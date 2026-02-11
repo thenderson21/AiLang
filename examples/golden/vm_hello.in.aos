@@ -1,0 +1,4 @@
+Program#p1 {
+  Let#l1(name=message) { Lit#s1(value="Hello from VM") }
+  Call#c1(target=io.print) { Var#v1(name=message) }
+}

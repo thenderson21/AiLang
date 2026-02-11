@@ -1,0 +1,18 @@
+Program#p1 {
+  Let#l1(name=path) { Lit#s1(value="/health") }
+  If#if1 {
+    Eq#eq1 { Var#v1(name=path) Lit#s2(value="/health") }
+    Block#b1 {
+      Let#l2(name=body) {
+        StrConcat#s3 {
+          Lit#s4(value="{\"status\":\"")
+          StrConcat#s5 { Lit#s6(value="ok") Lit#s7(value="\"}") }
+        }
+      }
+      Call#c1(target=io.print) { Var#v2(name=body) }
+    }
+    Block#b2 {
+      Call#c2(target=io.print) { Lit#s8(value="not-found") }
+    }
+  }
+}

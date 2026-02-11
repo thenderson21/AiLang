@@ -766,6 +766,45 @@ public sealed class AosValidator
             return AosValueKind.Bool;
         }
 
+        if (target == "sys.str_utf8ByteCount")
+        {
+            RequirePermission(node, "sys", permissions);
+            if (argTypes.Count != 1)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL142", "sys.str_utf8ByteCount expects 1 argument.", node.Id, node.Span));
+            }
+            else if (argTypes[0] != AosValueKind.String && argTypes[0] != AosValueKind.Unknown)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL143", "sys.str_utf8ByteCount arg must be string.", node.Id, node.Span));
+            }
+            return AosValueKind.Int;
+        }
+
+        if (target == "sys.vm_run")
+        {
+            RequirePermission(node, "sys", permissions);
+            if (argTypes.Count != 3)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL144", "sys.vm_run expects 3 arguments.", node.Id, node.Span));
+            }
+            else
+            {
+                if (argTypes[0] != AosValueKind.Node && argTypes[0] != AosValueKind.Unknown)
+                {
+                    _diagnostics.Add(new AosDiagnostic("VAL145", "sys.vm_run arg 1 must be node.", node.Id, node.Span));
+                }
+                if (argTypes[1] != AosValueKind.String && argTypes[1] != AosValueKind.Unknown)
+                {
+                    _diagnostics.Add(new AosDiagnostic("VAL146", "sys.vm_run arg 2 must be string.", node.Id, node.Span));
+                }
+                if (argTypes[2] != AosValueKind.Node && argTypes[2] != AosValueKind.Unknown)
+                {
+                    _diagnostics.Add(new AosDiagnostic("VAL147", "sys.vm_run arg 3 must be node.", node.Id, node.Span));
+                }
+            }
+            return AosValueKind.Unknown;
+        }
+
         if (target == "compiler.format")
         {
             RequirePermission(node, "compiler", permissions);
@@ -827,6 +866,20 @@ public sealed class AosValidator
                 _diagnostics.Add(new AosDiagnostic("VAL116", "compiler.toJson arg must be node.", node.Id, node.Span));
             }
             return AosValueKind.String;
+        }
+
+        if (target == "compiler.emitBytecode")
+        {
+            RequirePermission(node, "compiler", permissions);
+            if (argTypes.Count != 1)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL148", "compiler.emitBytecode expects 1 argument.", node.Id, node.Span));
+            }
+            else if (argTypes[0] != AosValueKind.Node && argTypes[0] != AosValueKind.Unknown)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL149", "compiler.emitBytecode arg must be node.", node.Id, node.Span));
+            }
+            return AosValueKind.Node;
         }
 
         if (target == "compiler.strCompare")

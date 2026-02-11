@@ -1,0 +1,379 @@
+Program#json_p1 {
+  Let#json_l1(name=compiler.toJson) {
+    Fn#json_f1(params=node) {
+      Block#json_b1 {
+        If#json_if1 {
+          Eq#json_e1 { NodeKind#json_nk1 { Var#json_v1(name=node) } Lit#json_lit1(value="Map") }
+          Block#json_b2 { Return#json_r1 { Call#json_c1(target=json_map) { Var#json_v2(name=node) } } }
+          Block#json_b3 {
+            If#json_if2 {
+              Eq#json_e2 { NodeKind#json_nk2 { Var#json_v3(name=node) } Lit#json_lit2(value="Lit") }
+              Block#json_b4 { Return#json_r2 { Call#json_c2(target=json_lit) { Var#json_v4(name=node) } } }
+              Block#json_b5 { Return#json_r3 { Lit#json_lit3(value="null") } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#json_l2(name=json_map) {
+    Fn#json_f2(params=mapNode) {
+      Block#json_b6 {
+        If#json_if3 {
+          Eq#json_e3 { ChildCount#json_cc1 { Var#json_v5(name=mapNode) } Lit#json_lit4(value=0) }
+          Block#json_b7 { Return#json_r4 { Lit#json_lit5(value="{}") } }
+          Block#json_b8 {
+            Let#json_l3(name=picked) { MakeBlock#json_mb1 { Lit#json_lit6(value="picked") } }
+            Let#json_l4(name=body) { Call#json_c3(target=json_map_emit) { Var#json_v6(name=mapNode) Var#json_v7(name=picked) Lit#json_lit7(value=0) } }
+            Return#json_r5 {
+              StrConcat#json_s1 {
+                Lit#json_lit8(value="{")
+                StrConcat#json_s2 {
+                  Var#json_v8(name=body)
+                  Lit#json_lit9(value="}")
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#json_l5(name=json_map_emit) {
+    Fn#json_f3(params=mapNode,picked,count) {
+      Block#json_b9 {
+        If#json_if4 {
+          Eq#json_e4 { Var#json_v9(name=count) ChildCount#json_cc2 { Var#json_v10(name=mapNode) } }
+          Block#json_b10 { Return#json_r6 { Lit#json_lit10(value="") } }
+          Block#json_b11 {
+            Let#json_l6(name=minIndex) {
+              Call#json_c4(target=json_find_min_index) {
+                Var#json_v11(name=mapNode)
+                Var#json_v12(name=picked)
+                Lit#json_lit11(value=0)
+                Lit#json_lit12(value=-1)
+                Lit#json_lit13(value="")
+                Lit#json_lit14(value=false)
+              }
+            }
+            If#json_if5 {
+              Eq#json_e5 { Var#json_v13(name=minIndex) Lit#json_lit15(value=-1) }
+              Block#json_b12 { Return#json_r7 { Lit#json_lit16(value="") } }
+              Block#json_b13 {
+                Let#json_l7(name=field) { ChildAt#json_ca1 { Var#json_v14(name=mapNode) Var#json_v15(name=minIndex) } }
+                Let#json_l8(name=key) { Call#json_c5(target=json_field_key) { Var#json_v16(name=field) } }
+                Let#json_l9(name=entry) { Call#json_c6(target=json_field_json) { Var#json_v17(name=field) } }
+                Let#json_l10(name=nextPicked) { Call#json_c7(target=json_picked_add) { Var#json_v18(name=picked) Var#json_v19(name=key) } }
+                Let#json_l11(name=rest) {
+                  Call#json_c8(target=json_map_emit) {
+                    Var#json_v20(name=mapNode)
+                    Var#json_v21(name=nextPicked)
+                    Add#json_a1 { Var#json_v22(name=count) Lit#json_lit17(value=1) }
+                  }
+                }
+                If#json_if6 {
+                  Eq#json_e6 { Var#json_v23(name=rest) Lit#json_lit18(value="") }
+                  Block#json_b14 { Return#json_r8 { Var#json_v24(name=entry) } }
+                  Block#json_b15 {
+                    Return#json_r9 {
+                      StrConcat#json_s3 {
+                        Var#json_v25(name=entry)
+                        StrConcat#json_s4 {
+                          Lit#json_lit19(value=",")
+                          Var#json_v26(name=rest)
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#json_l12(name=json_find_min_index) {
+    Fn#json_f4(params=mapNode,picked,index,bestIndex,bestKey,hasBest) {
+      Block#json_b16 {
+        If#json_if7 {
+          Eq#json_e7 { Var#json_v27(name=index) ChildCount#json_cc3 { Var#json_v28(name=mapNode) } }
+          Block#json_b17 { Return#json_r10 { Var#json_v29(name=bestIndex) } }
+          Block#json_b18 {
+            Let#json_l13(name=field) { ChildAt#json_ca2 { Var#json_v30(name=mapNode) Var#json_v31(name=index) } }
+            Let#json_l14(name=key) { Call#json_c9(target=json_field_key) { Var#json_v32(name=field) } }
+            If#json_if8 {
+              Call#json_c10(target=json_picked_has) { Var#json_v33(name=picked) Var#json_v34(name=key) Lit#json_lit20(value=0) }
+              Block#json_b19 {
+                Return#json_r11 {
+                  Call#json_c11(target=json_find_min_index) {
+                    Var#json_v35(name=mapNode)
+                    Var#json_v36(name=picked)
+                    Add#json_a2 { Var#json_v37(name=index) Lit#json_lit21(value=1) }
+                    Var#json_v38(name=bestIndex)
+                    Var#json_v39(name=bestKey)
+                    Var#json_v40(name=hasBest)
+                  }
+                }
+              }
+              Block#json_b20 {
+                If#json_if9 {
+                  Var#json_v41(name=hasBest)
+                  Block#json_b21 {
+                    Let#json_l15(name=cmp) { Call#json_c12(target=compiler.strCompare) { Var#json_v42(name=key) Var#json_v43(name=bestKey) } }
+                    If#json_if10 {
+                      Eq#json_e8 { Var#json_v44(name=cmp) Lit#json_lit22(value=-1) }
+                      Block#json_b22 {
+                        Return#json_r12 {
+                          Call#json_c13(target=json_find_min_index) {
+                            Var#json_v45(name=mapNode)
+                            Var#json_v46(name=picked)
+                            Add#json_a3 { Var#json_v47(name=index) Lit#json_lit23(value=1) }
+                            Var#json_v48(name=index)
+                            Var#json_v49(name=key)
+                            Lit#json_lit24(value=true)
+                          }
+                        }
+                      }
+                      Block#json_b23 {
+                        Return#json_r13 {
+                          Call#json_c14(target=json_find_min_index) {
+                            Var#json_v50(name=mapNode)
+                            Var#json_v51(name=picked)
+                            Add#json_a4 { Var#json_v52(name=index) Lit#json_lit25(value=1) }
+                            Var#json_v53(name=bestIndex)
+                            Var#json_v54(name=bestKey)
+                            Var#json_v55(name=hasBest)
+                          }
+                        }
+                      }
+                    }
+                  }
+                  Block#json_b24 {
+                    Return#json_r14 {
+                      Call#json_c15(target=json_find_min_index) {
+                        Var#json_v56(name=mapNode)
+                        Var#json_v57(name=picked)
+                        Add#json_a5 { Var#json_v58(name=index) Lit#json_lit26(value=1) }
+                        Var#json_v59(name=index)
+                        Var#json_v60(name=key)
+                        Lit#json_lit27(value=true)
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#json_l16(name=json_picked_add) {
+    Fn#json_f5(params=picked,key) {
+      Block#json_b25 {
+        Let#json_l17(name=lit) { MakeLitString#json_mls1 { Lit#json_lit28(value="picked_key") Var#json_v61(name=key) } }
+        Return#json_r15 { AppendChild#json_ap1 { Var#json_v62(name=picked) Var#json_v63(name=lit) } }
+      }
+    }
+  }
+
+  Let#json_l18(name=json_picked_has) {
+    Fn#json_f6(params=picked,key,index) {
+      Block#json_b26 {
+        If#json_if11 {
+          Eq#json_e9 { Var#json_v64(name=index) ChildCount#json_cc4 { Var#json_v65(name=picked) } }
+          Block#json_b27 { Return#json_r16 { Lit#json_lit29(value=false) } }
+          Block#json_b28 {
+            Let#json_l19(name=current) { ChildAt#json_ca3 { Var#json_v66(name=picked) Var#json_v67(name=index) } }
+            If#json_if12 {
+              Eq#json_e10 { Call#json_c16(target=json_lit_string) { Var#json_v68(name=current) } Var#json_v69(name=key) }
+              Block#json_b29 { Return#json_r17 { Lit#json_lit30(value=true) } }
+              Block#json_b30 {
+                Return#json_r18 {
+                  Call#json_c17(target=json_picked_has) {
+                    Var#json_v70(name=picked)
+                    Var#json_v71(name=key)
+                    Add#json_a6 { Var#json_v72(name=index) Lit#json_lit31(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#json_l20(name=json_field_json) {
+    Fn#json_f7(params=field) {
+      Block#json_b31 {
+        Let#json_l21(name=key) { Call#json_c18(target=json_field_key) { Var#json_v73(name=field) } }
+        If#json_if13 {
+          Eq#json_e11 { ChildCount#json_cc5 { Var#json_v74(name=field) } Lit#json_lit32(value=1) }
+          Block#json_b32 {
+            Let#json_l22(name=valueText) { Call#json_c19(target=compiler.toJson) { ChildAt#json_ca4 { Var#json_v75(name=field) Lit#json_lit33(value=0) } } }
+            Return#json_r19 {
+              StrConcat#json_s5 {
+                Lit#json_lit34(value="\"")
+                StrConcat#json_s6 {
+                  StrEscape#json_se1 { Var#json_v76(name=key) }
+                  StrConcat#json_s7 {
+                    Lit#json_lit35(value="\":")
+                    Var#json_v77(name=valueText)
+                  }
+                }
+              }
+            }
+          }
+          Block#json_b33 {
+            Return#json_r20 {
+              StrConcat#json_s8 {
+                Lit#json_lit36(value="\"")
+                StrConcat#json_s9 {
+                  StrEscape#json_se2 { Var#json_v78(name=key) }
+                  Lit#json_lit37(value="\":null")
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#json_l23(name=json_field_key) {
+    Fn#json_f8(params=field) {
+      Block#json_b34 { Return#json_r21 { Call#json_c20(target=json_attr_string) { Var#json_v79(name=field) Lit#json_lit38(value="key") Lit#json_lit39(value=0) } } }
+    }
+  }
+
+  Let#json_l24(name=json_lit_string) {
+    Fn#json_f9(params=lit) {
+      Block#json_b35 {
+        Let#json_l25(name=valueIndex) { Call#json_c21(target=json_attr_index) { Var#json_v80(name=lit) Lit#json_lit40(value="value") Lit#json_lit41(value=0) } }
+        If#json_if14 {
+          Eq#json_e12 { Var#json_v81(name=valueIndex) Lit#json_lit42(value=-1) }
+          Block#json_b36 { Return#json_r22 { Lit#json_lit43(value="") } }
+          Block#json_b37 { Return#json_r23 { AttrValueString#json_avs1 { Var#json_v82(name=lit) Var#json_v83(name=valueIndex) } } }
+        }
+      }
+    }
+  }
+
+  Let#json_l26(name=json_lit) {
+    Fn#json_f10(params=lit) {
+      Block#json_b38 {
+        Let#json_l27(name=valueIndex) { Call#json_c22(target=json_attr_index) { Var#json_v84(name=lit) Lit#json_lit44(value="value") Lit#json_lit45(value=0) } }
+        If#json_if15 {
+          Eq#json_e13 { Var#json_v85(name=valueIndex) Lit#json_lit46(value=-1) }
+          Block#json_b39 { Return#json_r24 { Lit#json_lit47(value="null") } }
+          Block#json_b40 {
+            Let#json_l28(name=kind) { AttrValueKind#json_avk1 { Var#json_v86(name=lit) Var#json_v87(name=valueIndex) } }
+            If#json_if16 {
+              Eq#json_e14 { Var#json_v88(name=kind) Lit#json_lit48(value="string") }
+              Block#json_b41 {
+                Return#json_r25 {
+                  StrConcat#json_s10 {
+                    Lit#json_lit49(value="\"")
+                    StrConcat#json_s11 {
+                      StrEscape#json_se3 { AttrValueString#json_avs2 { Var#json_v89(name=lit) Var#json_v90(name=valueIndex) } }
+                      Lit#json_lit50(value="\"")
+                    }
+                  }
+                }
+              }
+              Block#json_b42 {
+                If#json_if17 {
+                  Eq#json_e15 { Var#json_v91(name=kind) Lit#json_lit51(value="int") }
+                  Block#json_b43 { Return#json_r26 { ToString#json_t1 { AttrValueInt#json_avi1 { Var#json_v92(name=lit) Var#json_v93(name=valueIndex) } } } }
+                  Block#json_b44 {
+                    If#json_if18 {
+                      Eq#json_e16 { Var#json_v94(name=kind) Lit#json_lit52(value="bool") }
+                      Block#json_b45 {
+                        If#json_if19 {
+                          AttrValueBool#json_avb1 { Var#json_v95(name=lit) Var#json_v96(name=valueIndex) }
+                          Block#json_b46 { Return#json_r27 { Lit#json_lit53(value="true") } }
+                          Block#json_b47 { Return#json_r28 { Lit#json_lit54(value="false") } }
+                        }
+                      }
+                      Block#json_b48 {
+                        If#json_if20 {
+                          Eq#json_e17 { Var#json_v97(name=kind) Lit#json_lit55(value="identifier") }
+                          Block#json_b49 {
+                            If#json_if21 {
+                              Eq#json_e18 { AttrValueString#json_avs3 { Var#json_v98(name=lit) Var#json_v99(name=valueIndex) } Lit#json_lit56(value="null") }
+                              Block#json_b50 { Return#json_r29 { Lit#json_lit57(value="null") } }
+                              Block#json_b51 { Return#json_r30 { Lit#json_lit58(value="null") } }
+                            }
+                          }
+                          Block#json_b52 { Return#json_r31 { Lit#json_lit59(value="null") } }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#json_l29(name=json_attr_string) {
+    Fn#json_f11(params=node,key,index) {
+      Block#json_b53 {
+        If#json_if22 {
+          Eq#json_e19 { Var#json_v100(name=index) AttrCount#json_ac1 { Var#json_v101(name=node) } }
+          Block#json_b54 { Return#json_r32 { Lit#json_lit60(value="") } }
+          Block#json_b55 {
+            If#json_if23 {
+              Eq#json_e20 { AttrKey#json_ak1 { Var#json_v102(name=node) Var#json_v103(name=index) } Var#json_v104(name=key) }
+              Block#json_b56 { Return#json_r33 { AttrValueString#json_avs4 { Var#json_v105(name=node) Var#json_v106(name=index) } } }
+              Block#json_b57 {
+                Return#json_r34 {
+                  Call#json_c23(target=json_attr_string) {
+                    Var#json_v107(name=node)
+                    Var#json_v108(name=key)
+                    Add#json_a7 { Var#json_v109(name=index) Lit#json_lit61(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#json_l30(name=json_attr_index) {
+    Fn#json_f12(params=node,key,index) {
+      Block#json_b58 {
+        If#json_if24 {
+          Eq#json_e21 { Var#json_v110(name=index) AttrCount#json_ac2 { Var#json_v111(name=node) } }
+          Block#json_b59 { Return#json_r35 { Lit#json_lit62(value=-1) } }
+          Block#json_b60 {
+            If#json_if25 {
+              Eq#json_e22 { AttrKey#json_ak2 { Var#json_v112(name=node) Var#json_v113(name=index) } Var#json_v114(name=key) }
+              Block#json_b61 { Return#json_r36 { Var#json_v115(name=index) } }
+              Block#json_b62 {
+                Return#json_r37 {
+                  Call#json_c24(target=json_attr_index) {
+                    Var#json_v116(name=node)
+                    Var#json_v117(name=key)
+                    Add#json_a8 { Var#json_v118(name=index) Lit#json_lit63(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,125 @@
+Program#route_p1 {
+  Let#route_l1(name=compiler.route) {
+    Fn#route_f1(params=path,table) {
+      Block#route_b1 {
+        Return#route_r1 {
+          Call#route_c1(target=route_find) {
+            Var#route_v1(name=path)
+            Var#route_v2(name=table)
+            Lit#route_i1(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let#route_l2(name=route_find) {
+    Fn#route_f2(params=path,table,index) {
+      Block#route_b2 {
+        If#route_if1 {
+          Eq#route_e1 { Var#route_v3(name=index) ChildCount#route_cc1 { Var#route_v4(name=table) } }
+          Block#route_b3 { Return#route_r2 { Call#route_c2(target=route_make_null) { Lit#route_i2(value=0) } } }
+          Block#route_b4 {
+            Let#route_l3(name=child) { ChildAt#route_ca1 { Var#route_v5(name=table) Var#route_v6(name=index) } }
+            If#route_if2 {
+              Eq#route_e2 { NodeKind#route_nk1 { Var#route_v7(name=child) } Lit#route_i3(value="Route") }
+              Block#route_b5 {
+                Let#route_l4(name=routePath) {
+                  Call#route_c3(target=route_get_attr) {
+                    Var#route_v8(name=child)
+                    Lit#route_i4(value="path")
+                    Lit#route_i5(value=0)
+                  }
+                }
+                If#route_if3 {
+                  Eq#route_e3 { Var#route_v9(name=routePath) Var#route_v10(name=path) }
+                  Block#route_b6 {
+                    Let#route_l5(name=handler) {
+                      Call#route_c4(target=route_get_attr) {
+                        Var#route_v11(name=child)
+                        Lit#route_i6(value="handler")
+                        Lit#route_i7(value=0)
+                      }
+                    }
+                    Return#route_r3 { Call#route_c5(target=route_make_match) { Var#route_v12(name=handler) } }
+                  }
+                  Block#route_b7 {
+                    Return#route_r4 {
+                      Call#route_c6(target=route_find) {
+                        Var#route_v13(name=path)
+                        Var#route_v14(name=table)
+                        Add#route_a1 { Var#route_v15(name=index) Lit#route_i8(value=1) }
+                      }
+                    }
+                  }
+                }
+              }
+              Block#route_b8 {
+                Return#route_r5 {
+                  Call#route_c7(target=route_find) {
+                    Var#route_v16(name=path)
+                    Var#route_v17(name=table)
+                    Add#route_a2 { Var#route_v18(name=index) Lit#route_i9(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#route_l6(name=route_get_attr) {
+    Fn#route_f3(params=node,key,index) {
+      Block#route_b9 {
+        If#route_if4 {
+          Eq#route_e4 { Var#route_v19(name=index) AttrCount#route_ac1 { Var#route_v20(name=node) } }
+          Block#route_b10 { Return#route_r6 { Lit#route_i10(value="") } }
+          Block#route_b11 {
+            If#route_if5 {
+              Eq#route_e5 { AttrKey#route_ak1 { Var#route_v21(name=node) Var#route_v22(name=index) } Var#route_v23(name=key) }
+              Block#route_b12 { Return#route_r7 { AttrValueString#route_avs1 { Var#route_v24(name=node) Var#route_v25(name=index) } } }
+              Block#route_b13 {
+                Return#route_r8 {
+                  Call#route_c8(target=route_get_attr) {
+                    Var#route_v26(name=node)
+                    Var#route_v27(name=key)
+                    Add#route_a3 { Var#route_v28(name=index) Lit#route_i11(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#route_l7(name=route_make_match) {
+    Fn#route_f4(params=handler) {
+      Block#route_b14 {
+        Let#route_l8(name=programText) {
+          StrConcat#route_s1 {
+            Lit#route_i12(value="Program#rp1 { Match#auto(handler=\"")
+            StrConcat#route_s2 {
+              StrEscape#route_se1 { Var#route_v29(name=handler) }
+              Lit#route_i13(value="\") }")
+            }
+          }
+        }
+        Let#route_l9(name=parsed) { Call#route_c9(target=compiler.parse) { Var#route_v30(name=programText) } }
+        Return#route_r9 { ChildAt#route_ca2 { Var#route_v31(name=parsed) Lit#route_i14(value=0) } }
+      }
+    }
+  }
+
+  Let#route_l10(name=route_make_null) {
+    Fn#route_f5(params=_) {
+      Block#route_b15 {
+        Let#route_l11(name=parsed) { Call#route_c10(target=compiler.parse) { Lit#route_i15(value="Program#rp2 { Match#auto(handler=null) }") } }
+        Return#route_r10 { ChildAt#route_ca3 { Var#route_v32(name=parsed) Lit#route_i16(value=0) } }
+      }
+    }
+  }
+}

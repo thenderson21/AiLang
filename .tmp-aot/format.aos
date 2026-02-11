@@ -1,0 +1,190 @@
+Program#p1 {
+  Let#fmt1(name=format) {
+    Fn#fmt2(params=node) {
+      Block#fmt3 {
+        Return#fmt4 {
+          StrConcat#fmt5 {
+            StrConcat#fmt6 {
+              StrConcat#fmt7 {
+                NodeKind#fmt8 { Var#fmt9(name=node) }
+                Lit#fmt10(value="#")
+              }
+              NodeId#fmt11 { Var#fmt12(name=node) }
+            }
+            StrConcat#fmt13 {
+              Call#fmt14(target=formatAttrs) {
+                Var#fmt15(name=node)
+                Lit#fmt16(value=0)
+              }
+              Call#fmt17(target=formatChildren) {
+                Var#fmt18(name=node)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#fa1(name=formatAttrs) {
+    Fn#fa2(params=node,index) {
+      Block#fa3 {
+        If#fa4 {
+          Eq#fa5 {
+            Var#fa6(name=index)
+            AttrCount#fa7 { Var#fa8(name=node) }
+          }
+          Block#fa9 { Return#fa10 { Lit#fa11(value="") } }
+          Block#fa12 {
+            Return#fa13 {
+              StrConcat#fa14 {
+                StrConcat#fa15 {
+                  StrConcat#fa16 {
+                    StrConcat#fa17 {
+                      StrConcat#fa18 {
+                        StrConcat#fa19 {
+                          If#fa20 {
+                            Eq#fa21 { Var#fa22(name=index) Lit#fa23(value=0) }
+                            Block#fa24 { Lit#fa26(value="(") }
+                            Block#fa27 { Lit#fa29(value=" ") }
+                          }
+                          AttrKey#fa30 { Var#fa31(name=node) Var#fa32(name=index) }
+                        }
+                        Lit#fa33(value="=")
+                      }
+                      Call#fa34(target=formatAttrValue) { Var#fa35(name=node) Var#fa36(name=index) }
+                    }
+                    If#fa37 {
+                      Eq#fa38 {
+                        Add#fa39 { Var#fa40(name=index) Lit#fa41(value=1) }
+                        AttrCount#fa42 { Var#fa43(name=node) }
+                      }
+                      Block#fa44 { Lit#fa46(value=")") }
+                      Block#fa47 { Lit#fa49(value="") }
+                    }
+                  }
+                  Call#fa50(target=formatAttrs) {
+                    Var#fa51(name=node)
+                    Add#fa52 { Var#fa53(name=index) Lit#fa54(value=1) }
+                  }
+                }
+                Lit#fa55(value="")
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#fav1(name=formatAttrValue) {
+    Fn#fav2(params=node,index) {
+      Block#fav3 {
+        If#fav4 {
+          Eq#fav5 {
+            AttrValueKind#fav6 { Var#fav7(name=node) Var#fav8(name=index) }
+            Lit#fav9(value="string")
+          }
+          Block#fav10 {
+            Return#fav11 {
+              StrConcat#fav12 {
+                Lit#fav13(value="\"")
+                StrConcat#fav14 {
+                  StrEscape#fav15 { AttrValueString#fav16 { Var#fav17(name=node) Var#fav18(name=index) } }
+                  Lit#fav19(value="\"")
+                }
+              }
+            }
+          }
+          Block#fav20 {
+            If#fav21 {
+              Eq#fav22 {
+                AttrValueKind#fav23 { Var#fav24(name=node) Var#fav25(name=index) }
+                Lit#fav26(value="int")
+              }
+              Block#fav27 {
+                Return#fav28 { ToString#fav29 { AttrValueInt#fav30 { Var#fav31(name=node) Var#fav32(name=index) } } }
+              }
+              Block#fav33 {
+                If#fav34 {
+                  Eq#fav35 {
+                    AttrValueKind#fav36 { Var#fav37(name=node) Var#fav38(name=index) }
+                    Lit#fav39(value="bool")
+                  }
+                  Block#fav40 {
+                    If#fav41 {
+                      AttrValueBool#fav42 { Var#fav43(name=node) Var#fav44(name=index) }
+                      Block#fav45 { Return#fav46 { Lit#fav47(value="true") } }
+                      Block#fav48 { Return#fav49 { Lit#fav50(value="false") } }
+                    }
+                  }
+                  Block#fav51 {
+                    Return#fav52 { AttrValueString#fav53 { Var#fav54(name=node) Var#fav55(name=index) } }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#fc1(name=formatChildren) {
+    Fn#fc2(params=node) {
+      Block#fc3 {
+        If#fc4 {
+          Eq#fc5 {
+            ChildCount#fc6 { Var#fc7(name=node) }
+            Lit#fc8(value=0)
+          }
+          Block#fc9 { Return#fc10 { Lit#fc11(value="") } }
+          Block#fc12 {
+            Return#fc13 {
+              StrConcat#fc14 {
+                Lit#fc15(value=" { ")
+                StrConcat#fc16 {
+                  Call#fc17(target=format) { ChildAt#fc18 { Var#fc19(name=node) Lit#fc20(value=0) } }
+                  StrConcat#fc21 {
+                    Call#fc22(target=formatChildrenTail) {
+                      Var#fc23(name=node)
+                      Lit#fc24(value=1)
+                      ChildCount#fc25 { Var#fc26(name=node) }
+                    }
+                    Lit#fc27(value=" }")
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#fct1(name=formatChildrenTail) {
+    Fn#fct2(params=node,index,count) {
+      Block#fct3 {
+        If#fct4 {
+          Eq#fct5 { Var#fct6(name=index) Var#fct7(name=count) }
+          Block#fct8 { Return#fct9 { Lit#fct10(value="") } }
+          Block#fct11 {
+            Return#fct12 {
+              StrConcat#fct13 {
+                Lit#fct14(value=" ")
+                StrConcat#fct15 {
+                  Call#fct16(target=format) { ChildAt#fct17 { Var#fct18(name=node) Var#fct19(name=index) } }
+                  Call#fct20(target=formatChildrenTail) {
+                    Var#fct21(name=node)
+                    Add#fct22 { Var#fct23(name=index) Lit#fct24(value=1) }
+                    Var#fct25(name=count)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,10 @@
+Program#p1 {
+  Let#l1(name=line) { Lit#s0(value="vm-echo") }
+  Let#l2(name=out) {
+    StrConcat#s1 {
+      Lit#s2(value="echo:")
+      Var#v1(name=line)
+    }
+  }
+  Call#c2(target=io.print) { Var#v2(name=out) }
+}

@@ -1,0 +1,42 @@
+Program#http_p1 {
+  Let#http_l1(name=compiler.parseHttpRequest) {
+    Fn#http_f1(params=raw) {
+      Block#http_b1 {
+        Let#http_l2(name=method) { Call#http_c1(target=compiler.strToken) { Var#http_v1(name=raw) Lit#http_i1(value=0) } }
+        Let#http_l3(name=path) { Call#http_c2(target=compiler.strToken) { Var#http_v2(name=raw) Lit#http_i2(value=1) } }
+        Return#http_r1 { Call#http_c3(target=http_make_request) { Var#http_v3(name=method) Var#http_v4(name=path) } }
+      }
+    }
+  }
+
+  Let#http_l4(name=http_make_request) {
+    Fn#http_f2(params=method,path) {
+      Block#http_b2 {
+        Let#http_l5(name=programText) {
+          StrConcat#http_s1 {
+            Lit#http_i3(value="Program#hp_auto { HttpRequest#auto(method=\"")
+            StrConcat#http_s2 {
+              StrEscape#http_se1 { Var#http_v5(name=method) }
+              StrConcat#http_s3 {
+                Lit#http_i4(value="\" path=\"")
+                StrConcat#http_s4 {
+                  StrEscape#http_se2 { Var#http_v6(name=path) }
+                  Lit#http_i5(value="\") }")
+                }
+              }
+            }
+          }
+        }
+        Let#http_l6(name=parsed) { Call#http_c4(target=compiler.parse) { Var#http_v7(name=programText) } }
+        If#http_if1 {
+          Eq#http_e1 { NodeKind#http_nk1 { Var#http_v8(name=parsed) } Lit#http_i6(value="Program") }
+          Block#http_b3 { Return#http_r2 { ChildAt#http_ca1 { Var#http_v9(name=parsed) Lit#http_i7(value=0) } } }
+          Block#http_b4 {
+            Let#http_l7(name=fallback) { Call#http_c5(target=compiler.parse) { Lit#http_i8(value="Program#hp_fallback { HttpRequest#auto(method=\"\" path=\"\") }") } }
+            Return#http_r3 { ChildAt#http_ca2 { Var#http_v10(name=fallback) Lit#http_i9(value=0) } }
+          }
+        }
+      }
+    }
+  }
+}

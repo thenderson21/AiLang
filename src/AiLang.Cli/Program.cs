@@ -7,11 +7,28 @@ return;
 static int RunCli(string[] args)
 {
     var traceEnabled = args.Contains("--trace", StringComparer.Ordinal);
-    var filteredArgs = args.Where(a => !string.Equals(a, "--trace", StringComparison.Ordinal)).ToArray();
+    string vmMode = string.Empty;
+    var filtered = new List<string>();
+    foreach (var arg in args)
+    {
+        if (string.Equals(arg, "--trace", StringComparison.Ordinal))
+        {
+            continue;
+        }
+        if (arg.StartsWith("--vm=", StringComparison.Ordinal))
+        {
+            vmMode = arg["--vm=".Length..];
+            continue;
+        }
+
+        filtered.Add(arg);
+    }
+
+    var filteredArgs = filtered.ToArray();
 
     if (TryLoadEmbeddedBundle(out var embeddedBundleText))
     {
-        return RunEmbeddedBundle(embeddedBundleText!, filteredArgs, traceEnabled);
+        return RunEmbeddedBundle(embeddedBundleText!, filteredArgs, traceEnabled, vmMode);
     }
 
     if (filteredArgs.Length == 0)
@@ -30,7 +47,7 @@ static int RunCli(string[] args)
                 PrintUsage();
                 return 1;
             }
-            return RunSource(filteredArgs[1], filteredArgs.Skip(2).ToArray(), traceEnabled);
+            return RunSource(filteredArgs[1], filteredArgs.Skip(2).ToArray(), traceEnabled, vmMode);
         case "serve":
             if (filteredArgs.Length < 2)
             {
@@ -43,7 +60,7 @@ static int RunCli(string[] args)
                 return 1;
             }
 
-            return RunServe(filteredArgs[1], appArgs, port, traceEnabled);
+            return RunServe(filteredArgs[1], appArgs, port, traceEnabled, vmMode);
         default:
             PrintUsage();
             return 1;
@@ -68,20 +85,26 @@ static int RunRepl()
     return 0;
 }
 
-static int RunSource(string path, string[] argv, bool traceEnabled)
+static int RunSource(string path, string[] argv, bool traceEnabled, string vmMode)
 {
     try
     {
-        if (!TryLoadProgramForExecution(path, traceEnabled, argv, evaluateProgram: true, out _, out var runtime, out var errCode, out var errMessage, out var errNodeId))
+        var evaluateProgram = !string.Equals(vmMode, "bytecode", StringComparison.Ordinal);
+        if (!TryLoadProgramForExecution(path, traceEnabled, argv, evaluateProgram, vmMode, out _, out var runtime, out var errCode, out var errMessage, out var errNodeId))
         {
             Console.WriteLine(FormatErr("err1", errCode, errMessage, errNodeId));
             return errCode.StartsWith("PAR", StringComparison.Ordinal) || errCode.StartsWith("VAL", StringComparison.Ordinal) || errCode == "RUN002" ? 2 : 3;
         }
 
+        var traceSnapshot = traceEnabled ? new List<AosNode>(runtime!.TraceSteps) : null;
         var result = ExecuteRuntimeStart(runtime!, BuildKernelRunArgs());
         var suppressOutput = runtime!.Env.TryGetValue("__runtime_suppress_output", out var suppressValue) &&
                              suppressValue.Kind == AosValueKind.Bool &&
                              suppressValue.AsBool();
+        if (!suppressOutput && TryGetProgramNode(runtime, out var programNode))
+        {
+            suppressOutput = IsLifecycleProgram(programNode!);
+        }
 
         if (IsErrNode(result, out var errNode))
         {
@@ -91,7 +114,7 @@ static int RunSource(string path, string[] argv, bool traceEnabled)
 
         if (traceEnabled)
         {
-            Console.WriteLine(FormatTrace("trace1", runtime!.TraceSteps));
+            Console.WriteLine(FormatTrace("trace1", traceSnapshot ?? runtime!.TraceSteps));
         }
         else if (!suppressOutput)
         {
@@ -110,11 +133,12 @@ static int RunSource(string path, string[] argv, bool traceEnabled)
     }
 }
 
-static int RunServe(string path, string[] argv, int port, bool traceEnabled)
+static int RunServe(string path, string[] argv, int port, bool traceEnabled, string vmMode)
 {
     try
     {
-        if (!TryLoadProgramForExecution(path, traceEnabled, argv, evaluateProgram: true, out _, out var runtime, out var errCode, out var errMessage, out var errNodeId))
+        var evaluateProgram = !string.Equals(vmMode, "bytecode", StringComparison.Ordinal);
+        if (!TryLoadProgramForExecution(path, traceEnabled, argv, evaluateProgram, vmMode, out _, out var runtime, out var errCode, out var errMessage, out var errNodeId))
         {
             Console.WriteLine(FormatErr("err1", errCode, errMessage, errNodeId));
             return errCode.StartsWith("PAR", StringComparison.Ordinal) || errCode.StartsWith("VAL", StringComparison.Ordinal) || errCode == "RUN002" ? 2 : 3;
@@ -280,6 +304,7 @@ static bool TryLoadProgramForExecution(
     bool traceEnabled,
     string[] argv,
     bool evaluateProgram,
+    string vmMode,
     out AosNode? program,
     out AosRuntime? runtime,
     out string errCode,
@@ -316,13 +341,16 @@ static bool TryLoadProgramForExecution(
     runtime.Permissions.Add("io");
     runtime.Permissions.Add("compiler");
     runtime.ModuleBaseDir = Path.GetDirectoryName(Path.GetFullPath(path)) ?? Directory.GetCurrentDirectory();
-    runtime.TraceEnabled = traceEnabled;
+    runtime.TraceEnabled = false;
     runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(argv));
     runtime.ReadOnlyBindings.Add("argv");
+    runtime.Env["__vm_mode"] = AosValue.FromString(vmMode);
+    runtime.ReadOnlyBindings.Add("__vm_mode");
     runtime.Env["__program"] = AosValue.FromNode(parse.Root);
     runtime.ReadOnlyBindings.Add("__program");
     var bootstrapInterpreter = new AosInterpreter();
     AosStandardLibraryLoader.EnsureLoaded(runtime, bootstrapInterpreter);
+    runtime.TraceEnabled = traceEnabled;
 
     var envTypes = new Dictionary<string, AosValueKind>(StringComparer.Ordinal)
     {
@@ -363,7 +391,7 @@ static AosParseResult Parse(string source)
     return AosExternalFrontend.Parse(source);
 }
 
-static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnabled)
+static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnabled, string vmMode)
 {
     try
     {
@@ -396,6 +424,8 @@ static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnab
         runtime.ModuleBaseDir = Path.GetDirectoryName(Environment.ProcessPath ?? AppContext.BaseDirectory) ?? Directory.GetCurrentDirectory();
         runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(cliArgs));
         runtime.ReadOnlyBindings.Add("argv");
+        runtime.Env["__vm_mode"] = AosValue.FromString(vmMode);
+        runtime.ReadOnlyBindings.Add("__vm_mode");
         runtime.Env["__entryArgs"] = AosValue.FromNode(BuildArgvNode(cliArgs));
         runtime.ReadOnlyBindings.Add("__entryArgs");
         var bootstrapInterpreter = new AosInterpreter();
@@ -539,6 +569,46 @@ static bool IsErrNode(AosValue value, out AosNode? errNode)
     }
     errNode = node;
     return true;
+}
+
+static bool TryGetProgramNode(AosRuntime runtime, out AosNode? programNode)
+{
+    programNode = null;
+    if (!runtime.Env.TryGetValue("__program", out var programValue) || programValue.Kind != AosValueKind.Node)
+    {
+        return false;
+    }
+    programNode = programValue.AsNode();
+    return true;
+}
+
+static bool IsLifecycleProgram(AosNode program)
+{
+    var hasInit = false;
+    var hasUpdate = false;
+    foreach (var child in program.Children)
+    {
+        if (child.Kind != "Export")
+        {
+            continue;
+        }
+        if (!child.Attrs.TryGetValue("name", out var nameAttr) || nameAttr.Kind != AosAttrKind.Identifier)
+        {
+            continue;
+        }
+
+        var name = nameAttr.AsString();
+        if (string.Equals(name, "init", StringComparison.Ordinal))
+        {
+            hasInit = true;
+        }
+        else if (string.Equals(name, "update", StringComparison.Ordinal))
+        {
+            hasUpdate = true;
+        }
+    }
+
+    return hasInit && hasUpdate;
 }
 
 static string FormatOk(string id, AosValue value)
