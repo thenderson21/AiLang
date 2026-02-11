@@ -308,6 +308,62 @@ public sealed class AosValidator
                     _diagnostics.Add(new AosDiagnostic("VAL103", "HttpRequest path must be string.", node.Id, node.Span));
                 }
                 return AosValueKind.Node;
+            case "Route":
+                RequireChildren(node, 0, 0);
+                RequireAttr(node, "path");
+                RequireAttr(node, "handler");
+                if (node.Attrs.TryGetValue("path", out var routePathAttr) && routePathAttr.Kind != AosAttrKind.String)
+                {
+                    _diagnostics.Add(new AosDiagnostic("VAL106", "Route path must be string.", node.Id, node.Span));
+                }
+                if (node.Attrs.TryGetValue("handler", out var routeHandlerAttr) && routeHandlerAttr.Kind != AosAttrKind.String)
+                {
+                    _diagnostics.Add(new AosDiagnostic("VAL107", "Route handler must be string.", node.Id, node.Span));
+                }
+                return AosValueKind.Node;
+            case "Map":
+                foreach (var child in node.Children)
+                {
+                    var childType = ValidateNode(child, env, permissions);
+                    if (child.Kind != "Field")
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL112", "Map children must be Field nodes.", child.Id, child.Span));
+                    }
+                    else if (childType != AosValueKind.Node && childType != AosValueKind.Unknown)
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL113", "Field must evaluate to node.", child.Id, child.Span));
+                    }
+                }
+                return AosValueKind.Node;
+            case "Field":
+                RequireChildren(node, 1, 1);
+                RequireAttr(node, "key");
+                if (node.Attrs.TryGetValue("key", out var fieldKeyAttr) && fieldKeyAttr.Kind != AosAttrKind.String)
+                {
+                    _diagnostics.Add(new AosDiagnostic("VAL114", "Field key must be string.", node.Id, node.Span));
+                }
+                if (node.Children.Count == 1)
+                {
+                    ValidateNode(node.Children[0], env, permissions);
+                }
+                return AosValueKind.Node;
+            case "Match":
+                RequireChildren(node, 0, 0);
+                RequireAttr(node, "handler");
+                if (node.Attrs.TryGetValue("handler", out var matchHandlerAttr))
+                {
+                    if (matchHandlerAttr.Kind == AosAttrKind.String)
+                    {
+                        return AosValueKind.Node;
+                    }
+                    if (matchHandlerAttr.Kind == AosAttrKind.Identifier &&
+                        string.Equals(matchHandlerAttr.AsString(), "null", StringComparison.Ordinal))
+                    {
+                        return AosValueKind.Node;
+                    }
+                    _diagnostics.Add(new AosDiagnostic("VAL108", "Match handler must be string or null.", node.Id, node.Span));
+                }
+                return AosValueKind.Node;
             case "Command":
                 RequireChildren(node, 0, 0);
                 if (node.Id == "Exit")
@@ -603,6 +659,41 @@ public sealed class AosValidator
                 _diagnostics.Add(new AosDiagnostic("VAL105", "compiler.parseHttpRequest arg must be string.", node.Id, node.Span));
             }
             return AosValueKind.Node;
+        }
+
+        if (target == "compiler.route")
+        {
+            RequirePermission(node, "compiler", permissions);
+            if (argTypes.Count != 2)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL109", "compiler.route expects 2 arguments.", node.Id, node.Span));
+            }
+            else
+            {
+                if (argTypes[0] != AosValueKind.String && argTypes[0] != AosValueKind.Unknown)
+                {
+                    _diagnostics.Add(new AosDiagnostic("VAL110", "compiler.route arg 1 must be string.", node.Id, node.Span));
+                }
+                if (argTypes[1] != AosValueKind.Node && argTypes[1] != AosValueKind.Unknown)
+                {
+                    _diagnostics.Add(new AosDiagnostic("VAL111", "compiler.route arg 2 must be node.", node.Id, node.Span));
+                }
+            }
+            return AosValueKind.Node;
+        }
+
+        if (target == "compiler.toJson")
+        {
+            RequirePermission(node, "compiler", permissions);
+            if (argTypes.Count != 1)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL115", "compiler.toJson expects 1 argument.", node.Id, node.Span));
+            }
+            else if (argTypes[0] != AosValueKind.Node && argTypes[0] != AosValueKind.Unknown)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL116", "compiler.toJson arg must be node.", node.Id, node.Span));
+            }
+            return AosValueKind.String;
         }
 
         if (target == "compiler.validate")

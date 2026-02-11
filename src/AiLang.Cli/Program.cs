@@ -3,23 +3,57 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
-var traceEnabled = args.Contains("--trace", StringComparer.Ordinal);
-var filteredArgs = args.Where(a => !string.Equals(a, "--trace", StringComparison.Ordinal)).ToArray();
+Environment.ExitCode = RunCli(args);
+return;
 
-if (TryLoadEmbeddedBundle(out var embeddedBundleText))
+static int RunCli(string[] args)
 {
-    Environment.ExitCode = RunEmbeddedBundle(embeddedBundleText!, filteredArgs, traceEnabled);
-    return;
+    var traceEnabled = args.Contains("--trace", StringComparer.Ordinal);
+    var filteredArgs = args.Where(a => !string.Equals(a, "--trace", StringComparison.Ordinal)).ToArray();
+
+    if (TryLoadEmbeddedBundle(out var embeddedBundleText))
+    {
+        return RunEmbeddedBundle(embeddedBundleText!, filteredArgs, traceEnabled);
+    }
+
+    if (filteredArgs.Length == 0)
+    {
+        PrintUsage();
+        return 1;
+    }
+
+    switch (filteredArgs[0])
+    {
+        case "repl":
+            return RunRepl();
+        case "run":
+            if (filteredArgs.Length < 2)
+            {
+                PrintUsage();
+                return 1;
+            }
+            return RunSource(filteredArgs[1], filteredArgs.Skip(2).ToArray(), traceEnabled);
+        case "serve":
+            if (filteredArgs.Length < 2)
+            {
+                PrintUsage();
+                return 1;
+            }
+
+    if (!CliHttpServe.TryParseServeOptions(filteredArgs.Skip(2).ToArray(), out var port, out var appArgs))
+            {
+                PrintUsage();
+                return 1;
+            }
+
+            return RunServe(filteredArgs[1], appArgs, port, traceEnabled);
+        default:
+            PrintUsage();
+            return 1;
+    }
 }
 
-if (filteredArgs.Length == 0)
-{
-    PrintUsage();
-    Environment.ExitCode = 1;
-    return;
-}
-
-if (filteredArgs[0] == "repl")
+static int RunRepl()
 {
     var session = new AosReplSession();
     string? line;
@@ -33,45 +67,9 @@ if (filteredArgs[0] == "repl")
         var output = session.ExecuteLine(line);
         Console.WriteLine(output);
     }
-    return;
+
+    return 0;
 }
-
-if (filteredArgs[0] == "run")
-{
-    if (filteredArgs.Length < 2)
-    {
-        PrintUsage();
-        Environment.ExitCode = 1;
-        return;
-    }
-
-    Environment.ExitCode = RunSource(filteredArgs[1], filteredArgs.Skip(2).ToArray(), traceEnabled);
-    return;
-}
-
-if (filteredArgs[0] == "serve")
-{
-    if (filteredArgs.Length < 2)
-    {
-        PrintUsage();
-        Environment.ExitCode = 1;
-        return;
-    }
-
-    if (!TryParseServeOptions(filteredArgs.Skip(2).ToArray(), out var port, out var appArgs))
-    {
-        PrintUsage();
-        Environment.ExitCode = 1;
-        return;
-    }
-
-    Environment.ExitCode = RunServe(filteredArgs[1], appArgs, port, traceEnabled);
-    return;
-}
-
-PrintUsage();
-Environment.ExitCode = 1;
-return;
 
 static int RunSource(string path, string[] argv, bool traceEnabled)
 {
@@ -138,9 +136,9 @@ static int RunServe(string path, string[] argv, int port, bool traceEnabled)
             using var client = listener.AcceptTcpClient();
             using var stream = client.GetStream();
 
-            if (!TryReadHttpRequestLine(stream, out var method, out var requestPath))
+            if (!CliHttpServe.TryReadHttpRequestLine(stream, out var method, out var requestPath))
             {
-                WriteHttpResponse(stream, null);
+                CliHttpServe.WriteHttpResponse(stream, null);
                 continue;
             }
 
@@ -149,29 +147,11 @@ static int RunServe(string path, string[] argv, int port, bool traceEnabled)
                 runtime.TraceSteps.Clear();
             }
 
-            var eventNode = new AosNode(
-                "Event",
-                "Message",
-                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-                {
-                    ["type"] = new AosAttrValue(AosAttrKind.String, "http.request"),
-                    ["payload"] = new AosAttrValue(AosAttrKind.String, $"{method} {requestPath}")
-                },
-                new List<AosNode>(),
-                new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+            var eventNode = CliHttpServe.CreateHttpRequestEvent(method, requestPath);
 
             if (traceEnabled)
             {
-                runtime.TraceSteps.Add(new AosNode(
-                    "Step",
-                    "auto",
-                    new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-                    {
-                        ["kind"] = new AosAttrValue(AosAttrKind.String, "EventDispatch"),
-                        ["nodeId"] = new AosAttrValue(AosAttrKind.String, eventNode.Id)
-                    },
-                    new List<AosNode>(),
-                    new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
+                CliHttpServe.AppendEventDispatchTrace(runtime, eventNode);
             }
 
             var next = RuntimeDispatch(interpreter, runtime, AosValue.FromNode(eventNode), state);
@@ -190,16 +170,7 @@ static int RunServe(string path, string[] argv, int port, bool traceEnabled)
                 {
                     if (traceEnabled)
                     {
-                        runtime.TraceSteps.Add(new AosNode(
-                            "Step",
-                            "auto",
-                            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-                            {
-                                ["kind"] = new AosAttrValue(AosAttrKind.String, "CommandExecute"),
-                                ["nodeId"] = new AosAttrValue(AosAttrKind.String, command.Id)
-                            },
-                            new List<AosNode>(),
-                            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
+                        CliHttpServe.AppendCommandExecuteTrace(runtime, command);
                     }
 
                     var commandExitCode = commandExecutor.Execute(command);
@@ -219,7 +190,7 @@ static int RunServe(string path, string[] argv, int port, bool traceEnabled)
                 state = next;
             }
 
-            WriteHttpResponse(stream, commandExecutor.HttpResponsePayload);
+            CliHttpServe.WriteHttpResponse(stream, commandExecutor.HttpResponsePayload);
             if (traceEnabled)
             {
                 Console.WriteLine(FormatTrace("trace1", runtime.TraceSteps));
@@ -239,30 +210,6 @@ static int RunServe(string path, string[] argv, int port, bool traceEnabled)
     }
 }
 
-static bool TryParseServeOptions(string[] args, out int port, out string[] appArgs)
-{
-    port = 8080;
-    var collected = new List<string>();
-    for (var i = 0; i < args.Length; i++)
-    {
-        if (string.Equals(args[i], "--port", StringComparison.Ordinal))
-        {
-            if (i + 1 >= args.Length || !int.TryParse(args[i + 1], out var parsedPort) || parsedPort < 0 || parsedPort > 65535)
-            {
-                appArgs = Array.Empty<string>();
-                return false;
-            }
-            port = parsedPort;
-            i++;
-            continue;
-        }
-
-        collected.Add(args[i]);
-    }
-
-    appArgs = collected.ToArray();
-    return true;
-}
 
 static bool TryLoadProgramForExecution(
     string path,
@@ -341,75 +288,6 @@ static bool TryLoadProgramForExecution(
     program = parse.Root;
     return true;
 }
-
-static bool TryReadHttpRequestLine(NetworkStream stream, out string method, out string path)
-{
-    method = string.Empty;
-    path = string.Empty;
-
-    var bytes = new List<byte>(1024);
-    var endSeen = 0;
-    var pattern = new byte[] { 13, 10, 13, 10 };
-    while (bytes.Count < 16384)
-    {
-        var next = stream.ReadByte();
-        if (next < 0)
-        {
-            break;
-        }
-        var b = (byte)next;
-        bytes.Add(b);
-        if (b == pattern[endSeen])
-        {
-            endSeen++;
-            if (endSeen == 4)
-            {
-                break;
-            }
-        }
-        else
-        {
-            endSeen = b == pattern[0] ? 1 : 0;
-        }
-    }
-
-    var text = Encoding.ASCII.GetString(bytes.ToArray());
-    var firstLineEnd = text.IndexOf("\r\n", StringComparison.Ordinal);
-    var firstLine = firstLineEnd >= 0 ? text[..firstLineEnd] : text;
-    var parts = firstLine.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-    if (parts.Length < 2)
-    {
-        return false;
-    }
-
-    method = parts[0];
-    path = parts[1];
-    return true;
-}
-
-static void WriteHttpResponse(NetworkStream stream, string? payload)
-{
-    var body = payload ?? string.Empty;
-    string response;
-    if (payload is null)
-    {
-        response = "HTTP/1.1 204 No Content\r\nContent-Length: 0\r\n\r\n";
-    }
-    else
-    {
-        var bodyBytes = Encoding.UTF8.GetBytes(body);
-        response =
-            "HTTP/1.1 200 OK\r\n" +
-            "Content-Type: text/plain; charset=utf-8\r\n" +
-            $"Content-Length: {bodyBytes.Length}\r\n" +
-            "\r\n" +
-            body;
-    }
-
-    var output = Encoding.UTF8.GetBytes(response);
-    stream.Write(output, 0, output.Length);
-}
-
 
 static AosParseResult Parse(string source)
 {
@@ -647,7 +525,7 @@ static AosValue ExecuteLifecycle(AosInterpreter interpreter, AosRuntime runtime,
         return state;
     }
 
-    IEventSource eventSource = CreateEventSource(argValue);
+    var eventSource = CliAdapters.CreateEventSource(argValue);
     ICommandExecutor commandExecutor = new CliCommandExecutor();
 
     while (true)
@@ -1024,213 +902,4 @@ static AosNode BuildArgvNode(string[] values)
         new Dictionary<string, AosAttrValue>(StringComparer.Ordinal),
         children,
         new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
-}
-
-static IEventSource CreateEventSource(AosValue argValue)
-{
-    if (argValue.Kind == AosValueKind.Node)
-    {
-        var argvNode = argValue.AsNode();
-        if (TryGetArgString(argvNode, 0, out var marker) &&
-            string.Equals(marker, "__event_message", StringComparison.Ordinal) &&
-            TryGetArgString(argvNode, 1, out var type) &&
-            TryGetArgString(argvNode, 2, out var payload))
-        {
-            return new MessageOnceEventSource(type, payload);
-        }
-    }
-
-    return new StartOnlyEventSource();
-}
-
-static bool TryGetArgString(AosNode argvNode, int index, out string value)
-{
-    value = string.Empty;
-    if (index < 0 || index >= argvNode.Children.Count)
-    {
-        return false;
-    }
-
-    var child = argvNode.Children[index];
-    if (!string.Equals(child.Kind, "Lit", StringComparison.Ordinal))
-    {
-        return false;
-    }
-
-    if (!child.Attrs.TryGetValue("value", out var attr) || attr.Kind != AosAttrKind.String)
-    {
-        return false;
-    }
-
-    value = attr.AsString();
-    return true;
-}
-
-internal interface IEventSource
-{
-    AosNode? NextEvent();
-}
-
-internal sealed class StartOnlyEventSource : IEventSource
-{
-    private bool _dispatched;
-
-    public AosNode? NextEvent()
-    {
-        if (_dispatched)
-        {
-            return null;
-        }
-
-        _dispatched = true;
-        return new AosNode(
-            "Event",
-            "Start",
-            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal),
-            new List<AosNode>(),
-            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
-    }
-}
-
-internal sealed class MessageOnceEventSource : IEventSource
-{
-    private readonly string _type;
-    private readonly string _payload;
-    private bool _dispatched;
-
-    public MessageOnceEventSource(string type, string payload)
-    {
-        _type = type;
-        _payload = payload;
-    }
-
-    public AosNode? NextEvent()
-    {
-        if (_dispatched)
-        {
-            return null;
-        }
-
-        _dispatched = true;
-        return new AosNode(
-            "Event",
-            "Message",
-            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-            {
-                ["type"] = new AosAttrValue(AosAttrKind.String, _type),
-                ["payload"] = new AosAttrValue(AosAttrKind.String, _payload)
-            },
-            new List<AosNode>(),
-            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
-    }
-}
-
-internal sealed class FutureWebEventSource : IEventSource
-{
-    public AosNode? NextEvent() => null;
-}
-
-internal interface ICommandExecutor
-{
-    int? Execute(AosNode command);
-}
-
-internal sealed class CliCommandExecutor : ICommandExecutor
-{
-    public int? Execute(AosNode command)
-    {
-        if (command.Kind != "Command")
-        {
-            return null;
-        }
-
-        if (command.Id == "Exit" &&
-            command.Attrs.TryGetValue("code", out var codeAttr) &&
-            codeAttr.Kind == AosAttrKind.Int)
-        {
-            return codeAttr.AsInt();
-        }
-
-        if (command.Id == "Print" &&
-            command.Attrs.TryGetValue("text", out var textAttr) &&
-            textAttr.Kind == AosAttrKind.String)
-        {
-            Console.WriteLine(textAttr.AsString());
-            return null;
-        }
-
-        if (command.Id == "Emit" &&
-            command.Attrs.TryGetValue("type", out var emitTypeAttr) &&
-            emitTypeAttr.Kind == AosAttrKind.String &&
-            command.Attrs.TryGetValue("payload", out var emitPayloadAttr) &&
-            emitPayloadAttr.Kind == AosAttrKind.String)
-        {
-            if (string.Equals(emitTypeAttr.AsString(), "stdout", StringComparison.Ordinal))
-            {
-                Console.WriteLine(emitPayloadAttr.AsString());
-            }
-        }
-
-        return null;
-    }
-}
-
-internal sealed class FutureWebCommandExecutor : ICommandExecutor
-{
-    public int? Execute(AosNode command) => null;
-}
-
-internal sealed class ServeCommandExecutor : ICommandExecutor
-{
-    public string? HttpResponsePayload { get; private set; }
-    public bool ExitRequested { get; private set; }
-
-    public void Reset()
-    {
-        HttpResponsePayload = null;
-        ExitRequested = false;
-    }
-
-    public int? Execute(AosNode command)
-    {
-        if (command.Kind != "Command")
-        {
-            return null;
-        }
-
-        if (command.Id == "Exit" &&
-            command.Attrs.TryGetValue("code", out var codeAttr) &&
-            codeAttr.Kind == AosAttrKind.Int)
-        {
-            ExitRequested = true;
-            return codeAttr.AsInt();
-        }
-
-        if (command.Id == "Print" &&
-            command.Attrs.TryGetValue("text", out var textAttr) &&
-            textAttr.Kind == AosAttrKind.String)
-        {
-            Console.WriteLine(textAttr.AsString());
-            return null;
-        }
-
-        if (command.Id == "Emit" &&
-            command.Attrs.TryGetValue("type", out var emitTypeAttr) &&
-            emitTypeAttr.Kind == AosAttrKind.String &&
-            command.Attrs.TryGetValue("payload", out var emitPayloadAttr) &&
-            emitPayloadAttr.Kind == AosAttrKind.String)
-        {
-            var emitType = emitTypeAttr.AsString();
-            if (string.Equals(emitType, "stdout", StringComparison.Ordinal))
-            {
-                Console.WriteLine(emitPayloadAttr.AsString());
-            }
-            else if (string.Equals(emitType, "http.response", StringComparison.Ordinal))
-            {
-                HttpResponsePayload = emitPayloadAttr.AsString();
-            }
-        }
-
-        return null;
-    }
 }

@@ -329,7 +329,7 @@ public class AosTests
         {
             var response = SendHttpRequest(port, "GET /health HTTP/1.1\r\nHost: localhost\r\n\r\n");
             Assert.That(response.Contains("HTTP/1.1 200 OK", StringComparison.Ordinal), Is.True);
-            Assert.That(response.EndsWith("ok", StringComparison.Ordinal), Is.True);
+            Assert.That(response.EndsWith("{\"status\":\"ok\"}", StringComparison.Ordinal), Is.True);
         }
         finally
         {

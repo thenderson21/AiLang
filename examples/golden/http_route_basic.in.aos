@@ -1,0 +1,12 @@
+Program#rp1 {
+  Call#rp2(target=compiler.route) {
+    Lit#rp3(value="/health")
+    AppendChild#rp4 {
+      AppendChild#rp5 {
+        MakeBlock#rp6 { Lit#rp7(value="routes") }
+        Route#rp8(path="/health" handler="health")
+      }
+      Route#rp9(path="/users" handler="users")
+    }
+  }
+}

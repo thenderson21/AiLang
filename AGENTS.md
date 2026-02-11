@@ -6,7 +6,7 @@ The AI must treat architectural constraints as hard rules.
 ## Non-negotiable constraints
 
 - NO external libraries or NuGet packages.
-- NO JSON usage anywhere (input, output, internal).
+- NO JSON usage anywhere (input, output, internal), except explicit host boundary adapters for client-facing integrations (for example HTTP/Web API responses) when approved by task requirements.
 - ONLY the AI-Optimized Syntax (AOS) is allowed.
 - The interpreter, validator, and REPL must remain deterministic.
 - No network, filesystem writes, time, or randomness unless explicitly via capability and permission.

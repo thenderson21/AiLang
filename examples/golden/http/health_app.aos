@@ -12,16 +12,42 @@ Program#h1 {
         Let#h13(name=reqPayload) { AttrValueString#h14 { Var#h15(name=event) Lit#h16(value=0) } }
         Let#h32(name=req) { Call#h33(target=compiler.parseHttpRequest) { Var#h34(name=reqPayload) } }
         Let#h35(name=reqPath) { AttrValueString#h36 { Var#h37(name=req) Lit#h38(value=1) } }
+        Let#h39(name=routes) {
+          AppendChild#h40 {
+            AppendChild#h41 {
+              MakeBlock#h42 { Lit#h43(value="routes") }
+              Route#h44(path="/health" handler="health")
+            }
+            Route#h45(path="/users" handler="users")
+          }
+        }
+        Let#h46(name=match) { Call#h47(target=compiler.route) { Var#h48(name=reqPath) Var#h49(name=routes) } }
+        Let#h50(name=handler) { AttrValueString#h51 { Var#h52(name=match) Lit#h53(value=0) } }
         If#h17 {
-          Eq#h18 { Var#h19(name=reqPath) Lit#h20(value="/health") }
+          Eq#h18 { Var#h19(name=handler) Lit#h20(value="health") }
           Block#h21 {
+            Let#h54(name=bodyMap) {
+              Map#h55 { Field#h58(key="status") { Lit#h59(value="ok") } }
+            }
+            Let#h60(name=bodyJson) { Call#h61(target=compiler.toJson) { Var#h62(name=bodyMap) } }
+            Let#h63(name=cmdText) {
+              StrConcat#h64 {
+                Lit#h65(value="Program#cmdp1 { Command#Emit(type=\"http.response\" payload=\"")
+                StrConcat#h66 {
+                  StrEscape#h67 { Var#h68(name=bodyJson) }
+                  Lit#h69(value="\") }")
+                }
+              }
+            }
+            Let#h70(name=cmdParsed) { Call#h71(target=compiler.parse) { Var#h72(name=cmdText) } }
+            Let#h73(name=cmdNode) { ChildAt#h74 { Var#h75(name=cmdParsed) Lit#h76(value=0) } }
             Return#h22 {
               AppendChild#h23 {
                 AppendChild#h24 {
                   MakeBlock#h25 { Lit#h26(value="next") }
                   Var#h27(name=state)
                 }
-                Command#Emit(type="http.response" payload="ok")
+                Var#h77(name=cmdNode)
               }
             }
           }
