@@ -435,8 +435,14 @@ static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnab
             return 3;
         }
 
-        var execution = ExecuteModuleEntry(bootstrapInterpreter, runtime, entryExport, exportValue, "__entryArgs");
-        var result = execution.Value;
+        runtime.Env["__program"] = AosValue.FromNode(driverProgram);
+        runtime.ReadOnlyBindings.Add("__program");
+        runtime.Env["__program_result"] = exportValue;
+        runtime.ReadOnlyBindings.Add("__program_result");
+        runtime.Env["__entryExport"] = AosValue.FromString(entryExport);
+        runtime.ReadOnlyBindings.Add("__entryExport");
+
+        var result = ExecuteRuntimeStart(runtime, BuildKernelRunArgs());
 
         if (IsErrNode(result, out var errNode))
         {
@@ -534,108 +540,6 @@ static bool IsErrNode(AosValue value, out AosNode? errNode)
     errNode = node;
     return true;
 }
-
-static (AosValue Value, bool SuppressOutput) ExecuteModuleEntry(
-    AosInterpreter interpreter,
-    AosRuntime runtime,
-    string entryExport,
-    AosValue exportValue,
-    string argBindingName)
-{
-    if (HasFunctionBinding(runtime, entryExport))
-    {
-        var args = runtime.Env.TryGetValue(argBindingName, out var argValue) ? argValue : AosValue.FromNode(BuildArgvNode(Array.Empty<string>()));
-        var callResult = InvokeNamedFunction(interpreter, runtime, entryExport, args, arg1: null);
-        return (callResult, false);
-    }
-
-    return (exportValue, false);
-}
-
-static AosValue InvokeNamedFunction(
-    AosInterpreter interpreter,
-    AosRuntime runtime,
-    string functionName,
-    AosValue arg0,
-    AosValue? arg1 = null)
-{
-    var bindings = new List<(string Name, AosValue Value)> { ("__entry_arg0", arg0) };
-    if (arg1 is not null)
-    {
-        bindings.Add(("__entry_arg1", arg1));
-    }
-
-    var previous = new Dictionary<string, AosValue>(StringComparer.Ordinal);
-    foreach (var (name, value) in bindings)
-    {
-        if (runtime.Env.TryGetValue(name, out var prior))
-        {
-            previous[name] = prior;
-        }
-        runtime.Env[name] = value;
-    }
-
-    var callChildren = new List<AosNode>
-    {
-        new(
-            "Var",
-            "entry_arg0",
-            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-            {
-                ["name"] = new AosAttrValue(AosAttrKind.Identifier, "__entry_arg0")
-            },
-            new List<AosNode>(),
-            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)))
-    };
-    if (arg1 is not null)
-    {
-        callChildren.Add(new AosNode(
-            "Var",
-            "entry_arg1",
-            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-            {
-                ["name"] = new AosAttrValue(AosAttrKind.Identifier, "__entry_arg1")
-            },
-            new List<AosNode>(),
-            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
-    }
-
-    var call = new AosNode(
-        "Call",
-        $"entry_call_{functionName}",
-        new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-        {
-            ["target"] = new AosAttrValue(AosAttrKind.Identifier, functionName)
-        },
-        callChildren,
-        new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
-
-    AosValue result;
-    try
-    {
-        result = interpreter.EvaluateExpression(call, runtime);
-    }
-    finally
-    {
-        foreach (var (name, _) in bindings)
-        {
-            if (previous.TryGetValue(name, out var prior))
-            {
-                runtime.Env[name] = prior;
-            }
-            else
-            {
-                runtime.Env.Remove(name);
-            }
-        }
-    }
-
-    return result;
-}
-
-static bool HasFunctionBinding(AosRuntime runtime, string name)
-    => runtime.Env.TryGetValue(name, out var value) && value.Kind == AosValueKind.Function;
-
 
 static string FormatOk(string id, AosValue value)
 {

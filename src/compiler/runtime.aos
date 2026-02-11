@@ -40,10 +40,11 @@ Program#rt_p1 {
             }
           }
           Block#rt_b56 {
+            Let#rt_l51(name=entryExport) { Var#rt_v105(name=__entryExport) }
             If#rt_if22 {
-              Call#rt_c46(target=runtime_has_export) { Var#rt_v105(name=__program) Lit#rt_i60(value="start") Lit#rt_i61(value=0) }
-              Block#rt_b57 { Return#rt_r32 { Call#rt_c47(target=start) { Var#rt_v106(name=argv) } } }
-              Block#rt_b58 { Return#rt_r33 { Var#rt_v107(name=__program_result) } }
+              Eq#rt_eq30 { Var#rt_v106(name=entryExport) Lit#rt_i60(value="") }
+              Block#rt_b57 { Return#rt_r32 { Var#rt_v107(name=__program_result) } }
+              Block#rt_b58 { Return#rt_r33 { Call#rt_c47(target=runtime_call_named_export) { Var#rt_v108(name=entryExport) } } }
             }
           }
         }
@@ -442,6 +443,28 @@ Program#rt_p1 {
               }
             }
           }
+        }
+      }
+    }
+  }
+
+  Let#rt_l52(name=runtime_call_named_export) {
+    Fn#rt_f19(params=exportName) {
+      Block#rt_b87 {
+        Let#rt_l53(name=programText) {
+          StrConcat#rt_s12 {
+            Lit#rt_i98(value="Program#rt_call_p1 { Call#rt_call_c1(target=")
+            StrConcat#rt_s13 {
+              Var#rt_v147(name=exportName)
+              Lit#rt_i99(value=") { Var#rt_call_v1(name=argv) } }")
+            }
+          }
+        }
+        Let#rt_l54(name=parsed) { Call#rt_c62(target=compiler.parse) { Var#rt_v148(name=programText) } }
+        If#rt_if35 {
+          Eq#rt_eq31 { NodeKind#rt_nk8 { Var#rt_v149(name=parsed) } Lit#rt_i100(value="Program") }
+          Block#rt_b88 { Return#rt_r45 { Call#rt_c63(target=compiler.run) { Var#rt_v150(name=parsed) } } }
+          Block#rt_b89 { Return#rt_r46 { Var#rt_v151(name=__program_result) } }
         }
       }
     }
