@@ -1,0 +1,18 @@
+Program#life1 {
+  Export#life2(name=init)
+  Export#life3(name=update)
+  Let#life4(name=init) {
+    Fn#life5(params=args) {
+      Block#life6 {
+        Return#life7 { Lit#life8(value=1) }
+      }
+    }
+  }
+  Let#life9(name=update) {
+    Fn#life10(params=state,event) {
+      Block#life11 {
+        Add#life12 { Var#life13(name=state) Lit#life14(value=0) }
+      }
+    }
+  }
+}

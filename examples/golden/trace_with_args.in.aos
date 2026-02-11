@@ -1,0 +1,3 @@
+Program#ta1 {
+  ChildCount#ta2 { Var#ta3(name=argv) }
+}

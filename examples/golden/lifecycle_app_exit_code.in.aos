@@ -1,0 +1,18 @@
+Program#life30 {
+  Export#life31(name=init)
+  Export#life32(name=update)
+  Let#life33(name=init) {
+    Fn#life34(params=args) {
+      Block#life35 {
+        Return#life36 { Lit#life37(value=0) }
+      }
+    }
+  }
+  Let#life38(name=update) {
+    Fn#life39(params=state,event) {
+      Block#life40 {
+        Return#life41 { Command#Exit(code=9) }
+      }
+    }
+  }
+}

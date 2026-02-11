@@ -1,0 +1,1 @@
+Trace#trace1 { Step#auto(kind="Program" nodeId="ta1") Step#auto(kind="ChildCount" nodeId="ta2") Step#auto(kind="Var" nodeId="ta3") }

@@ -1,8 +1,26 @@
 {
   "version": 2,
-  "dgSpecHash": "OaIFc0oxxMs=",
+  "dgSpecHash": "JfGtV0IpBCU=",
   "success": true,
   "projectFilePath": "/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Cli/AiLang.Cli.csproj",
-  "expectedPackageFiles": [],
-  "logs": []
+  "expectedPackageFiles": [
+    "/Users/toddhenderson/.nuget/packages/microsoft.dotnet.ilcompiler/10.0.2/microsoft.dotnet.ilcompiler.10.0.2.nupkg.sha512",
+    "/Users/toddhenderson/.nuget/packages/microsoft.net.illink.tasks/10.0.2/microsoft.net.illink.tasks.10.0.2.nupkg.sha512",
+    "/Users/toddhenderson/.nuget/packages/runtime.osx-arm64.microsoft.dotnet.ilcompiler/10.0.2/runtime.osx-arm64.microsoft.dotnet.ilcompiler.10.0.2.nupkg.sha512",
+    "/Users/toddhenderson/.nuget/packages/microsoft.netcore.app.runtime.osx-arm64/10.0.2/microsoft.netcore.app.runtime.osx-arm64.10.0.2.nupkg.sha512",
+    "/Users/toddhenderson/.nuget/packages/microsoft.aspnetcore.app.runtime.osx-arm64/10.0.2/microsoft.aspnetcore.app.runtime.osx-arm64.10.0.2.nupkg.sha512",
+    "/Users/toddhenderson/.nuget/packages/microsoft.netcore.app.runtime.nativeaot.osx-arm64/10.0.2/microsoft.netcore.app.runtime.nativeaot.osx-arm64.10.0.2.nupkg.sha512",
+    "/Users/toddhenderson/.nuget/packages/runtime.osx-arm64.microsoft.dotnet.ilcompiler/10.0.2/runtime.osx-arm64.microsoft.dotnet.ilcompiler.10.0.2.nupkg.sha512"
+  ],
+  "logs": [
+    {
+      "code": "NU1900",
+      "level": "Warning",
+      "message": "Error occurred while getting package vulnerability data: Unable to load the service index for source https://api.nuget.org/v3/index.json.",
+      "projectPath": "/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Cli/AiLang.Cli.csproj",
+      "warningLevel": 1,
+      "filePath": "/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Cli/AiLang.Cli.csproj",
+      "targetGraphs": []
+    }
+  ]
 }

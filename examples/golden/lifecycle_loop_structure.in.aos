@@ -1,0 +1,18 @@
+Program#ll1 {
+  Export#ll2(name=init)
+  Export#ll3(name=update)
+  Let#ll4(name=init) {
+    Fn#ll5(params=args) {
+      Block#ll6 {
+        Return#ll7 { Lit#ll8(value=41) }
+      }
+    }
+  }
+  Let#ll9(name=update) {
+    Fn#ll10(params=state,event) {
+      Block#ll11 {
+        Return#ll12 { Add#ll13 { Var#ll14(name=state) Lit#ll15(value=1) } }
+      }
+    }
+  }
+}

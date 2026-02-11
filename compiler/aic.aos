@@ -23,8 +23,14 @@ Program#aic_p1 {
                           Eq#aic_e5 { Var#aic_v7(name=cmd) Lit#aic_i8(value="test") }
                           Block#aic_b1t0 { Return#aic_r5 { Call#aic_c6(target=runTest) { Var#aic_v8(name=args) } } }
                           Block#aic_b1t1 {
-                            Call#aic_c7(target=io.write) { Lit#aic_i9(value="Err#err0(code=AIC001 message=\"Unknown subcommand.\" nodeId=argv)") }
-                            Return#aic_r6 { Lit#aic_i1t0(value=1) }
+                            If#aic_if6 {
+                              Eq#aic_e6 { Var#aic_v9(name=cmd) Lit#aic_i1t1(value="new") }
+                              Block#aic_b1t2 { Return#aic_r7 { Call#aic_c8(target=runNew) { Var#aic_v1t2(name=args) } } }
+                              Block#aic_b1t3 {
+                                Call#aic_c9(target=io.write) { Lit#aic_i9(value="Err#err0(code=AIC001 message=\"Unknown subcommand.\" nodeId=argv)") }
+                                Return#aic_r8 { Lit#aic_i1t0(value=1) }
+                              }
+                            }
                           }
                         }
                       }
@@ -114,6 +120,162 @@ Program#aic_p1 {
           }
           Block#aic_b18 { Return#aic_r15 { Call#aic_c14(target=compiler.test) { Var#aic_v18(name=dir) } } }
         }
+      }
+    }
+  }
+
+  Let#aic_ln1(name=runNew) {
+    Fn#aic_fn1(params=args) {
+      Block#aic_bn1 {
+        Let#aic_ln2(name=name) { Call#aic_cn1(target=readArg) { Var#aic_vn1(name=args) Lit#aic_in1(value=1) } }
+        If#aic_ifn1 {
+          Eq#aic_en1 { Var#aic_vn2(name=name) Lit#aic_in2(value="") }
+          Block#aic_bn2 {
+            Call#aic_cn2(target=io.write) { Lit#aic_in3(value="Err#err0(code=AICN001 message=\"Missing project name.\" nodeId=argv)") }
+            Return#aic_rn1 { Lit#aic_in4(value=1) }
+          }
+          Block#aic_bn3 {
+            If#aic_ifn2 {
+              Call#aic_cn3(target=runIoPathExists) { Var#aic_vn3(name=name) }
+              Block#aic_bn4 {
+                Call#aic_cn4(target=io.write) { Lit#aic_in5(value="Err#err0(code=AICN002 message=\"Directory already exists.\" nodeId=name)") }
+                Return#aic_rn2 { Lit#aic_in6(value=1) }
+              }
+              Block#aic_bn5 {
+                Let#aic_ln3(name=srcDir) { StrConcat#aic_sn1 { Var#aic_vn4(name=name) Lit#aic_in7(value="/src") } }
+                Let#aic_ln4(name=projectPath) { StrConcat#aic_sn2 { Var#aic_vn5(name=name) Lit#aic_in8(value="/project.aiproj") } }
+                Let#aic_ln5(name=appPath) { StrConcat#aic_sn3 { Var#aic_vn6(name=name) Lit#aic_in9(value="/src/app.aos") } }
+                Let#aic_ln6(name=agentsPath) { StrConcat#aic_sn4 { Var#aic_vn7(name=name) Lit#aic_in10(value="/AGENTS.md") } }
+                Call#aic_cn5(target=runIoMakeDir) { Var#aic_vn8(name=name) }
+                Call#aic_cn6(target=runIoMakeDir) { Var#aic_vn9(name=srcDir) }
+                Call#aic_cn7(target=runIoWriteFile) { Var#aic_vn10(name=projectPath) Call#aic_cn8(target=buildProjectManifest) { Var#aic_vn11(name=name) } }
+                Call#aic_cn9(target=runIoWriteFile) { Var#aic_vn12(name=appPath) Call#aic_cn10(target=buildAppTemplate) { Lit#aic_in11(value=0) } }
+                Call#aic_cn11(target=runIoWriteFile) { Var#aic_vn13(name=agentsPath) Call#aic_cn12(target=buildAgentsDoc) { Lit#aic_in12(value=0) } }
+                Call#aic_cn13(target=io.write) { Lit#aic_in13(value="Ok#ok1(type=string value=\"project-created\")") }
+                Return#aic_rn3 { Lit#aic_in14(value=0) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#aic_ln20(name=runIoPathExists) {
+    Fn#aic_fn20(params=path) {
+      Block#aic_bn20 {
+        Let#aic_ln21(name=programText) {
+          StrConcat#aic_sn20 {
+            Lit#aic_in20(value="Program#n1 { Call#n2(target=io.pathExists) { Lit#n3(value=\"")
+            StrConcat#aic_sn21 {
+              StrEscape#aic_se20 { Var#aic_vn20(name=path) }
+              Lit#aic_in21(value="\") } }")
+            }
+          }
+        }
+        Let#aic_ln22(name=parsed) { Call#aic_cn20(target=compiler.parse) { Var#aic_vn21(name=programText) } }
+        If#aic_ifn20 {
+          Eq#aic_en20 { NodeKind#aic_nkn20 { Var#aic_vn22(name=parsed) } Lit#aic_in22(value="Err") }
+          Block#aic_bn21 { Return#aic_rn20 { Lit#aic_in23(value=false) } }
+          Block#aic_bn22 {
+            Let#aic_ln23(name=result) { Call#aic_cn21(target=compiler.run) { Var#aic_vn23(name=parsed) } }
+            If#aic_ifn21 {
+              Eq#aic_en21 { NodeKind#aic_nkn21 { Var#aic_vn24(name=result) } Lit#aic_in24(value="Lit") }
+              Block#aic_bn23 {
+                Return#aic_rn21 { AttrValueBool#aic_avbn20 { Var#aic_vn25(name=result) Lit#aic_in25(value=0) } }
+              }
+              Block#aic_bn24 { Return#aic_rn22 { Lit#aic_in26(value=false) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#aic_ln30(name=runIoMakeDir) {
+    Fn#aic_fn30(params=path) {
+      Block#aic_bn30 {
+        Let#aic_ln31(name=programText) {
+          StrConcat#aic_sn30 {
+            Lit#aic_in30(value="Program#n4 { Call#n5(target=io.makeDir) { Lit#n6(value=\"")
+            StrConcat#aic_sn31 {
+              StrEscape#aic_se30 { Var#aic_vn30(name=path) }
+              Lit#aic_in31(value="\") } }")
+            }
+          }
+        }
+        Let#aic_ln32(name=parsed) { Call#aic_cn30(target=compiler.parse) { Var#aic_vn31(name=programText) } }
+        If#aic_ifn30 {
+          Eq#aic_en30 { NodeKind#aic_nkn30 { Var#aic_vn32(name=parsed) } Lit#aic_in32(value="Err") }
+          Block#aic_bn31 { Return#aic_rn30 { Lit#aic_in33(value=1) } }
+          Block#aic_bn32 {
+            Call#aic_cn31(target=compiler.run) { Var#aic_vn33(name=parsed) }
+            Return#aic_rn31 { Lit#aic_in34(value=0) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#aic_ln40(name=runIoWriteFile) {
+    Fn#aic_fn40(params=path,text) {
+      Block#aic_bn40 {
+        Let#aic_ln41(name=programText) {
+          StrConcat#aic_sn40 {
+            Lit#aic_in40(value="Program#n7 { Call#n8(target=io.writeFile) { Lit#n9(value=\"")
+            StrConcat#aic_sn41 {
+              StrEscape#aic_se40 { Var#aic_vn40(name=path) }
+              StrConcat#aic_sn42 {
+                Lit#aic_in41(value="\") Lit#n10(value=\"")
+                StrConcat#aic_sn43 {
+                  StrEscape#aic_se41 { Var#aic_vn41(name=text) }
+                  Lit#aic_in42(value="\") } }")
+                }
+              }
+            }
+          }
+        }
+        Let#aic_ln42(name=parsed) { Call#aic_cn40(target=compiler.parse) { Var#aic_vn42(name=programText) } }
+        If#aic_ifn40 {
+          Eq#aic_en40 { NodeKind#aic_nkn40 { Var#aic_vn43(name=parsed) } Lit#aic_in43(value="Err") }
+          Block#aic_bn41 { Return#aic_rn40 { Lit#aic_in44(value=1) } }
+          Block#aic_bn42 {
+            Call#aic_cn41(target=compiler.run) { Var#aic_vn44(name=parsed) }
+            Return#aic_rn41 { Lit#aic_in45(value=0) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#aic_ln50(name=buildProjectManifest) {
+    Fn#aic_fn50(params=name) {
+      Block#aic_bn50 {
+        Return#aic_rn50 {
+          StrConcat#aic_sn50 {
+            Lit#aic_in50(value="Program#p1 {\nProject#proj1(\nname=\"")
+            StrConcat#aic_sn51 {
+              StrEscape#aic_se50 { Var#aic_vn50(name=name) }
+              Lit#aic_in51(value="\"\nentryFile=\"src/app.aos\"\nentryExport=\"start\"\n)\n}\n")
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#aic_ln60(name=buildAppTemplate) {
+    Fn#aic_fn60(params=_) {
+      Block#aic_bn60 {
+        Return#aic_rn60 { Lit#aic_in60(value="Program#p1 {\nExport#e1(name=\"start\")\nLet#l1(name=\"start\") {\nFn#f1(params=\"args\") {\nBlock#b1 {\nCall#print1(target=io.print) {\nLit#s1(value=\"Hello from AiLang.\")\n}\nReturn#r1 { Lit#i1(value=0) }\n}\n}\n}\n}\n") }
+      }
+    }
+  }
+
+  Let#aic_ln70(name=buildAgentsDoc) {
+    Fn#aic_fn70(params=_) {
+      Block#aic_bn70 {
+        Return#aic_rn70 { Lit#aic_in70(value="Agent Rules\n\t•\tEntry function is Export start(args).\n\t•\tReturn int for exit code.\n\t•\tDeterministic output only.\n\t•\tDo not modify project.aiproj structure.\n\t•\tNo JSON.\n") }
       }
     }
   }

@@ -161,3 +161,4 @@
 /Users/toddhenderson/RiderProjects/AiLang/tests/AiLang.Tests/bin/Debug/net10.0/format.aos
 /Users/toddhenderson/RiderProjects/AiLang/tests/AiLang.Tests/bin/Debug/net10.0/validate.aos
 /Users/toddhenderson/RiderProjects/AiLang/tests/AiLang.Tests/obj/Debug/net10.0/AiLang.Tests.sourcelink.json
+/Users/toddhenderson/RiderProjects/AiLang/tests/AiLang.Tests/bin/Debug/net10.0/route.aos

@@ -9,6 +9,8 @@ public sealed class AosRuntime
     public Dictionary<string, Dictionary<string, AosValue>> ModuleExports { get; } = new(StringComparer.Ordinal);
     public HashSet<string> ModuleLoading { get; } = new(StringComparer.Ordinal);
     public Stack<Dictionary<string, AosValue>> ExportScopes { get; } = new();
+    public bool TraceEnabled { get; set; }
+    public List<AosNode> TraceSteps { get; } = new();
     public AosNode? Program { get; set; }
 }
 
@@ -50,6 +52,20 @@ public sealed class AosInterpreter
 
     private AosValue EvalNode(AosNode node, AosRuntime runtime, Dictionary<string, AosValue> env)
     {
+        if (runtime.TraceEnabled)
+        {
+            runtime.TraceSteps.Add(new AosNode(
+                "Step",
+                "auto",
+                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                {
+                    ["kind"] = new AosAttrValue(AosAttrKind.String, node.Kind),
+                    ["nodeId"] = new AosAttrValue(AosAttrKind.String, node.Id)
+                },
+                new List<AosNode>(),
+                node.Span));
+        }
+
         _evalDepth++;
         if (_evalDepth > MaxEvalDepth)
         {
@@ -149,6 +165,14 @@ public sealed class AosInterpreter
                 return EvalMakeErr(node, runtime, env);
             case "MakeLitString":
                 return EvalMakeLitString(node, runtime, env);
+            case "Event":
+            case "Command":
+            case "HttpRequest":
+            case "Route":
+            case "Match":
+            case "Map":
+            case "Field":
+                return AosValue.FromNode(node);
             case "NodeKind":
                 return EvalNodeKind(node, runtime, env);
             case "NodeId":
@@ -368,6 +392,70 @@ public sealed class AosInterpreter
             return AosValue.FromBool(File.Exists(pathValue.AsString()));
         }
 
+        if (target == "io.pathExists")
+        {
+            if (!runtime.Permissions.Contains("io"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var pathValue = EvalNode(node.Children[0], runtime, env);
+            if (pathValue.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            var path = pathValue.AsString();
+            return AosValue.FromBool(File.Exists(path) || Directory.Exists(path));
+        }
+
+        if (target == "io.makeDir")
+        {
+            if (!runtime.Permissions.Contains("io"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var pathValue = EvalNode(node.Children[0], runtime, env);
+            if (pathValue.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            Directory.CreateDirectory(pathValue.AsString());
+            return AosValue.Void;
+        }
+
+        if (target == "io.writeFile")
+        {
+            if (!runtime.Permissions.Contains("io"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 2)
+            {
+                return AosValue.Unknown;
+            }
+
+            var pathValue = EvalNode(node.Children[0], runtime, env);
+            var textValue = EvalNode(node.Children[1], runtime, env);
+            if (pathValue.Kind != AosValueKind.String || textValue.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            File.WriteAllText(pathValue.AsString(), textValue.AsString());
+            return AosValue.Void;
+        }
+
         if (target == "compiler.parse")
         {
             if (!runtime.Permissions.Contains("compiler"))
@@ -399,6 +487,64 @@ public sealed class AosInterpreter
             }
             diagnostic ??= new AosDiagnostic("PAR000", "Parse failed.", "unknown", null);
             return AosValue.FromNode(CreateErrNode("parse_err", diagnostic.Code, diagnostic.Message, diagnostic.NodeId ?? "unknown", node.Span));
+        }
+
+        if (target == "compiler.parseHttpRequest")
+        {
+            if (!runtime.Permissions.Contains("compiler"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var payload = EvalNode(node.Children[0], runtime, env);
+            if (payload.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            var request = payload.AsString().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var method = request.Length > 0 ? request[0] : string.Empty;
+            var path = request.Length > 1 ? request[1] : string.Empty;
+            var parsed = new AosNode(
+                "HttpRequest",
+                "auto",
+                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                {
+                    ["method"] = new AosAttrValue(AosAttrKind.String, method),
+                    ["path"] = new AosAttrValue(AosAttrKind.String, path)
+                },
+                new List<AosNode>(),
+                node.Span);
+            return AosValue.FromNode(parsed);
+        }
+
+        if (target == "compiler.toJson")
+        {
+            if (!runtime.Permissions.Contains("compiler"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var input = EvalNode(node.Children[0], runtime, env);
+            if (input.Kind != AosValueKind.Node)
+            {
+                return AosValue.Unknown;
+            }
+
+            if (!TrySerializeJsonNode(input.AsNode(), out var json))
+            {
+                return AosValue.Unknown;
+            }
+
+            return AosValue.FromString(json);
         }
 
         if (target == "compiler.format")
@@ -502,6 +648,7 @@ public sealed class AosInterpreter
                 return AosValue.Unknown;
             }
 
+            AosStandardLibraryLoader.EnsureRouteLoaded(runtime, this);
             var runEnv = new Dictionary<string, AosValue>(StringComparer.Ordinal);
             var value = Evaluate(input.AsNode(), runtime, runEnv);
             if (IsErrValue(value))
@@ -1135,7 +1282,7 @@ public sealed class AosInterpreter
         {
             switch (ch)
             {
-                case '\"': sb.Append("\\\\\""); break;
+                case '\"': sb.Append("\\\""); break;
                 case '\\': sb.Append("\\\\"); break;
                 case '\n': sb.Append("\\n"); break;
                 case '\r': sb.Append("\\r"); break;
@@ -1143,6 +1290,130 @@ public sealed class AosInterpreter
                 default: sb.Append(ch); break;
             }
         }
+        return sb.ToString();
+    }
+
+    private static bool TrySerializeJsonNode(AosNode node, out string json)
+    {
+        if (node.Kind == "Lit")
+        {
+            if (!node.Attrs.TryGetValue("value", out var litAttr))
+            {
+                json = string.Empty;
+                return false;
+            }
+
+            switch (litAttr.Kind)
+            {
+                case AosAttrKind.String:
+                    json = "\"" + EscapeJsonString(litAttr.AsString()) + "\"";
+                    return true;
+                case AosAttrKind.Int:
+                    json = litAttr.AsInt().ToString();
+                    return true;
+                case AosAttrKind.Bool:
+                    json = litAttr.AsBool() ? "true" : "false";
+                    return true;
+                default:
+                    json = string.Empty;
+                    return false;
+            }
+        }
+
+        if (node.Kind == "Map")
+        {
+            var entries = new List<(string Key, AosNode Value, int Index)>();
+            for (var i = 0; i < node.Children.Count; i++)
+            {
+                var child = node.Children[i];
+                if (child.Kind != "Field" ||
+                    !child.Attrs.TryGetValue("key", out var keyAttr) ||
+                    keyAttr.Kind != AosAttrKind.String ||
+                    child.Children.Count != 1)
+                {
+                    json = string.Empty;
+                    return false;
+                }
+
+                entries.Add((keyAttr.AsString(), child.Children[0], i));
+            }
+
+            var ordered = entries
+                .OrderBy(e => e.Key, StringComparer.Ordinal)
+                .ThenBy(e => e.Index)
+                .ToList();
+
+            var sb = new System.Text.StringBuilder();
+            sb.Append('{');
+            for (var i = 0; i < ordered.Count; i++)
+            {
+                if (i > 0)
+                {
+                    sb.Append(',');
+                }
+
+                sb.Append('"');
+                sb.Append(EscapeJsonString(ordered[i].Key));
+                sb.Append('"');
+                sb.Append(':');
+                if (!TrySerializeJsonNode(ordered[i].Value, out var valueJson))
+                {
+                    json = string.Empty;
+                    return false;
+                }
+                sb.Append(valueJson);
+            }
+            sb.Append('}');
+            json = sb.ToString();
+            return true;
+        }
+
+        json = string.Empty;
+        return false;
+    }
+
+    private static string EscapeJsonString(string value)
+    {
+        var sb = new System.Text.StringBuilder();
+        foreach (var ch in value)
+        {
+            switch (ch)
+            {
+                case '"':
+                    sb.Append("\\\"");
+                    break;
+                case '\\':
+                    sb.Append("\\\\");
+                    break;
+                case '\b':
+                    sb.Append("\\b");
+                    break;
+                case '\f':
+                    sb.Append("\\f");
+                    break;
+                case '\n':
+                    sb.Append("\\n");
+                    break;
+                case '\r':
+                    sb.Append("\\r");
+                    break;
+                case '\t':
+                    sb.Append("\\t");
+                    break;
+                default:
+                    if (ch < 0x20)
+                    {
+                        sb.Append("\\u");
+                        sb.Append(((int)ch).ToString("x4"));
+                    }
+                    else
+                    {
+                        sb.Append(ch);
+                    }
+                    break;
+            }
+        }
+
         return sb.ToString();
     }
 
@@ -1224,6 +1495,18 @@ public sealed class AosInterpreter
             var errPath = $"{stem}.err";
             var testName = Path.GetFileName(stem);
             var source = File.ReadAllText(inputPath);
+            if (testName == "new_directory_exists")
+            {
+                Directory.CreateDirectory(Path.Combine(directory, "new", "existing_project"));
+            }
+            else if (testName == "new_success")
+            {
+                var successDir = Path.Combine(directory, "new", "success_project");
+                if (Directory.Exists(successDir))
+                {
+                    Directory.Delete(successDir, recursive: true);
+                }
+            }
 
             string actual;
             string expected;
@@ -1237,6 +1520,21 @@ public sealed class AosInterpreter
             else if (File.Exists(outPath))
             {
                 expected = NormalizeGoldenText(File.ReadAllText(outPath));
+                if (testName.StartsWith("trace_", StringComparison.Ordinal))
+                {
+                    actual = ExecuteTraceGolden(source, testName);
+                    goto compare_result;
+                }
+                if (testName.StartsWith("lifecycle_", StringComparison.Ordinal))
+                {
+                    actual = ExecuteLifecycleGolden(source, testName);
+                    goto compare_result;
+                }
+                if (testName == "http_health_route_refactor")
+                {
+                    actual = ExecuteLifecycleGolden(source, testName);
+                    goto compare_result;
+                }
                 if (testName == "publish_binary_runs")
                 {
                     actual = ExecutePublishBinaryGolden(aicProgram, directory, source);
@@ -1271,6 +1569,15 @@ public sealed class AosInterpreter
                 failCount++;
                 Console.WriteLine($"FAIL {testName}");
             }
+
+            if (testName == "new_success")
+            {
+                var successDir = Path.Combine(directory, "new", "success_project");
+                if (Directory.Exists(successDir))
+                {
+                    Directory.Delete(successDir, recursive: true);
+                }
+            }
         }
 
         return failCount == 0 ? 0 : 1;
@@ -1283,6 +1590,8 @@ public sealed class AosInterpreter
         runtime.Permissions.Add("compiler");
         runtime.Env["argv"] = BuildArgvNode(argv);
         runtime.ReadOnlyBindings.Add("argv");
+        var interpreter = new AosInterpreter();
+        AosStandardLibraryLoader.EnsureRouteLoaded(runtime, interpreter);
 
         var oldIn = Console.In;
         var oldOut = Console.Out;
@@ -1291,7 +1600,6 @@ public sealed class AosInterpreter
         {
             Console.SetIn(new StringReader(input));
             Console.SetOut(writer);
-            var interpreter = new AosInterpreter();
             interpreter.EvaluateProgram(aicProgram, runtime);
         }
         finally
@@ -1305,6 +1613,18 @@ public sealed class AosInterpreter
 
     private static string[]? ResolveGoldenArgs(string directory, string testName, bool errorMode)
     {
+        if (testName.StartsWith("new_", StringComparison.Ordinal))
+        {
+            var newDir = Path.Combine(directory, "new");
+            return testName switch
+            {
+                "new_missing_name" => new[] { "new" },
+                "new_directory_exists" => new[] { "new", Path.Combine(newDir, "existing_project") },
+                "new_success" => new[] { "new", Path.Combine(newDir, "success_project") },
+                _ => new[] { "new" }
+            };
+        }
+
         if (testName.StartsWith("publish_", StringComparison.Ordinal))
         {
             return testName switch
@@ -1327,6 +1647,141 @@ public sealed class AosInterpreter
         }
 
         return null;
+    }
+
+    private static string ExecuteTraceGolden(string source, string testName)
+    {
+        var hostBinary = ResolveHostBinaryPath();
+        if (hostBinary is null)
+        {
+            return "Err#err0(code=RUN001 message=\"host binary not found.\" nodeId=trace)";
+        }
+
+        var tempDir = Path.Combine(Path.GetTempPath(), $"ailang-trace-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var sourcePath = Path.Combine(tempDir, "trace_input.aos");
+            File.WriteAllText(sourcePath, source);
+
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = hostBinary,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                WorkingDirectory = Directory.GetCurrentDirectory()
+            };
+            psi.ArgumentList.Add("run");
+            psi.ArgumentList.Add(sourcePath);
+            psi.ArgumentList.Add("--trace");
+            if (testName == "trace_with_args")
+            {
+                psi.ArgumentList.Add("alpha");
+                psi.ArgumentList.Add("beta");
+            }
+
+            using var process = System.Diagnostics.Process.Start(psi);
+            if (process is null)
+            {
+                return "Err#err0(code=RUN001 message=\"Failed to execute trace golden.\" nodeId=trace)";
+            }
+
+            var output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            return NormalizeGoldenText(output);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(tempDir, true);
+            }
+            catch
+            {
+            }
+        }
+    }
+
+    private static string ExecuteLifecycleGolden(string source, string testName)
+    {
+        var hostBinary = ResolveHostBinaryPath();
+        if (hostBinary is null)
+        {
+            return "Err#err0(code=RUN001 message=\"host binary not found.\" nodeId=lifecycle)";
+        }
+
+        var tempDir = Path.Combine(Path.GetTempPath(), $"ailang-lifecycle-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            var sourcePath = Path.Combine(tempDir, "lifecycle_input.aos");
+            File.WriteAllText(sourcePath, source);
+
+            var psi = new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = hostBinary,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                WorkingDirectory = Directory.GetCurrentDirectory()
+            };
+            psi.ArgumentList.Add("run");
+            psi.ArgumentList.Add(sourcePath);
+            if (testName == "lifecycle_event_message_basic" || testName == "http_health_route_refactor")
+            {
+                psi.ArgumentList.Add("__event_message");
+                psi.ArgumentList.Add("text");
+                psi.ArgumentList.Add("GET /health");
+            }
+
+            using var process = System.Diagnostics.Process.Start(psi);
+            if (process is null)
+            {
+                return "Err#err0(code=RUN001 message=\"Failed to execute lifecycle golden.\" nodeId=lifecycle)";
+            }
+
+            var output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            if (testName == "lifecycle_app_exit_code")
+            {
+                return AosFormatter.Format(new AosNode(
+                    "ExitCode",
+                    "ec1",
+                    new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                    {
+                        ["value"] = new AosAttrValue(AosAttrKind.Int, process.ExitCode)
+                    },
+                    new List<AosNode>(),
+                    new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
+            }
+            if (testName == "lifecycle_command_exit_after_print")
+            {
+                var exitText = AosFormatter.Format(new AosNode(
+                    "ExitCode",
+                    "ec1",
+                    new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                    {
+                        ["value"] = new AosAttrValue(AosAttrKind.Int, process.ExitCode)
+                    },
+                    new List<AosNode>(),
+                    new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
+                var printed = NormalizeGoldenText(output);
+                return printed.Length == 0 ? exitText : $"{printed}\n{exitText}";
+            }
+
+            return NormalizeGoldenText(output);
+        }
+        finally
+        {
+            try
+            {
+                Directory.Delete(tempDir, true);
+            }
+            catch
+            {
+            }
+        }
     }
 
     private static string ExecutePublishBinaryGolden(AosNode aicProgram, string directory, string input)
@@ -1482,6 +1937,8 @@ public sealed class AosInterpreter
         runtime.Permissions.Add("console");
         runtime.Permissions.Add("io");
         runtime.Permissions.Add("compiler");
+        var interpreter = new AosInterpreter();
+        AosStandardLibraryLoader.EnsureRouteLoaded(runtime, interpreter);
 
         var validator = new AosValidator();
         var validation = validator.Validate(parse.Root, null, runtime.Permissions, runStructural: false);
@@ -1491,7 +1948,6 @@ public sealed class AosInterpreter
             return AosFormatter.Format(CreateErrNode("diag0", first.Code, first.Message, first.NodeId ?? "unknown", parse.Root.Span));
         }
 
-        var interpreter = new AosInterpreter();
         var result = interpreter.EvaluateProgram(parse.Root, runtime);
         return FormatOkValue(result, parse.Root.Span);
     }

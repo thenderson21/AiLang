@@ -1,0 +1,32 @@
+Program#lmb1 {
+  Export#lmb2(name=init)
+  Export#lmb3(name=update)
+  Let#lmb4(name=init) {
+    Fn#lmb5(params=args) {
+      Block#lmb6 {
+        Return#lmb7 { MakeBlock#lmb8 { Lit#lmb9(value="s0") } }
+      }
+    }
+  }
+  Let#lmb10(name=update) {
+    Fn#lmb11(params=state,event) {
+      Block#lmb12 {
+        If#lmb13 {
+          Eq#lmb14 { NodeId#lmb15 { Var#lmb16(name=event) } Lit#lmb17(value="Message") }
+          Block#lmb18 {
+            Return#lmb19 {
+              AppendChild#lmb20 {
+                AppendChild#lmb21 {
+                  MakeBlock#lmb22 { Lit#lmb23(value="next") }
+                  MakeBlock#lmb24 { Lit#lmb25(value="state") }
+                }
+                Command#Emit(type="stdout" payload="message-ok")
+              }
+            }
+          }
+          Block#lmb26 { Return#lmb27 { MakeBlock#lmb28 { Lit#lmb29(value="state") } } }
+        }
+      }
+    }
+  }
+}

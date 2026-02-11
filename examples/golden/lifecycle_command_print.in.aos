@@ -1,0 +1,26 @@
+Program#lp1 {
+  Export#lp2(name=init)
+  Export#lp3(name=update)
+  Let#lp4(name=init) {
+    Fn#lp5(params=args) {
+      Block#lp6 {
+        Return#lp7 { MakeBlock#lp8 { Lit#lp9(value="s0") } }
+      }
+    }
+  }
+  Let#lp9b(name=update) {
+    Fn#lp10(params=state,event) {
+      Block#lp11 {
+        Return#lp12 {
+          AppendChild#lp13 {
+            AppendChild#lp14 {
+              MakeBlock#lp15 { Lit#lp16(value="lifecycle") }
+              MakeBlock#lp17 { Lit#lp18(value="s1") }
+            }
+            Command#Print(text="hello-lifecycle")
+          }
+        }
+      }
+    }
+  }
+}

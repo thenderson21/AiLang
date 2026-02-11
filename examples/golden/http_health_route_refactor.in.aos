@@ -1,0 +1,44 @@
+Program#hr1 {
+  Export#hr2(name=init)
+  Export#hr3(name=update)
+  Let#hr4(name=init) {
+    Fn#hr5(params=args) {
+      Block#hr6 { Return#hr7 { MakeBlock#hr8 { Lit#hr9(value="state") } } }
+    }
+  }
+  Let#hr10(name=update) {
+    Fn#hr11(params=state,event) {
+      Block#hr12 {
+        Let#hr13(name=reqPayload) { AttrValueString#hr14 { Var#hr15(name=event) Lit#hr16(value=0) } }
+        Let#hr17(name=req) { Call#hr18(target=compiler.parseHttpRequest) { Var#hr19(name=reqPayload) } }
+        Let#hr20(name=reqPath) { AttrValueString#hr21 { Var#hr22(name=req) Lit#hr23(value=1) } }
+        Let#hr24(name=routes) {
+          AppendChild#hr25 {
+            AppendChild#hr26 {
+              MakeBlock#hr27 { Lit#hr28(value="routes") }
+              Route#hr29(path="/health" handler="health")
+            }
+            Route#hr30(path="/users" handler="users")
+          }
+        }
+        Let#hr31(name=match) { Call#hr32(target=compiler.route) { Var#hr33(name=reqPath) Var#hr34(name=routes) } }
+        Let#hr35(name=handler) { AttrValueString#hr36 { Var#hr37(name=match) Lit#hr38(value=0) } }
+        If#hr39 {
+          Eq#hr40 { Var#hr41(name=handler) Lit#hr42(value="health") }
+          Block#hr43 {
+            Return#hr44 {
+              AppendChild#hr45 {
+                AppendChild#hr46 {
+                  MakeBlock#hr47 { Lit#hr48(value="next") }
+                  Var#hr49(name=state)
+                }
+                Command#Emit(type="stdout" payload="ok")
+              }
+            }
+          }
+          Block#hr50 { Return#hr51 { MakeBlock#hr52 { Lit#hr53(value="next") } } }
+        }
+      }
+    }
+  }
+}

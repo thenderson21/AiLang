@@ -1,0 +1,29 @@
+Program#lem1 {
+  Export#lem2(name=init)
+  Export#lem3(name=update)
+  Let#lem4(name=init) {
+    Fn#lem5(params=args) {
+      Block#lem6 {
+        Return#lem7 { MakeBlock#lem8 { Lit#lem9(value="s0") } }
+      }
+    }
+  }
+  Let#lem10(name=update) {
+    Fn#lem11(params=state,event) {
+      Block#lem12 {
+        Return#lem13 {
+          AppendChild#lem14 {
+            AppendChild#lem15 {
+              AppendChild#lem16 {
+                MakeBlock#lem17 { Lit#lem18(value="lifecycle") }
+                MakeBlock#lem19 { Lit#lem20(value="s1") }
+              }
+              Command#Print(text="print-ok")
+            }
+            Command#Emit(type="stdout" payload="emit-ok")
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,4 +1,9 @@
 using AiLang.Core;
+using System.Diagnostics;
+using System.Globalization;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
 
 namespace AiLang.Tests;
 
@@ -294,6 +299,48 @@ public class AosTests
         Assert.That(missingOutput, Is.EqualTo("Err#runtime_err(code=RUN024 message=\"Import file not found: examples/golden/modules/does_not_exist.aos\" nodeId=rm2)"));
     }
 
+    [Test]
+    public void Serve_HealthEndpoint_ReturnsOk()
+    {
+        var appPath = FindRepoFile("examples/golden/http/health_app.aos");
+        var repoRoot = Path.GetDirectoryName(FindRepoFile("AiLang.slnx"))!;
+        var port = FindFreePort();
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            WorkingDirectory = repoRoot
+        };
+        psi.ArgumentList.Add("run");
+        psi.ArgumentList.Add("--project");
+        psi.ArgumentList.Add(Path.Combine(repoRoot, "src", "AiLang.Cli"));
+        psi.ArgumentList.Add("serve");
+        psi.ArgumentList.Add(appPath);
+        psi.ArgumentList.Add("--port");
+        psi.ArgumentList.Add(port.ToString(CultureInfo.InvariantCulture));
+
+        using var process = Process.Start(psi);
+        Assert.That(process, Is.Not.Null);
+
+        try
+        {
+            var response = SendHttpRequest(port, "GET /health HTTP/1.1\r\nHost: localhost\r\n\r\n");
+            Assert.That(response.Contains("HTTP/1.1 200 OK", StringComparison.Ordinal), Is.True);
+            Assert.That(response.EndsWith("{\"status\":\"ok\"}", StringComparison.Ordinal), Is.True);
+        }
+        finally
+        {
+            if (process is { HasExited: false })
+            {
+                process.Kill(entireProcessTree: true);
+                process.WaitForExit(2000);
+            }
+        }
+    }
+
     private static AosParseResult Parse(string source)
     {
         var tokenizer = new AosTokenizer(source);
@@ -380,5 +427,43 @@ public class AosTests
         }
 
         throw new FileNotFoundException($"Could not find {relativePath} from {AppContext.BaseDirectory}");
+    }
+
+    private static int FindFreePort()
+    {
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+        listener.Stop();
+        return port;
+    }
+
+    private static string SendHttpRequest(int port, string request)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        Exception? last = null;
+        while (DateTime.UtcNow < deadline)
+        {
+            try
+            {
+                using var client = new TcpClient();
+                client.Connect(IPAddress.Loopback, port);
+                client.ReceiveTimeout = 2000;
+                client.SendTimeout = 2000;
+                using var stream = client.GetStream();
+                var bytes = Encoding.ASCII.GetBytes(request);
+                stream.Write(bytes, 0, bytes.Length);
+                stream.Flush();
+                using var reader = new StreamReader(stream, Encoding.UTF8);
+                return reader.ReadToEnd();
+            }
+            catch (Exception ex)
+            {
+                last = ex;
+                Thread.Sleep(50);
+            }
+        }
+
+        throw new InvalidOperationException("Failed to connect to serve endpoint.", last);
     }
 }

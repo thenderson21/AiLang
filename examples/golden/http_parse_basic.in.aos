@@ -1,0 +1,3 @@
+Program#hp1 {
+  Call#hp2(target=compiler.parseHttpRequest) { Lit#hp3(value="GET /health") }
+}

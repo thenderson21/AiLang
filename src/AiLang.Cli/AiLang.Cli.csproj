@@ -21,6 +21,10 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>validate.aos</Link>
     </Content>
+    <Content Include="..\..\compiler\route.aos">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>route.aos</Link>
+    </Content>
   </ItemGroup>
 
 </Project>

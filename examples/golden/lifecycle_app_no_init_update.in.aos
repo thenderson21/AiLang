@@ -1,0 +1,10 @@
+Program#life20 {
+  Export#life21(name=start)
+  Let#life22(name=start) {
+    Fn#life23(params=args) {
+      Block#life24 {
+        Return#life25 { Lit#life26(value=5) }
+      }
+    }
+  }
+}

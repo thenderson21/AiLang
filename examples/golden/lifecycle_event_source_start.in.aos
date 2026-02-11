@@ -1,0 +1,18 @@
+Program#les1 {
+  Export#les2(name=init)
+  Export#les3(name=update)
+  Let#les4(name=init) {
+    Fn#les5(params=args) {
+      Block#les6 {
+        Return#les7 { Lit#les8(value=1) }
+      }
+    }
+  }
+  Let#les9(name=update) {
+    Fn#les10(params=state,event) {
+      Block#les11 {
+        Return#les12 { Add#les13 { Var#les14(name=state) Lit#les15(value=0) } }
+      }
+    }
+  }
+}

@@ -1,0 +1,29 @@
+Program#le1 {
+  Export#le2(name=init)
+  Export#le3(name=update)
+  Let#le4(name=init) {
+    Fn#le5(params=args) {
+      Block#le6 {
+        Return#le7 { MakeBlock#le8 { Lit#le9(value="s0") } }
+      }
+    }
+  }
+  Let#le10(name=update) {
+    Fn#le11(params=state,event) {
+      Block#le12 {
+        Return#le13 {
+          AppendChild#le14 {
+            AppendChild#le15 {
+              AppendChild#le16 {
+                MakeBlock#le17 { Lit#le18(value="lifecycle") }
+                MakeBlock#le19 { Lit#le20(value="s2") }
+              }
+              Command#Print(text="before-exit")
+            }
+            Command#Exit(code=7)
+          }
+        }
+      }
+    }
+  }
+}
