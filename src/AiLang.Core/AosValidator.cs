@@ -696,6 +696,48 @@ public sealed class AosValidator
             return AosValueKind.String;
         }
 
+        if (target == "compiler.strCompare")
+        {
+            RequirePermission(node, "compiler", permissions);
+            if (argTypes.Count != 2)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL117", "compiler.strCompare expects 2 arguments.", node.Id, node.Span));
+            }
+            else
+            {
+                if (argTypes[0] != AosValueKind.String && argTypes[0] != AosValueKind.Unknown)
+                {
+                    _diagnostics.Add(new AosDiagnostic("VAL118", "compiler.strCompare arg 1 must be string.", node.Id, node.Span));
+                }
+                if (argTypes[1] != AosValueKind.String && argTypes[1] != AosValueKind.Unknown)
+                {
+                    _diagnostics.Add(new AosDiagnostic("VAL119", "compiler.strCompare arg 2 must be string.", node.Id, node.Span));
+                }
+            }
+            return AosValueKind.Int;
+        }
+
+        if (target == "compiler.strToken")
+        {
+            RequirePermission(node, "compiler", permissions);
+            if (argTypes.Count != 2)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL120", "compiler.strToken expects 2 arguments.", node.Id, node.Span));
+            }
+            else
+            {
+                if (argTypes[0] != AosValueKind.String && argTypes[0] != AosValueKind.Unknown)
+                {
+                    _diagnostics.Add(new AosDiagnostic("VAL121", "compiler.strToken arg 1 must be string.", node.Id, node.Span));
+                }
+                if (argTypes[1] != AosValueKind.Int && argTypes[1] != AosValueKind.Unknown)
+                {
+                    _diagnostics.Add(new AosDiagnostic("VAL122", "compiler.strToken arg 2 must be int.", node.Id, node.Span));
+                }
+            }
+            return AosValueKind.String;
+        }
+
         if (target == "compiler.validate")
         {
             RequirePermission(node, "compiler", permissions);

@@ -489,62 +489,62 @@ public sealed class AosInterpreter
             return AosValue.FromNode(CreateErrNode("parse_err", diagnostic.Code, diagnostic.Message, diagnostic.NodeId ?? "unknown", node.Span));
         }
 
-        if (target == "compiler.parseHttpRequest")
+        if (target == "compiler.strCompare")
         {
             if (!runtime.Permissions.Contains("compiler"))
             {
                 return AosValue.Unknown;
             }
-            if (node.Children.Count != 1)
+            if (node.Children.Count != 2)
             {
                 return AosValue.Unknown;
             }
 
-            var payload = EvalNode(node.Children[0], runtime, env);
-            if (payload.Kind != AosValueKind.String)
+            var left = EvalNode(node.Children[0], runtime, env);
+            var right = EvalNode(node.Children[1], runtime, env);
+            if (left.Kind != AosValueKind.String || right.Kind != AosValueKind.String)
             {
                 return AosValue.Unknown;
             }
 
-            var request = payload.AsString().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            var method = request.Length > 0 ? request[0] : string.Empty;
-            var path = request.Length > 1 ? request[1] : string.Empty;
-            var parsed = new AosNode(
-                "HttpRequest",
-                "auto",
-                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-                {
-                    ["method"] = new AosAttrValue(AosAttrKind.String, method),
-                    ["path"] = new AosAttrValue(AosAttrKind.String, path)
-                },
-                new List<AosNode>(),
-                node.Span);
-            return AosValue.FromNode(parsed);
+            var cmp = string.CompareOrdinal(left.AsString(), right.AsString());
+            if (cmp < 0)
+            {
+                return AosValue.FromInt(-1);
+            }
+            if (cmp > 0)
+            {
+                return AosValue.FromInt(1);
+            }
+            return AosValue.FromInt(0);
         }
 
-        if (target == "compiler.toJson")
+        if (target == "compiler.strToken")
         {
             if (!runtime.Permissions.Contains("compiler"))
             {
                 return AosValue.Unknown;
             }
-            if (node.Children.Count != 1)
+            if (node.Children.Count != 2)
             {
                 return AosValue.Unknown;
             }
 
-            var input = EvalNode(node.Children[0], runtime, env);
-            if (input.Kind != AosValueKind.Node)
+            var text = EvalNode(node.Children[0], runtime, env);
+            var index = EvalNode(node.Children[1], runtime, env);
+            if (text.Kind != AosValueKind.String || index.Kind != AosValueKind.Int)
             {
                 return AosValue.Unknown;
             }
 
-            if (!TrySerializeJsonNode(input.AsNode(), out var json))
+            var tokens = text.AsString().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            var i = index.AsInt();
+            if (i < 0 || i >= tokens.Length)
             {
-                return AosValue.Unknown;
+                return AosValue.FromString(string.Empty);
             }
 
-            return AosValue.FromString(json);
+            return AosValue.FromString(tokens[i]);
         }
 
         if (target == "compiler.format")
@@ -648,7 +648,7 @@ public sealed class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            AosStandardLibraryLoader.EnsureRouteLoaded(runtime, this);
+            AosStandardLibraryLoader.EnsureLoaded(runtime, this);
             var runEnv = new Dictionary<string, AosValue>(StringComparer.Ordinal);
             var value = Evaluate(input.AsNode(), runtime, runEnv);
             if (IsErrValue(value))
@@ -1293,130 +1293,6 @@ public sealed class AosInterpreter
         return sb.ToString();
     }
 
-    private static bool TrySerializeJsonNode(AosNode node, out string json)
-    {
-        if (node.Kind == "Lit")
-        {
-            if (!node.Attrs.TryGetValue("value", out var litAttr))
-            {
-                json = string.Empty;
-                return false;
-            }
-
-            switch (litAttr.Kind)
-            {
-                case AosAttrKind.String:
-                    json = "\"" + EscapeJsonString(litAttr.AsString()) + "\"";
-                    return true;
-                case AosAttrKind.Int:
-                    json = litAttr.AsInt().ToString();
-                    return true;
-                case AosAttrKind.Bool:
-                    json = litAttr.AsBool() ? "true" : "false";
-                    return true;
-                default:
-                    json = string.Empty;
-                    return false;
-            }
-        }
-
-        if (node.Kind == "Map")
-        {
-            var entries = new List<(string Key, AosNode Value, int Index)>();
-            for (var i = 0; i < node.Children.Count; i++)
-            {
-                var child = node.Children[i];
-                if (child.Kind != "Field" ||
-                    !child.Attrs.TryGetValue("key", out var keyAttr) ||
-                    keyAttr.Kind != AosAttrKind.String ||
-                    child.Children.Count != 1)
-                {
-                    json = string.Empty;
-                    return false;
-                }
-
-                entries.Add((keyAttr.AsString(), child.Children[0], i));
-            }
-
-            var ordered = entries
-                .OrderBy(e => e.Key, StringComparer.Ordinal)
-                .ThenBy(e => e.Index)
-                .ToList();
-
-            var sb = new System.Text.StringBuilder();
-            sb.Append('{');
-            for (var i = 0; i < ordered.Count; i++)
-            {
-                if (i > 0)
-                {
-                    sb.Append(',');
-                }
-
-                sb.Append('"');
-                sb.Append(EscapeJsonString(ordered[i].Key));
-                sb.Append('"');
-                sb.Append(':');
-                if (!TrySerializeJsonNode(ordered[i].Value, out var valueJson))
-                {
-                    json = string.Empty;
-                    return false;
-                }
-                sb.Append(valueJson);
-            }
-            sb.Append('}');
-            json = sb.ToString();
-            return true;
-        }
-
-        json = string.Empty;
-        return false;
-    }
-
-    private static string EscapeJsonString(string value)
-    {
-        var sb = new System.Text.StringBuilder();
-        foreach (var ch in value)
-        {
-            switch (ch)
-            {
-                case '"':
-                    sb.Append("\\\"");
-                    break;
-                case '\\':
-                    sb.Append("\\\\");
-                    break;
-                case '\b':
-                    sb.Append("\\b");
-                    break;
-                case '\f':
-                    sb.Append("\\f");
-                    break;
-                case '\n':
-                    sb.Append("\\n");
-                    break;
-                case '\r':
-                    sb.Append("\\r");
-                    break;
-                case '\t':
-                    sb.Append("\\t");
-                    break;
-                default:
-                    if (ch < 0x20)
-                    {
-                        sb.Append("\\u");
-                        sb.Append(((int)ch).ToString("x4"));
-                    }
-                    else
-                    {
-                        sb.Append(ch);
-                    }
-                    break;
-            }
-        }
-
-        return sb.ToString();
-    }
-
     private static string ValueToDisplayString(AosValue value)
     {
         return value.Kind switch
@@ -1591,7 +1467,7 @@ public sealed class AosInterpreter
         runtime.Env["argv"] = BuildArgvNode(argv);
         runtime.ReadOnlyBindings.Add("argv");
         var interpreter = new AosInterpreter();
-        AosStandardLibraryLoader.EnsureRouteLoaded(runtime, interpreter);
+        AosStandardLibraryLoader.EnsureLoaded(runtime, interpreter);
 
         var oldIn = Console.In;
         var oldOut = Console.Out;
@@ -1938,7 +1814,7 @@ public sealed class AosInterpreter
         runtime.Permissions.Add("io");
         runtime.Permissions.Add("compiler");
         var interpreter = new AosInterpreter();
-        AosStandardLibraryLoader.EnsureRouteLoaded(runtime, interpreter);
+        AosStandardLibraryLoader.EnsureLoaded(runtime, interpreter);
 
         var validator = new AosValidator();
         var validation = validator.Validate(parse.Root, null, runtime.Permissions, runStructural: false);

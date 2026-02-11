@@ -13,3 +13,5 @@
 /Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/bin/Debug/net10.0/validate.aos
 /Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/obj/Debug/net10.0/AiLang.Core.sourcelink.json
 /Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/bin/Debug/net10.0/route.aos
+/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/bin/Debug/net10.0/json.aos
+/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/bin/Debug/net10.0/http.aos

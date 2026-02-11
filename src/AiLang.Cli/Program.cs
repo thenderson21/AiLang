@@ -255,7 +255,7 @@ static bool TryLoadProgramForExecution(
     runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(argv));
     runtime.ReadOnlyBindings.Add("argv");
     var bootstrapInterpreter = new AosInterpreter();
-    AosStandardLibraryLoader.EnsureRouteLoaded(runtime, bootstrapInterpreter);
+    AosStandardLibraryLoader.EnsureLoaded(runtime, bootstrapInterpreter);
 
     var envTypes = new Dictionary<string, AosValueKind>(StringComparer.Ordinal)
     {
@@ -330,7 +330,7 @@ static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnab
         runtime.Env["__entryArgs"] = AosValue.FromNode(BuildArgvNode(cliArgs));
         runtime.ReadOnlyBindings.Add("__entryArgs");
         var bootstrapInterpreter = new AosInterpreter();
-        AosStandardLibraryLoader.EnsureRouteLoaded(runtime, bootstrapInterpreter);
+        AosStandardLibraryLoader.EnsureLoaded(runtime, bootstrapInterpreter);
 
         var driverProgram = new AosNode(
             "Program",

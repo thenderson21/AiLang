@@ -1,0 +1,9 @@
+Program#jo1 {
+  Call#jo2(target=compiler.toJson) {
+    Map#jo3 {
+      Field#jo4(key="z-key") { Lit#jo5(value=3) }
+      Field#jo6(key="a.key") { Lit#jo7(value=2) }
+      Field#jo8(key="a key") { Lit#jo9(value=1) }
+    }
+  }
+}

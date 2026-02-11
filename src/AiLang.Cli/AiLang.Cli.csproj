@@ -25,6 +25,14 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>route.aos</Link>
     </Content>
+    <Content Include="..\..\compiler\json.aos">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>json.aos</Link>
+    </Content>
+    <Content Include="..\..\compiler\http.aos">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>http.aos</Link>
+    </Content>
   </ItemGroup>
 
 </Project>
