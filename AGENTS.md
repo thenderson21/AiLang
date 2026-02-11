@@ -8,6 +8,7 @@ The AI must treat architectural constraints as hard rules.
 - NO external libraries or NuGet packages.
 - NO JSON usage anywhere (input, output, internal), except explicit host boundary adapters for client-facing integrations (for example HTTP/Web API responses) when approved by task requirements.
 - ONLY the AI-Optimized Syntax (AOS) is allowed.
+- Canonical execution engine is AiBC1 VM; AST interpreter is debug-only (`--vm=ast`).
 - The interpreter, validator, and REPL must remain deterministic.
 - No network, filesystem writes, time, or randomness unless explicitly via capability and permission.
 - Stable node IDs are required; never regenerate IDs unnecessarily.
@@ -41,6 +42,7 @@ The AI must treat architectural constraints as hard rules.
 ## Local commands
 
 - Use `./tools/airun` for day-to-day execution.
+- VM is default for `run`; use `--vm=ast` only for debugging unsupported bytecode paths.
 - Use `./scripts/test.sh` for golden test validation.
 - Use `./scripts/build-airun.sh` only when rebuilding `tools/airun` via dotnet publish.
 - Do not use `dotnet run` or `dotnet test` for normal workflow.

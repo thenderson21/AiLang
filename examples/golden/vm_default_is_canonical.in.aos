@@ -1,0 +1,3 @@
+Program#p1 {
+  Import#imp1(path="./missing.aos")
+}

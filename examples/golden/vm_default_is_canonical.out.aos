@@ -1,0 +1,1 @@
+Err#vm_emit_err(code=VM001 message="Unsupported construct in bytecode mode: Import." nodeId=imp1)

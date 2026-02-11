@@ -7,7 +7,7 @@ return;
 static int RunCli(string[] args)
 {
     var traceEnabled = args.Contains("--trace", StringComparer.Ordinal);
-    string vmMode = string.Empty;
+    string vmMode = "bytecode";
     var filtered = new List<string>();
     foreach (var arg in args)
     {
@@ -26,9 +26,11 @@ static int RunCli(string[] args)
 
     var filteredArgs = filtered.ToArray();
 
-    if (TryLoadEmbeddedBundle(out var embeddedBundleText))
+    if (TryLoadEmbeddedPayload(out var embeddedPayload, out var embeddedBytecodePayload))
     {
-        return RunEmbeddedBundle(embeddedBundleText!, filteredArgs, traceEnabled, vmMode);
+        return embeddedBytecodePayload
+            ? RunEmbeddedBytecode(embeddedPayload!, filteredArgs, traceEnabled)
+            : RunEmbeddedBundle(embeddedPayload!, filteredArgs, traceEnabled, vmMode);
     }
 
     if (filteredArgs.Length == 0)
@@ -137,8 +139,7 @@ static int RunServe(string path, string[] argv, int port, bool traceEnabled, str
 {
     try
     {
-        var evaluateProgram = !string.Equals(vmMode, "bytecode", StringComparison.Ordinal);
-        if (!TryLoadProgramForExecution(path, traceEnabled, argv, evaluateProgram, vmMode, out _, out var runtime, out var errCode, out var errMessage, out var errNodeId))
+        if (!TryLoadProgramForExecution(path, traceEnabled, argv, evaluateProgram: true, vmMode, out _, out var runtime, out var errCode, out var errMessage, out var errNodeId))
         {
             Console.WriteLine(FormatErr("err1", errCode, errMessage, errNodeId));
             return errCode.StartsWith("PAR", StringComparison.Ordinal) || errCode.StartsWith("VAL", StringComparison.Ordinal) || errCode == "RUN002" ? 2 : 3;
@@ -424,7 +425,8 @@ static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnab
         runtime.ModuleBaseDir = Path.GetDirectoryName(Environment.ProcessPath ?? AppContext.BaseDirectory) ?? Directory.GetCurrentDirectory();
         runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(cliArgs));
         runtime.ReadOnlyBindings.Add("argv");
-        runtime.Env["__vm_mode"] = AosValue.FromString(vmMode);
+        var bundleVmMode = string.Equals(vmMode, "bytecode", StringComparison.Ordinal) ? "ast" : vmMode;
+        runtime.Env["__vm_mode"] = AosValue.FromString(bundleVmMode);
         runtime.ReadOnlyBindings.Add("__vm_mode");
         runtime.Env["__entryArgs"] = AosValue.FromNode(BuildArgvNode(cliArgs));
         runtime.ReadOnlyBindings.Add("__entryArgs");
@@ -494,30 +496,85 @@ static int RunEmbeddedBundle(string bundleText, string[] cliArgs, bool traceEnab
     }
 }
 
-static bool TryLoadEmbeddedBundle(out string? bundleText)
+static int RunEmbeddedBytecode(string bytecodeText, string[] cliArgs, bool traceEnabled)
 {
-    bundleText = null;
+    try
+    {
+        var parse = Parse(bytecodeText);
+        if (parse.Root is null || parse.Diagnostics.Count > 0)
+        {
+            var diagnostic = parse.Diagnostics.FirstOrDefault() ?? new AosDiagnostic("BND001", "Embedded bytecode parse failed.", "bundle", null);
+            Console.WriteLine(FormatErr("err1", diagnostic.Code, diagnostic.Message, diagnostic.NodeId ?? "bundle"));
+            return 3;
+        }
+
+        if (parse.Root.Kind != "Bytecode")
+        {
+            Console.WriteLine(FormatErr("err1", "BND005", "Embedded payload is not Bytecode.", parse.Root.Id));
+            return 3;
+        }
+
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("console");
+        runtime.Permissions.Add("io");
+        runtime.Permissions.Add("compiler");
+        runtime.Permissions.Add("sys");
+        runtime.TraceEnabled = traceEnabled;
+        runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(cliArgs));
+        runtime.ReadOnlyBindings.Add("argv");
+
+        var interpreter = new AosInterpreter();
+        var result = interpreter.RunBytecode(parse.Root, "main", BuildArgvNode(cliArgs), runtime);
+        if (IsErrNode(result, out var errNode))
+        {
+            Console.WriteLine(AosFormatter.Format(errNode!));
+            return 3;
+        }
+
+        if (traceEnabled)
+        {
+            Console.WriteLine(FormatTrace("trace1", runtime.TraceSteps));
+        }
+
+        return result.Kind == AosValueKind.Int ? result.AsInt() : 0;
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine(FormatErr("err1", "BND006", ex.Message, "bundle"));
+        return 3;
+    }
+}
+
+static bool TryLoadEmbeddedPayload(out string? payloadText, out bool isBytecodePayload)
+{
+    payloadText = null;
+    isBytecodePayload = false;
     var processPath = Environment.ProcessPath;
     if (string.IsNullOrWhiteSpace(processPath) || !File.Exists(processPath))
     {
         return false;
     }
 
-    var marker = Encoding.UTF8.GetBytes("\n--AIBUNDLE1--\n");
+    var markerAst = Encoding.UTF8.GetBytes("\n--AIBUNDLE1--\n");
+    var markerBytecode = Encoding.UTF8.GetBytes("\n--AIBUNDLE1:BYTECODE--\n");
     var bytes = File.ReadAllBytes(processPath);
-    var markerIndex = LastIndexOf(bytes, marker);
-    if (markerIndex < 0)
+    var astIndex = LastIndexOf(bytes, markerAst);
+    var bytecodeIndex = LastIndexOf(bytes, markerBytecode);
+    if (astIndex < 0 && bytecodeIndex < 0)
     {
         return false;
     }
 
+    var marker = astIndex >= bytecodeIndex ? markerAst : markerBytecode;
+    var markerIndex = astIndex >= bytecodeIndex ? astIndex : bytecodeIndex;
+    isBytecodePayload = astIndex < bytecodeIndex;
     var start = markerIndex + marker.Length;
     if (start >= bytes.Length)
     {
         return false;
     }
 
-    bundleText = Encoding.UTF8.GetString(bytes, start, bytes.Length - start);
+    payloadText = Encoding.UTF8.GetString(bytes, start, bytes.Length - start);
     return true;
 }
 
@@ -543,6 +600,7 @@ static int LastIndexOf(byte[] haystack, byte[] needle)
 
     return -1;
 }
+
 
 static bool TryGetBundleAttr(AosNode bundle, string key, out string value)
 {
@@ -669,7 +727,7 @@ static string FormatErr(string id, string code, string message, string nodeId)
 
 static void PrintUsage()
 {
-    Console.WriteLine("Usage: airun repl | airun run <path.aos> | airun serve <path.aos> [--port <n>]");
+    Console.WriteLine("Usage: airun repl | airun run <path.aos> | airun serve <path.aos> [--port <n>] [--vm=bytecode|ast]");
 }
 
 static AosNode BuildArgvNode(string[] values)

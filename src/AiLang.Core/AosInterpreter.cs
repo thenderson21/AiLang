@@ -41,6 +41,24 @@ public sealed class AosInterpreter
         return Evaluate(expr, runtime, runtime.Env);
     }
 
+    public AosValue RunBytecode(AosNode bytecode, string entryName, AosNode argsNode, AosRuntime runtime)
+    {
+        try
+        {
+            var vm = VmProgram.Load(bytecode);
+            return VmRunner.Run(this, runtime, vm, entryName, argsNode);
+        }
+        catch (VmRuntimeException ex)
+        {
+            return AosValue.FromNode(CreateErrNode(
+                "vm_err",
+                ex.Code,
+                ex.Message,
+                ex.NodeId,
+                new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
+        }
+    }
+
     private AosValue Evaluate(AosNode node, AosRuntime runtime, Dictionary<string, AosValue> env)
     {
         try
@@ -1002,7 +1020,6 @@ public sealed class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            var bundleValue = EvalNode(node.Children[0], runtime, env);
             var projectNameValue = EvalNode(node.Children[1], runtime, env);
             if (projectNameValue.Kind != AosValueKind.String)
             {
@@ -1030,28 +1047,62 @@ public sealed class AosInterpreter
             var projectName = projectNameValue.AsString();
             var bundlePath = Path.Combine(publishDir, $"{projectName}.aibundle");
             var outputBinaryPath = Path.Combine(publishDir, projectName);
-            var bundleText = bundleValue.Kind switch
+
+            var rawBundleNode = node.Children.Count > 0 ? node.Children[0] : null;
+            if (rawBundleNode is null || rawBundleNode.Kind != "Bundle")
             {
-                AosValueKind.Node => AosFormatter.Format(bundleValue.AsNode()),
-                AosValueKind.String => bundleValue.AsString(),
-                _ => string.Empty
-            };
-            if (bundleText.Length == 0 && node.Children.Count > 0)
-            {
-                // compiler.publish accepts a literal bundle node argument; it does not require the
-                // bundle node to be executable.
-                bundleText = AosFormatter.Format(node.Children[0]);
+                return AosValue.FromNode(CreateErrNode("publish_err", "PUB005", "publish requires Bundle node.", node.Id, node.Span));
             }
 
-            if (bundleText.Length == 0)
+            if (!rawBundleNode.Attrs.TryGetValue("entryFile", out var entryFileAttr) || entryFileAttr.Kind != AosAttrKind.String)
             {
-                return AosValue.Unknown;
+                return AosValue.FromNode(CreateErrNode("publish_err", "PUB006", "Bundle missing entryFile.", node.Id, node.Span));
             }
+
+            var entryFile = entryFileAttr.AsString();
+            var entryPath = Path.GetFullPath(Path.Combine(publishDir, entryFile));
+            if (!File.Exists(entryPath))
+            {
+                return AosValue.FromNode(CreateErrNode("publish_err", "PUB007", $"Entry file not found: {entryFile}", node.Id, node.Span));
+            }
+
+            AosNode? entryProgram;
+            try
+            {
+                var parsed = AosExternalFrontend.Parse(File.ReadAllText(entryPath));
+                if (parsed.Root is null || parsed.Diagnostics.Count > 0 || parsed.Root.Kind != "Program")
+                {
+                    var diagnostic = parsed.Diagnostics.FirstOrDefault();
+                    return AosValue.FromNode(CreateErrNode(
+                        "publish_err",
+                        diagnostic?.Code ?? "PAR000",
+                        diagnostic?.Message ?? "Failed to parse entry file.",
+                        diagnostic?.NodeId ?? node.Id,
+                        node.Span));
+                }
+                entryProgram = parsed.Root;
+            }
+            catch (Exception ex)
+            {
+                return AosValue.FromNode(CreateErrNode("publish_err", "PUB008", ex.Message, node.Id, node.Span));
+            }
+
+            AosNode bytecodeNode;
+            try
+            {
+                bytecodeNode = BytecodeCompiler.Compile(entryProgram!, allowImportNodes: true);
+            }
+            catch (VmRuntimeException vmEx)
+            {
+                return AosValue.FromNode(CreateErrNode("publish_err", vmEx.Code, vmEx.Message, vmEx.NodeId, node.Span));
+            }
+
+            var bytecodeText = AosFormatter.Format(bytecodeNode);
 
             try
             {
                 Directory.CreateDirectory(publishDir);
-                File.WriteAllText(bundlePath, bundleText);
+                File.WriteAllText(bundlePath, bytecodeText);
 
                 var sourceBinary = ResolveHostBinaryPath();
                 if (sourceBinary is null)
@@ -1060,7 +1111,7 @@ public sealed class AosInterpreter
                 }
 
                 File.Copy(sourceBinary, outputBinaryPath, overwrite: true);
-                File.AppendAllText(outputBinaryPath, "\n--AIBUNDLE1--\n" + bundleText);
+                File.AppendAllText(outputBinaryPath, "\n--AIBUNDLE1:BYTECODE--\n" + bytecodeText);
                 if (!OperatingSystem.IsWindows())
                 {
                     try
@@ -1893,6 +1944,7 @@ public sealed class AosInterpreter
             psi.ArgumentList.Add("run");
             psi.ArgumentList.Add(sourcePath);
             psi.ArgumentList.Add("--trace");
+            psi.ArgumentList.Add("--vm=ast");
             if (testName == "trace_with_args")
             {
                 psi.ArgumentList.Add("alpha");
@@ -1946,6 +1998,7 @@ public sealed class AosInterpreter
             };
             psi.ArgumentList.Add("run");
             psi.ArgumentList.Add(sourcePath);
+            psi.ArgumentList.Add("--vm=ast");
             if (testName == "lifecycle_event_message_basic" || testName == "http_health_route_refactor")
             {
                 psi.ArgumentList.Add("__event_message");
@@ -2028,7 +2081,6 @@ public sealed class AosInterpreter
             };
             psi.ArgumentList.Add("run");
             psi.ArgumentList.Add(sourcePath);
-            psi.ArgumentList.Add("--vm=bytecode");
             if (testName == "vm_echo")
             {
                 // Explicit stdin exercise for io.readLine.
@@ -2482,12 +2534,14 @@ public sealed class AosInterpreter
         private readonly List<string> _functionOrder = new();
         private int _instructionId;
 
-        public VmCompileContext(AosNode program)
+        public VmCompileContext(AosNode program, bool allowImportNodes)
         {
             Program = program;
+            AllowImportNodes = allowImportNodes;
         }
 
         public AosNode Program { get; }
+        public bool AllowImportNodes { get; }
 
         public int AddConstant(AosValue value)
         {
@@ -2594,14 +2648,14 @@ public sealed class AosInterpreter
 
     private static class BytecodeCompiler
     {
-        public static AosNode Compile(AosNode program)
+        public static AosNode Compile(AosNode program, bool allowImportNodes = false)
         {
             if (program.Kind != "Program")
             {
                 throw new VmRuntimeException("VM001", "compiler.emitBytecode expects Program node.", program.Id);
             }
 
-            var context = new VmCompileContext(program);
+            var context = new VmCompileContext(program, allowImportNodes);
             context.DiscoverFunctions();
             var compiled = new List<VmCompileFunction>();
 
@@ -2699,7 +2753,6 @@ public sealed class AosInterpreter
                 CompileStatement(context, state, child);
             }
 
-            state.Emit("CONST", context.AddConstant(AosValue.FromInt(0)));
             state.Emit("RETURN");
             return new VmCompileFunction
             {
@@ -2756,6 +2809,20 @@ public sealed class AosInterpreter
 
         private static void CompileStatement(VmCompileContext context, VmFunctionCompileState state, AosNode node)
         {
+            if (node.Kind == "Export")
+            {
+                return;
+            }
+
+            if (node.Kind == "Import")
+            {
+                if (context.AllowImportNodes)
+                {
+                    return;
+                }
+                throw new VmRuntimeException("VM001", "Unsupported construct in bytecode mode: Import.", node.Id);
+            }
+
             if (node.Kind == "Let")
             {
                 if (!node.Attrs.TryGetValue("name", out var nameAttr) || nameAttr.Kind != AosAttrKind.Identifier)

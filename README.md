@@ -23,6 +23,18 @@ Use the repo-local launcher:
 ./tools/airun repl
 ```
 
+Run program execution uses the AiBC1 VM by default:
+
+```bash
+./tools/airun run examples/hello.aos
+```
+
+Force AST interpreter mode for debugging only:
+
+```bash
+./tools/airun run --vm=ast examples/hello.aos
+```
+
 Load a program and evaluate expressions:
 
 ```text
@@ -76,6 +88,12 @@ Rebuild `tools/airun` (NativeAOT, osx-arm64):
 
 Dotnet is only required for `scripts/build-airun.sh`.
 `scripts/build-airun.sh` also rebuilds the standalone frontend parser `tools/aos_frontend`.
+
+## Runtime Engine
+
+- Canonical runtime: AiBC1 bytecode VM (default).
+- AST interpreter: debug-only fallback via `--vm=ast`.
+- New publish artifacts embed bytecode payloads by default.
 
 ## Examples
 
