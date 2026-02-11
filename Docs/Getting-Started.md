@@ -25,9 +25,9 @@ Run build and verification flows with deterministic outputs.
 ```
 4. Run compiler driver modes:
 ```bash
-cat examples/golden/fmt_basic.in.aos | ./tools/airun run compiler/aic.aos fmt
-cat examples/golden/check_missing_name.in.aos | ./tools/airun run compiler/aic.aos check
-cat examples/golden/run_var.in.aos | ./tools/airun run compiler/aic.aos run
+cat examples/golden/fmt_basic.in.aos | ./tools/airun run src/compiler/aic.aos fmt
+cat examples/golden/check_missing_name.in.aos | ./tools/airun run src/compiler/aic.aos check
+cat examples/golden/run_var.in.aos | ./tools/airun run src/compiler/aic.aos run
 ```
 
 ## Expected Output
@@ -45,7 +45,7 @@ cat examples/golden/run_var.in.aos | ./tools/airun run compiler/aic.aos run
 
 ```aos
 Program#p1 {
-  Import#i1(path="./std/str.aos")
+  Import#i1(path="./src/std/str.aos")
   Call#c1(target=concat) { Lit#l1(value="a") Lit#l2(value="b") }
 }
 ```

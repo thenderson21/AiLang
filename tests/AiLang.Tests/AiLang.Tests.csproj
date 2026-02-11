@@ -21,13 +21,29 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="..\..\compiler\format.aos">
+    <Content Include="..\..\src\compiler\format.aos">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>format.aos</Link>
     </Content>
-    <Content Include="..\..\compiler\validate.aos">
+    <Content Include="..\..\src\compiler\validate.aos">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <Link>validate.aos</Link>
+    </Content>
+    <Content Include="..\..\src\compiler\route.aos">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>route.aos</Link>
+    </Content>
+    <Content Include="..\..\src\compiler\json.aos">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>json.aos</Link>
+    </Content>
+    <Content Include="..\..\src\compiler\http.aos">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>http.aos</Link>
+    </Content>
+    <Content Include="..\..\src\compiler\runtime.aos">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>runtime.aos</Link>
     </Content>
   </ItemGroup>
 

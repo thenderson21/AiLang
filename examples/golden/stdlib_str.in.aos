@@ -1,4 +1,4 @@
 Program#gstr_p1 {
-  Import#gstr_i1(path="./std/str.aos")
+  Import#gstr_i1(path="./src/std/str.aos")
   Call#gstr_c1(target=concat) { Lit#gstr_l1(value="ab") Lit#gstr_l2(value="cd") }
 }

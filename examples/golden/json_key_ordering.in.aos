@@ -1,0 +1,8 @@
+Program#jk1 {
+  Call#jk2(target=compiler.toJson) {
+    Map#jk3 {
+      Field#jk4(key="b") { Lit#jk5(value="2") }
+      Field#jk6(key="a") { Lit#jk7(value="1") }
+    }
+  }
+}

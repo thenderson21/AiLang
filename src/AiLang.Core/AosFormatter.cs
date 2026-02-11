@@ -56,6 +56,7 @@ public static class AosFormatter
         {
             AppContext.BaseDirectory,
             Directory.GetCurrentDirectory(),
+            Path.Combine(Directory.GetCurrentDirectory(), "src", "compiler"),
             Path.Combine(Directory.GetCurrentDirectory(), "compiler")
         };
 

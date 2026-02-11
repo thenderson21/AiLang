@@ -110,103 +110,128 @@ static int RunServe(string path, string[] argv, int port, bool traceEnabled)
             return errCode.StartsWith("PAR", StringComparison.Ordinal) || errCode.StartsWith("VAL", StringComparison.Ordinal) || errCode == "RUN002" ? 2 : 3;
         }
 
-        if (!HasExport(parseRoot!, "init") || !HasExport(parseRoot!, "update") ||
-            !HasFunctionBinding(runtime!, "init") || !HasFunctionBinding(runtime!, "update"))
+        var runtimeKernel = LoadRuntimeKernel();
+        if (runtimeKernel is null)
         {
-            Console.WriteLine(FormatErr("err0", "HTTP001", "App must export init and update.", "app"));
-            return 1;
-        }
-
-        var interpreter = new AosInterpreter();
-        var state = InvokeNamedFunction(interpreter, runtime, "init", runtime.Env["argv"], traceName: "init");
-        if (IsErrNode(state, out var initErr))
-        {
-            Console.WriteLine(AosFormatter.Format(initErr!));
+            Console.WriteLine(FormatErr("err1", "RUN001", "runtime.aos not found.", "runtime"));
             return 3;
         }
 
-        var listener = new TcpListener(IPAddress.Loopback, port);
-        listener.Start();
-        var commandExecutor = new ServeCommandExecutor();
-        var exitCode = 0;
-
-        while (true)
+        var interpreter = new AosInterpreter();
+        runtime!.Permissions.Add("sys");
+        var kernelInit = interpreter.EvaluateProgram(runtimeKernel, runtime);
+        if (IsErrNode(kernelInit, out var kernelErr))
         {
-            using var client = listener.AcceptTcpClient();
-            using var stream = client.GetStream();
-
-            if (!CliHttpServe.TryReadHttpRequestLine(stream, out var method, out var requestPath))
-            {
-                CliHttpServe.WriteHttpResponse(stream, null);
-                continue;
-            }
-
-            if (traceEnabled)
-            {
-                runtime.TraceSteps.Clear();
-            }
-
-            var eventNode = CliHttpServe.CreateHttpRequestEvent(method, requestPath);
-
-            if (traceEnabled)
-            {
-                CliHttpServe.AppendEventDispatchTrace(runtime, eventNode);
-            }
-
-            var next = RuntimeDispatch(interpreter, runtime, AosValue.FromNode(eventNode), state);
-            if (IsErrNode(next, out var updateErr))
-            {
-                Console.WriteLine(AosFormatter.Format(updateErr!));
-                listener.Stop();
-                return 3;
-            }
-
-            commandExecutor.Reset();
-            if (TryUnpackLifecycleBlock(next, runtime, out var nextState, out var commands))
-            {
-                state = nextState;
-                foreach (var command in commands)
-                {
-                    if (traceEnabled)
-                    {
-                        CliHttpServe.AppendCommandExecuteTrace(runtime, command);
-                    }
-
-                    var commandExitCode = commandExecutor.Execute(command);
-                    if (commandExitCode is not null)
-                    {
-                        exitCode = commandExitCode.Value;
-                        break;
-                    }
-                }
-            }
-            else if (TryGetExitCode(next, out var immediateExit))
-            {
-                exitCode = immediateExit;
-            }
-            else
-            {
-                state = next;
-            }
-
-            CliHttpServe.WriteHttpResponse(stream, commandExecutor.HttpResponsePayload);
-            if (traceEnabled)
-            {
-                Console.WriteLine(FormatTrace("trace1", runtime.TraceSteps));
-            }
-
-            if (exitCode != 0 || commandExecutor.ExitRequested)
-            {
-                listener.Stop();
-                return exitCode;
-            }
+            Console.WriteLine(AosFormatter.Format(kernelErr!));
+            return 3;
         }
+
+        var kernelArgs = BuildKernelServeArgs(port);
+        runtime.Env["__kernel_args"] = AosValue.FromNode(kernelArgs);
+        var call = new AosNode(
+            "Call",
+            "serve_kernel_call",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+            {
+                ["target"] = new AosAttrValue(AosAttrKind.Identifier, "runtime.start")
+            },
+            new List<AosNode>
+            {
+                new(
+                    "Var",
+                    "serve_kernel_args",
+                    new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                    {
+                        ["name"] = new AosAttrValue(AosAttrKind.Identifier, "__kernel_args")
+                    },
+                    new List<AosNode>(),
+                    new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)))
+            },
+            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+
+        var result = interpreter.EvaluateExpression(call, runtime);
+        if (traceEnabled)
+        {
+            Console.WriteLine(FormatTrace("trace1", runtime.TraceSteps));
+        }
+        return result.Kind == AosValueKind.Int ? result.AsInt() : 0;
+    }
+    catch (AosProcessExitException exit)
+    {
+        return exit.Code;
     }
     catch (Exception ex)
     {
         Console.WriteLine(FormatErr("err1", "RUN001", ex.Message, "unknown"));
         return 3;
     }
+}
+
+static AosNode? LoadRuntimeKernel()
+{
+    var searchRoots = new[]
+    {
+        AppContext.BaseDirectory,
+        Directory.GetCurrentDirectory(),
+        Path.Combine(Directory.GetCurrentDirectory(), "src", "compiler"),
+        Path.Combine(Directory.GetCurrentDirectory(), "compiler")
+    };
+
+    string? path = null;
+    foreach (var root in searchRoots)
+    {
+        var candidate = Path.Combine(root, "runtime.aos");
+        if (File.Exists(candidate))
+        {
+            path = candidate;
+            break;
+        }
+    }
+
+    if (path is null)
+    {
+        return null;
+    }
+
+    var parse = Parse(File.ReadAllText(path));
+    if (parse.Root is null || parse.Diagnostics.Count > 0)
+    {
+        return null;
+    }
+
+    return parse.Root.Kind == "Program" ? parse.Root : null;
+}
+
+static AosNode BuildKernelServeArgs(int port)
+{
+    var children = new List<AosNode>
+    {
+        new(
+            "Lit",
+            "karg0",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+            {
+                ["value"] = new AosAttrValue(AosAttrKind.String, "serve")
+            },
+            new List<AosNode>(),
+            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))),
+        new(
+            "Lit",
+            "karg1",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+            {
+                ["value"] = new AosAttrValue(AosAttrKind.Int, port)
+            },
+            new List<AosNode>(),
+            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)))
+    };
+
+    return new AosNode(
+        "Block",
+        "kargv",
+        new Dictionary<string, AosAttrValue>(StringComparer.Ordinal),
+        children,
+        new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
 }
 
 

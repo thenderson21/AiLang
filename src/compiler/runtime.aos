@@ -1,0 +1,289 @@
+Program#rt_p1 {
+  Export#rt_e1(name=runtime.start)
+
+  Let#rt_l1(name=runtime.start) {
+    Fn#rt_f1(params=args) {
+      Block#rt_b1 {
+        Let#rt_l2(name=mode) { Call#rt_c1(target=runtime_arg_string) { Var#rt_v1(name=args) Lit#rt_i1(value=0) } }
+        If#rt_if1 {
+          Eq#rt_eq1 { Var#rt_v2(name=mode) Lit#rt_i2(value="serve") }
+          Block#rt_b2 { Return#rt_r1 { Call#rt_c2(target=runtime_serve) { Var#rt_v3(name=args) } } }
+          Block#rt_b3 { Return#rt_r2 { Lit#rt_i3(value=0) } }
+        }
+      }
+    }
+  }
+
+  Let#rt_l3(name=runtime_serve) {
+    Fn#rt_f2(params=args) {
+      Block#rt_b4 {
+        Let#rt_l4(name=port) { Call#rt_c3(target=runtime_arg_int) { Var#rt_v4(name=args) Lit#rt_i4(value=1) } }
+        Let#rt_l5(name=listener) { Call#rt_c4(target=sys.net_listen) { Var#rt_v5(name=port) } }
+        Let#rt_l6(name=state) { Call#rt_c5(target=init) { Var#rt_v6(name=argv) } }
+        Return#rt_r3 { Call#rt_c6(target=runtime_serve_loop) { Var#rt_v7(name=listener) Var#rt_v8(name=state) } }
+      }
+    }
+  }
+
+  Let#rt_l7(name=runtime_serve_loop) {
+    Fn#rt_f3(params=listener,state) {
+      Block#rt_b5 {
+        Let#rt_l8(name=conn) { Call#rt_c7(target=sys.net_accept) { Var#rt_v9(name=listener) } }
+        If#rt_if2 {
+          Eq#rt_eq2 { Var#rt_v10(name=conn) Lit#rt_i5(value=-1) }
+          Block#rt_b6 { Return#rt_r4 { Lit#rt_i6(value=0) } }
+          Block#rt_b7 {
+            Let#rt_l9(name=raw) { Call#rt_c8(target=sys.net_readHeaders) { Var#rt_v11(name=conn) } }
+            Let#rt_l10(name=event) { Call#rt_c9(target=runtime_make_event) { Var#rt_v12(name=raw) } }
+            Let#rt_l11(name=next) { Call#rt_c10(target=runtime.dispatch) { Var#rt_v13(name=state) Var#rt_v14(name=event) } }
+            Let#rt_l12(name=nextState) { Call#rt_c11(target=runtime_handle_next) { Var#rt_v15(name=next) Var#rt_v16(name=conn) Var#rt_v17(name=state) } }
+            Call#rt_c12(target=sys.net_close) { Var#rt_v18(name=conn) }
+            Return#rt_r5 { Call#rt_c13(target=runtime_serve_loop) { Var#rt_v19(name=listener) Var#rt_v20(name=nextState) } }
+          }
+        }
+      }
+    }
+  }
+
+  Let#rt_l13(name=runtime.dispatch) {
+    Fn#rt_f4(params=state,event) {
+      Block#rt_b8 { Return#rt_r6 { Call#rt_c14(target=update) { Var#rt_v21(name=state) Var#rt_v22(name=event) } } }
+    }
+  }
+
+  Let#rt_l14(name=runtime_make_event) {
+    Fn#rt_f5(params=payload) {
+      Block#rt_b9 {
+        Let#rt_l15(name=programText) {
+          StrConcat#rt_s1 {
+            Lit#rt_i7(value="Program#rt_event_p1 { Event#Message(type=\"http.request\" payload=\"")
+            StrConcat#rt_s2 {
+              StrEscape#rt_se1 { Var#rt_v23(name=payload) }
+              Lit#rt_i8(value="\") }")
+            }
+          }
+        }
+        Let#rt_l16(name=parsed) { Call#rt_c15(target=compiler.parse) { Var#rt_v24(name=programText) } }
+        If#rt_if3 {
+          Eq#rt_eq3 { NodeKind#rt_nk1 { Var#rt_v25(name=parsed) } Lit#rt_i9(value="Program") }
+          Block#rt_b10 { Return#rt_r7 { ChildAt#rt_ca1 { Var#rt_v26(name=parsed) Lit#rt_i10(value=0) } } }
+          Block#rt_b11 {
+            Let#rt_l17(name=fallback) { Call#rt_c16(target=compiler.parse) { Lit#rt_i11(value="Program#rt_event_p2 { Event#Message(type=\"http.request\" payload=\"\") }") } }
+            Return#rt_r8 { ChildAt#rt_ca2 { Var#rt_v27(name=fallback) Lit#rt_i12(value=0) } }
+          }
+        }
+      }
+    }
+  }
+
+  Let#rt_l18(name=runtime_handle_next) {
+    Fn#rt_f6(params=next,conn,currentState) {
+      Block#rt_b12 {
+        If#rt_if4 {
+          Eq#rt_eq4 { NodeKind#rt_nk2 { Var#rt_v28(name=next) } Lit#rt_i13(value="Block") }
+          Block#rt_b13 {
+            If#rt_if5 {
+              Eq#rt_eq5 { ChildCount#rt_cc1 { Var#rt_v29(name=next) } Lit#rt_i14(value=0) }
+              Block#rt_b14 {
+                Call#rt_c17(target=sys.net_write) { Var#rt_v30(name=conn) Call#rt_c18(target=runtime_http_204) { Lit#rt_i15(value=0) } }
+                Return#rt_r9 { Var#rt_v31(name=currentState) }
+              }
+              Block#rt_b15 {
+                Let#rt_l19(name=newState) { ChildAt#rt_ca3 { Var#rt_v32(name=next) Lit#rt_i16(value=0) } }
+                Let#rt_l20(name=didWrite) { Call#rt_c19(target=runtime_handle_commands) { Var#rt_v33(name=next) Lit#rt_i17(value=1) Var#rt_v34(name=conn) Lit#rt_i18(value=false) } }
+                If#rt_if6 {
+                  Var#rt_v35(name=didWrite)
+                  Block#rt_b16 { Return#rt_r10 { Var#rt_v36(name=newState) } }
+                  Block#rt_b17 {
+                    Call#rt_c20(target=sys.net_write) { Var#rt_v37(name=conn) Call#rt_c21(target=runtime_http_204) { Lit#rt_i19(value=0) } }
+                    Return#rt_r11 { Var#rt_v38(name=newState) }
+                  }
+                }
+              }
+            }
+          }
+          Block#rt_b18 {
+            Call#rt_c22(target=sys.net_write) { Var#rt_v39(name=conn) Call#rt_c23(target=runtime_http_204) { Lit#rt_i20(value=0) } }
+            Return#rt_r12 { Var#rt_v40(name=next) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#rt_l21(name=runtime_handle_commands) {
+    Fn#rt_f7(params=block,index,conn,didWrite) {
+      Block#rt_b19 {
+        If#rt_if7 {
+          Eq#rt_eq6 { Var#rt_v41(name=index) ChildCount#rt_cc2 { Var#rt_v42(name=block) } }
+          Block#rt_b20 { Return#rt_r13 { Var#rt_v43(name=didWrite) } }
+          Block#rt_b21 {
+            Let#rt_l22(name=cmd) { ChildAt#rt_ca4 { Var#rt_v44(name=block) Var#rt_v45(name=index) } }
+            If#rt_if8 {
+              Eq#rt_eq7 { NodeKind#rt_nk3 { Var#rt_v46(name=cmd) } Lit#rt_i21(value="Command") }
+              Block#rt_b22 {
+                If#rt_if9 {
+                  Eq#rt_eq8 { NodeId#rt_nid1 { Var#rt_v47(name=cmd) } Lit#rt_i22(value="Exit") }
+                  Block#rt_b23 {
+                    Call#rt_c24(target=sys.proc_exit) { Call#rt_c25(target=runtime_attr_int) { Var#rt_v48(name=cmd) Lit#rt_i23(value="code") Lit#rt_i24(value=0) } }
+                    Return#rt_r14 { Var#rt_v49(name=didWrite) }
+                  }
+                  Block#rt_b24 {
+                    If#rt_if10 {
+                      Eq#rt_eq9 { NodeId#rt_nid2 { Var#rt_v50(name=cmd) } Lit#rt_i25(value="Emit") }
+                      Block#rt_b25 {
+                        Let#rt_l23(name=emitType) { Call#rt_c26(target=runtime_attr_string) { Var#rt_v51(name=cmd) Lit#rt_i26(value="type") Lit#rt_i27(value=0) } }
+                        Let#rt_l24(name=emitPayload) { Call#rt_c27(target=runtime_attr_string) { Var#rt_v52(name=cmd) Lit#rt_i28(value="payload") Lit#rt_i29(value=0) } }
+                        If#rt_if11 {
+                          Eq#rt_eq10 { Var#rt_v53(name=emitType) Lit#rt_i30(value="stdout") }
+                          Block#rt_b26 { Call#rt_c28(target=sys.stdout_writeLine) { Var#rt_v54(name=emitPayload) } }
+                          Block#rt_b27 { Lit#rt_i31(value=0) }
+                        }
+                        If#rt_if12 {
+                          Eq#rt_eq11 { Var#rt_v55(name=emitType) Lit#rt_i32(value="http.response") }
+                          Block#rt_b28 {
+                            Call#rt_c29(target=sys.net_write) { Var#rt_v56(name=conn) Call#rt_c30(target=runtime_http_200) { Var#rt_v57(name=emitPayload) } }
+                            Return#rt_r15 {
+                              Call#rt_c31(target=runtime_handle_commands) {
+                                Var#rt_v58(name=block)
+                                Add#rt_a1 { Var#rt_v59(name=index) Lit#rt_i33(value=1) }
+                                Var#rt_v60(name=conn)
+                                Lit#rt_i34(value=true)
+                              }
+                            }
+                          }
+                          Block#rt_b29 { Lit#rt_i35(value=0) }
+                        }
+                      }
+                      Block#rt_b30 { Lit#rt_i36(value=0) }
+                    }
+                  }
+                }
+              }
+              Block#rt_b31 { Lit#rt_i37(value=0) }
+            }
+            Return#rt_r16 {
+              Call#rt_c32(target=runtime_handle_commands) {
+                Var#rt_v61(name=block)
+                Add#rt_a2 { Var#rt_v62(name=index) Lit#rt_i38(value=1) }
+                Var#rt_v63(name=conn)
+                Var#rt_v64(name=didWrite)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#rt_l25(name=runtime_http_200) {
+    Fn#rt_f8(params=payload) {
+      Block#rt_b32 {
+        Return#rt_r17 {
+          StrConcat#rt_s3 {
+            Lit#rt_i39(value="HTTP/1.1 200 OK\r\nContent-Type: text/plain; charset=utf-8\r\n\r\n")
+            Var#rt_v65(name=payload)
+          }
+        }
+      }
+    }
+  }
+
+  Let#rt_l26(name=runtime_http_204) {
+    Fn#rt_f9(params=_) {
+      Block#rt_b33 { Return#rt_r18 { Lit#rt_i40(value="HTTP/1.1 204 No Content\r\nContent-Length: 0\r\n\r\n") } }
+    }
+  }
+
+  Let#rt_l27(name=runtime_arg_string) {
+    Fn#rt_f10(params=args,index) {
+      Block#rt_b34 {
+        If#rt_if13 {
+          Eq#rt_eq12 { Var#rt_v66(name=index) ChildCount#rt_cc3 { Var#rt_v67(name=args) } }
+          Block#rt_b35 { Return#rt_r19 { Lit#rt_i41(value="") } }
+          Block#rt_b36 {
+            Return#rt_r20 {
+              Call#rt_c33(target=runtime_attr_string) {
+                ChildAt#rt_ca5 { Var#rt_v68(name=args) Var#rt_v69(name=index) }
+                Lit#rt_i42(value="value")
+                Lit#rt_i43(value=0)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#rt_l28(name=runtime_arg_int) {
+    Fn#rt_f11(params=args,index) {
+      Block#rt_b37 {
+        If#rt_if14 {
+          Eq#rt_eq13 { Var#rt_v70(name=index) ChildCount#rt_cc4 { Var#rt_v71(name=args) } }
+          Block#rt_b38 { Return#rt_r21 { Lit#rt_i44(value=0) } }
+          Block#rt_b39 {
+            Return#rt_r22 {
+              Call#rt_c34(target=runtime_attr_int) {
+                ChildAt#rt_ca6 { Var#rt_v72(name=args) Var#rt_v73(name=index) }
+                Lit#rt_i45(value="value")
+                Lit#rt_i46(value=0)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#rt_l29(name=runtime_attr_string) {
+    Fn#rt_f12(params=node,key,index) {
+      Block#rt_b40 {
+        If#rt_if15 {
+          Eq#rt_eq14 { Var#rt_v74(name=index) AttrCount#rt_ac1 { Var#rt_v75(name=node) } }
+          Block#rt_b41 { Return#rt_r23 { Lit#rt_i47(value="") } }
+          Block#rt_b42 {
+            If#rt_if16 {
+              Eq#rt_eq15 { AttrKey#rt_ak1 { Var#rt_v76(name=node) Var#rt_v77(name=index) } Var#rt_v78(name=key) }
+              Block#rt_b43 { Return#rt_r24 { AttrValueString#rt_avs1 { Var#rt_v79(name=node) Var#rt_v80(name=index) } } }
+              Block#rt_b44 {
+                Return#rt_r25 {
+                  Call#rt_c35(target=runtime_attr_string) {
+                    Var#rt_v81(name=node)
+                    Var#rt_v82(name=key)
+                    Add#rt_a3 { Var#rt_v83(name=index) Lit#rt_i48(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#rt_l30(name=runtime_attr_int) {
+    Fn#rt_f13(params=node,key,index) {
+      Block#rt_b45 {
+        If#rt_if17 {
+          Eq#rt_eq16 { Var#rt_v84(name=index) AttrCount#rt_ac2 { Var#rt_v85(name=node) } }
+          Block#rt_b46 { Return#rt_r26 { Lit#rt_i49(value=0) } }
+          Block#rt_b47 {
+            If#rt_if18 {
+              Eq#rt_eq17 { AttrKey#rt_ak2 { Var#rt_v86(name=node) Var#rt_v87(name=index) } Var#rt_v88(name=key) }
+              Block#rt_b48 { Return#rt_r27 { AttrValueInt#rt_avi1 { Var#rt_v89(name=node) Var#rt_v90(name=index) } } }
+              Block#rt_b49 {
+                Return#rt_r28 {
+                  Call#rt_c36(target=runtime_attr_int) {
+                    Var#rt_v91(name=node)
+                    Var#rt_v92(name=key)
+                    Add#rt_a4 { Var#rt_v93(name=index) Lit#rt_i50(value=1) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

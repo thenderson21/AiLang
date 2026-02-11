@@ -1,4 +1,4 @@
 Program#gmath_p1 {
-  Import#gmath_i1(path="./std/math.aos")
+  Import#gmath_i1(path="./src/std/math.aos")
   Call#gmath_c1(target=add) { Lit#gmath_l1(value=2) Lit#gmath_l2(value=3) }
 }

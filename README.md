@@ -12,8 +12,8 @@ For agent-focused operating docs, use `Docs/README.md`.
 This repository is itself an AiLang project.
 
 - Project manifest: `project.aiproj`
-- Compiler driver: `compiler/aic.aos`
-- Standard library: `std/*.aos`
+- Compiler driver: `src/compiler/aic.aos`
+- Standard library: `src/std/*.aos`
 
 ## Quick Start
 

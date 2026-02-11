@@ -270,7 +270,7 @@ public class AosTests
     [Test]
     public void Aic_Smoke_FmtCheckRun()
     {
-        var aicPath = FindRepoFile("compiler/aic.aos");
+        var aicPath = FindRepoFile("src/compiler/aic.aos");
         var fmtInput = File.ReadAllText(FindRepoFile("examples/aic_fmt_input.aos"));
         var checkInput = File.ReadAllText(FindRepoFile("examples/aic_check_bad.aos"));
         var runInput = File.ReadAllText(FindRepoFile("examples/aic_run_input.aos"));
@@ -288,7 +288,7 @@ public class AosTests
     [Test]
     public void Aic_Run_ImportDiagnostics()
     {
-        var aicPath = FindRepoFile("compiler/aic.aos");
+        var aicPath = FindRepoFile("src/compiler/aic.aos");
         var cycleInput = File.ReadAllText(FindRepoFile("examples/golden/run_import_cycle.in.aos"));
         var missingInput = File.ReadAllText(FindRepoFile("examples/golden/run_import_missing.in.aos"));
 
@@ -357,7 +357,7 @@ public class AosTests
         var runtime = new AosRuntime();
         runtime.Permissions.Add("io");
         runtime.Permissions.Add("compiler");
-        runtime.ModuleBaseDir = Path.GetDirectoryName(Path.GetDirectoryName(aicPath)!)!;
+        runtime.ModuleBaseDir = Path.GetDirectoryName(FindRepoFile("AiLang.slnx"))!;
         runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(new[] { mode }));
         runtime.ReadOnlyBindings.Add("argv");
 

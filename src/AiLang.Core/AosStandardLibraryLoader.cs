@@ -74,6 +74,8 @@ public static class AosStandardLibraryLoader
         {
             AppContext.BaseDirectory,
             Directory.GetCurrentDirectory(),
+            Path.Combine(AppContext.BaseDirectory, "src", "compiler"),
+            Path.Combine(Directory.GetCurrentDirectory(), "src", "compiler"),
             Path.Combine(AppContext.BaseDirectory, "compiler"),
             Path.Combine(Directory.GetCurrentDirectory(), "compiler")
         };
@@ -119,6 +121,8 @@ public static class AosStandardLibraryLoader
         {
             AppContext.BaseDirectory,
             Directory.GetCurrentDirectory(),
+            Path.Combine(AppContext.BaseDirectory, "src", "compiler"),
+            Path.Combine(Directory.GetCurrentDirectory(), "src", "compiler"),
             Path.Combine(AppContext.BaseDirectory, "compiler"),
             Path.Combine(Directory.GetCurrentDirectory(), "compiler")
         };
@@ -164,6 +168,8 @@ public static class AosStandardLibraryLoader
         {
             AppContext.BaseDirectory,
             Directory.GetCurrentDirectory(),
+            Path.Combine(AppContext.BaseDirectory, "src", "compiler"),
+            Path.Combine(Directory.GetCurrentDirectory(), "src", "compiler"),
             Path.Combine(AppContext.BaseDirectory, "compiler"),
             Path.Combine(Directory.GetCurrentDirectory(), "compiler")
         };

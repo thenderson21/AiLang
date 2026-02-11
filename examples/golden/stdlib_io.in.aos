@@ -1,5 +1,5 @@
 Program#gio_p1 {
-  Import#gio_i1(path="./std/io.aos")
+  Import#gio_i1(path="./src/std/io.aos")
   Call#gio_c1(target=print) { Lit#gio_l1(value="hello") }
   Call#gio_c2(target=println) { Lit#gio_l2(value="world") }
 }

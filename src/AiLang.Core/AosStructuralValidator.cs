@@ -71,6 +71,7 @@ public sealed class AosStructuralValidator
         {
             AppContext.BaseDirectory,
             Directory.GetCurrentDirectory(),
+            Path.Combine(Directory.GetCurrentDirectory(), "src", "compiler"),
             Path.Combine(Directory.GetCurrentDirectory(), "compiler")
         };
 

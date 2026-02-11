@@ -12,6 +12,9 @@ public sealed class AosRuntime
     public bool TraceEnabled { get; set; }
     public List<AosNode> TraceSteps { get; } = new();
     public AosNode? Program { get; set; }
+    public Dictionary<int, System.Net.Sockets.TcpListener> NetListeners { get; } = new();
+    public Dictionary<int, System.Net.Sockets.TcpClient> NetConnections { get; } = new();
+    public int NextNetHandle { get; set; } = 1;
 }
 
 public sealed class AosInterpreter
@@ -454,6 +457,257 @@ public sealed class AosInterpreter
 
             File.WriteAllText(pathValue.AsString(), textValue.AsString());
             return AosValue.Void;
+        }
+
+        if (target == "sys.net_listen")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var portValue = EvalNode(node.Children[0], runtime, env);
+            if (portValue.Kind != AosValueKind.Int)
+            {
+                return AosValue.Unknown;
+            }
+
+            var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, portValue.AsInt());
+            listener.Start();
+            var handle = runtime.NextNetHandle++;
+            runtime.NetListeners[handle] = listener;
+            return AosValue.FromInt(handle);
+        }
+
+        if (target == "sys.net_accept")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var handleValue = EvalNode(node.Children[0], runtime, env);
+            if (handleValue.Kind != AosValueKind.Int)
+            {
+                return AosValue.Unknown;
+            }
+
+            if (!runtime.NetListeners.TryGetValue(handleValue.AsInt(), out var listener))
+            {
+                return AosValue.FromInt(-1);
+            }
+
+            var client = listener.AcceptTcpClient();
+            var connHandle = runtime.NextNetHandle++;
+            runtime.NetConnections[connHandle] = client;
+            return AosValue.FromInt(connHandle);
+        }
+
+        if (target == "sys.net_readHeaders")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var handleValue = EvalNode(node.Children[0], runtime, env);
+            if (handleValue.Kind != AosValueKind.Int)
+            {
+                return AosValue.Unknown;
+            }
+
+            if (!runtime.NetConnections.TryGetValue(handleValue.AsInt(), out var client))
+            {
+                return AosValue.FromString(string.Empty);
+            }
+
+            var stream = client.GetStream();
+            var bytes = new List<byte>(1024);
+            var endSeen = 0;
+            var pattern = new byte[] { 13, 10, 13, 10 };
+            while (bytes.Count < 16384)
+            {
+                var next = stream.ReadByte();
+                if (next < 0)
+                {
+                    break;
+                }
+
+                var b = (byte)next;
+                bytes.Add(b);
+                if (b == pattern[endSeen])
+                {
+                    endSeen++;
+                    if (endSeen == 4)
+                    {
+                        break;
+                    }
+                }
+                else
+                {
+                    endSeen = b == pattern[0] ? 1 : 0;
+                }
+            }
+
+            return AosValue.FromString(System.Text.Encoding.ASCII.GetString(bytes.ToArray()));
+        }
+
+        if (target == "sys.net_write")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 2)
+            {
+                return AosValue.Unknown;
+            }
+
+            var handleValue = EvalNode(node.Children[0], runtime, env);
+            var textValue = EvalNode(node.Children[1], runtime, env);
+            if (handleValue.Kind != AosValueKind.Int || textValue.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            if (!runtime.NetConnections.TryGetValue(handleValue.AsInt(), out var client))
+            {
+                return AosValue.Unknown;
+            }
+
+            var bytes = System.Text.Encoding.UTF8.GetBytes(textValue.AsString());
+            var stream = client.GetStream();
+            stream.Write(bytes, 0, bytes.Length);
+            stream.Flush();
+            return AosValue.Void;
+        }
+
+        if (target == "sys.net_close")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var handleValue = EvalNode(node.Children[0], runtime, env);
+            if (handleValue.Kind != AosValueKind.Int)
+            {
+                return AosValue.Unknown;
+            }
+
+            var handle = handleValue.AsInt();
+            if (runtime.NetConnections.TryGetValue(handle, out var conn))
+            {
+                try { conn.Close(); } catch { }
+                runtime.NetConnections.Remove(handle);
+                return AosValue.Void;
+            }
+
+            if (runtime.NetListeners.TryGetValue(handle, out var listener))
+            {
+                try { listener.Stop(); } catch { }
+                runtime.NetListeners.Remove(handle);
+                return AosValue.Void;
+            }
+
+            return AosValue.Void;
+        }
+
+        if (target == "sys.stdout_writeLine")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var textValue = EvalNode(node.Children[0], runtime, env);
+            if (textValue.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            Console.WriteLine(textValue.AsString());
+            return AosValue.Void;
+        }
+
+        if (target == "sys.proc_exit")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var codeValue = EvalNode(node.Children[0], runtime, env);
+            if (codeValue.Kind != AosValueKind.Int)
+            {
+                return AosValue.Unknown;
+            }
+
+            throw new AosProcessExitException(codeValue.AsInt());
+        }
+
+        if (target == "sys.fs_readFile")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var pathValue = EvalNode(node.Children[0], runtime, env);
+            if (pathValue.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            return AosValue.FromString(File.ReadAllText(pathValue.AsString()));
+        }
+
+        if (target == "sys.fs_fileExists")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var pathValue = EvalNode(node.Children[0], runtime, env);
+            if (pathValue.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            return AosValue.FromBool(File.Exists(pathValue.AsString()));
         }
 
         if (target == "compiler.parse")
@@ -1355,7 +1609,7 @@ public sealed class AosInterpreter
         var aicProgram = LoadAicProgram();
         if (aicProgram is null)
         {
-            Console.WriteLine("FAIL aic (compiler/aic.aos not found)");
+            Console.WriteLine("FAIL aic (src/compiler/aic.aos not found)");
             return 1;
         }
 
@@ -1697,6 +1951,7 @@ public sealed class AosInterpreter
         {
             AppContext.BaseDirectory,
             Directory.GetCurrentDirectory(),
+            Path.Combine(Directory.GetCurrentDirectory(), "src", "compiler"),
             Path.Combine(Directory.GetCurrentDirectory(), "compiler")
         };
 
