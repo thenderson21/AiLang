@@ -1,0 +1,11 @@
+/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/bin/Debug/net10.0/AiLang.Core.deps.json
+/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/bin/Debug/net10.0/AiLang.Core.dll
+/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/bin/Debug/net10.0/AiLang.Core.pdb
+/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/obj/Debug/net10.0/AiLang.Core.GeneratedMSBuildEditorConfig.editorconfig
+/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/obj/Debug/net10.0/AiLang.Core.AssemblyInfoInputs.cache
+/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/obj/Debug/net10.0/AiLang.Core.AssemblyInfo.cs
+/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/obj/Debug/net10.0/AiLang.Core.csproj.CoreCompileInputs.cache
+/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/obj/Debug/net10.0/AiLang.Core.dll
+/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/obj/Debug/net10.0/refint/AiLang.Core.dll
+/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/obj/Debug/net10.0/AiLang.Core.pdb
+/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/obj/Debug/net10.0/ref/AiLang.Core.dll

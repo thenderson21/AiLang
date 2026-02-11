@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AiLang.Cli/AiLang.Cli.csproj" />
+    <Project Path="src/AiLang.Core/AiLang.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AiLang.Tests/AiLang.Tests.csproj" />
+  </Folder>
+</Solution>
