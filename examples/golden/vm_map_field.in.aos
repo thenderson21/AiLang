@@ -1,0 +1,9 @@
+Program#p1 {
+  Let#l1(name=m) {
+    Map#m1 {
+      Field#f1(key="status") { Lit#s1(value="ok") }
+      Field#f2(key="ready") { Lit#b1(value=true) }
+    }
+  }
+  Call#c1(target=io.print) { Call#c2(target=compiler.toJson) { Var#v1(name=m) } }
+}

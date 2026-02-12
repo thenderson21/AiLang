@@ -1,0 +1,17 @@
+Program#p1 {
+  Let#l1(name=evt) { Event#Message(type="http.request" payload="GET /health") }
+  Let#l2(name=cmd) { Command#Print(text="ok") }
+  Let#l3(name=req) { HttpRequest#h1(method="GET" path="/health") }
+  Let#l4(name=route) { Route#r1(path="/health" handler="health") }
+  Let#l5(name=match) { Match#m1(handler="health") }
+  Call#c1(target=io.print) { NodeKind#k1 { Var#v1(name=evt) } }
+  Call#c2(target=io.print) { NodeKind#k2 { Var#v2(name=cmd) } }
+  Call#c3(target=io.print) { NodeKind#k3 { Var#v3(name=req) } }
+  Call#c4(target=io.print) { NodeKind#k4 { Var#v4(name=route) } }
+  Call#c5(target=io.print) { NodeKind#k5 { Var#v5(name=match) } }
+  If#if1 {
+    Eq#eq1 { Lit#n1(value=null) Lit#n2(value=null) }
+    Block#b1 { Call#c6(target=io.print) { Lit#s1(value="null-ok") } }
+    Block#b2 { Call#c7(target=io.print) { Lit#s2(value="null-bad") } }
+  }
+}
