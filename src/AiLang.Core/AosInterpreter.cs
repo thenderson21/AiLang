@@ -45,8 +45,13 @@ public sealed partial class AosInterpreter
     {
         try
         {
-            var vm = VmProgramLoader.Load(bytecode, BytecodeAdapter.Instance);
-            return RunVmProgram(vm, entryName, argsNode, runtime);
+            var args = BuildVmArgs(bytecode, entryName, argsNode);
+            return VmEngine.Run(
+                bytecode,
+                entryName,
+                args,
+                BytecodeAdapter.Instance,
+                new VmExecutionAdapter(this, runtime));
         }
         catch (VmRuntimeException ex)
         {
@@ -728,8 +733,15 @@ public sealed partial class AosInterpreter
 
             try
             {
-                var vm = VmProgramLoader.Load(bytecodeValue.AsNode(), BytecodeAdapter.Instance);
-                return RunVmProgram(vm, entryValue.AsString(), argsValue.AsNode(), runtime);
+                var bytecodeNode = bytecodeValue.AsNode();
+                var entryName = entryValue.AsString();
+                var args = BuildVmArgs(bytecodeNode, entryName, argsValue.AsNode());
+                return VmEngine.Run(
+                    bytecodeNode,
+                    entryName,
+                    args,
+                    BytecodeAdapter.Instance,
+                    new VmExecutionAdapter(this, runtime));
             }
             catch (VmRuntimeException ex)
             {
@@ -2204,19 +2216,15 @@ public sealed partial class AosInterpreter
             AosValue.FromNode(DecodeNodeConstant(encodedNode, nodeId));
     }
 
-    private AosValue RunVmProgram(VmProgram<AosValue> vm, string entryName, AosNode argsNode, AosRuntime runtime)
+    private static List<AosValue> BuildVmArgs(AosNode bytecodeNode, string entryName, AosNode argsNode)
     {
+        var vm = VmProgramLoader.Load(bytecodeNode, BytecodeAdapter.Instance);
         if (!vm.FunctionIndexByName.TryGetValue(entryName, out var entryIndex))
         {
             throw new VmRuntimeException("VM001", $"Entry function not found: {entryName}.", entryName);
         }
+        var entry = vm.Functions[entryIndex];
 
-        var args = BuildVmArgs(vm.Functions[entryIndex], argsNode);
-        return AiVM.Core.VmRunner.Run<AosValue, AosNode>(vm, entryIndex, args, new VmExecutionAdapter(this, runtime));
-    }
-
-    private static List<AosValue> BuildVmArgs(VmFunction entry, AosNode argsNode)
-    {
         var args = new List<AosValue>();
         if (entry.Params.Count == 1 && string.Equals(entry.Params[0], "argv", StringComparison.Ordinal))
         {
