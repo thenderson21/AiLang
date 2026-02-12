@@ -1,3 +1,5 @@
+using AiVM.Core;
+
 namespace AiLang.Core;
 
 public static class AosFormatter
@@ -54,17 +56,17 @@ public static class AosFormatter
     {
         var searchRoots = new[]
         {
-            AppContext.BaseDirectory,
-            Directory.GetCurrentDirectory(),
-            Path.Combine(Directory.GetCurrentDirectory(), "src", "compiler"),
-            Path.Combine(Directory.GetCurrentDirectory(), "compiler")
+            HostEnvironment.BaseDirectory,
+            HostFileSystem.GetCurrentDirectory(),
+            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "src", "compiler"),
+            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "compiler")
         };
 
         string? path = null;
         foreach (var root in searchRoots)
         {
-            var candidate = Path.Combine(root, "format.aos");
-            if (File.Exists(candidate))
+            var candidate = HostFileSystem.Combine(root, "format.aos");
+            if (HostFileSystem.FileExists(candidate))
             {
                 path = candidate;
                 break;
@@ -76,7 +78,7 @@ public static class AosFormatter
             throw new FileNotFoundException("format.aos not found.");
         }
 
-        var source = File.ReadAllText(path);
+        var source = HostFileSystem.ReadAllText(path);
         var parse = AosParsing.Parse(source);
 
         if (parse.Root is null)

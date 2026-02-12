@@ -1,3 +1,5 @@
+using AiVM.Core;
+
 namespace AiLang.Core;
 
 public sealed class AosValidationResult
@@ -136,7 +138,7 @@ public sealed class AosValidator
                     else
                     {
                         var entryFile = entryFileAttr.AsString();
-                        if (Path.IsPathRooted(entryFile))
+                        if (HostFileSystem.IsPathRooted(entryFile))
                         {
                             _diagnostics.Add(new AosDiagnostic("VAL093", "Project entryFile must be relative path.", node.Id, node.Span));
                         }
@@ -188,7 +190,7 @@ public sealed class AosValidator
                     {
                         _diagnostics.Add(new AosDiagnostic("VAL153", "Include path must be string.", node.Id, node.Span));
                     }
-                    else if (Path.IsPathRooted(includePathAttr.AsString()))
+                    else if (HostFileSystem.IsPathRooted(includePathAttr.AsString()))
                     {
                         _diagnostics.Add(new AosDiagnostic("VAL154", "Include path must be relative path.", node.Id, node.Span));
                     }

@@ -1,3 +1,5 @@
+using AiVM.Core;
+
 namespace AiLang.Core;
 
 public static class AosStandardLibraryLoader
@@ -50,19 +52,19 @@ public static class AosStandardLibraryLoader
     {
         var searchRoots = new[]
         {
-            AppContext.BaseDirectory,
-            Directory.GetCurrentDirectory(),
-            Path.Combine(AppContext.BaseDirectory, "src", "compiler"),
-            Path.Combine(Directory.GetCurrentDirectory(), "src", "compiler"),
-            Path.Combine(AppContext.BaseDirectory, "compiler"),
-            Path.Combine(Directory.GetCurrentDirectory(), "compiler")
+            HostEnvironment.BaseDirectory,
+            HostFileSystem.GetCurrentDirectory(),
+            HostFileSystem.Combine(HostEnvironment.BaseDirectory, "src", "compiler"),
+            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "src", "compiler"),
+            HostFileSystem.Combine(HostEnvironment.BaseDirectory, "compiler"),
+            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "compiler")
         };
 
         string? path = null;
         foreach (var root in searchRoots)
         {
-            var candidate = Path.Combine(root, "route.aos");
-            if (File.Exists(candidate))
+            var candidate = HostFileSystem.Combine(root, "route.aos");
+            if (HostFileSystem.FileExists(candidate))
             {
                 path = candidate;
                 break;
@@ -97,19 +99,19 @@ public static class AosStandardLibraryLoader
     {
         var searchRoots = new[]
         {
-            AppContext.BaseDirectory,
-            Directory.GetCurrentDirectory(),
-            Path.Combine(AppContext.BaseDirectory, "src", "compiler"),
-            Path.Combine(Directory.GetCurrentDirectory(), "src", "compiler"),
-            Path.Combine(AppContext.BaseDirectory, "compiler"),
-            Path.Combine(Directory.GetCurrentDirectory(), "compiler")
+            HostEnvironment.BaseDirectory,
+            HostFileSystem.GetCurrentDirectory(),
+            HostFileSystem.Combine(HostEnvironment.BaseDirectory, "src", "compiler"),
+            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "src", "compiler"),
+            HostFileSystem.Combine(HostEnvironment.BaseDirectory, "compiler"),
+            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "compiler")
         };
 
         string? path = null;
         foreach (var root in searchRoots)
         {
-            var candidate = Path.Combine(root, "json.aos");
-            if (File.Exists(candidate))
+            var candidate = HostFileSystem.Combine(root, "json.aos");
+            if (HostFileSystem.FileExists(candidate))
             {
                 path = candidate;
                 break;

@@ -1,3 +1,5 @@
+using AiVM.Core;
+
 namespace AiLang.Core;
 
 public sealed class AosStructuralValidator
@@ -69,17 +71,17 @@ public sealed class AosStructuralValidator
     {
         var searchRoots = new[]
         {
-            AppContext.BaseDirectory,
-            Directory.GetCurrentDirectory(),
-            Path.Combine(Directory.GetCurrentDirectory(), "src", "compiler"),
-            Path.Combine(Directory.GetCurrentDirectory(), "compiler")
+            HostEnvironment.BaseDirectory,
+            HostFileSystem.GetCurrentDirectory(),
+            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "src", "compiler"),
+            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "compiler")
         };
 
         string? path = null;
         foreach (var root in searchRoots)
         {
-            var candidate = Path.Combine(root, "validate.aos");
-            if (File.Exists(candidate))
+            var candidate = HostFileSystem.Combine(root, "validate.aos");
+            if (HostFileSystem.FileExists(candidate))
             {
                 path = candidate;
                 break;
@@ -91,7 +93,7 @@ public sealed class AosStructuralValidator
             throw new FileNotFoundException("validate.aos not found.");
         }
 
-        var source = File.ReadAllText(path);
+        var source = HostFileSystem.ReadAllText(path);
         var parse = AosParsing.Parse(source);
 
         if (parse.Root is null)

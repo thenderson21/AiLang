@@ -1,3 +1,5 @@
+using AiVM.Core;
+
 namespace AiLang.Core;
 
 public static class AosParsing
@@ -9,6 +11,6 @@ public static class AosParsing
 
     public static AosParseResult ParseFile(string path)
     {
-        return Parse(File.ReadAllText(path));
+        return Parse(HostFileSystem.ReadAllText(path));
     }
 }

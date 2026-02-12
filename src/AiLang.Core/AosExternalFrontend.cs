@@ -1,5 +1,5 @@
-using System.Diagnostics;
 using System.Text;
+using AiVM.Core;
 
 namespace AiLang.Core;
 
@@ -15,16 +15,7 @@ public static class AosExternalFrontend
 
         try
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = frontend,
-                Arguments = "--stdin",
-                RedirectStandardInput = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false
-            };
-            using var process = Process.Start(psi);
+            var process = HostProcessRunner.RunWithStdIn(frontend, "--stdin", source);
             if (process is null)
             {
                 return new AosParseResult(null, new List<AosDiagnostic>
@@ -33,21 +24,12 @@ public static class AosExternalFrontend
                 });
             }
 
-            process.StandardInput.Write(source);
-            process.StandardInput.Close();
-
-            var stderrTask = process.StandardError.ReadToEndAsync();
-            using var stdout = new MemoryStream();
-            process.StandardOutput.BaseStream.CopyTo(stdout);
-            process.WaitForExit();
-            var stderr = stderrTask.GetAwaiter().GetResult();
-
             if (process.ExitCode != 0)
             {
-                return new AosParseResult(null, new List<AosDiagnostic> { ParseFrontendError(stderr) });
+                return new AosParseResult(null, new List<AosDiagnostic> { ParseFrontendError(process.Stderr) });
             }
 
-            return Decode(stdout.ToArray());
+            return Decode(process.Stdout);
         }
         catch (Exception ex)
         {
@@ -97,22 +79,22 @@ public static class AosExternalFrontend
 
     private static string? ResolveFrontendPath()
     {
-        var env = Environment.GetEnvironmentVariable("AOS_FRONTEND");
-        if (!string.IsNullOrWhiteSpace(env) && File.Exists(env))
+        var env = HostEnvironment.GetEnvironmentVariable("AOS_FRONTEND");
+        if (!string.IsNullOrWhiteSpace(env) && HostFileSystem.FileExists(env))
         {
             return env;
         }
 
         var candidates = new[]
         {
-            Path.Combine(AppContext.BaseDirectory, "aos_frontend"),
-            Path.Combine(Directory.GetCurrentDirectory(), "tools", "aos_frontend"),
-            Path.Combine(Directory.GetCurrentDirectory(), "aos_frontend")
+            HostFileSystem.Combine(HostEnvironment.BaseDirectory, "aos_frontend"),
+            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "tools", "aos_frontend"),
+            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "aos_frontend")
         };
 
         foreach (var candidate in candidates)
         {
-            if (File.Exists(candidate))
+            if (HostFileSystem.FileExists(candidate))
             {
                 return candidate;
             }
