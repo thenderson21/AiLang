@@ -7,6 +7,21 @@ AiLang is an AI-first language/runtime project using AI-Optimized Syntax (AOS) a
 This root README is human-oriented.  
 For agent-focused operating docs, use `Docs/README.md`.
 
+## Architecture
+
+AiLang is organized into four explicit layers under `src/`:
+
+- `src/AiLang.Core` — language layer (AOS AST model, parser bridge, validator, formatter wiring, semantic helpers).
+- `src/AiVM.Core` — deterministic VM/runtime engine (AiBC1 load/run + syscall dispatch boundary).
+- `src/AiCLI` — executable bootloader and CLI argument handling (`run`, `serve`, `repl`, `bench`).
+- `src/AiVectra` — UI-layer placeholder for future integration.
+
+Layer rule:
+
+- C# host effects are only reachable through `sys.*`.
+- VM is canonical runtime execution.
+- AST interpreter exists only for debug (`--vm=ast` in dev mode).
+
 ## Project Identity
 
 This repository is itself an AiLang project.

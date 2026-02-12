@@ -18,6 +18,24 @@ The AI must treat architectural constraints as hard rules.
 - VM execution must not directly access time, randomness, network, filesystem, or process state.
 - Syscalls are the only permitted escape hatch from deterministic execution.
 
+## Layer boundaries (enforced)
+
+- `src/AiLang.Core` is language-only:
+  - parser/tokenizer bridge
+  - AST/IR structures
+  - validator and deterministic language semantics
+  - no direct syscall, network, file, or process operations
+- `src/AiVM.Core` is VM-only:
+  - AiBC1 loading/execution
+  - deterministic state transition engine
+  - syscall dispatch boundary only (`sys.*`)
+  - no language-spec ownership changes without `SPEC/` updates
+- `src/AiCLI` is bootloader-only:
+  - CLI arg parsing and mode selection
+  - syscall host binding
+  - delegates execution to core/vm layers
+- `src/AiVectra` is UI-layer placeholder (no active runtime integration yet).
+
 ## What the AI is allowed to do
 
 - Implement tokenizer, parser, validator, interpreter, REPL.
