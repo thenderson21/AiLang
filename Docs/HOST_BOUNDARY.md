@@ -28,3 +28,17 @@ When adding behavior:
 - No command routing semantics in C#.
 
 If a change needs these, implement it in AOS and keep C# as syscall-only transport.
+
+## VM Purity Invariant (New)
+
+AiVM is a deterministic execution microkernel.
+
+The VM core must:
+- Execute bytecode as a pure state transition engine.
+- Perform no host IO, time access, randomness, or process inspection directly.
+- Contain no lifecycle, routing, HTTP, or orchestration logic.
+- Make no semantic decisions beyond instruction execution.
+
+All observable side effects must occur exclusively through explicit `sys.*` invocations.
+
+Syscalls form the only boundary between deterministic VM execution and host effects.

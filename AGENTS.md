@@ -13,6 +13,10 @@ The AI must treat architectural constraints as hard rules.
 - No network, filesystem writes, time, or randomness unless explicitly via capability and permission.
 - Stable node IDs are required; never regenerate IDs unnecessarily.
 - Semantic IR is the source of truth. Encoding is not.
+- AiVM must remain a deterministic state transition engine.
+- No hidden side effects inside the VM; all effects must route through `sys.*`.
+- VM execution must not directly access time, randomness, network, filesystem, or process state.
+- Syscalls are the only permitted escape hatch from deterministic execution.
 
 ## What the AI is allowed to do
 
