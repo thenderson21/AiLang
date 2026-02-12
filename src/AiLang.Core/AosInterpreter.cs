@@ -525,15 +525,6 @@ public sealed class AosInterpreter
 
             var certPath = certPathValue.AsString();
             var keyPath = keyPathValue.AsString();
-            if (!File.Exists(certPath))
-            {
-                throw new InvalidOperationException($"TLS003: certificate file not found: {certPath}");
-            }
-            if (!File.Exists(keyPath))
-            {
-                throw new InvalidOperationException($"TLS004: key file not found: {keyPath}");
-            }
-
             System.Security.Cryptography.X509Certificates.X509Certificate2 certificate;
             try
             {
@@ -541,7 +532,7 @@ public sealed class AosInterpreter
             }
             catch
             {
-                throw new InvalidOperationException("TLS005: failed to load TLS certificate/key.");
+                return AosValue.FromInt(-1);
             }
 
             var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, portValue.AsInt());
