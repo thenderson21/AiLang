@@ -299,7 +299,7 @@ public sealed partial class AosInterpreter
             {
                 return AosValue.Unknown;
             }
-            Console.WriteLine(arg.AsString());
+            VmSyscalls.ConsolePrintLine(arg.AsString());
             return AosValue.Void;
         }
 
@@ -320,7 +320,7 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            Console.WriteLine(ValueToDisplayString(value));
+            VmSyscalls.IoPrint(ValueToDisplayString(value));
             return AosValue.Void;
         }
 
@@ -341,7 +341,7 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            Console.Write(value.AsString());
+            VmSyscalls.IoWrite(value.AsString());
             return AosValue.Void;
         }
 
@@ -356,8 +356,7 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            var line = Console.ReadLine();
-            return AosValue.FromString(line ?? string.Empty);
+            return AosValue.FromString(VmSyscalls.IoReadLine());
         }
 
         if (target == "io.readAllStdin")
@@ -371,7 +370,7 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            return AosValue.FromString(Console.In.ReadToEnd());
+            return AosValue.FromString(VmSyscalls.IoReadAllStdin());
         }
 
         if (target == "io.readFile")
@@ -391,7 +390,7 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            return AosValue.FromString(File.ReadAllText(pathValue.AsString()));
+            return AosValue.FromString(VmSyscalls.IoReadFile(pathValue.AsString()));
         }
 
         if (target == "io.fileExists")
@@ -411,7 +410,7 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            return AosValue.FromBool(File.Exists(pathValue.AsString()));
+            return AosValue.FromBool(VmSyscalls.IoFileExists(pathValue.AsString()));
         }
 
         if (target == "io.pathExists")
@@ -431,8 +430,7 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            var path = pathValue.AsString();
-            return AosValue.FromBool(File.Exists(path) || Directory.Exists(path));
+            return AosValue.FromBool(VmSyscalls.IoPathExists(pathValue.AsString()));
         }
 
         if (target == "io.makeDir")
@@ -452,7 +450,7 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            Directory.CreateDirectory(pathValue.AsString());
+            VmSyscalls.IoMakeDir(pathValue.AsString());
             return AosValue.Void;
         }
 
@@ -474,7 +472,7 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            File.WriteAllText(pathValue.AsString(), textValue.AsString());
+            VmSyscalls.IoWriteFile(pathValue.AsString(), textValue.AsString());
             return AosValue.Void;
         }
 
