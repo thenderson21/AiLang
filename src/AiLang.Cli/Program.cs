@@ -81,13 +81,13 @@ static int RunCli(string[] args)
                 Console.WriteLine(FormatErr("err0", "DEV005", "Source serve is unavailable in production build.", "serve"));
                 return 1;
             }
-            if (!CliHttpServe.TryParseServeOptions(filteredArgs.Skip(2).ToArray(), out var port, out var appArgs))
+            if (!CliHttpServe.TryParseServeOptions(filteredArgs.Skip(2).ToArray(), out var port, out var tlsCertPath, out var tlsKeyPath, out var appArgs))
             {
                 PrintUsage();
                 return 1;
             }
 
-            return RunServe(filteredArgs[1], appArgs, port, traceEnabled, vmMode);
+            return RunServe(filteredArgs[1], appArgs, port, tlsCertPath, tlsKeyPath, traceEnabled, vmMode);
         case "bench":
             if (!InAosDevMode())
             {
@@ -172,7 +172,7 @@ static int RunSource(string path, string[] argv, bool traceEnabled, string vmMod
     }
 }
 
-static int RunServe(string path, string[] argv, int port, bool traceEnabled, string vmMode)
+static int RunServe(string path, string[] argv, int port, string tlsCertPath, string tlsKeyPath, bool traceEnabled, string vmMode)
 {
     try
     {
@@ -183,7 +183,7 @@ static int RunServe(string path, string[] argv, int port, bool traceEnabled, str
         }
 
         runtime!.Permissions.Add("sys");
-        var result = ExecuteRuntimeStart(runtime, BuildKernelServeArgs(port));
+        var result = ExecuteRuntimeStart(runtime, BuildKernelServeArgs(port, tlsCertPath, tlsKeyPath));
         if (IsErrNode(result, out var errNode))
         {
             Console.WriteLine(AosFormatter.Format(errNode!));
@@ -247,7 +247,7 @@ static AosNode? LoadRuntimeKernel()
     return parse.Root.Kind == "Program" ? parse.Root : null;
 }
 
-static AosNode BuildKernelServeArgs(int port)
+static AosNode BuildKernelServeArgs(int port, string tlsCertPath, string tlsKeyPath)
 {
     var children = new List<AosNode>
     {
@@ -266,6 +266,24 @@ static AosNode BuildKernelServeArgs(int port)
             new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
             {
                 ["value"] = new AosAttrValue(AosAttrKind.Int, port)
+            },
+            new List<AosNode>(),
+            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))),
+        new(
+            "Lit",
+            "karg2",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+            {
+                ["value"] = new AosAttrValue(AosAttrKind.String, tlsCertPath)
+            },
+            new List<AosNode>(),
+            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))),
+        new(
+            "Lit",
+            "karg3",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+            {
+                ["value"] = new AosAttrValue(AosAttrKind.String, tlsKeyPath)
             },
             new List<AosNode>(),
             new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)))
@@ -1011,7 +1029,7 @@ static void PrintUsage()
 {
     if (InAosDevMode())
     {
-        Console.WriteLine("Usage: airun repl | airun run <path.aos> | airun serve <path.aos> [--port <n>] [--vm=bytecode|ast] | airun bench [--iterations <n>] [--human]");
+        Console.WriteLine("Usage: airun repl | airun run <path.aos> | airun serve <path.aos> [--port <n>] [--tls-cert <path>] [--tls-key <path>] [--vm=bytecode|ast] | airun bench [--iterations <n>] [--human]");
         return;
     }
 

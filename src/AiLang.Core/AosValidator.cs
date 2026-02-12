@@ -687,6 +687,31 @@ public sealed class AosValidator
             return AosValueKind.Int;
         }
 
+        if (target == "sys.net_listen_tls")
+        {
+            RequirePermission(node, "sys", permissions);
+            if (argTypes.Count != 3)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL140", "sys.net_listen_tls expects 3 arguments.", node.Id, node.Span));
+            }
+            else
+            {
+                if (argTypes[0] != AosValueKind.Int && argTypes[0] != AosValueKind.Unknown)
+                {
+                    _diagnostics.Add(new AosDiagnostic("VAL141", "sys.net_listen_tls arg 1 must be int.", node.Id, node.Span));
+                }
+                if (argTypes[1] != AosValueKind.String && argTypes[1] != AosValueKind.Unknown)
+                {
+                    _diagnostics.Add(new AosDiagnostic("VAL142", "sys.net_listen_tls arg 2 must be string.", node.Id, node.Span));
+                }
+                if (argTypes[2] != AosValueKind.String && argTypes[2] != AosValueKind.Unknown)
+                {
+                    _diagnostics.Add(new AosDiagnostic("VAL143", "sys.net_listen_tls arg 3 must be string.", node.Id, node.Span));
+                }
+            }
+            return AosValueKind.Int;
+        }
+
         if (target == "sys.net_accept")
         {
             RequirePermission(node, "sys", permissions);

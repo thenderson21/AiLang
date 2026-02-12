@@ -80,7 +80,32 @@ Program#rt_p1 {
     Fn#rt_f2(params=args) {
       Block#rt_b4 {
         Let#rt_l4(name=port) { Call#rt_c3(target=runtime_arg_int) { Var#rt_v4(name=args) Lit#rt_i4(value=1) } }
-        Let#rt_l5(name=listener) { Call#rt_c4(target=sys.net_listen) { Var#rt_v5(name=port) } }
+        Let#rt_l60(name=tlsCertPath) { Call#rt_c70(target=runtime_arg_string) { Var#rt_v161(name=args) Lit#rt_i110(value=2) } }
+        Let#rt_l61(name=tlsKeyPath) { Call#rt_c71(target=runtime_arg_string) { Var#rt_v162(name=args) Lit#rt_i111(value=3) } }
+        Let#rt_l5(name=listener) {
+          If#rt_if38 {
+            Eq#rt_eq35 { Var#rt_v163(name=tlsCertPath) Lit#rt_i112(value="") }
+            Block#rt_b95 {
+              If#rt_if39 {
+                Eq#rt_eq36 { Var#rt_v164(name=tlsKeyPath) Lit#rt_i113(value="") }
+                Block#rt_b96 { Call#rt_c4(target=sys.net_listen) { Var#rt_v5(name=port) } }
+                Block#rt_b97 { MakeErr#rt_me1 { Lit#rt_i114(value="runtime_err") Lit#rt_i115(value="TLS001") Lit#rt_i116(value="--tls-key requires --tls-cert.") Lit#rt_i117(value="serve") } }
+              }
+            }
+            Block#rt_b98 {
+              If#rt_if40 {
+                Eq#rt_eq37 { Var#rt_v165(name=tlsKeyPath) Lit#rt_i118(value="") }
+                Block#rt_b99 { MakeErr#rt_me2 { Lit#rt_i119(value="runtime_err") Lit#rt_i120(value="TLS002") Lit#rt_i121(value="--tls-cert requires --tls-key.") Lit#rt_i122(value="serve") } }
+                Block#rt_b100 { Call#rt_c72(target=sys.net_listen_tls) { Var#rt_v166(name=port) Var#rt_v167(name=tlsCertPath) Var#rt_v168(name=tlsKeyPath) } }
+              }
+            }
+          }
+        }
+        If#rt_if41 {
+          Eq#rt_eq38 { NodeKind#rt_nk10 { Var#rt_v169(name=listener) } Lit#rt_i123(value="Err") }
+          Block#rt_b101 { Return#rt_r54 { Var#rt_v170(name=listener) } }
+          Block#rt_b102 { Lit#rt_i124(value=0) }
+        }
         Let#rt_l6(name=state) { Call#rt_c5(target=init) { Var#rt_v6(name=argv) } }
         Return#rt_r3 { Call#rt_c6(target=runtime_serve_loop) { Var#rt_v7(name=listener) Var#rt_v8(name=state) } }
       }

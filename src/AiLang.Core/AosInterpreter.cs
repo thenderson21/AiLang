@@ -14,6 +14,8 @@ public sealed class AosRuntime
     public AosNode? Program { get; set; }
     public Dictionary<int, System.Net.Sockets.TcpListener> NetListeners { get; } = new();
     public Dictionary<int, System.Net.Sockets.TcpClient> NetConnections { get; } = new();
+    public Dictionary<int, System.Security.Cryptography.X509Certificates.X509Certificate2> NetTlsCertificates { get; } = new();
+    public Dictionary<int, System.Net.Security.SslStream> NetTlsStreams { get; } = new();
     public int NextNetHandle { get; set; } = 1;
 }
 
@@ -502,6 +504,54 @@ public sealed class AosInterpreter
             return AosValue.FromInt(handle);
         }
 
+        if (target == "sys.net_listen_tls")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 3)
+            {
+                return AosValue.Unknown;
+            }
+
+            var portValue = EvalNode(node.Children[0], runtime, env);
+            var certPathValue = EvalNode(node.Children[1], runtime, env);
+            var keyPathValue = EvalNode(node.Children[2], runtime, env);
+            if (portValue.Kind != AosValueKind.Int || certPathValue.Kind != AosValueKind.String || keyPathValue.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            var certPath = certPathValue.AsString();
+            var keyPath = keyPathValue.AsString();
+            if (!File.Exists(certPath))
+            {
+                throw new InvalidOperationException($"TLS003: certificate file not found: {certPath}");
+            }
+            if (!File.Exists(keyPath))
+            {
+                throw new InvalidOperationException($"TLS004: key file not found: {keyPath}");
+            }
+
+            System.Security.Cryptography.X509Certificates.X509Certificate2 certificate;
+            try
+            {
+                certificate = System.Security.Cryptography.X509Certificates.X509Certificate2.CreateFromPemFile(certPath, keyPath);
+            }
+            catch
+            {
+                throw new InvalidOperationException("TLS005: failed to load TLS certificate/key.");
+            }
+
+            var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, portValue.AsInt());
+            listener.Start();
+            var handle = runtime.NextNetHandle++;
+            runtime.NetListeners[handle] = listener;
+            runtime.NetTlsCertificates[handle] = certificate;
+            return AosValue.FromInt(handle);
+        }
+
         if (target == "sys.net_accept")
         {
             if (!runtime.Permissions.Contains("sys"))
@@ -527,6 +577,27 @@ public sealed class AosInterpreter
             var client = listener.AcceptTcpClient();
             var connHandle = runtime.NextNetHandle++;
             runtime.NetConnections[connHandle] = client;
+            if (runtime.NetTlsCertificates.TryGetValue(handleValue.AsInt(), out var cert))
+            {
+                var tlsStream = new System.Net.Security.SslStream(client.GetStream(), leaveInnerStreamOpen: false);
+                try
+                {
+                    tlsStream.AuthenticateAsServer(
+                        cert,
+                        clientCertificateRequired: false,
+                        enabledSslProtocols: System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13,
+                        checkCertificateRevocation: false);
+                }
+                catch
+                {
+                    tlsStream.Dispose();
+                    try { client.Close(); } catch { }
+                    runtime.NetConnections.Remove(connHandle);
+                    return AosValue.FromInt(-1);
+                }
+
+                runtime.NetTlsStreams[connHandle] = tlsStream;
+            }
             return AosValue.FromInt(connHandle);
         }
 
@@ -552,7 +623,9 @@ public sealed class AosInterpreter
                 return AosValue.FromString(string.Empty);
             }
 
-            var stream = client.GetStream();
+            Stream stream = runtime.NetTlsStreams.TryGetValue(handleValue.AsInt(), out var tlsStream)
+                ? tlsStream
+                : client.GetStream();
             var bytes = new List<byte>(1024);
             var endSeen = 0;
             var pattern = new byte[] { 13, 10, 13, 10 };
@@ -607,7 +680,9 @@ public sealed class AosInterpreter
             }
 
             var bytes = System.Text.Encoding.UTF8.GetBytes(textValue.AsString());
-            var stream = client.GetStream();
+            Stream stream = runtime.NetTlsStreams.TryGetValue(handleValue.AsInt(), out var tlsStream)
+                ? tlsStream
+                : client.GetStream();
             stream.Write(bytes, 0, bytes.Length);
             stream.Flush();
             return AosValue.Void;
@@ -633,6 +708,11 @@ public sealed class AosInterpreter
             var handle = handleValue.AsInt();
             if (runtime.NetConnections.TryGetValue(handle, out var conn))
             {
+                if (runtime.NetTlsStreams.TryGetValue(handle, out var tlsStream))
+                {
+                    try { tlsStream.Dispose(); } catch { }
+                    runtime.NetTlsStreams.Remove(handle);
+                }
                 try { conn.Close(); } catch { }
                 runtime.NetConnections.Remove(handle);
                 return AosValue.Void;
@@ -642,6 +722,7 @@ public sealed class AosInterpreter
             {
                 try { listener.Stop(); } catch { }
                 runtime.NetListeners.Remove(handle);
+                runtime.NetTlsCertificates.Remove(handle);
                 return AosValue.Void;
             }
 
