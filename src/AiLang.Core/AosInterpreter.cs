@@ -664,7 +664,7 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            return AosValue.FromString(File.ReadAllText(pathValue.AsString()));
+            return AosValue.FromString(VmSyscalls.FsReadFile(pathValue.AsString()));
         }
 
         if (target == "sys.fs_fileExists")
@@ -684,7 +684,7 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            return AosValue.FromBool(File.Exists(pathValue.AsString()));
+            return AosValue.FromBool(VmSyscalls.FsFileExists(pathValue.AsString()));
         }
 
         if (target == "sys.str_utf8ByteCount")
@@ -704,7 +704,7 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            return AosValue.FromInt(System.Text.Encoding.UTF8.GetByteCount(textValue.AsString()));
+            return AosValue.FromInt(VmSyscalls.StrUtf8ByteCount(textValue.AsString()));
         }
 
         if (target == "sys.vm_run")
