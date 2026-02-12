@@ -1,0 +1,4 @@
+Program#p1 {
+  Import#i1(path="./mod.aos")
+  Call#c1(target=io.print) { Lit#s1(value="import-ok") }
+}
