@@ -481,235 +481,9 @@ public sealed partial class AosInterpreter
             return AosValue.Void;
         }
 
-        if (target == "sys.net_listen")
+        if (TryEvaluateSysCall(target, node, runtime, env, out var sysValue))
         {
-            if (!runtime.Permissions.Contains("sys"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 1)
-            {
-                return AosValue.Unknown;
-            }
-
-            var portValue = EvalNode(node.Children[0], runtime, env);
-            if (portValue.Kind != AosValueKind.Int)
-            {
-                return AosValue.Unknown;
-            }
-
-            return AosValue.FromInt(VmSyscalls.NetListen(runtime.Network, portValue.AsInt()));
-        }
-
-        if (target == "sys.net_listen_tls")
-        {
-            if (!runtime.Permissions.Contains("sys"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 3)
-            {
-                return AosValue.Unknown;
-            }
-
-            var portValue = EvalNode(node.Children[0], runtime, env);
-            var certPathValue = EvalNode(node.Children[1], runtime, env);
-            var keyPathValue = EvalNode(node.Children[2], runtime, env);
-            if (portValue.Kind != AosValueKind.Int || certPathValue.Kind != AosValueKind.String || keyPathValue.Kind != AosValueKind.String)
-            {
-                return AosValue.Unknown;
-            }
-
-            return AosValue.FromInt(VmSyscalls.NetListenTls(
-                runtime.Network,
-                portValue.AsInt(),
-                certPathValue.AsString(),
-                keyPathValue.AsString()));
-        }
-
-        if (target == "sys.net_accept")
-        {
-            if (!runtime.Permissions.Contains("sys"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 1)
-            {
-                return AosValue.Unknown;
-            }
-
-            var handleValue = EvalNode(node.Children[0], runtime, env);
-            if (handleValue.Kind != AosValueKind.Int)
-            {
-                return AosValue.Unknown;
-            }
-
-            return AosValue.FromInt(VmSyscalls.NetAccept(runtime.Network, handleValue.AsInt()));
-        }
-
-        if (target == "sys.net_readHeaders")
-        {
-            if (!runtime.Permissions.Contains("sys"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 1)
-            {
-                return AosValue.Unknown;
-            }
-
-            var handleValue = EvalNode(node.Children[0], runtime, env);
-            if (handleValue.Kind != AosValueKind.Int)
-            {
-                return AosValue.Unknown;
-            }
-
-            return AosValue.FromString(VmSyscalls.NetReadHeaders(runtime.Network, handleValue.AsInt()));
-        }
-
-        if (target == "sys.net_write")
-        {
-            if (!runtime.Permissions.Contains("sys"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 2)
-            {
-                return AosValue.Unknown;
-            }
-
-            var handleValue = EvalNode(node.Children[0], runtime, env);
-            var textValue = EvalNode(node.Children[1], runtime, env);
-            if (handleValue.Kind != AosValueKind.Int || textValue.Kind != AosValueKind.String)
-            {
-                return AosValue.Unknown;
-            }
-
-            return VmSyscalls.NetWrite(runtime.Network, handleValue.AsInt(), textValue.AsString())
-                ? AosValue.Void
-                : AosValue.Unknown;
-        }
-
-        if (target == "sys.net_close")
-        {
-            if (!runtime.Permissions.Contains("sys"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 1)
-            {
-                return AosValue.Unknown;
-            }
-
-            var handleValue = EvalNode(node.Children[0], runtime, env);
-            if (handleValue.Kind != AosValueKind.Int)
-            {
-                return AosValue.Unknown;
-            }
-
-            VmSyscalls.NetClose(runtime.Network, handleValue.AsInt());
-            return AosValue.Void;
-        }
-
-        if (target == "sys.stdout_writeLine")
-        {
-            if (!runtime.Permissions.Contains("sys"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 1)
-            {
-                return AosValue.Unknown;
-            }
-
-            var textValue = EvalNode(node.Children[0], runtime, env);
-            if (textValue.Kind != AosValueKind.String)
-            {
-                return AosValue.Unknown;
-            }
-
-            VmSyscalls.StdoutWriteLine(textValue.AsString());
-            return AosValue.Void;
-        }
-
-        if (target == "sys.proc_exit")
-        {
-            if (!runtime.Permissions.Contains("sys"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 1)
-            {
-                return AosValue.Unknown;
-            }
-
-            var codeValue = EvalNode(node.Children[0], runtime, env);
-            if (codeValue.Kind != AosValueKind.Int)
-            {
-                return AosValue.Unknown;
-            }
-
-            VmSyscalls.ProcessExit(codeValue.AsInt());
-        }
-
-        if (target == "sys.fs_readFile")
-        {
-            if (!runtime.Permissions.Contains("sys"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 1)
-            {
-                return AosValue.Unknown;
-            }
-
-            var pathValue = EvalNode(node.Children[0], runtime, env);
-            if (pathValue.Kind != AosValueKind.String)
-            {
-                return AosValue.Unknown;
-            }
-
-            return AosValue.FromString(VmSyscalls.FsReadFile(pathValue.AsString()));
-        }
-
-        if (target == "sys.fs_fileExists")
-        {
-            if (!runtime.Permissions.Contains("sys"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 1)
-            {
-                return AosValue.Unknown;
-            }
-
-            var pathValue = EvalNode(node.Children[0], runtime, env);
-            if (pathValue.Kind != AosValueKind.String)
-            {
-                return AosValue.Unknown;
-            }
-
-            return AosValue.FromBool(VmSyscalls.FsFileExists(pathValue.AsString()));
-        }
-
-        if (target == "sys.str_utf8ByteCount")
-        {
-            if (!runtime.Permissions.Contains("sys"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 1)
-            {
-                return AosValue.Unknown;
-            }
-
-            var textValue = EvalNode(node.Children[0], runtime, env);
-            if (textValue.Kind != AosValueKind.String)
-            {
-                return AosValue.Unknown;
-            }
-
-            return AosValue.FromInt(VmSyscalls.StrUtf8ByteCount(textValue.AsString()));
+            return sysValue;
         }
 
         if (target == "sys.vm_run")
@@ -2181,6 +1955,63 @@ public sealed partial class AosInterpreter
             attrs,
             new List<AosNode>(),
             new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+    }
+
+    private bool TryEvaluateSysCall(
+        string target,
+        AosNode callNode,
+        AosRuntime runtime,
+        Dictionary<string, AosValue> env,
+        out AosValue result)
+    {
+        result = AosValue.Unknown;
+        if (target == "sys.vm_run" || !SyscallContracts.IsSysTarget(target))
+        {
+            return false;
+        }
+
+        if (!runtime.Permissions.Contains("sys"))
+        {
+            return true;
+        }
+
+        var args = new List<SysValue>(callNode.Children.Count);
+        for (var i = 0; i < callNode.Children.Count; i++)
+        {
+            args.Add(ToSysValue(EvalNode(callNode.Children[i], runtime, env)));
+        }
+
+        if (!VmSyscallDispatcher.TryInvoke(target, args, runtime.Network, out var sysResult))
+        {
+            return false;
+        }
+
+        result = FromSysValue(sysResult);
+        return true;
+    }
+
+    private static SysValue ToSysValue(AosValue value)
+    {
+        return value.Kind switch
+        {
+            AosValueKind.String => SysValue.String(value.AsString()),
+            AosValueKind.Int => SysValue.Int(value.AsInt()),
+            AosValueKind.Bool => SysValue.Bool(value.AsBool()),
+            AosValueKind.Void => SysValue.Void(),
+            _ => SysValue.Unknown()
+        };
+    }
+
+    private static AosValue FromSysValue(SysValue value)
+    {
+        return value.Kind switch
+        {
+            VmValueKind.String => AosValue.FromString(value.StringValue),
+            VmValueKind.Int => AosValue.FromInt(value.IntValue),
+            VmValueKind.Bool => AosValue.FromBool(value.BoolValue),
+            VmValueKind.Void => AosValue.Void,
+            _ => AosValue.Unknown
+        };
     }
 
 
