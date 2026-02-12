@@ -128,8 +128,6 @@ Program#aic_p1 {
     Fn#aic_fn1(params=args) {
       Block#aic_bn1 {
         Let#aic_ln2(name=name) { Call#aic_cn1(target=readArg) { Var#aic_vn1(name=args) Lit#aic_in1(value=1) } }
-        Let#aic_ln2t(name=template) { Call#aic_cn1t(target=readArg) { Var#aic_vn1t(name=args) Lit#aic_in1t(value=2) } }
-        Let#aic_ln2t2(name=resolvedTemplate) { Call#aic_cn1t2(target=resolveTemplateName) { Var#aic_vn1t2(name=template) } }
         If#aic_ifn1 {
           Eq#aic_en1 { Var#aic_vn2(name=name) Lit#aic_in2(value="") }
           Block#aic_bn2 {
@@ -144,6 +142,8 @@ Program#aic_p1 {
                 Return#aic_rn2 { Lit#aic_in6(value=1) }
               }
               Block#aic_bn5 {
+                Let#aic_ln2t(name=template) { Call#aic_cn1t(target=readArg) { Var#aic_vn1t(name=args) Lit#aic_in1t(value=2) } }
+                Let#aic_ln2t2(name=resolvedTemplate) { Call#aic_cn1t2(target=resolveTemplateName) { Var#aic_vn1t2(name=template) } }
                 If#aic_ifn3 {
                   Call#aic_cn4t(target=isSupportedTemplate) { Var#aic_vn4t(name=resolvedTemplate) }
                   Block#aic_bn5a {
