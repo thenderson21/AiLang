@@ -216,6 +216,38 @@ public class AosTests
     }
 
     [Test]
+    public void VmRunBytecode_EmitsInstructionTrace_WhenEnabled()
+    {
+        var source = "Program#p1 { Call#c1(target=compiler.emitBytecode) { Call#c2(target=compiler.parse) { Lit#s1(value=\"Program#p2 { Lit#l1(value=1) }\") } } }";
+        var parse = Parse(source);
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var interpreter = new AosInterpreter();
+        var runtime = new AosRuntime { TraceEnabled = true };
+        runtime.Permissions.Add("compiler");
+        var bytecodeValue = interpreter.EvaluateProgram(parse.Root!, runtime);
+        Assert.That(bytecodeValue.Kind, Is.EqualTo(AosValueKind.Node));
+
+        runtime.TraceSteps.Clear();
+        var args = Parse("Block#argv").Root!;
+        var result = interpreter.RunBytecode(bytecodeValue.AsNode(), "main", args, runtime);
+        Assert.That(result.Kind, Is.Not.EqualTo(AosValueKind.Unknown));
+
+        var vmSteps = runtime.TraceSteps
+            .Where(step => step.Kind == "Step" &&
+                           step.Attrs.TryGetValue("kind", out var kindAttr) &&
+                           kindAttr.Kind == AosAttrKind.String &&
+                           kindAttr.AsString() == "VmInstruction")
+            .ToList();
+
+        Assert.That(vmSteps.Count, Is.GreaterThan(0));
+        Assert.That(vmSteps.Any(step =>
+            step.Attrs.TryGetValue("op", out var opAttr) &&
+            opAttr.Kind == AosAttrKind.String &&
+            opAttr.AsString() == "RETURN"), Is.True);
+    }
+
+    [Test]
     public void Evaluator_ImportsAndMergesExplicitExports()
     {
         var tempDir = Directory.CreateTempSubdirectory("ailang-import-ok-");

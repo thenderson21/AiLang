@@ -3325,9 +3325,11 @@ public sealed partial class AosInterpreter
 
             var stack = new List<AosValue>();
             var pc = 0;
+            AddVmTraceStep(runtime, function.Name, -1, "ENTER");
             while (pc < function.Instructions.Count)
             {
                 var inst = function.Instructions[pc];
+                AddVmTraceStep(runtime, function.Name, pc, inst.Op);
                 switch (inst.Op)
                 {
                     case "CONST":
@@ -3709,13 +3711,40 @@ public sealed partial class AosInterpreter
                         break;
                     }
                     case "RETURN":
-                        return stack.Count == 0 ? AosValue.Void : Pop(stack, function.Name);
+                    {
+                        var value = stack.Count == 0 ? AosValue.Void : Pop(stack, function.Name);
+                        AddVmTraceStep(runtime, function.Name, pc, "RETURN");
+                        return value;
+                    }
                     default:
                         throw new VmRuntimeException("VM001", $"Unsupported opcode: {inst.Op}.", function.Name);
                 }
             }
 
+            AddVmTraceStep(runtime, function.Name, pc, "RETURN");
             return AosValue.Void;
+        }
+
+        private static void AddVmTraceStep(AosRuntime runtime, string functionName, int pc, string op)
+        {
+            if (!runtime.TraceEnabled)
+            {
+                return;
+            }
+
+            runtime.TraceSteps.Add(new AosNode(
+                "Step",
+                "auto",
+                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                {
+                    ["kind"] = new AosAttrValue(AosAttrKind.String, "VmInstruction"),
+                    ["nodeId"] = new AosAttrValue(AosAttrKind.String, functionName),
+                    ["function"] = new AosAttrValue(AosAttrKind.String, functionName),
+                    ["pc"] = new AosAttrValue(AosAttrKind.Int, pc),
+                    ["op"] = new AosAttrValue(AosAttrKind.String, op)
+                },
+                new List<AosNode>(),
+                new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
         }
 
         private static AosValue ExecuteCall(AosInterpreter interpreter, AosRuntime runtime, string target, List<AosValue> args)
