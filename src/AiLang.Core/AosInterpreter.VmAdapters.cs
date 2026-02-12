@@ -210,5 +210,26 @@ public sealed partial class AosInterpreter
             var env = new Dictionary<string, AosValue>(_runtime.Env, StringComparer.Ordinal);
             return _interpreter.EvalCall(callNode, _runtime, env);
         }
+
+        public void TraceInstruction(string functionName, int pc, string op)
+        {
+            if (!_runtime.TraceEnabled)
+            {
+                return;
+            }
+
+            _runtime.TraceSteps.Add(new AosNode(
+                "Step",
+                "auto",
+                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                {
+                    ["kind"] = new AosAttrValue(AosAttrKind.String, "VmInstruction"),
+                    ["nodeId"] = new AosAttrValue(AosAttrKind.String, functionName),
+                    ["pc"] = new AosAttrValue(AosAttrKind.Int, pc),
+                    ["op"] = new AosAttrValue(AosAttrKind.String, op)
+                },
+                new List<AosNode>(),
+                new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
+        }
     }
 }
