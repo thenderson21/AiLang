@@ -1,0 +1,5 @@
+Program#hpf1 {
+  Call#hpf2(target=compiler.parseHttpRequest) {
+    Lit#hpf3(value="POST /users?id=42&name=todd HTTP/1.1\r\nHost: localhost\r\nContent-Type: text/plain\r\nContent-Length: 5\r\n\r\nhello")
+  }
+}

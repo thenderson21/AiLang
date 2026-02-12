@@ -336,7 +336,7 @@ public sealed class AosValidator
                 }
                 return AosValueKind.Node;
             case "HttpRequest":
-                RequireChildren(node, 0, 0);
+                RequireChildren(node, 0, 2);
                 RequireAttr(node, "method");
                 RequireAttr(node, "path");
                 if (node.Attrs.TryGetValue("method", out var methodAttr) && methodAttr.Kind != AosAttrKind.String)
@@ -346,6 +346,18 @@ public sealed class AosValidator
                 if (node.Attrs.TryGetValue("path", out var httpPathAttr) && httpPathAttr.Kind != AosAttrKind.String)
                 {
                     _diagnostics.Add(new AosDiagnostic("VAL103", "HttpRequest path must be string.", node.Id, node.Span));
+                }
+                foreach (var child in node.Children)
+                {
+                    var childType = ValidateNode(child, env, permissions);
+                    if (child.Kind != "Map")
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL138", "HttpRequest children must be Map nodes.", child.Id, child.Span));
+                    }
+                    else if (childType != AosValueKind.Node && childType != AosValueKind.Unknown)
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL139", "HttpRequest map child must evaluate to node.", child.Id, child.Span));
+                    }
                 }
                 return AosValueKind.Node;
             case "Route":

@@ -1,1 +1,1 @@
-HttpRequest#auto(method="GET" path="/health")
+HttpRequest#auto(method="GET" path="/health") { Map#http_headers Map#http_query }
