@@ -1144,7 +1144,7 @@ public sealed partial class AosInterpreter
                 Directory.CreateDirectory(publishDir);
                 File.WriteAllText(bundlePath, bytecodeText);
 
-                var sourceBinary = ResolveHostBinaryPath();
+                var sourceBinary = HostExecutableLocator.ResolveHostBinaryPath();
                 if (sourceBinary is null)
                 {
                     return AosValue.FromNode(CreateErrNode("publish_err", "PUB004", "host executable not found.", node.Id, node.Span));
@@ -3631,28 +3631,4 @@ public sealed partial class AosInterpreter
         return AosValue.FromNode(CreateErrNode("runtime_err", code, message, nodeId, span));
     }
 
-    private static string? ResolveHostBinaryPath()
-    {
-        var processPath = Environment.ProcessPath;
-        if (!string.IsNullOrWhiteSpace(processPath) && File.Exists(processPath))
-        {
-            return processPath;
-        }
-
-        var candidates = new[]
-        {
-            Path.Combine(AppContext.BaseDirectory, "airun"),
-            Path.Combine(Directory.GetCurrentDirectory(), "tools", "airun")
-        };
-
-        foreach (var candidate in candidates)
-        {
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        return null;
-    }
 }

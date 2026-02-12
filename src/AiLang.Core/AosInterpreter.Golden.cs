@@ -1,3 +1,5 @@
+using AiVM.Core;
+
 namespace AiLang.Core;
 
 public sealed partial class AosInterpreter
@@ -198,7 +200,7 @@ public sealed partial class AosInterpreter
 
     private static string ExecuteTraceGolden(string source, string testName)
     {
-        var hostBinary = ResolveHostBinaryPath();
+        var hostBinary = HostExecutableLocator.ResolveHostBinaryPath();
         if (hostBinary is null)
         {
             return "Err#err0(code=RUN001 message=\"host binary not found.\" nodeId=trace)";
@@ -253,7 +255,7 @@ public sealed partial class AosInterpreter
 
     private static string ExecuteLifecycleGolden(string source, string testName)
     {
-        var hostBinary = ResolveHostBinaryPath();
+        var hostBinary = HostExecutableLocator.ResolveHostBinaryPath();
         if (hostBinary is null)
         {
             return "Err#err0(code=RUN001 message=\"host binary not found.\" nodeId=lifecycle)";
@@ -335,7 +337,7 @@ public sealed partial class AosInterpreter
 
     private static string ExecuteVmGolden(string source, string testName)
     {
-        var hostBinary = ResolveHostBinaryPath();
+        var hostBinary = HostExecutableLocator.ResolveHostBinaryPath();
         if (hostBinary is null)
         {
             return "Err#err0(code=RUN001 message=\"host binary not found.\" nodeId=vm)";
