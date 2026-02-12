@@ -14,7 +14,8 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 | `Call` | `target` (identifier/dotted identifier) | `0..N` | Native or user-defined call. |
 | `Import` | `path` (string, relative) | `0` | Loads another module and merges explicit exports. |
 | `Export` | `name` (identifier) | `0` | Exposes one binding from current module. |
-| `Project` | `name` (string), `entryFile` (string), `entryExport` (string) | `0` | Project manifest node for `project.aiproj`. |
+| `Project` | `name` (string), `entryFile` (string), `entryExport` (string) | `0..N` | Project manifest node for `project.aiproj`; children must be `Include`. |
+| `Include` | `name` (string), `path` (string, relative), `version` (string) | `0` | Declares library include metadata for project-level dependency resolution. |
 | `If` | none | `2..3` | Condition, then-branch, optional else-branch. |
 | `Eq` | none | `2` | Value equality. |
 | `StrConcat` | none | `2` | String concatenation. |

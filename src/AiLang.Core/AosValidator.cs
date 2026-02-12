@@ -126,7 +126,7 @@ public sealed class AosValidator
                 RequireAttr(node, "name");
                 RequireAttr(node, "entryFile");
                 RequireAttr(node, "entryExport");
-                RequireChildren(node, 0, 0);
+                RequireChildren(node, 0, int.MaxValue);
                 if (node.Attrs.TryGetValue("entryFile", out var entryFileAttr))
                 {
                     if (entryFileAttr.Kind != AosAttrKind.String)
@@ -151,6 +151,46 @@ public sealed class AosValidator
                     else if (string.IsNullOrEmpty(entryExportAttr.AsString()))
                     {
                         _diagnostics.Add(new AosDiagnostic("VAL095", "Project entryExport must be non-empty.", node.Id, node.Span));
+                    }
+                }
+                foreach (var child in node.Children)
+                {
+                    if (child.Kind != "Include")
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL150", "Project children must be Include nodes.", child.Id, child.Span));
+                        continue;
+                    }
+                    ValidateNode(child, env, permissions);
+                }
+                return AosValueKind.Void;
+            case "Include":
+                RequireAttr(node, "name");
+                RequireAttr(node, "path");
+                RequireAttr(node, "version");
+                RequireChildren(node, 0, 0);
+                if (node.Attrs.TryGetValue("name", out var includeNameAttr))
+                {
+                    if (includeNameAttr.Kind != AosAttrKind.String || string.IsNullOrEmpty(includeNameAttr.AsString()))
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL151", "Include name must be non-empty string.", node.Id, node.Span));
+                    }
+                }
+                if (node.Attrs.TryGetValue("version", out var versionAttr))
+                {
+                    if (versionAttr.Kind != AosAttrKind.String || string.IsNullOrEmpty(versionAttr.AsString()))
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL152", "Include version must be non-empty string.", node.Id, node.Span));
+                    }
+                }
+                if (node.Attrs.TryGetValue("path", out var includePathAttr))
+                {
+                    if (includePathAttr.Kind != AosAttrKind.String)
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL153", "Include path must be string.", node.Id, node.Span));
+                    }
+                    else if (Path.IsPathRooted(includePathAttr.AsString()))
+                    {
+                        _diagnostics.Add(new AosDiagnostic("VAL154", "Include path must be relative path.", node.Id, node.Span));
                     }
                 }
                 return AosValueKind.Void;

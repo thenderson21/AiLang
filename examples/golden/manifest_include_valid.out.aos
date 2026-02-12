@@ -1,0 +1,1 @@
+Program#p1 { Project#proj1(entryExport="main" entryFile="src/main.aos" name="myapp") { Include#inc1(name="AiVectra" path="libs/aivectra" version="0.1.0") } }
