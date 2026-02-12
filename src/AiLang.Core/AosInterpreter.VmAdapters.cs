@@ -194,6 +194,8 @@ public sealed partial class AosInterpreter
                 new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
         }
 
+        public AosNode ValueToNode(AosValue value) => ToRuntimeNode(value);
+
         public AosValue ExecuteCall(string target, IReadOnlyList<AosValue> args)
         {
             var callNode = new AosNode(
