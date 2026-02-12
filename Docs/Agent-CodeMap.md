@@ -12,7 +12,9 @@
 - CLI entry: `src/AiLang.Cli/Program.cs`
 - Interpreter entry: `src/AiLang.Core/AosInterpreter.cs`
   - Core eval dispatch: `src/AiLang.Core/AosInterpreter.CoreEval.cs`
+  - Eval loop + trace: `src/AiLang.Core/AosInterpreter.EvalLoop.cs`, `src/AiLang.Core/AosInterpreter.Trace.cs`
   - Call dispatch: `src/AiLang.Core/AosInterpreter.Calls.cs`
+  - VM call entry + bridges: `src/AiLang.Core/AosInterpreter.VmEntry.cs`, `src/AiLang.Core/AosInterpreter.VmRunCall.cs`
   - Compiler calls: `src/AiLang.Core/AosInterpreter.CompilerCalls.cs`
   - Sys/capability bridge: `src/AiLang.Core/AosInterpreter.SysBridge.cs`
   - Import/publish helpers: `src/AiLang.Core/AosInterpreter.Imports.cs`, `src/AiLang.Core/AosInterpreter.Publish.cs`
