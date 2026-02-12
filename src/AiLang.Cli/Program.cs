@@ -730,12 +730,18 @@ static string FormatErr(string id, string code, string message, string nodeId)
 static int RunBench(string[] args)
 {
     var iterations = 20;
+    var human = false;
     for (var i = 0; i < args.Length; i++)
     {
         if (string.Equals(args[i], "--iterations", StringComparison.Ordinal) && i + 1 < args.Length && int.TryParse(args[i + 1], out var parsed) && parsed > 0)
         {
             iterations = parsed;
             i++;
+            continue;
+        }
+        if (string.Equals(args[i], "--human", StringComparison.Ordinal))
+        {
+            human = true;
         }
     }
 
@@ -765,7 +771,24 @@ static int RunBench(string[] args)
         caseNodes,
         new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
 
-    Console.WriteLine(AosFormatter.Format(report));
+    if (human)
+    {
+        Console.WriteLine("name         status         astTicks   vmTicks    inst  speedup");
+        foreach (var node in caseNodes)
+        {
+            var name = node.Attrs["name"].AsString();
+            var status = node.Attrs["status"].AsString();
+            var astTicks = node.Attrs["astTicks"].AsInt();
+            var vmTicks = node.Attrs["vmTicks"].AsInt();
+            var inst = node.Attrs["instructionCount"].AsInt();
+            var speedup = vmTicks == 0 ? "n/a" : $"{(double)astTicks / vmTicks:0.00}x";
+            Console.WriteLine($"{name,-12} {status,-13} {astTicks,9} {vmTicks,9} {inst,5} {speedup,7}");
+        }
+    }
+    else
+    {
+        Console.WriteLine(AosFormatter.Format(report));
+    }
     return 0;
 }
 

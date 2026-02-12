@@ -103,6 +103,7 @@ Run deterministic benchmark cases:
 
 ```bash
 ./tools/airun bench --iterations 20
+./tools/airun bench --human
 ```
 
 ## Language Contracts
