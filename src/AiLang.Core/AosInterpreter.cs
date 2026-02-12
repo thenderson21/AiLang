@@ -270,23 +270,9 @@ public sealed partial class AosInterpreter
         }
 
         var target = targetAttr.AsString();
-        if (target == "math.add")
+        if (TryEvaluateMathAddCall(target, node, runtime, env, out var mathValue))
         {
-            if (!runtime.Permissions.Contains("math"))
-            {
-                return AosValue.Unknown;
-            }
-            if (node.Children.Count != 2)
-            {
-                return AosValue.Unknown;
-            }
-            var left = EvalNode(node.Children[0], runtime, env);
-            var right = EvalNode(node.Children[1], runtime, env);
-            if (left.Kind != AosValueKind.Int || right.Kind != AosValueKind.Int)
-            {
-                return AosValue.Unknown;
-            }
-            return AosValue.FromInt(left.AsInt() + right.AsInt());
+            return mathValue;
         }
 
         if (TryEvaluateCapabilityCall(target, node, runtime, env, out var capabilityValue))
@@ -309,15 +295,9 @@ public sealed partial class AosInterpreter
             return compilerValue;
         }
 
-        if (!env.TryGetValue(target, out var functionValue))
+        if (TryEvaluateUserFunctionCall(target, node, runtime, env, out var functionValue))
         {
-            runtime.Env.TryGetValue(target, out functionValue);
-        }
-
-        if (functionValue is not null && functionValue.Kind == AosValueKind.Function)
-        {
-            var args = node.Children.Select(child => EvalNode(child, runtime, env)).ToList();
-            return EvalFunctionCall(functionValue.AsFunction(), args, runtime);
+            return functionValue;
         }
 
         return AosValue.Unknown;
