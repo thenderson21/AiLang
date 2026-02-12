@@ -1,4 +1,5 @@
 using AiLang.Core;
+using AiLang.Cli;
 using AiVM.Core;
 
 Environment.ExitCode = RunCli(args);
@@ -6,6 +7,8 @@ return;
 
 static int RunCli(string[] args)
 {
+    VmSyscalls.Host = new CliSyscallHost();
+
     var traceEnabled = args.Contains("--trace", StringComparer.Ordinal);
     string vmMode = "bytecode";
     var filtered = new List<string>();
@@ -132,13 +135,14 @@ static int RunSource(string path, string[] argv, bool traceEnabled, string vmMod
             return errCode.StartsWith("PAR", StringComparison.Ordinal) || errCode.StartsWith("VAL", StringComparison.Ordinal) || errCode == "RUN002" ? 2 : 3;
         }
 
-        var lifecycleMode = program is not null && HasExport(program, "init") && HasExport(program, "update");
         var traceSnapshot = traceEnabled ? new List<AosNode>(runtime!.TraceSteps) : null;
         var result = ExecuteRuntimeStart(runtime!, BuildKernelRunArgs());
-        var suppressOutput = runtime!.Env.TryGetValue("__runtime_suppress_output", out var suppressValue) &&
-                             suppressValue.Kind == AosValueKind.Bool &&
-                             suppressValue.AsBool();
-        suppressOutput = suppressOutput || lifecycleMode;
+        var suppressOutput = (runtime!.Env.TryGetValue("__runtime_suppress_output", out var suppressValue) &&
+                              suppressValue.Kind == AosValueKind.Bool &&
+                              suppressValue.AsBool()) ||
+                             (program is not null &&
+                              HasNamedExport(program, "init") &&
+                              HasNamedExport(program, "update"));
 
         if (IsErrNode(result, out var errNode))
         {
@@ -175,34 +179,6 @@ static int RunSource(string path, string[] argv, bool traceEnabled, string vmMod
         Console.WriteLine(FormatErr("err1", "RUN001", ex.Message, "unknown"));
         return 3;
     }
-}
-
-static bool HasExport(AosNode program, string exportName)
-{
-    foreach (var child in program.Children)
-    {
-        if (!string.Equals(child.Kind, "Export", StringComparison.Ordinal))
-        {
-            continue;
-        }
-
-        if (!child.Attrs.TryGetValue("name", out var nameAttr))
-        {
-            continue;
-        }
-
-        if (nameAttr.Kind != AosAttrKind.String && nameAttr.Kind != AosAttrKind.Identifier)
-        {
-            continue;
-        }
-
-        if (string.Equals(nameAttr.AsString(), exportName, StringComparison.Ordinal))
-        {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 static int RunServe(string path, string[] argv, int port, string tlsCertPath, string tlsKeyPath, bool traceEnabled, string vmMode)
@@ -444,7 +420,12 @@ static bool TryLoadProgramForExecution(
         return false;
     }
 
-    if (evaluateProgram)
+    var shouldEvaluateProgram = evaluateProgram ||
+                                (string.Equals(vmMode, "bytecode", StringComparison.Ordinal) &&
+                                 HasNamedExport(parse.Root, "init") &&
+                                 HasNamedExport(parse.Root, "update"));
+
+    if (shouldEvaluateProgram)
     {
         var initResult = bootstrapInterpreter.EvaluateProgram(parse.Root, runtime);
         if (IsErrNode(initResult, out var errNode))
@@ -460,6 +441,30 @@ static bool TryLoadProgramForExecution(
 
     program = parse.Root;
     return true;
+}
+
+static bool HasNamedExport(AosNode program, string exportName)
+{
+    foreach (var child in program.Children)
+    {
+        if (!string.Equals(child.Kind, "Export", StringComparison.Ordinal))
+        {
+            continue;
+        }
+
+        if (!child.Attrs.TryGetValue("name", out var nameAttr))
+        {
+            continue;
+        }
+
+        if ((nameAttr.Kind == AosAttrKind.String || nameAttr.Kind == AosAttrKind.Identifier) &&
+            string.Equals(nameAttr.AsString(), exportName, StringComparison.Ordinal))
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 static AosParseResult Parse(string source)

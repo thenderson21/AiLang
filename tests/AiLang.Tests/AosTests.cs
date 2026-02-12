@@ -1,4 +1,5 @@
 using AiLang.Core;
+using AiVM.Core;
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
@@ -13,6 +14,27 @@ namespace AiLang.Tests;
 
 public class AosTests
 {
+    private sealed class RecordingSyscallHost : DefaultSyscallHost
+    {
+        public string? LastStdoutLine { get; private set; }
+        public int IoPrintCount { get; private set; }
+
+        public override void StdoutWriteLine(string text)
+        {
+            LastStdoutLine = text;
+        }
+
+        public override void IoPrint(string text)
+        {
+            IoPrintCount++;
+        }
+
+        public override int StrUtf8ByteCount(string text)
+        {
+            return 777;
+        }
+    }
+
     [Test]
     public void CompilerAssets_CanFindBundledCompilerFiles()
     {
@@ -213,6 +235,107 @@ public class AosTests
         Assert.That(bytecode.Attrs["format"].AsString(), Is.EqualTo("AiBC1"));
         Assert.That(bytecode.Attrs["version"].AsInt(), Is.EqualTo(1));
         Assert.That(bytecode.Attrs["flags"].AsInt(), Is.EqualTo(0));
+    }
+
+    [Test]
+    public void SyscallDispatch_Utf8Count_ReturnsInt()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.str_utf8ByteCount) { Lit#s1(value=\"abc\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("sys");
+        var interpreter = new AosInterpreter();
+        var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+
+        Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
+        Assert.That(value.AsInt(), Is.EqualTo(3));
+    }
+
+    [Test]
+    public void VmSyscalls_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+
+            var count = VmSyscalls.StrUtf8ByteCount("abc");
+            VmSyscalls.StdoutWriteLine("hello");
+
+            Assert.That(count, Is.EqualTo(777));
+            Assert.That(host.LastStdoutLine, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void UnknownSysTarget_DoesNotEvaluateArguments()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.unknown) { Call#c2(target=io.print) { Lit#s1(value=\"side-effect\") } } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            runtime.Permissions.Add("io");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Unknown));
+            Assert.That(host.IoPrintCount, Is.EqualTo(0));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void InvalidCapabilityArity_DoesNotEvaluateArguments()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=io.print) { Call#c2(target=io.print) { Lit#s1(value=\"nested\") } Lit#s2(value=\"extra\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("io");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Unknown));
+            Assert.That(host.IoPrintCount, Is.EqualTo(0));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_InvalidArgs_ReturnsUnknown()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.net_close) }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("sys");
+        var interpreter = new AosInterpreter();
+        var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+
+        Assert.That(value.Kind, Is.EqualTo(AosValueKind.Unknown));
     }
 
     [Test]

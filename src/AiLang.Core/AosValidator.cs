@@ -687,201 +687,14 @@ public sealed class AosValidator
             return AosValueKind.Node;
         }
 
-        if (target == "sys.net_listen")
+        if (SyscallContracts.TryValidate(
+                target,
+                argTypes.Select(ToVmValueKind).ToList(),
+                (code, message) => _diagnostics.Add(new AosDiagnostic(code, message, node.Id, node.Span)),
+                out var syscallReturnKind))
         {
             RequirePermission(node, "sys", permissions);
-            if (argTypes.Count != 1)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL123", "sys.net_listen expects 1 argument.", node.Id, node.Span));
-            }
-            else if (argTypes[0] != AosValueKind.Int && argTypes[0] != AosValueKind.Unknown)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL124", "sys.net_listen arg must be int.", node.Id, node.Span));
-            }
-            return AosValueKind.Int;
-        }
-
-        if (target == "sys.net_listen_tls")
-        {
-            RequirePermission(node, "sys", permissions);
-            if (argTypes.Count != 3)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL140", "sys.net_listen_tls expects 3 arguments.", node.Id, node.Span));
-            }
-            else
-            {
-                if (argTypes[0] != AosValueKind.Int && argTypes[0] != AosValueKind.Unknown)
-                {
-                    _diagnostics.Add(new AosDiagnostic("VAL141", "sys.net_listen_tls arg 1 must be int.", node.Id, node.Span));
-                }
-                if (argTypes[1] != AosValueKind.String && argTypes[1] != AosValueKind.Unknown)
-                {
-                    _diagnostics.Add(new AosDiagnostic("VAL142", "sys.net_listen_tls arg 2 must be string.", node.Id, node.Span));
-                }
-                if (argTypes[2] != AosValueKind.String && argTypes[2] != AosValueKind.Unknown)
-                {
-                    _diagnostics.Add(new AosDiagnostic("VAL143", "sys.net_listen_tls arg 3 must be string.", node.Id, node.Span));
-                }
-            }
-            return AosValueKind.Int;
-        }
-
-        if (target == "sys.net_accept")
-        {
-            RequirePermission(node, "sys", permissions);
-            if (argTypes.Count != 1)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL125", "sys.net_accept expects 1 argument.", node.Id, node.Span));
-            }
-            else if (argTypes[0] != AosValueKind.Int && argTypes[0] != AosValueKind.Unknown)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL126", "sys.net_accept arg must be int.", node.Id, node.Span));
-            }
-            return AosValueKind.Int;
-        }
-
-        if (target == "sys.net_readHeaders")
-        {
-            RequirePermission(node, "sys", permissions);
-            if (argTypes.Count != 1)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL127", "sys.net_readHeaders expects 1 argument.", node.Id, node.Span));
-            }
-            else if (argTypes[0] != AosValueKind.Int && argTypes[0] != AosValueKind.Unknown)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL128", "sys.net_readHeaders arg must be int.", node.Id, node.Span));
-            }
-            return AosValueKind.String;
-        }
-
-        if (target == "sys.net_write")
-        {
-            RequirePermission(node, "sys", permissions);
-            if (argTypes.Count != 2)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL129", "sys.net_write expects 2 arguments.", node.Id, node.Span));
-            }
-            else
-            {
-                if (argTypes[0] != AosValueKind.Int && argTypes[0] != AosValueKind.Unknown)
-                {
-                    _diagnostics.Add(new AosDiagnostic("VAL130", "sys.net_write arg 1 must be int.", node.Id, node.Span));
-                }
-                if (argTypes[1] != AosValueKind.String && argTypes[1] != AosValueKind.Unknown)
-                {
-                    _diagnostics.Add(new AosDiagnostic("VAL131", "sys.net_write arg 2 must be string.", node.Id, node.Span));
-                }
-            }
-            return AosValueKind.Void;
-        }
-
-        if (target == "sys.net_close")
-        {
-            RequirePermission(node, "sys", permissions);
-            if (argTypes.Count != 1)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL132", "sys.net_close expects 1 argument.", node.Id, node.Span));
-            }
-            else if (argTypes[0] != AosValueKind.Int && argTypes[0] != AosValueKind.Unknown)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL133", "sys.net_close arg must be int.", node.Id, node.Span));
-            }
-            return AosValueKind.Void;
-        }
-
-        if (target == "sys.stdout_writeLine")
-        {
-            RequirePermission(node, "sys", permissions);
-            if (argTypes.Count != 1)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL134", "sys.stdout_writeLine expects 1 argument.", node.Id, node.Span));
-            }
-            else if (argTypes[0] != AosValueKind.String && argTypes[0] != AosValueKind.Unknown)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL135", "sys.stdout_writeLine arg must be string.", node.Id, node.Span));
-            }
-            return AosValueKind.Void;
-        }
-
-        if (target == "sys.proc_exit")
-        {
-            RequirePermission(node, "sys", permissions);
-            if (argTypes.Count != 1)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL136", "sys.proc_exit expects 1 argument.", node.Id, node.Span));
-            }
-            else if (argTypes[0] != AosValueKind.Int && argTypes[0] != AosValueKind.Unknown)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL137", "sys.proc_exit arg must be int.", node.Id, node.Span));
-            }
-            return AosValueKind.Void;
-        }
-
-        if (target == "sys.fs_readFile")
-        {
-            RequirePermission(node, "sys", permissions);
-            if (argTypes.Count != 1)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL138", "sys.fs_readFile expects 1 argument.", node.Id, node.Span));
-            }
-            else if (argTypes[0] != AosValueKind.String && argTypes[0] != AosValueKind.Unknown)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL139", "sys.fs_readFile arg must be string.", node.Id, node.Span));
-            }
-            return AosValueKind.String;
-        }
-
-        if (target == "sys.fs_fileExists")
-        {
-            RequirePermission(node, "sys", permissions);
-            if (argTypes.Count != 1)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL140", "sys.fs_fileExists expects 1 argument.", node.Id, node.Span));
-            }
-            else if (argTypes[0] != AosValueKind.String && argTypes[0] != AosValueKind.Unknown)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL141", "sys.fs_fileExists arg must be string.", node.Id, node.Span));
-            }
-            return AosValueKind.Bool;
-        }
-
-        if (target == "sys.str_utf8ByteCount")
-        {
-            RequirePermission(node, "sys", permissions);
-            if (argTypes.Count != 1)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL142", "sys.str_utf8ByteCount expects 1 argument.", node.Id, node.Span));
-            }
-            else if (argTypes[0] != AosValueKind.String && argTypes[0] != AosValueKind.Unknown)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL143", "sys.str_utf8ByteCount arg must be string.", node.Id, node.Span));
-            }
-            return AosValueKind.Int;
-        }
-
-        if (target == "sys.vm_run")
-        {
-            RequirePermission(node, "sys", permissions);
-            if (argTypes.Count != 3)
-            {
-                _diagnostics.Add(new AosDiagnostic("VAL144", "sys.vm_run expects 3 arguments.", node.Id, node.Span));
-            }
-            else
-            {
-                if (argTypes[0] != AosValueKind.Node && argTypes[0] != AosValueKind.Unknown)
-                {
-                    _diagnostics.Add(new AosDiagnostic("VAL145", "sys.vm_run arg 1 must be node.", node.Id, node.Span));
-                }
-                if (argTypes[1] != AosValueKind.String && argTypes[1] != AosValueKind.Unknown)
-                {
-                    _diagnostics.Add(new AosDiagnostic("VAL146", "sys.vm_run arg 2 must be string.", node.Id, node.Span));
-                }
-                if (argTypes[2] != AosValueKind.Node && argTypes[2] != AosValueKind.Unknown)
-                {
-                    _diagnostics.Add(new AosDiagnostic("VAL147", "sys.vm_run arg 3 must be node.", node.Id, node.Span));
-                }
-            }
-            return AosValueKind.Unknown;
+            return FromVmValueKind(syscallReturnKind);
         }
 
         if (target == "compiler.format")
@@ -1137,5 +950,31 @@ public sealed class AosValidator
         {
             PredeclareFunctions(child, env);
         }
+    }
+
+    private static VmValueKind ToVmValueKind(AosValueKind kind)
+    {
+        return kind switch
+        {
+            AosValueKind.String => VmValueKind.String,
+            AosValueKind.Int => VmValueKind.Int,
+            AosValueKind.Bool => VmValueKind.Bool,
+            AosValueKind.Node => VmValueKind.Node,
+            AosValueKind.Void => VmValueKind.Void,
+            _ => VmValueKind.Unknown
+        };
+    }
+
+    private static AosValueKind FromVmValueKind(VmValueKind kind)
+    {
+        return kind switch
+        {
+            VmValueKind.String => AosValueKind.String,
+            VmValueKind.Int => AosValueKind.Int,
+            VmValueKind.Bool => AosValueKind.Bool,
+            VmValueKind.Node => AosValueKind.Node,
+            VmValueKind.Void => AosValueKind.Void,
+            _ => AosValueKind.Unknown
+        };
     }
 }

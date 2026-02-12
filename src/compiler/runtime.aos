@@ -20,7 +20,19 @@ Program#rt_p1 {
         Let#rt_l32(name=__runtime_suppress_output) { Lit#rt_i51(value=false) }
         If#rt_if36 {
           Eq#rt_eq32 { Var#rt_v152(name=__vm_mode) Lit#rt_i101(value="bytecode") }
-          Block#rt_b90 { Return#rt_r47 { Call#rt_c64(target=runtime_run_vm) { Lit#rt_i102(value=0) } } }
+          Block#rt_b90 {
+            If#rt_if36b {
+              Call#rt_c64b(target=runtime_has_export) { Var#rt_v152b(name=__program) Lit#rt_i101b(value="init") Lit#rt_i101c(value=0) }
+              Block#rt_b90b {
+                If#rt_if36c {
+                  Call#rt_c64c(target=runtime_has_export) { Var#rt_v152c(name=__program) Lit#rt_i101d(value="update") Lit#rt_i101e(value=0) }
+                  Block#rt_b90c { Lit#rt_i101f(value=0) }
+                  Block#rt_b90d { Return#rt_r47 { Call#rt_c64(target=runtime_run_vm) { Lit#rt_i102(value=0) } } }
+                }
+              }
+              Block#rt_b90e { Return#rt_r47b { Call#rt_c64d(target=runtime_run_vm) { Lit#rt_i102b(value=0) } } }
+            }
+          }
           Block#rt_b91 { Lit#rt_i103(value=0) }
         }
         If#rt_if19 {

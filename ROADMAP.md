@@ -113,6 +113,16 @@ Exit Criteria:
 	•	Runtime executes bytecode instead of AST
 	•	Interpreter retained only for dev mode
 
+Architecture Clarification:
+
+The bytecode VM is a deterministic microkernel.
+
+- Bytecode execution must be a pure state transition system.
+- All host interaction occurs only through explicit `sys.*` dispatch.
+- No host IO, time, randomness, or network logic may exist in the VM core.
+- Syscall handling must remain capability-gated.
+
+This ensures deterministic replay, WASM portability, and future JIT/AOT safety.
 ⸻
 
 ## Phase 4 – GUI Platform (Vector-Based)
