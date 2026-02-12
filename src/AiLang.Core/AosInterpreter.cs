@@ -1,3 +1,5 @@
+using AiVM.Core;
+
 namespace AiLang.Core;
 
 public sealed class AosRuntime
@@ -12,11 +14,7 @@ public sealed class AosRuntime
     public bool TraceEnabled { get; set; }
     public List<AosNode> TraceSteps { get; } = new();
     public AosNode? Program { get; set; }
-    public Dictionary<int, System.Net.Sockets.TcpListener> NetListeners { get; } = new();
-    public Dictionary<int, System.Net.Sockets.TcpClient> NetConnections { get; } = new();
-    public Dictionary<int, System.Security.Cryptography.X509Certificates.X509Certificate2> NetTlsCertificates { get; } = new();
-    public Dictionary<int, System.Net.Security.SslStream> NetTlsStreams { get; } = new();
-    public int NextNetHandle { get; set; } = 1;
+    public VmNetworkState Network { get; } = new();
 }
 
 public sealed partial class AosInterpreter
@@ -499,8 +497,8 @@ public sealed partial class AosInterpreter
 
             var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, portValue.AsInt());
             listener.Start();
-            var handle = runtime.NextNetHandle++;
-            runtime.NetListeners[handle] = listener;
+            var handle = runtime.Network.NextNetHandle++;
+            runtime.Network.NetListeners[handle] = listener;
             return AosValue.FromInt(handle);
         }
 
@@ -537,9 +535,9 @@ public sealed partial class AosInterpreter
 
             var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, portValue.AsInt());
             listener.Start();
-            var handle = runtime.NextNetHandle++;
-            runtime.NetListeners[handle] = listener;
-            runtime.NetTlsCertificates[handle] = certificate;
+            var handle = runtime.Network.NextNetHandle++;
+            runtime.Network.NetListeners[handle] = listener;
+            runtime.Network.NetTlsCertificates[handle] = certificate;
             return AosValue.FromInt(handle);
         }
 
@@ -560,15 +558,15 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            if (!runtime.NetListeners.TryGetValue(handleValue.AsInt(), out var listener))
+            if (!runtime.Network.NetListeners.TryGetValue(handleValue.AsInt(), out var listener))
             {
                 return AosValue.FromInt(-1);
             }
 
             var client = listener.AcceptTcpClient();
-            var connHandle = runtime.NextNetHandle++;
-            runtime.NetConnections[connHandle] = client;
-            if (runtime.NetTlsCertificates.TryGetValue(handleValue.AsInt(), out var cert))
+            var connHandle = runtime.Network.NextNetHandle++;
+            runtime.Network.NetConnections[connHandle] = client;
+            if (runtime.Network.NetTlsCertificates.TryGetValue(handleValue.AsInt(), out var cert))
             {
                 var tlsStream = new System.Net.Security.SslStream(client.GetStream(), leaveInnerStreamOpen: false);
                 try
@@ -583,11 +581,11 @@ public sealed partial class AosInterpreter
                 {
                     tlsStream.Dispose();
                     try { client.Close(); } catch { }
-                    runtime.NetConnections.Remove(connHandle);
+                    runtime.Network.NetConnections.Remove(connHandle);
                     return AosValue.FromInt(-1);
                 }
 
-                runtime.NetTlsStreams[connHandle] = tlsStream;
+                runtime.Network.NetTlsStreams[connHandle] = tlsStream;
             }
             return AosValue.FromInt(connHandle);
         }
@@ -609,12 +607,12 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            if (!runtime.NetConnections.TryGetValue(handleValue.AsInt(), out var client))
+            if (!runtime.Network.NetConnections.TryGetValue(handleValue.AsInt(), out var client))
             {
                 return AosValue.FromString(string.Empty);
             }
 
-            Stream stream = runtime.NetTlsStreams.TryGetValue(handleValue.AsInt(), out var tlsStream)
+            Stream stream = runtime.Network.NetTlsStreams.TryGetValue(handleValue.AsInt(), out var tlsStream)
                 ? tlsStream
                 : client.GetStream();
             var bytes = new List<byte>(1024);
@@ -687,13 +685,13 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            if (!runtime.NetConnections.TryGetValue(handleValue.AsInt(), out var client))
+            if (!runtime.Network.NetConnections.TryGetValue(handleValue.AsInt(), out var client))
             {
                 return AosValue.Unknown;
             }
 
             var bytes = System.Text.Encoding.UTF8.GetBytes(textValue.AsString());
-            Stream stream = runtime.NetTlsStreams.TryGetValue(handleValue.AsInt(), out var tlsStream)
+            Stream stream = runtime.Network.NetTlsStreams.TryGetValue(handleValue.AsInt(), out var tlsStream)
                 ? tlsStream
                 : client.GetStream();
             stream.Write(bytes, 0, bytes.Length);
@@ -719,23 +717,23 @@ public sealed partial class AosInterpreter
             }
 
             var handle = handleValue.AsInt();
-            if (runtime.NetConnections.TryGetValue(handle, out var conn))
+            if (runtime.Network.NetConnections.TryGetValue(handle, out var conn))
             {
-                if (runtime.NetTlsStreams.TryGetValue(handle, out var tlsStream))
+                if (runtime.Network.NetTlsStreams.TryGetValue(handle, out var tlsStream))
                 {
                     try { tlsStream.Dispose(); } catch { }
-                    runtime.NetTlsStreams.Remove(handle);
+                    runtime.Network.NetTlsStreams.Remove(handle);
                 }
                 try { conn.Close(); } catch { }
-                runtime.NetConnections.Remove(handle);
+                runtime.Network.NetConnections.Remove(handle);
                 return AosValue.Void;
             }
 
-            if (runtime.NetListeners.TryGetValue(handle, out var listener))
+            if (runtime.Network.NetListeners.TryGetValue(handle, out var listener))
             {
                 try { listener.Stop(); } catch { }
-                runtime.NetListeners.Remove(handle);
-                runtime.NetTlsCertificates.Remove(handle);
+                runtime.Network.NetListeners.Remove(handle);
+                runtime.Network.NetTlsCertificates.Remove(handle);
                 return AosValue.Void;
             }
 

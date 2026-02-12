@@ -1,4 +1,5 @@
 using AiLang.Core;
+using AiVM.Core;
 using System.Text;
 
 Environment.ExitCode = RunCli(args);

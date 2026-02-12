@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/AiLang.Cli/AiLang.Cli.csproj" />
     <Project Path="src/AiLang.Core/AiLang.Core.csproj" />
+    <Project Path="src/AiVM.Core/AiVM.Core.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AiLang.Tests/AiLang.Tests.csproj" />

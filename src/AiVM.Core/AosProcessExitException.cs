@@ -1,4 +1,4 @@
-namespace AiLang.Core;
+namespace AiVM.Core;
 
 public sealed class AosProcessExitException : Exception
 {
