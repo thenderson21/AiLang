@@ -1,0 +1,8 @@
+Program#p1 {
+  Let#l1(name=path) { Lit#s1(value="/health") }
+  If#if1 {
+    Eq#e1 { Var#v1(name=path) Lit#s2(value="/health") }
+    Block#b1 { Lit#s3(value="ok") }
+    Block#b2 { Lit#s4(value="not-found") }
+  }
+}

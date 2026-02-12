@@ -63,6 +63,8 @@ static int RunCli(string[] args)
             }
 
             return RunServe(filteredArgs[1], appArgs, port, traceEnabled, vmMode);
+        case "bench":
+            return RunBench(filteredArgs.Skip(1).ToArray());
         default:
             PrintUsage();
             return 1;
@@ -725,9 +727,209 @@ static string FormatErr(string id, string code, string message, string nodeId)
     return AosFormatter.Format(node);
 }
 
+static int RunBench(string[] args)
+{
+    var iterations = 20;
+    for (var i = 0; i < args.Length; i++)
+    {
+        if (string.Equals(args[i], "--iterations", StringComparison.Ordinal) && i + 1 < args.Length && int.TryParse(args[i + 1], out var parsed) && parsed > 0)
+        {
+            iterations = parsed;
+            i++;
+        }
+    }
+
+    var cases = new[]
+    {
+        ("loop", "examples/bench/loop_compute.aos"),
+        ("str_concat", "examples/bench/str_concat.aos"),
+        ("map_create", "examples/bench/map_create.aos"),
+        ("http_handler", "examples/bench/http_handler.aos"),
+        ("lifecycle", "examples/bench/lifecycle_run.aos")
+    };
+
+    var caseNodes = new List<AosNode>(cases.Length);
+    foreach (var (name, relativePath) in cases)
+    {
+        caseNodes.Add(RunBenchCase(name, relativePath, iterations));
+    }
+
+    var report = new AosNode(
+        "Benchmark",
+        "bench1",
+        new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+        {
+            ["iterations"] = new AosAttrValue(AosAttrKind.Int, iterations),
+            ["cases"] = new AosAttrValue(AosAttrKind.Int, caseNodes.Count)
+        },
+        caseNodes,
+        new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+
+    Console.WriteLine(AosFormatter.Format(report));
+    return 0;
+}
+
+static AosNode RunBenchCase(string name, string relativePath, int iterations)
+{
+    var fullPath = ResolveRepoPath(relativePath);
+    if (fullPath is null || !File.Exists(fullPath))
+    {
+        return BuildBenchCaseNode(name, "missing", 0, 0, 0);
+    }
+
+    var source = File.ReadAllText(fullPath);
+    var parse = Parse(source);
+    if (parse.Root is null || parse.Diagnostics.Count > 0 || parse.Root.Kind != "Program")
+    {
+        return BuildBenchCaseNode(name, "parse_err", 0, 0, 0);
+    }
+
+    var program = parse.Root;
+    var permissions = new HashSet<string>(StringComparer.Ordinal) { "math", "console", "io", "compiler", "sys" };
+    var validator = new AosValidator();
+    var validation = validator.Validate(program, null, permissions, runStructural: false);
+    if (validation.Diagnostics.Count > 0)
+    {
+        return BuildBenchCaseNode(name, "val_err", 0, 0, 0);
+    }
+
+    var astTicks = 0L;
+    for (var i = 0; i < iterations; i++)
+    {
+        var runtime = NewBenchRuntime(fullPath);
+        var interpreter = new AosInterpreter();
+        AosStandardLibraryLoader.EnsureLoaded(runtime, interpreter);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var value = interpreter.EvaluateProgram(program, runtime);
+        sw.Stop();
+        astTicks += sw.ElapsedTicks;
+        if (IsErrNode(value, out _))
+        {
+            return BuildBenchCaseNode(name, "ast_err", astTicks, 0, 0);
+        }
+    }
+
+    var compileRuntime = NewBenchRuntime(fullPath);
+    var compileInterpreter = new AosInterpreter();
+    AosStandardLibraryLoader.EnsureLoaded(compileRuntime, compileInterpreter);
+    compileRuntime.Env["__bench_program"] = AosValue.FromNode(program);
+    var emitNode = new AosNode(
+        "Call",
+        "bench_emit",
+        new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+        {
+            ["target"] = new AosAttrValue(AosAttrKind.Identifier, "compiler.emitBytecode")
+        },
+        new List<AosNode>
+        {
+            new(
+                "Var",
+                "bench_prog_ref",
+                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                {
+                    ["name"] = new AosAttrValue(AosAttrKind.Identifier, "__bench_program")
+                },
+                new List<AosNode>(),
+                new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)))
+        },
+        new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+
+    var emitValue = compileInterpreter.EvaluateExpression(emitNode, compileRuntime);
+    if (emitValue.Kind != AosValueKind.Node || IsErrNode(emitValue, out _))
+    {
+        return BuildBenchCaseNode(name, "vm_unsupported", astTicks, 0, 0);
+    }
+
+    var bytecode = emitValue.AsNode();
+    var instCount = CountInstructions(bytecode);
+    var vmTicks = 0L;
+    for (var i = 0; i < iterations; i++)
+    {
+        var runtime = NewBenchRuntime(fullPath);
+        var interpreter = new AosInterpreter();
+        AosStandardLibraryLoader.EnsureLoaded(runtime, interpreter);
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        var result = interpreter.RunBytecode(bytecode, "main", BuildArgvNode(Array.Empty<string>()), runtime);
+        sw.Stop();
+        vmTicks += sw.ElapsedTicks;
+        if (IsErrNode(result, out _))
+        {
+            return BuildBenchCaseNode(name, "vm_err", astTicks, vmTicks, instCount);
+        }
+    }
+
+    return BuildBenchCaseNode(name, "ok", astTicks, vmTicks, instCount);
+}
+
+static AosRuntime NewBenchRuntime(string sourcePath)
+{
+    var runtime = new AosRuntime();
+    runtime.Permissions.Add("console");
+    runtime.Permissions.Add("io");
+    runtime.Permissions.Add("compiler");
+    runtime.Permissions.Add("sys");
+    runtime.ModuleBaseDir = Path.GetDirectoryName(sourcePath) ?? Directory.GetCurrentDirectory();
+    runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(Array.Empty<string>()));
+    runtime.ReadOnlyBindings.Add("argv");
+    return runtime;
+}
+
+static AosNode BuildBenchCaseNode(string name, string status, long astTicks, long vmTicks, int instCount)
+{
+    var astTicksInt = astTicks > int.MaxValue ? int.MaxValue : (int)astTicks;
+    var vmTicksInt = vmTicks > int.MaxValue ? int.MaxValue : (int)vmTicks;
+    return new AosNode(
+        "Case",
+        $"case_{name}",
+        new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+        {
+            ["name"] = new AosAttrValue(AosAttrKind.String, name),
+            ["status"] = new AosAttrValue(AosAttrKind.Identifier, status),
+            ["astTicks"] = new AosAttrValue(AosAttrKind.Int, astTicksInt),
+            ["vmTicks"] = new AosAttrValue(AosAttrKind.Int, vmTicksInt),
+            ["instructionCount"] = new AosAttrValue(AosAttrKind.Int, instCount)
+        },
+        new List<AosNode>(),
+        new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+}
+
+static int CountInstructions(AosNode bytecode)
+{
+    var count = 0;
+    foreach (var child in bytecode.Children)
+    {
+        if (child.Kind == "Func")
+        {
+            count += child.Children.Count(inst => inst.Kind == "Inst");
+        }
+    }
+    return count;
+}
+
+static string? ResolveRepoPath(string relativePath)
+{
+    var candidates = new[]
+    {
+        Path.Combine(Directory.GetCurrentDirectory(), relativePath),
+        Path.Combine(AppContext.BaseDirectory, relativePath),
+        Path.Combine(Directory.GetCurrentDirectory(), "..", relativePath)
+    };
+
+    foreach (var candidate in candidates)
+    {
+        var full = Path.GetFullPath(candidate);
+        if (File.Exists(full))
+        {
+            return full;
+        }
+    }
+
+    return null;
+}
+
 static void PrintUsage()
 {
-    Console.WriteLine("Usage: airun repl | airun run <path.aos> | airun serve <path.aos> [--port <n>] [--vm=bytecode|ast]");
+    Console.WriteLine("Usage: airun repl | airun run <path.aos> | airun serve <path.aos> [--port <n>] [--vm=bytecode|ast] | airun bench [--iterations <n>]");
 }
 
 static AosNode BuildArgvNode(string[] values)

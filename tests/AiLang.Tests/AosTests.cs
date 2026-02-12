@@ -341,6 +341,38 @@ public class AosTests
         }
     }
 
+    [Test]
+    public void Bench_Command_ReturnsStructuredReport()
+    {
+        var repoRoot = Path.GetDirectoryName(FindRepoFile("AiLang.slnx"))!;
+        var psi = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            WorkingDirectory = repoRoot
+        };
+        psi.ArgumentList.Add("run");
+        psi.ArgumentList.Add("--project");
+        psi.ArgumentList.Add(Path.Combine(repoRoot, "src", "AiLang.Cli"));
+        psi.ArgumentList.Add("bench");
+        psi.ArgumentList.Add("--iterations");
+        psi.ArgumentList.Add("1");
+
+        using var process = Process.Start(psi);
+        Assert.That(process, Is.Not.Null);
+        var output = process!.StandardOutput.ReadToEnd().Trim();
+        process.WaitForExit(15000);
+
+        Assert.That(process.ExitCode, Is.EqualTo(0), process.StandardError.ReadToEnd());
+        var parsed = Parse(output);
+        Assert.That(parsed.Diagnostics, Is.Empty);
+        Assert.That(parsed.Root, Is.Not.Null);
+        Assert.That(parsed.Root!.Kind, Is.EqualTo("Benchmark"));
+        Assert.That(parsed.Root.Children.Count, Is.EqualTo(5));
+    }
+
     private static AosParseResult Parse(string source)
     {
         var tokenizer = new AosTokenizer(source);

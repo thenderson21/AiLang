@@ -1,0 +1,22 @@
+Program#p1 {
+  Let#l1(name=sum) {
+    Fn#f1(params=n) {
+      Block#b1 {
+        If#if1 {
+          Eq#e1 { Var#v1(name=n) Lit#i0(value=0) }
+          Block#b2 { Return#r1 { Lit#i1(value=0) } }
+          Block#b3 {
+            Return#r2 {
+              Add#a1 {
+                Var#v2(name=n)
+                Call#c1(target=sum) { Add#a2 { Var#v3(name=n) Lit#i2(value=-1) } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  Let#l2(name=result) { Call#c2(target=sum) { Lit#i3(value=64) } }
+  Var#v4(name=result)
+}
