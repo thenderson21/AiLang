@@ -142,17 +142,28 @@ Program#aic_p1 {
                 Return#aic_rn2 { Lit#aic_in6(value=1) }
               }
               Block#aic_bn5 {
-                Let#aic_ln3(name=srcDir) { StrConcat#aic_sn1 { Var#aic_vn4(name=name) Lit#aic_in7(value="/src") } }
-                Let#aic_ln4(name=projectPath) { StrConcat#aic_sn2 { Var#aic_vn5(name=name) Lit#aic_in8(value="/project.aiproj") } }
-                Let#aic_ln5(name=appPath) { StrConcat#aic_sn3 { Var#aic_vn6(name=name) Lit#aic_in9(value="/src/app.aos") } }
-                Let#aic_ln6(name=agentsPath) { StrConcat#aic_sn4 { Var#aic_vn7(name=name) Lit#aic_in10(value="/AGENTS.md") } }
-                Call#aic_cn5(target=runIoMakeDir) { Var#aic_vn8(name=name) }
-                Call#aic_cn6(target=runIoMakeDir) { Var#aic_vn9(name=srcDir) }
-                Call#aic_cn7(target=runIoWriteFile) { Var#aic_vn10(name=projectPath) Call#aic_cn8(target=buildProjectManifest) { Var#aic_vn11(name=name) } }
-                Call#aic_cn9(target=runIoWriteFile) { Var#aic_vn12(name=appPath) Call#aic_cn10(target=buildAppTemplate) { Lit#aic_in11(value=0) } }
-                Call#aic_cn11(target=runIoWriteFile) { Var#aic_vn13(name=agentsPath) Call#aic_cn12(target=buildAgentsDoc) { Lit#aic_in12(value=0) } }
-                Call#aic_cn13(target=io.write) { Lit#aic_in13(value="Ok#ok1(type=string value=\"project-created\")") }
-                Return#aic_rn3 { Lit#aic_in14(value=0) }
+                Let#aic_ln2t(name=template) { Call#aic_cn1t(target=readArg) { Var#aic_vn1t(name=args) Lit#aic_in1t(value=2) } }
+                Let#aic_ln2t2(name=resolvedTemplate) { Call#aic_cn1t2(target=resolveTemplateName) { Var#aic_vn1t2(name=template) } }
+                If#aic_ifn3 {
+                  Call#aic_cn4t(target=isSupportedTemplate) { Var#aic_vn4t(name=resolvedTemplate) }
+                  Block#aic_bn5a {
+                    Let#aic_ln3(name=srcDir) { StrConcat#aic_sn1 { Var#aic_vn4(name=name) Lit#aic_in7(value="/src") } }
+                    Let#aic_ln4(name=projectPath) { StrConcat#aic_sn2 { Var#aic_vn5(name=name) Lit#aic_in8(value="/project.aiproj") } }
+                    Let#aic_ln5(name=appPath) { StrConcat#aic_sn3 { Var#aic_vn6(name=name) Lit#aic_in9(value="/src/app.aos") } }
+                    Let#aic_ln6(name=agentsPath) { StrConcat#aic_sn4 { Var#aic_vn7(name=name) Lit#aic_in10(value="/AGENTS.md") } }
+                    Call#aic_cn5(target=runIoMakeDir) { Var#aic_vn8(name=name) }
+                    Call#aic_cn6(target=runIoMakeDir) { Var#aic_vn9(name=srcDir) }
+                    Call#aic_cn7(target=runIoWriteFile) { Var#aic_vn10(name=projectPath) Call#aic_cn8(target=buildProjectManifest) { Var#aic_vn11(name=name) } }
+                    Call#aic_cn9(target=runIoWriteFile) { Var#aic_vn12(name=appPath) Call#aic_cn10(target=buildTemplateApp) { Var#aic_vn11t(name=resolvedTemplate) } }
+                    Call#aic_cn11(target=runIoWriteFile) { Var#aic_vn13(name=agentsPath) Call#aic_cn12(target=buildAgentsDoc) { Var#aic_vn11t2(name=resolvedTemplate) } }
+                    Call#aic_cn13(target=io.write) { Lit#aic_in13(value="Ok#ok1(type=string value=\"project-created\")") }
+                    Return#aic_rn3 { Lit#aic_in14(value=0) }
+                  }
+                  Block#aic_bn5b {
+                    Call#aic_cn13t(target=io.write) { Lit#aic_int13(value="Err#err0(code=AICN003 message=\"Unknown template.\" nodeId=template)") }
+                    Return#aic_rn3t { Lit#aic_int14(value=1) }
+                  }
+                }
               }
             }
           }
@@ -268,6 +279,96 @@ Program#aic_p1 {
     Fn#aic_fn60(params=_) {
       Block#aic_bn60 {
         Return#aic_rn60 { Lit#aic_in60(value="Program#p1 {\nExport#e1(name=\"start\")\nLet#l1(name=\"start\") {\nFn#f1(params=\"args\") {\nBlock#b1 {\nCall#print1(target=io.print) {\nLit#s1(value=\"Hello from AiLang.\")\n}\nReturn#r1 { Lit#i1(value=0) }\n}\n}\n}\n}\n") }
+      }
+    }
+  }
+
+  Let#aic_ln60h(name=buildHttpTemplate) {
+    Fn#aic_fn60h(params=_) {
+      Block#aic_bn60h {
+        Return#aic_rn60h { Lit#aic_in60h(value="Program#p1 {\nExport#e1(name=\"init\")\nExport#e2(name=\"update\")\nLet#l1(name=\"init\") {\nFn#f1(params=\"args\") {\nBlock#b1 { Return#r1 { Lit#s1(value=\"state\") } }\n}\n}\nLet#l2(name=\"update\") {\nFn#f2(params=\"state,event\") {\nBlock#b2 {\nReturn#r2 {\nBlock#b3 {\nVar#v1(name=state)\nCommand#c1(type=\"Emit\" payload=\"ok\")\n}\n}\n}\n}\n}\n}\n") }
+      }
+    }
+  }
+
+  Let#aic_ln60g(name=buildGuiTemplate) {
+    Fn#aic_fn60g(params=_) {
+      Block#aic_bn60g {
+        Return#aic_rn60g { Lit#aic_in60g(value="Program#p1 {\nExport#e1(name=\"start\")\nLet#l1(name=\"start\") {\nFn#f1(params=\"args\") {\nBlock#b1 {\nCall#print1(target=io.print) {\nLit#s1(value=\"GUI template placeholder\")\n}\nReturn#r1 { Lit#i1(value=0) }\n}\n}\n}\n}\n") }
+      }
+    }
+  }
+
+  Let#aic_ln60l(name=buildLibTemplate) {
+    Fn#aic_fn60l(params=_) {
+      Block#aic_bn60l {
+        Return#aic_rn60l { Lit#aic_in60l(value="Program#p1 {\nExport#e1(name=\"hello\")\nExport#e2(name=\"start\")\nLet#l1(name=\"hello\") {\nFn#f1(params=\"name\") {\nBlock#b1 {\nReturn#r1 {\nStrConcat#s1 {\nLit#s2(value=\"hello \")\nVar#v1(name=name)\n}\n}\n}\n}\n}\nLet#l2(name=\"start\") {\nFn#f2(params=\"args\") {\nBlock#b2 {\nCall#print1(target=io.print) {\nCall#c1(target=hello) { Lit#s3(value=\"library\") }\n}\nReturn#r2 { Lit#i1(value=0) }\n}\n}\n}\n}\n") }
+      }
+    }
+  }
+
+  Let#aic_ln60x(name=buildTemplateApp) {
+    Fn#aic_fn60x(params=template) {
+      Block#aic_bn60x {
+        If#aic_if60x1 {
+          Eq#aic_e60x1 { Var#aic_v60x1(name=template) Lit#aic_i60x1(value="cli") }
+          Block#aic_b60x1 { Return#aic_r60x1 { Call#aic_c60x1(target=buildAppTemplate) { Lit#aic_i60x2(value=0) } } }
+          Block#aic_b60x2 {
+            If#aic_if60x2 {
+              Eq#aic_e60x2 { Var#aic_v60x2(name=template) Lit#aic_i60x3(value="http") }
+              Block#aic_b60x3 { Return#aic_r60x2 { Call#aic_c60x2(target=buildHttpTemplate) { Lit#aic_i60x4(value=0) } } }
+              Block#aic_b60x4 {
+                If#aic_if60x3 {
+                  Eq#aic_e60x3 { Var#aic_v60x3(name=template) Lit#aic_i60x5(value="gui") }
+                  Block#aic_b60x5 { Return#aic_r60x3 { Call#aic_c60x3(target=buildGuiTemplate) { Lit#aic_i60x6(value=0) } } }
+                  Block#aic_b60x6 { Return#aic_r60x4 { Call#aic_c60x4(target=buildLibTemplate) { Lit#aic_i60x7(value=0) } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#aic_ln60y(name=resolveTemplateName) {
+    Fn#aic_fn60y(params=template) {
+      Block#aic_bn60y {
+        If#aic_if60y1 {
+          Eq#aic_e60y1 { Var#aic_v60y1(name=template) Lit#aic_i60y1(value="") }
+          Block#aic_b60y1 { Return#aic_r60y1 { Lit#aic_i60y2(value="cli") } }
+          Block#aic_b60y2 { Return#aic_r60y2 { Var#aic_v60y2(name=template) } }
+        }
+      }
+    }
+  }
+
+  Let#aic_ln60z(name=isSupportedTemplate) {
+    Fn#aic_fn60z(params=template) {
+      Block#aic_bn60z {
+        If#aic_if60z1 {
+          Eq#aic_e60z1 { Var#aic_v60z1(name=template) Lit#aic_i60z1(value="cli") }
+          Block#aic_b60z1 { Return#aic_r60z1 { Lit#aic_i60z2(value=true) } }
+          Block#aic_b60z2 {
+            If#aic_if60z2 {
+              Eq#aic_e60z2 { Var#aic_v60z2(name=template) Lit#aic_i60z3(value="http") }
+              Block#aic_b60z3 { Return#aic_r60z2 { Lit#aic_i60z4(value=true) } }
+              Block#aic_b60z4 {
+                If#aic_if60z3 {
+                  Eq#aic_e60z3 { Var#aic_v60z3(name=template) Lit#aic_i60z5(value="gui") }
+                  Block#aic_b60z5 { Return#aic_r60z3 { Lit#aic_i60z6(value=true) } }
+                  Block#aic_b60z6 {
+                    If#aic_if60z4 {
+                      Eq#aic_e60z4 { Var#aic_v60z4(name=template) Lit#aic_i60z7(value="lib") }
+                      Block#aic_b60z7 { Return#aic_r60z4 { Lit#aic_i60z8(value=true) } }
+                      Block#aic_b60z8 { Return#aic_r60z5 { Lit#aic_i60z9(value=false) } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
