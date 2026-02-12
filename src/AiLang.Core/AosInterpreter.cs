@@ -495,11 +495,7 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, portValue.AsInt());
-            listener.Start();
-            var handle = runtime.Network.NextNetHandle++;
-            runtime.Network.NetListeners[handle] = listener;
-            return AosValue.FromInt(handle);
+            return AosValue.FromInt(VmSyscalls.NetListen(runtime.Network, portValue.AsInt()));
         }
 
         if (target == "sys.net_listen_tls")
@@ -521,24 +517,11 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            var certPath = certPathValue.AsString();
-            var keyPath = keyPathValue.AsString();
-            System.Security.Cryptography.X509Certificates.X509Certificate2 certificate;
-            try
-            {
-                certificate = System.Security.Cryptography.X509Certificates.X509Certificate2.CreateFromPemFile(certPath, keyPath);
-            }
-            catch
-            {
-                return AosValue.FromInt(-1);
-            }
-
-            var listener = new System.Net.Sockets.TcpListener(System.Net.IPAddress.Loopback, portValue.AsInt());
-            listener.Start();
-            var handle = runtime.Network.NextNetHandle++;
-            runtime.Network.NetListeners[handle] = listener;
-            runtime.Network.NetTlsCertificates[handle] = certificate;
-            return AosValue.FromInt(handle);
+            return AosValue.FromInt(VmSyscalls.NetListenTls(
+                runtime.Network,
+                portValue.AsInt(),
+                certPathValue.AsString(),
+                keyPathValue.AsString()));
         }
 
         if (target == "sys.net_accept")
@@ -558,36 +541,7 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            if (!runtime.Network.NetListeners.TryGetValue(handleValue.AsInt(), out var listener))
-            {
-                return AosValue.FromInt(-1);
-            }
-
-            var client = listener.AcceptTcpClient();
-            var connHandle = runtime.Network.NextNetHandle++;
-            runtime.Network.NetConnections[connHandle] = client;
-            if (runtime.Network.NetTlsCertificates.TryGetValue(handleValue.AsInt(), out var cert))
-            {
-                var tlsStream = new System.Net.Security.SslStream(client.GetStream(), leaveInnerStreamOpen: false);
-                try
-                {
-                    tlsStream.AuthenticateAsServer(
-                        cert,
-                        clientCertificateRequired: false,
-                        enabledSslProtocols: System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13,
-                        checkCertificateRevocation: false);
-                }
-                catch
-                {
-                    tlsStream.Dispose();
-                    try { client.Close(); } catch { }
-                    runtime.Network.NetConnections.Remove(connHandle);
-                    return AosValue.FromInt(-1);
-                }
-
-                runtime.Network.NetTlsStreams[connHandle] = tlsStream;
-            }
-            return AosValue.FromInt(connHandle);
+            return AosValue.FromInt(VmSyscalls.NetAccept(runtime.Network, handleValue.AsInt()));
         }
 
         if (target == "sys.net_readHeaders")
@@ -607,64 +561,7 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            if (!runtime.Network.NetConnections.TryGetValue(handleValue.AsInt(), out var client))
-            {
-                return AosValue.FromString(string.Empty);
-            }
-
-            Stream stream = runtime.Network.NetTlsStreams.TryGetValue(handleValue.AsInt(), out var tlsStream)
-                ? tlsStream
-                : client.GetStream();
-            var bytes = new List<byte>(1024);
-            var endSeen = 0;
-            var pattern = new byte[] { 13, 10, 13, 10 };
-            while (bytes.Count < 65536)
-            {
-                var next = stream.ReadByte();
-                if (next < 0)
-                {
-                    break;
-                }
-
-                var b = (byte)next;
-                bytes.Add(b);
-                if (b == pattern[endSeen])
-                {
-                    endSeen++;
-                    if (endSeen == 4)
-                    {
-                        break;
-                    }
-                }
-                else
-                {
-                    endSeen = b == pattern[0] ? 1 : 0;
-                }
-            }
-
-            var headerText = System.Text.Encoding.ASCII.GetString(bytes.ToArray());
-            var contentLength = ParseContentLength(headerText);
-            if (contentLength > 0)
-            {
-                var bodyBuffer = new byte[contentLength];
-                var readTotal = 0;
-                while (readTotal < contentLength)
-                {
-                    var read = stream.Read(bodyBuffer, readTotal, contentLength - readTotal);
-                    if (read <= 0)
-                    {
-                        break;
-                    }
-                    readTotal += read;
-                }
-
-                if (readTotal > 0)
-                {
-                    headerText += System.Text.Encoding.UTF8.GetString(bodyBuffer, 0, readTotal);
-                }
-            }
-
-            return AosValue.FromString(headerText);
+            return AosValue.FromString(VmSyscalls.NetReadHeaders(runtime.Network, handleValue.AsInt()));
         }
 
         if (target == "sys.net_write")
@@ -685,18 +582,9 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            if (!runtime.Network.NetConnections.TryGetValue(handleValue.AsInt(), out var client))
-            {
-                return AosValue.Unknown;
-            }
-
-            var bytes = System.Text.Encoding.UTF8.GetBytes(textValue.AsString());
-            Stream stream = runtime.Network.NetTlsStreams.TryGetValue(handleValue.AsInt(), out var tlsStream)
-                ? tlsStream
-                : client.GetStream();
-            stream.Write(bytes, 0, bytes.Length);
-            stream.Flush();
-            return AosValue.Void;
+            return VmSyscalls.NetWrite(runtime.Network, handleValue.AsInt(), textValue.AsString())
+                ? AosValue.Void
+                : AosValue.Unknown;
         }
 
         if (target == "sys.net_close")
@@ -716,27 +604,7 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            var handle = handleValue.AsInt();
-            if (runtime.Network.NetConnections.TryGetValue(handle, out var conn))
-            {
-                if (runtime.Network.NetTlsStreams.TryGetValue(handle, out var tlsStream))
-                {
-                    try { tlsStream.Dispose(); } catch { }
-                    runtime.Network.NetTlsStreams.Remove(handle);
-                }
-                try { conn.Close(); } catch { }
-                runtime.Network.NetConnections.Remove(handle);
-                return AosValue.Void;
-            }
-
-            if (runtime.Network.NetListeners.TryGetValue(handle, out var listener))
-            {
-                try { listener.Stop(); } catch { }
-                runtime.Network.NetListeners.Remove(handle);
-                runtime.Network.NetTlsCertificates.Remove(handle);
-                return AosValue.Void;
-            }
-
+            VmSyscalls.NetClose(runtime.Network, handleValue.AsInt());
             return AosValue.Void;
         }
 
@@ -757,7 +625,7 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            Console.WriteLine(textValue.AsString());
+            VmSyscalls.StdoutWriteLine(textValue.AsString());
             return AosValue.Void;
         }
 
@@ -778,7 +646,7 @@ public sealed partial class AosInterpreter
                 return AosValue.Unknown;
             }
 
-            throw new AosProcessExitException(codeValue.AsInt());
+            VmSyscalls.ProcessExit(codeValue.AsInt());
         }
 
         if (target == "sys.fs_readFile")
@@ -1987,40 +1855,6 @@ public sealed partial class AosInterpreter
             },
             new List<AosNode>(),
             span);
-    }
-
-    private static int ParseContentLength(string raw)
-    {
-        var lines = raw.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
-        foreach (var line in lines)
-        {
-            var trimmed = line.Trim();
-            if (trimmed.Length == 0)
-            {
-                break;
-            }
-
-            var colon = trimmed.IndexOf(':');
-            if (colon <= 0)
-            {
-                continue;
-            }
-
-            var key = trimmed[..colon].Trim();
-            if (!string.Equals(key, "Content-Length", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            var value = trimmed[(colon + 1)..].Trim();
-            if (int.TryParse(value, out var parsed) && parsed > 0)
-            {
-                return parsed;
-            }
-            return 0;
-        }
-
-        return 0;
     }
 
     private static AosNode ParseHttpRequestNode(string raw, AosSpan span)
