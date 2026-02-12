@@ -7,7 +7,7 @@ public sealed class AosRuntime
     public Dictionary<string, AosValue> Env { get; } = new(StringComparer.Ordinal);
     public HashSet<string> Permissions { get; } = new(StringComparer.Ordinal) { "math" };
     public HashSet<string> ReadOnlyBindings { get; } = new(StringComparer.Ordinal);
-    public string ModuleBaseDir { get; set; } = Directory.GetCurrentDirectory();
+    public string ModuleBaseDir { get; set; } = HostFileSystem.GetFullPath(".");
     public Dictionary<string, Dictionary<string, AosValue>> ModuleExports { get; } = new(StringComparer.Ordinal);
     public HashSet<string> ModuleLoading { get; } = new(StringComparer.Ordinal);
     public Stack<Dictionary<string, AosValue>> ExportScopes { get; } = new();
@@ -1027,11 +1027,11 @@ public sealed partial class AosInterpreter
 
             var publishDir = dirAttr.AsString();
             var projectName = projectNameValue.AsString();
-            var bundlePath = Path.Combine(publishDir, $"{projectName}.aibundle");
-            var outputBinaryPath = Path.Combine(publishDir, projectName);
-            var libraryPath = Path.Combine(publishDir, $"{projectName}.ailib");
+            var bundlePath = HostFileSystem.Combine(publishDir, $"{projectName}.aibundle");
+            var outputBinaryPath = HostFileSystem.Combine(publishDir, projectName);
+            var libraryPath = HostFileSystem.Combine(publishDir, $"{projectName}.ailib");
 
-            var manifestPath = Path.Combine(publishDir, "project.aiproj");
+            var manifestPath = HostFileSystem.Combine(publishDir, "project.aiproj");
             if (TryLoadProjectNode(manifestPath, out var projectNode, out var manifestErr) && projectNode is not null)
             {
                 if (ValidateProjectIncludesForPublish(publishDir, projectNode, out var includeErr))
@@ -1066,8 +1066,8 @@ public sealed partial class AosInterpreter
                             node.Span);
                         try
                         {
-                            Directory.CreateDirectory(publishDir);
-                            File.WriteAllText(libraryPath, AosFormatter.Format(canonicalProgram));
+                            HostFileSystem.EnsureDirectory(publishDir);
+                            HostFileSystem.WriteAllText(libraryPath, AosFormatter.Format(canonicalProgram));
                             return AosValue.FromInt(0);
                         }
                         catch (Exception ex)
@@ -1098,8 +1098,8 @@ public sealed partial class AosInterpreter
             }
 
             var entryFile = entryFileAttr.AsString();
-            var entryPath = Path.GetFullPath(Path.Combine(publishDir, entryFile));
-            if (!File.Exists(entryPath))
+            var entryPath = HostFileSystem.GetFullPath(HostFileSystem.Combine(publishDir, entryFile));
+            if (!HostFileSystem.FileExists(entryPath))
             {
                 return AosValue.FromNode(CreateErrNode("publish_err", "PUB007", $"Entry file not found: {entryFile}", node.Id, node.Span));
             }
@@ -1139,8 +1139,8 @@ public sealed partial class AosInterpreter
 
             try
             {
-                Directory.CreateDirectory(publishDir);
-                File.WriteAllText(bundlePath, bytecodeText);
+                HostFileSystem.EnsureDirectory(publishDir);
+                HostFileSystem.WriteAllText(bundlePath, bytecodeText);
 
                 var sourceBinary = HostExecutableLocator.ResolveHostBinaryPath();
                 if (sourceBinary is null)
@@ -1188,12 +1188,12 @@ public sealed partial class AosInterpreter
         }
 
         var relativePath = pathAttr.AsString();
-        if (Path.IsPathRooted(relativePath))
+        if (HostFileSystem.IsPathRooted(relativePath))
         {
             return CreateRuntimeErr("RUN022", "Import path must be relative.", node.Id, node.Span);
         }
 
-        var absolutePath = Path.GetFullPath(Path.Combine(runtime.ModuleBaseDir, relativePath));
+        var absolutePath = HostFileSystem.GetFullPath(HostFileSystem.Combine(runtime.ModuleBaseDir, relativePath));
         if (runtime.ModuleExports.TryGetValue(absolutePath, out var cachedExports))
         {
             foreach (var exportEntry in cachedExports)
@@ -1208,7 +1208,7 @@ public sealed partial class AosInterpreter
             return CreateRuntimeErr("RUN023", "Circular import detected.", node.Id, node.Span);
         }
 
-        if (!File.Exists(absolutePath))
+        if (!HostFileSystem.FileExists(absolutePath))
         {
             return CreateRuntimeErr("RUN024", $"Import file not found: {relativePath}", node.Id, node.Span);
         }
@@ -1243,7 +1243,7 @@ public sealed partial class AosInterpreter
         }
 
         var priorBaseDir = runtime.ModuleBaseDir;
-        runtime.ModuleBaseDir = Path.GetDirectoryName(absolutePath) ?? priorBaseDir;
+        runtime.ModuleBaseDir = HostFileSystem.GetDirectoryName(absolutePath) ?? priorBaseDir;
         runtime.ModuleLoading.Add(absolutePath);
         runtime.ExportScopes.Push(new Dictionary<string, AosValue>(StringComparer.Ordinal));
         try
@@ -1301,17 +1301,17 @@ public sealed partial class AosInterpreter
             }
 
             var relativePath = pathAttr.AsString();
-            if (Path.IsPathRooted(relativePath))
+            if (HostFileSystem.IsPathRooted(relativePath))
             {
                 throw new VmRuntimeException("VM001", "Import path must be relative.", child.Id);
             }
 
-            var fullPath = Path.GetFullPath(Path.Combine(moduleBaseDir, relativePath));
+            var fullPath = HostFileSystem.GetFullPath(HostFileSystem.Combine(moduleBaseDir, relativePath));
             if (!loading.Add(fullPath))
             {
                 throw new VmRuntimeException("VM001", "Circular import detected.", child.Id);
             }
-            if (!File.Exists(fullPath))
+            if (!HostFileSystem.FileExists(fullPath))
             {
                 loading.Remove(fullPath);
                 throw new VmRuntimeException("VM001", $"Import file not found: {relativePath}", child.Id);
@@ -1335,7 +1335,7 @@ public sealed partial class AosInterpreter
                 throw new VmRuntimeException("VM001", diag?.Message ?? "Imported root must be Program.", child.Id);
             }
 
-            var importedDir = Path.GetDirectoryName(fullPath) ?? moduleBaseDir;
+            var importedDir = HostFileSystem.GetDirectoryName(fullPath) ?? moduleBaseDir;
             var flattenedImport = ResolveImportsForBytecode(parse.Root, importedDir, loading);
             loading.Remove(fullPath);
             foreach (var letNode in ExtractExportedLets(flattenedImport))
@@ -1957,7 +1957,7 @@ public sealed partial class AosInterpreter
         projectNode = null;
         errNode = null;
 
-        if (!File.Exists(manifestPath))
+        if (!HostFileSystem.FileExists(manifestPath))
         {
             return false;
         }
@@ -2035,15 +2035,15 @@ public sealed partial class AosInterpreter
                 return false;
             }
 
-            if (Path.IsPathRooted(includePath))
+            if (HostFileSystem.IsPathRooted(includePath))
             {
                 errNode = CreateErrNode("publish_err", "PUB012", "Include path must be relative.", includeNode.Id, includeNode.Span);
                 return false;
             }
 
-            var includeDir = Path.GetFullPath(Path.Combine(publishDir, includePath));
-            var includeManifestPath = Path.Combine(includeDir, $"{includeName}.ailib");
-            if (!File.Exists(includeManifestPath))
+            var includeDir = HostFileSystem.GetFullPath(HostFileSystem.Combine(publishDir, includePath));
+            var includeManifestPath = HostFileSystem.Combine(includeDir, $"{includeName}.ailib");
+            if (!HostFileSystem.FileExists(includeManifestPath))
             {
                 errNode = CreateErrNode("publish_err", "PUB015", $"Included library not found: {includeName}", includeNode.Id, includeNode.Span);
                 return false;
