@@ -4,12 +4,13 @@
 
 - `src/AiLang.Core`: language layer (AST, parser frontend bridge, validator, formatter host wiring, AOS runtime semantics).
 - `src/AiVM.Core`: VM/runtime host layer (AiBC1 load/run, syscall host wrappers, bundle loader/publisher, process/file/network adapters).
-- `src/AiLang.Cli`: CLI bootloader (`run`, `serve`, `repl`, `bench`) and process entry wiring.
+- `src/AiCLI`: CLI bootloader (`run`, `serve`, `repl`, `bench`) and process entry wiring.
+- `src/AiVectra`: UI layer placeholder project (no runtime integration yet).
 - `src/compiler`: AiLang-authored compiler/runtime scripts (`aic.aos`, `runtime.aos`, `format.aos`, `validate.aos`, `route.aos`, `json.aos`, `http.aos`).
 
 ## Primary Entry Points
 
-- CLI entry: `src/AiLang.Cli/Program.cs`
+- CLI entry: `src/AiCLI/Program.cs`
 - Interpreter entry: `src/AiLang.Core/AosInterpreter.cs`
   - Core eval dispatch: `src/AiLang.Core/AosInterpreter.CoreEval.cs`
   - Eval loop + trace: `src/AiLang.Core/AosInterpreter.EvalLoop.cs`, `src/AiLang.Core/AosInterpreter.Trace.cs`

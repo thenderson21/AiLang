@@ -528,7 +528,7 @@ public class AosTests
         };
         psi.ArgumentList.Add("run");
         psi.ArgumentList.Add("--project");
-        psi.ArgumentList.Add(Path.Combine(repoRoot, "src", "AiLang.Cli"));
+        psi.ArgumentList.Add(Path.Combine(repoRoot, "src", "AiCLI"));
         psi.ArgumentList.Add("serve");
         psi.ArgumentList.Add(appPath);
         psi.ArgumentList.Add("--port");
@@ -574,7 +574,7 @@ public class AosTests
         };
         psi.ArgumentList.Add("run");
         psi.ArgumentList.Add("--project");
-        psi.ArgumentList.Add(Path.Combine(repoRoot, "src", "AiLang.Cli"));
+        psi.ArgumentList.Add(Path.Combine(repoRoot, "src", "AiCLI"));
         psi.ArgumentList.Add("serve");
         psi.ArgumentList.Add(appPath);
         psi.ArgumentList.Add("--port");
@@ -623,7 +623,7 @@ public class AosTests
         };
         psi.ArgumentList.Add("run");
         psi.ArgumentList.Add("--project");
-        psi.ArgumentList.Add(Path.Combine(repoRoot, "src", "AiLang.Cli"));
+        psi.ArgumentList.Add(Path.Combine(repoRoot, "src", "AiCLI"));
         psi.ArgumentList.Add("serve");
         psi.ArgumentList.Add(appPath);
         psi.ArgumentList.Add("--port");
@@ -664,7 +664,7 @@ public class AosTests
         };
         psi.ArgumentList.Add("run");
         psi.ArgumentList.Add("--project");
-        psi.ArgumentList.Add(Path.Combine(repoRoot, "src", "AiLang.Cli"));
+        psi.ArgumentList.Add(Path.Combine(repoRoot, "src", "AiCLI"));
         psi.ArgumentList.Add("bench");
         psi.ArgumentList.Add("--iterations");
         psi.ArgumentList.Add("1");

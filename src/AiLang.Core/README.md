@@ -13,7 +13,7 @@ Language-layer implementation for AiLang.
 ## Non-responsibilities
 
 - Direct syscall implementation details (kept in `AiVM.Core`).
-- CLI argument parsing and process boot (kept in `AiLang.Cli`).
+- CLI argument parsing and process boot (kept in `AiCLI`).
 
 ## Interpreter Partial Map
 

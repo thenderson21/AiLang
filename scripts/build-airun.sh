@@ -6,7 +6,7 @@ OUT_DIR="${ROOT_DIR}/.artifacts/airun-osx-arm64"
 
 "${ROOT_DIR}/scripts/build-frontend.sh"
 
-dotnet publish "${ROOT_DIR}/src/AiLang.Cli/AiLang.Cli.csproj" \
+dotnet publish "${ROOT_DIR}/src/AiCLI/AiCLI.csproj" \
   -c Release \
   -r osx-arm64 \
   -p:PublishAot=true \

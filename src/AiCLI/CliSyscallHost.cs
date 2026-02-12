@@ -1,6 +1,6 @@
 using AiVM.Core;
 
-namespace AiLang.Cli;
+namespace AiCLI;
 
 internal sealed class CliSyscallHost : DefaultSyscallHost
 {
