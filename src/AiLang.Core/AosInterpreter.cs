@@ -556,7 +556,7 @@ public sealed class AosInterpreter
             var bytes = new List<byte>(1024);
             var endSeen = 0;
             var pattern = new byte[] { 13, 10, 13, 10 };
-            while (bytes.Count < 16384)
+            while (bytes.Count < 65536)
             {
                 var next = stream.ReadByte();
                 if (next < 0)
@@ -580,7 +580,29 @@ public sealed class AosInterpreter
                 }
             }
 
-            return AosValue.FromString(System.Text.Encoding.ASCII.GetString(bytes.ToArray()));
+            var headerText = System.Text.Encoding.ASCII.GetString(bytes.ToArray());
+            var contentLength = ParseContentLength(headerText);
+            if (contentLength > 0)
+            {
+                var bodyBuffer = new byte[contentLength];
+                var readTotal = 0;
+                while (readTotal < contentLength)
+                {
+                    var read = stream.Read(bodyBuffer, readTotal, contentLength - readTotal);
+                    if (read <= 0)
+                    {
+                        break;
+                    }
+                    readTotal += read;
+                }
+
+                if (readTotal > 0)
+                {
+                    headerText += System.Text.Encoding.UTF8.GetString(bodyBuffer, 0, readTotal);
+                }
+            }
+
+            return AosValue.FromString(headerText);
         }
 
         if (target == "sys.net_write")
@@ -899,6 +921,26 @@ public sealed class AosInterpreter
             }
 
             return AosValue.FromString(tokens[i]);
+        }
+
+        if (target == "compiler.parseHttpRequest")
+        {
+            if (!runtime.Permissions.Contains("compiler"))
+            {
+                return AosValue.Unknown;
+            }
+            if (node.Children.Count != 1)
+            {
+                return AosValue.Unknown;
+            }
+
+            var text = EvalNode(node.Children[0], runtime, env);
+            if (text.Kind != AosValueKind.String)
+            {
+                return AosValue.Unknown;
+            }
+
+            return AosValue.FromNode(ParseHttpRequestNode(text.AsString(), node.Span));
         }
 
         if (target == "compiler.format")
@@ -1874,6 +1916,150 @@ public sealed class AosInterpreter
                 ["nodeId"] = new AosAttrValue(AosAttrKind.Identifier, nodeId)
             },
             new List<AosNode>(),
+            span);
+    }
+
+    private static int ParseContentLength(string raw)
+    {
+        var lines = raw.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        foreach (var line in lines)
+        {
+            var trimmed = line.Trim();
+            if (trimmed.Length == 0)
+            {
+                break;
+            }
+
+            var colon = trimmed.IndexOf(':');
+            if (colon <= 0)
+            {
+                continue;
+            }
+
+            var key = trimmed[..colon].Trim();
+            if (!string.Equals(key, "Content-Length", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var value = trimmed[(colon + 1)..].Trim();
+            if (int.TryParse(value, out var parsed) && parsed > 0)
+            {
+                return parsed;
+            }
+            return 0;
+        }
+
+        return 0;
+    }
+
+    private static AosNode ParseHttpRequestNode(string raw, AosSpan span)
+    {
+        var normalized = raw.Replace("\r\n", "\n", StringComparison.Ordinal);
+        var splitIndex = normalized.IndexOf("\n\n", StringComparison.Ordinal);
+        var head = splitIndex >= 0 ? normalized[..splitIndex] : normalized;
+        var body = splitIndex >= 0 ? normalized[(splitIndex + 2)..] : string.Empty;
+
+        var lines = head.Split('\n');
+        var requestLine = lines.Length > 0 ? lines[0].Trim() : string.Empty;
+        var requestParts = requestLine.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var method = requestParts.Length > 0 ? requestParts[0] : string.Empty;
+        var rawPath = requestParts.Length > 1 ? requestParts[1] : string.Empty;
+
+        var query = string.Empty;
+        var path = rawPath;
+        var queryStart = rawPath.IndexOf('?', StringComparison.Ordinal);
+        if (queryStart >= 0)
+        {
+            path = rawPath[..queryStart];
+            query = queryStart + 1 < rawPath.Length ? rawPath[(queryStart + 1)..] : string.Empty;
+        }
+
+        var headerMapChildren = new List<AosNode>();
+        for (var i = 1; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            if (string.IsNullOrWhiteSpace(line))
+            {
+                continue;
+            }
+
+            var colon = line.IndexOf(':');
+            if (colon <= 0)
+            {
+                continue;
+            }
+
+            var key = line[..colon].Trim();
+            var value = line[(colon + 1)..].Trim();
+            headerMapChildren.Add(new AosNode(
+                "Field",
+                $"http_header_{i}",
+                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                {
+                    ["key"] = new AosAttrValue(AosAttrKind.String, key)
+                },
+                new List<AosNode>
+                {
+                    new AosNode(
+                        "Lit",
+                        $"http_header_val_{i}",
+                        new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                        {
+                            ["value"] = new AosAttrValue(AosAttrKind.String, value)
+                        },
+                        new List<AosNode>(),
+                        span)
+                },
+                span));
+        }
+
+        var queryMapChildren = new List<AosNode>();
+        if (!string.IsNullOrEmpty(query))
+        {
+            var queryParts = query.Split('&', StringSplitOptions.RemoveEmptyEntries);
+            for (var i = 0; i < queryParts.Length; i++)
+            {
+                var part = queryParts[i];
+                var eq = part.IndexOf('=');
+                var key = eq >= 0 ? part[..eq] : part;
+                var value = eq >= 0 && eq + 1 < part.Length ? part[(eq + 1)..] : string.Empty;
+                queryMapChildren.Add(new AosNode(
+                    "Field",
+                    $"http_query_{i}",
+                    new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                    {
+                        ["key"] = new AosAttrValue(AosAttrKind.String, key)
+                    },
+                    new List<AosNode>
+                    {
+                        new AosNode(
+                            "Lit",
+                            $"http_query_val_{i}",
+                            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                            {
+                                ["value"] = new AosAttrValue(AosAttrKind.String, value)
+                            },
+                            new List<AosNode>(),
+                            span)
+                    },
+                    span));
+            }
+        }
+
+        return new AosNode(
+            "HttpRequest",
+            "auto",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+            {
+                ["method"] = new AosAttrValue(AosAttrKind.String, method),
+                ["path"] = new AosAttrValue(AosAttrKind.String, path)
+            },
+            new List<AosNode>
+            {
+                new AosNode("Map", "http_headers", new Dictionary<string, AosAttrValue>(StringComparer.Ordinal), headerMapChildren, span),
+                new AosNode("Map", "http_query", new Dictionary<string, AosAttrValue>(StringComparer.Ordinal), queryMapChildren, span)
+            },
             span);
     }
 
