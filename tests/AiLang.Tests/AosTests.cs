@@ -434,6 +434,52 @@ public class AosTests
     }
 
     [Test]
+    public void Serve_InvalidTlsMaterial_ReturnsRuntimeError()
+    {
+        var appPath = FindRepoFile("examples/golden/http/health_app.aos");
+        var repoRoot = Path.GetDirectoryName(FindRepoFile("AiLang.slnx"))!;
+        var port = FindFreePort();
+        var missingCert = Path.Combine(Path.GetTempPath(), $"ailang-missing-cert-{Guid.NewGuid():N}.pem");
+        var missingKey = Path.Combine(Path.GetTempPath(), $"ailang-missing-key-{Guid.NewGuid():N}.pem");
+
+        var psi = new ProcessStartInfo
+        {
+            FileName = "dotnet",
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            WorkingDirectory = repoRoot
+        };
+        psi.ArgumentList.Add("run");
+        psi.ArgumentList.Add("--project");
+        psi.ArgumentList.Add(Path.Combine(repoRoot, "src", "AiLang.Cli"));
+        psi.ArgumentList.Add("serve");
+        psi.ArgumentList.Add(appPath);
+        psi.ArgumentList.Add("--port");
+        psi.ArgumentList.Add(port.ToString(CultureInfo.InvariantCulture));
+        psi.ArgumentList.Add("--tls-cert");
+        psi.ArgumentList.Add(missingCert);
+        psi.ArgumentList.Add("--tls-key");
+        psi.ArgumentList.Add(missingKey);
+
+        using var process = Process.Start(psi);
+        Assert.That(process, Is.Not.Null);
+
+        var exited = process!.WaitForExit(15000);
+        if (!exited)
+        {
+            process.Kill(entireProcessTree: true);
+            Assert.Fail("serve did not exit for invalid TLS material.");
+        }
+
+        var output = process.StandardOutput.ReadToEnd().Trim();
+        Assert.That(process.ExitCode, Is.EqualTo(3), process.StandardError.ReadToEnd());
+        Assert.That(
+            output,
+            Is.EqualTo("Err#runtime_err(code=TLS003 message=\"Failed to load TLS certificate or key.\" nodeId=serve)"));
+    }
+
+    [Test]
     public void Bench_Command_ReturnsStructuredReport()
     {
         var repoRoot = Path.GetDirectoryName(FindRepoFile("AiLang.slnx"))!;

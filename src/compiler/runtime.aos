@@ -106,6 +106,20 @@ Program#rt_p1 {
           Block#rt_b101 { Return#rt_r54 { Var#rt_v170(name=listener) } }
           Block#rt_b102 { Lit#rt_i124(value=0) }
         }
+        If#rt_if_tls1 {
+          Eq#rt_eq_tls1 { Var#rt_v_tls1(name=listener) Lit#rt_i_tls1(value=-1) }
+          Block#rt_b_tls1 {
+            Return#rt_r_tls1 {
+              MakeErr#rt_me_tls1 {
+                Lit#rt_i_tls2(value="runtime_err")
+                Lit#rt_i_tls3(value="TLS003")
+                Lit#rt_i_tls4(value="Failed to load TLS certificate or key.")
+                Lit#rt_i_tls5(value="serve")
+              }
+            }
+          }
+          Block#rt_b_tls2 { Lit#rt_i_tls6(value=0) }
+        }
         Let#rt_l6(name=state) { Call#rt_c5(target=init) { Var#rt_v6(name=argv) } }
         Return#rt_r3 { Call#rt_c6(target=runtime_serve_loop) { Var#rt_v7(name=listener) Var#rt_v8(name=state) } }
       }
