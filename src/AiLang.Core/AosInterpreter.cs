@@ -663,15 +663,13 @@ public sealed partial class AosInterpreter
                                     node.Span)
                             },
                             node.Span);
-                        try
+                        if (VmPublishArtifacts.TryWriteLibrary(publishDir, libraryPath, AosFormatter.Format(canonicalProgram), out var libraryWriteError))
                         {
-                            HostFileSystem.EnsureDirectory(publishDir);
-                            HostFileSystem.WriteAllText(libraryPath, AosFormatter.Format(canonicalProgram));
                             return AosValue.FromInt(0);
                         }
-                        catch (Exception ex)
+                        else
                         {
-                            return AosValue.FromNode(CreateErrNode("publish_err", "PUB003", ex.Message, node.Id, node.Span));
+                            return AosValue.FromNode(CreateErrNode("publish_err", "PUB003", libraryWriteError, node.Id, node.Span));
                         }
                     }
                 }
@@ -736,28 +734,18 @@ public sealed partial class AosInterpreter
 
             var bytecodeText = AosFormatter.Format(bytecodeNode);
 
-            try
+            if (VmPublishArtifacts.TryWriteBundleExecutable(
+                    publishDir,
+                    bundlePath,
+                    outputBinaryPath,
+                    bytecodeText,
+                    out var publishErrorCode,
+                    out var publishErrorMessage))
             {
-                HostFileSystem.EnsureDirectory(publishDir);
-                HostFileSystem.WriteAllText(bundlePath, bytecodeText);
-
-                var sourceBinary = HostExecutableLocator.ResolveHostBinaryPath();
-                if (sourceBinary is null)
-                {
-                    return AosValue.FromNode(CreateErrNode("publish_err", "PUB004", "host executable not found.", node.Id, node.Span));
-                }
-
-                if (!BundlePublisher.TryWriteEmbeddedBytecodeExecutable(sourceBinary, outputBinaryPath, bytecodeText, out var bundleWriteError))
-                {
-                    return AosValue.FromNode(CreateErrNode("publish_err", "PUB003", bundleWriteError, node.Id, node.Span));
-                }
-
                 return AosValue.FromInt(0);
             }
-            catch (Exception ex)
-            {
-                return AosValue.FromNode(CreateErrNode("publish_err", "PUB003", ex.Message, node.Id, node.Span));
-            }
+
+            return AosValue.FromNode(CreateErrNode("publish_err", publishErrorCode, publishErrorMessage, node.Id, node.Span));
         }
 
         if (!env.TryGetValue(target, out var functionValue))
