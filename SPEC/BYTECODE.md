@@ -2,65 +2,75 @@
 
 AiBC1 is the deterministic bytecode container for AiLang VM execution.
 
-## Container
+## Header
 
-- Root node: `Bytecode#...`
-- Required attrs:
-  - `format="AiBC1"`
-  - `version=1`
-- Children are ordered sections:
-  - `Const#...`
-  - `Func#...`
+Root node must be `Bytecode#...` with required attrs:
 
-No section may rely on hash-map or runtime iteration order.
+- `magic="AIBC"` (container magic)
+- `format="AiBC1"` (encoding family)
+- `version=1` (schema version)
+- `flags=0` (reserved byte; non-zero reserved for future use)
+
+VM loader requirements:
+
+- reject missing/invalid `magic` with deterministic `VM001`
+- reject unsupported `format` with deterministic `VM001`
+- reject unsupported `version` with deterministic `VM001`
+- reject missing/invalid `flags` with deterministic `VM001`
+
+## Sections
+
+Children are ordered sections:
+
+- `Const#...`
+- `Func#...`
+
+No section may rely on map/hash iteration order.
 
 ## Constant Pool
 
-Each `Const` child represents one pool item.
+Each `Const` child represents one constant.
 
-- Required attrs:
-  - `kind=string|int|bool|null`
+- required attrs:
+  - `kind=string|int|bool|null|node`
   - `value=...`
-- Constants are addressed by zero-based index in child order.
-- Encoding is deterministic first-seen order from compiler walk.
+- constants are addressed by zero-based child index
+- compiler emits constants in deterministic first-seen order for the canonical walk
 
-## Functions
+`kind=node` uses canonical AOS text encoding of exactly one node value.
+
+## Function Table
 
 Each `Func` child defines one callable unit.
 
-- Required attrs:
+- required attrs:
   - `name=<identifier>`
   - `params="<csv>"`
   - `locals="<csv>"`
-- Instruction stream is the ordered `Inst` children.
-
-Function table index is function child order.
+- instruction stream is ordered `Inst` children
+- function index is child order
 
 ## Instructions
 
-Each `Inst` has required `op` and optional `a`, `b`, `s`.
+Each `Inst` has required `op` and optional operands `a`, `b`, `s`.
 
-- `CONST a` push constant index `a`
-- `LOAD_LOCAL a` push local slot `a`
-- `STORE_LOCAL a` pop -> local slot `a`
-- `POP` pop one value
-- `EQ` pop2 compare, push bool
-- `ADD_INT` pop2 int add, push int
-- `STR_CONCAT` pop2 string concat, push string
-- `JUMP a` set pc to absolute instruction index `a`
-- `JUMP_IF_FALSE a` pop bool, jump if false
-- `CALL a b` call function index `a` with `b` args
-- `CALL_SYS a s` call syscall/host target `s` with `a` args
-- `RETURN` return top of stack or `void` if empty
+- stack/data: `CONST`, `LOAD_LOCAL`, `STORE_LOCAL`, `POP`
+- control flow: `JUMP`, `JUMP_IF_FALSE`, `RETURN`
+- calls: `CALL`, `CALL_SYS`
+- primitive ops: `EQ`, `ADD_INT`, `STR_CONCAT`, `TO_STRING`, `STR_ESCAPE`
+- node ops: `NODE_KIND`, `NODE_ID`, `ATTR_COUNT`, `ATTR_KEY`, `ATTR_VALUE_KIND`, `ATTR_VALUE_STRING`, `ATTR_VALUE_INT`, `ATTR_VALUE_BOOL`, `CHILD_COUNT`, `CHILD_AT`, `MAKE_BLOCK`, `APPEND_CHILD`, `MAKE_ERR`, `MAKE_LIT_STRING`, `MAKE_NODE`
 
-All operands are deterministic and interpreted as little-endian numeric values when serialized to raw bytes by future backends.
+## Binary Mapping
+
+When serialized to raw bytes by backend tooling, numeric fields are little-endian.
+Canonical byte streams must be deterministic for identical input programs.
 
 ## Error Model
 
-VM errors are deterministic `Err` nodes with:
+VM failures must be deterministic `Err` nodes:
 
 - `code=VM001`
-- `message=<stable text>`
-- `nodeId=<function|node id>`
+- stable `message`
+- stable `nodeId`
 
-Unsupported constructs during emit or run must return `VM001`, never crash.
+Unsupported constructs during emit/load/run must return `VM001`, never crash.

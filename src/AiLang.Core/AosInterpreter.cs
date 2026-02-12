@@ -2408,9 +2408,21 @@ public sealed class AosInterpreter
                 throw new VmRuntimeException("VM001", "Expected Bytecode node.", node.Id);
             }
 
+            if (!node.Attrs.TryGetValue("magic", out var magicAttr) || magicAttr.Kind != AosAttrKind.String || magicAttr.AsString() != "AIBC")
+            {
+                throw new VmRuntimeException("VM001", "Unsupported bytecode magic.", node.Id);
+            }
             if (!node.Attrs.TryGetValue("format", out var formatAttr) || formatAttr.Kind != AosAttrKind.String || formatAttr.AsString() != "AiBC1")
             {
                 throw new VmRuntimeException("VM001", "Unsupported bytecode format.", node.Id);
+            }
+            if (!node.Attrs.TryGetValue("version", out var versionAttr) || versionAttr.Kind != AosAttrKind.Int || versionAttr.AsInt() != 1)
+            {
+                throw new VmRuntimeException("VM001", "Unsupported bytecode version.", node.Id);
+            }
+            if (!node.Attrs.TryGetValue("flags", out var flagsAttr) || flagsAttr.Kind != AosAttrKind.Int)
+            {
+                throw new VmRuntimeException("VM001", "Invalid bytecode flags.", node.Id);
             }
 
             var constants = new List<AosValue>();
@@ -2729,8 +2741,10 @@ public sealed class AosInterpreter
                 "bc1",
                 new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
                 {
+                    ["magic"] = new AosAttrValue(AosAttrKind.String, "AIBC"),
                     ["format"] = new AosAttrValue(AosAttrKind.String, "AiBC1"),
-                    ["version"] = new AosAttrValue(AosAttrKind.Int, 1)
+                    ["version"] = new AosAttrValue(AosAttrKind.Int, 1),
+                    ["flags"] = new AosAttrValue(AosAttrKind.Int, 0)
                 },
                 children,
                 new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));

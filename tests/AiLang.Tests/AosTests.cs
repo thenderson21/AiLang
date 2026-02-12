@@ -175,6 +175,43 @@ public class AosTests
     }
 
     [Test]
+    public void CompilerEmitBytecode_IncludesHeaderFields()
+    {
+        var source = "Program#p1 { Call#c1(target=compiler.emitBytecode) { Call#c2(target=compiler.parse) { Lit#s1(value=\"Program#p2 { Lit#l1(value=1) }\") } } }";
+        var parse = Parse(source);
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("compiler");
+        var interpreter = new AosInterpreter();
+        var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+
+        Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+        var bytecode = value.AsNode();
+        Assert.That(bytecode.Kind, Is.EqualTo("Bytecode"));
+        Assert.That(bytecode.Attrs["magic"].AsString(), Is.EqualTo("AIBC"));
+        Assert.That(bytecode.Attrs["format"].AsString(), Is.EqualTo("AiBC1"));
+        Assert.That(bytecode.Attrs["version"].AsInt(), Is.EqualTo(1));
+        Assert.That(bytecode.Attrs["flags"].AsInt(), Is.EqualTo(0));
+    }
+
+    [Test]
+    public void VmRunBytecode_RejectsUnsupportedVersion()
+    {
+        var bytecode = Parse("Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=2 flags=0)").Root!;
+        var runtime = new AosRuntime();
+        var interpreter = new AosInterpreter();
+        var args = Parse("Block#argv").Root!;
+
+        var value = interpreter.RunBytecode(bytecode, "main", args, runtime);
+        Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+        var err = value.AsNode();
+        Assert.That(err.Kind, Is.EqualTo("Err"));
+        Assert.That(err.Attrs["code"].AsString(), Is.EqualTo("VM001"));
+        Assert.That(err.Attrs["message"].AsString(), Is.EqualTo("Unsupported bytecode version."));
+    }
+
+    [Test]
     public void Evaluator_ImportsAndMergesExplicitExports()
     {
         var tempDir = Directory.CreateTempSubdirectory("ailang-import-ok-");
