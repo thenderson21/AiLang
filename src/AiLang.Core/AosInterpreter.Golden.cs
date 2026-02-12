@@ -8,14 +8,14 @@ public sealed partial class AosInterpreter
     {
         if (!HostFileSystem.DirectoryExists(directory))
         {
-            Console.WriteLine($"FAIL {directory} (directory not found)");
+            HostConsole.WriteLine($"FAIL {directory} (directory not found)");
             return 1;
         }
 
         var aicProgram = LoadAicProgram();
         if (aicProgram is null)
         {
-            Console.WriteLine("FAIL aic (src/compiler/aic.aos not found)");
+            HostConsole.WriteLine("FAIL aic (src/compiler/aic.aos not found)");
             return 1;
         }
 
@@ -101,19 +101,19 @@ public sealed partial class AosInterpreter
             else
             {
                 failCount++;
-                Console.WriteLine($"FAIL {testName}");
+                HostConsole.WriteLine($"FAIL {testName}");
                 continue;
             }
 
         compare_result:
             if (actual == expected)
             {
-                Console.WriteLine($"PASS {testName}");
+                HostConsole.WriteLine($"PASS {testName}");
             }
             else
             {
                 failCount++;
-                Console.WriteLine($"FAIL {testName}");
+                HostConsole.WriteLine($"FAIL {testName}");
             }
 
             if (testName == "new_success")
@@ -139,19 +139,19 @@ public sealed partial class AosInterpreter
         var interpreter = new AosInterpreter();
         AosStandardLibraryLoader.EnsureLoaded(runtime, interpreter);
 
-        var oldIn = Console.In;
-        var oldOut = Console.Out;
+        var oldIn = HostConsole.In;
+        var oldOut = HostConsole.Out;
         var writer = new StringWriter();
         try
         {
-            Console.SetIn(new StringReader(input));
-            Console.SetOut(writer);
+            HostConsole.In = new StringReader(input);
+            HostConsole.Out = writer;
             interpreter.EvaluateProgram(aicProgram, runtime);
         }
         finally
         {
-            Console.SetIn(oldIn);
-            Console.SetOut(oldOut);
+            HostConsole.In = oldIn;
+            HostConsole.Out = oldOut;
         }
 
         return NormalizeGoldenText(writer.ToString());
