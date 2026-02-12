@@ -25,9 +25,19 @@ static int RunCli(string[] args)
     }
 
     var filteredArgs = filtered.ToArray();
+    if (!InAosDevMode() && string.Equals(vmMode, "ast", StringComparison.Ordinal))
+    {
+        Console.WriteLine(FormatErr("err0", "DEV001", "AST mode is disabled in production build.", "vmMode"));
+        return 1;
+    }
 
     if (TryLoadEmbeddedPayload(out var embeddedPayload, out var embeddedBytecodePayload))
     {
+        if (!InAosDevMode() && !embeddedBytecodePayload)
+        {
+            Console.WriteLine(FormatErr("err0", "DEV002", "Production runtime only supports embedded bytecode payloads.", "bundle"));
+            return 1;
+        }
         return embeddedBytecodePayload
             ? RunEmbeddedBytecode(embeddedPayload!, filteredArgs, traceEnabled)
             : RunEmbeddedBundle(embeddedPayload!, filteredArgs, traceEnabled, vmMode);
@@ -42,6 +52,11 @@ static int RunCli(string[] args)
     switch (filteredArgs[0])
     {
         case "repl":
+            if (!InAosDevMode())
+            {
+                Console.WriteLine(FormatErr("err0", "DEV003", "REPL is unavailable in production build.", "repl"));
+                return 1;
+            }
             return RunRepl();
         case "run":
             if (filteredArgs.Length < 2)
@@ -49,11 +64,21 @@ static int RunCli(string[] args)
                 PrintUsage();
                 return 1;
             }
+            if (!InAosDevMode())
+            {
+                Console.WriteLine(FormatErr("err0", "DEV004", "Source run is unavailable in production build.", "run"));
+                return 1;
+            }
             return RunSource(filteredArgs[1], filteredArgs.Skip(2).ToArray(), traceEnabled, vmMode);
         case "serve":
             if (filteredArgs.Length < 2)
             {
                 PrintUsage();
+                return 1;
+            }
+            if (!InAosDevMode())
+            {
+                Console.WriteLine(FormatErr("err0", "DEV005", "Source serve is unavailable in production build.", "serve"));
                 return 1;
             }
             if (!CliHttpServe.TryParseServeOptions(filteredArgs.Skip(2).ToArray(), out var port, out var appArgs))
@@ -727,7 +752,22 @@ static string FormatErr(string id, string code, string message, string nodeId)
 
 static void PrintUsage()
 {
-    Console.WriteLine("Usage: airun repl | airun run <path.aos> | airun serve <path.aos> [--port <n>] [--vm=bytecode|ast]");
+    if (InAosDevMode())
+    {
+        Console.WriteLine("Usage: airun repl | airun run <path.aos> | airun serve <path.aos> [--port <n>] [--vm=bytecode|ast]");
+        return;
+    }
+
+    Console.WriteLine("Usage: airun <embedded-binary> [args...]");
+}
+
+static bool InAosDevMode()
+{
+#if AOS_DEV_MODE
+    return true;
+#else
+    return false;
+#endif
 }
 
 static AosNode BuildArgvNode(string[] values)

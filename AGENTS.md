@@ -43,6 +43,7 @@ The AI must treat architectural constraints as hard rules.
 
 - Use `./tools/airun` for day-to-day execution.
 - VM is default for `run`; use `--vm=ast` only for debugging unsupported bytecode paths.
+- Production runtime builds (`AosDevMode=false`) disable `--vm=ast` and source-mode commands.
 - Use `./scripts/test.sh` for golden test validation.
 - Use `./scripts/build-airun.sh` only when rebuilding `tools/airun` via dotnet publish.
 - Do not use `dotnet run` or `dotnet test` for normal workflow.

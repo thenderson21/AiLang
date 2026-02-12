@@ -94,6 +94,7 @@ Dotnet is only required for `scripts/build-airun.sh`.
 - Canonical runtime: AiBC1 bytecode VM (default).
 - AST interpreter: debug-only fallback via `--vm=ast`.
 - New publish artifacts embed bytecode payloads by default.
+- Build flag: `AosDevMode=false` creates a production runtime build with AST mode disabled.
 
 ## Examples
 

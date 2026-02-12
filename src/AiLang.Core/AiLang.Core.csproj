@@ -4,6 +4,8 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AosDevMode Condition="'$(AosDevMode)'==''">true</AosDevMode>
+    <DefineConstants Condition="'$(AosDevMode)'=='true'">$(DefineConstants);AOS_DEV_MODE</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
