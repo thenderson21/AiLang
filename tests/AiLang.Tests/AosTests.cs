@@ -482,7 +482,7 @@ public class AosTests
         runtime.Permissions.Add("io");
         runtime.Permissions.Add("compiler");
         runtime.ModuleBaseDir = Path.GetDirectoryName(FindRepoFile("AiLang.slnx"))!;
-        runtime.Env["argv"] = AosValue.FromNode(BuildArgvNode(new[] { mode }));
+        runtime.Env["argv"] = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(new[] { mode }));
         runtime.ReadOnlyBindings.Add("argv");
 
         var validator = new AosValidator();
@@ -510,30 +510,6 @@ public class AosTests
         }
 
         return writer.ToString();
-    }
-
-    private static AosNode BuildArgvNode(string[] values)
-    {
-        var children = new List<AosNode>(values.Length);
-        for (var i = 0; i < values.Length; i++)
-        {
-            children.Add(new AosNode(
-                "Lit",
-                $"argv{i}",
-                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-                {
-                    ["value"] = new AosAttrValue(AosAttrKind.String, values[i])
-                },
-                new List<AosNode>(),
-                new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
-        }
-
-        return new AosNode(
-            "Block",
-            "argv",
-            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal),
-            children,
-            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
     }
 
     private static string FindRepoFile(string relativePath)

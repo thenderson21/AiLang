@@ -77,7 +77,7 @@ public static class AosFormatter
         }
 
         var source = File.ReadAllText(path);
-        var parse = AosExternalFrontend.Parse(source);
+        var parse = AosParsing.Parse(source);
 
         if (parse.Root is null)
         {

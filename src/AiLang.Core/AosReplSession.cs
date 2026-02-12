@@ -161,7 +161,7 @@ public sealed class AosReplSession
 
     private AosParseResult Parse(string line)
     {
-        return AosExternalFrontend.Parse(line);
+        return AosParsing.Parse(line);
     }
 
     private string FormatOk(AosValue value)

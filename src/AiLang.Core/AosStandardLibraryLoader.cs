@@ -96,7 +96,7 @@ public static class AosStandardLibraryLoader
             throw new FileNotFoundException("route.aos not found.");
         }
 
-        var parse = AosExternalFrontend.Parse(File.ReadAllText(path));
+        var parse = AosParsing.ParseFile(path);
         if (parse.Root is null)
         {
             throw new InvalidOperationException("Failed to parse route.aos.");
@@ -143,7 +143,7 @@ public static class AosStandardLibraryLoader
             throw new FileNotFoundException("json.aos not found.");
         }
 
-        var parse = AosExternalFrontend.Parse(File.ReadAllText(path));
+        var parse = AosParsing.ParseFile(path);
         if (parse.Root is null)
         {
             throw new InvalidOperationException("Failed to parse json.aos.");
@@ -190,7 +190,7 @@ public static class AosStandardLibraryLoader
             throw new FileNotFoundException("http.aos not found.");
         }
 
-        var parse = AosExternalFrontend.Parse(File.ReadAllText(path));
+        var parse = AosParsing.ParseFile(path);
         if (parse.Root is null)
         {
             throw new InvalidOperationException("Failed to parse http.aos.");
