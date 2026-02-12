@@ -11,6 +11,11 @@
 
 - CLI entry: `src/AiLang.Cli/Program.cs`
 - Interpreter entry: `src/AiLang.Core/AosInterpreter.cs`
+  - Core eval dispatch: `src/AiLang.Core/AosInterpreter.CoreEval.cs`
+  - Call dispatch: `src/AiLang.Core/AosInterpreter.Calls.cs`
+  - Compiler calls: `src/AiLang.Core/AosInterpreter.CompilerCalls.cs`
+  - Sys/capability bridge: `src/AiLang.Core/AosInterpreter.SysBridge.cs`
+  - Import/publish helpers: `src/AiLang.Core/AosInterpreter.Imports.cs`, `src/AiLang.Core/AosInterpreter.Publish.cs`
 - VM entry: `src/AiVM.Core/VmEngine.cs`
 - Golden harness: `src/AiLang.Core/AosInterpreter.Golden.cs`
 
