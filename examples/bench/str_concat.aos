@@ -1,0 +1,22 @@
+Program#p1 {
+  Let#l1(name=build) {
+    Fn#f1(params=n) {
+      Block#b1 {
+        If#if1 {
+          Eq#e1 { Var#v1(name=n) Lit#i0(value=0) }
+          Block#b2 { Return#r1 { Lit#s1(value="") } }
+          Block#b3 {
+            Return#r2 {
+              StrConcat#s2 {
+                Lit#s3(value="x")
+                Call#c1(target=build) { Add#a1 { Var#v2(name=n) Lit#i1(value=-1) } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  Let#l2(name=result) { Call#c2(target=build) { Lit#i2(value=128) } }
+  Var#v3(name=result)
+}

@@ -100,6 +100,13 @@ Dotnet is only required for `scripts/build-airun.sh`.
 
 See `examples/hello.aos` for a full program using `console.print`, and `examples/golden` for evaluator/fmt/check goldens.
 
+Run deterministic benchmark cases:
+
+```bash
+./tools/airun bench --iterations 20
+./tools/airun bench --human
+```
+
 ## Language Contracts
 
 Normative semantic contracts live in:

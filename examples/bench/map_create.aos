@@ -1,0 +1,8 @@
+Program#p1 {
+  Map#m1 {
+    Field#f1(key="a") { Lit#i1(value=1) }
+    Field#f2(key="b") { Lit#i2(value=2) }
+    Field#f3(key="c") { Lit#i3(value=3) }
+    Field#f4(key="d") { Lit#i4(value=4) }
+  }
+}

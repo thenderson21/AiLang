@@ -1,0 +1,17 @@
+Program#p1 {
+  Export#e1(name=init)
+  Export#e2(name=update)
+  Let#l1(name=init) {
+    Fn#f1(params=args) {
+      Block#b1 { Return#r1 { Lit#i1(value=1) } }
+    }
+  }
+  Let#l2(name=update) {
+    Fn#f2(params=state,event) {
+      Block#b2 {
+        Return#r2 { Add#a1 { Var#v1(name=state) Lit#i2(value=1) } }
+      }
+    }
+  }
+  Call#c1(target=update) { Call#c2(target=init) { Lit#i3(value=0) } Lit#s1(value="Start") }
+}
