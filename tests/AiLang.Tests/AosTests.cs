@@ -1,4 +1,5 @@
 using AiLang.Core;
+using AiVM.Core;
 using System.Diagnostics;
 using System.Globalization;
 using System.Net;
@@ -13,6 +14,21 @@ namespace AiLang.Tests;
 
 public class AosTests
 {
+    private sealed class RecordingSyscallHost : DefaultSyscallHost
+    {
+        public string? LastStdoutLine { get; private set; }
+
+        public override void StdoutWriteLine(string text)
+        {
+            LastStdoutLine = text;
+        }
+
+        public override int StrUtf8ByteCount(string text)
+        {
+            return 777;
+        }
+    }
+
     [Test]
     public void CompilerAssets_CanFindBundledCompilerFiles()
     {
@@ -228,6 +244,27 @@ public class AosTests
 
         Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
         Assert.That(value.AsInt(), Is.EqualTo(3));
+    }
+
+    [Test]
+    public void VmSyscalls_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+
+            var count = VmSyscalls.StrUtf8ByteCount("abc");
+            VmSyscalls.StdoutWriteLine("hello");
+
+            Assert.That(count, Is.EqualTo(777));
+            Assert.That(host.LastStdoutLine, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
     }
 
     [Test]
