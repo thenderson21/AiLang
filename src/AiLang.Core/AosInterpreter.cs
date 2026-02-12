@@ -3713,7 +3713,6 @@ public sealed partial class AosInterpreter
                     case "RETURN":
                     {
                         var value = stack.Count == 0 ? AosValue.Void : Pop(stack, function.Name);
-                        AddVmTraceStep(runtime, function.Name, pc, "RETURN");
                         return value;
                     }
                     default:
