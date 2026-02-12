@@ -24,29 +24,6 @@ public sealed partial class AosInterpreter
         return Evaluate(expr, runtime, runtime.Env);
     }
 
-    public AosValue RunBytecode(AosNode bytecode, string entryName, AosNode argsNode, AosRuntime runtime)
-    {
-        try
-        {
-            var vm = VmProgramLoader.Load(bytecode, BytecodeAdapter.Instance);
-            var args = BuildVmArgs(vm, entryName, argsNode);
-            return VmEngine.Run<AosNode, AosValue>(
-                vm,
-                entryName,
-                args,
-                new VmExecutionAdapter(this, runtime));
-        }
-        catch (VmRuntimeException ex)
-        {
-            return AosValue.FromNode(CreateErrNode(
-                "vm_err",
-                ex.Code,
-                ex.Message,
-                ex.NodeId,
-                new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0))));
-        }
-    }
-
     private AosValue Evaluate(AosNode node, AosRuntime runtime, Dictionary<string, AosValue> env)
     {
         try
