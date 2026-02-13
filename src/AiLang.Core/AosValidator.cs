@@ -730,11 +730,11 @@ public sealed class AosValidator
             RequirePermission(node, "compiler", permissions);
             if (argTypes.Count != 1)
             {
-                _diagnostics.Add(new AosDiagnostic("VAL150", "compiler.parseHttpBodyForm expects 1 argument.", node.Id, node.Span));
+                _diagnostics.Add(new AosDiagnostic("VAL160", "compiler.parseHttpBodyForm expects 1 argument.", node.Id, node.Span));
             }
             else if (argTypes[0] != AosValueKind.String && argTypes[0] != AosValueKind.Unknown)
             {
-                _diagnostics.Add(new AosDiagnostic("VAL151", "compiler.parseHttpBodyForm arg must be string.", node.Id, node.Span));
+                _diagnostics.Add(new AosDiagnostic("VAL161", "compiler.parseHttpBodyForm arg must be string.", node.Id, node.Span));
             }
             return AosValueKind.Node;
         }
@@ -744,11 +744,11 @@ public sealed class AosValidator
             RequirePermission(node, "compiler", permissions);
             if (argTypes.Count != 1)
             {
-                _diagnostics.Add(new AosDiagnostic("VAL152", "compiler.parseHttpBodyJson expects 1 argument.", node.Id, node.Span));
+                _diagnostics.Add(new AosDiagnostic("VAL162", "compiler.parseHttpBodyJson expects 1 argument.", node.Id, node.Span));
             }
             else if (argTypes[0] != AosValueKind.String && argTypes[0] != AosValueKind.Unknown)
             {
-                _diagnostics.Add(new AosDiagnostic("VAL153", "compiler.parseHttpBodyJson arg must be string.", node.Id, node.Span));
+                _diagnostics.Add(new AosDiagnostic("VAL163", "compiler.parseHttpBodyJson arg must be string.", node.Id, node.Span));
             }
             return AosValueKind.Node;
         }
