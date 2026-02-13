@@ -18,6 +18,7 @@ public class AosTests
     {
         public string? LastStdoutLine { get; private set; }
         public int IoPrintCount { get; private set; }
+        public string HttpGetResult { get; set; } = string.Empty;
 
         public override void StdoutWriteLine(string text)
         {
@@ -32,6 +33,11 @@ public class AosTests
         public override int StrUtf8ByteCount(string text)
         {
             return 777;
+        }
+
+        public override string HttpGet(string url)
+        {
+            return HttpGetResult;
         }
     }
 
@@ -266,6 +272,30 @@ public class AosTests
 
             Assert.That(count, Is.EqualTo(777));
             Assert.That(host.LastStdoutLine, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_HttpGet_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { HttpGetResult = "http-ok" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var parse = Parse("Program#p1 { Call#c1(target=sys.http_get) { Lit#s1(value=\"https://example.com\") } }");
+            Assert.That(parse.Diagnostics, Is.Empty);
+
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(value.AsString(), Is.EqualTo("http-ok"));
         }
         finally
         {

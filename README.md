@@ -119,9 +119,11 @@ See `examples/hello.aos` for a full program using `console.print`, and `examples
 
 Canonical sample projects live in `samples/`:
 
-- `samples/weather-api`: lifecycle HTTP app with `/weather?city=Fort%20Worth&mock=1` mock response.
+- `samples/weather-api`: lifecycle HTTP app with `/weather?city=Fort%20Worth`.
 - `samples/weather-site`: lifecycle HTTP app serving `/` HTML using shared weather data logic.
 - `samples/cli-fetch`: CLI-style app that formats and prints weather output.
+
+Note: weather samples now call a live upstream weather endpoint via `sys.http_get`, so runtime internet access is required.
 
 Run samples:
 

@@ -17,7 +17,16 @@ Program#ws_p1 {
   Let#ws_l2(name=renderHomeHtml) {
     Fn#ws_f2(params=_) {
       Block#ws_b2 {
-        Return#ws_r2 { Var#ws_v0(name=sampleHomeHtml) }
+        Let#ws_l3(name=bodyJson) { Call#ws_c1(target=getWeatherJson) { Lit#ws_i2(value="Fort Worth") } }
+        Return#ws_r2 {
+          StrConcat#ws_s1 {
+            Lit#ws_i4(value="<html><body><h1>Weather</h1><p>Fort Worth</p><pre>")
+            StrConcat#ws_s2 {
+              Var#ws_v1(name=bodyJson)
+              Lit#ws_i5(value="</pre></body></html>")
+            }
+          }
+        }
       }
     }
   }

@@ -9,10 +9,18 @@ Program#cf_p1 {
   Let#cf_l1(name=formatWeather) {
     Fn#cf_f1(params=city) {
       Block#cf_b1 {
-        If#cf_if0 {
-          Eq#cf_eq0 { Var#cf_v0(name=city) Lit#cf_i9(value="Fort Worth") }
-          Block#cf_b0 { Return#cf_r0 { Var#cf_v00(name=sampleCliText) } }
-          Block#cf_b01 { Return#cf_r01 { Lit#cf_i10(value="Weather for Unknown: {\"city\":\"Unknown\",\"tempC\":0,\"condition\":\"Unknown\",\"source\":\"mock\"}") } }
+        Let#cf_l2(name=bodyJson) { Call#cf_c1(target=getWeatherJson) { Var#cf_v1(name=city) } }
+        Return#cf_r1 {
+          StrConcat#cf_s1 {
+            Lit#cf_i2(value="Weather for ")
+            StrConcat#cf_s2 {
+              Var#cf_v2(name=city)
+              StrConcat#cf_s3 {
+                Lit#cf_i3(value=": ")
+                Var#cf_v3(name=bodyJson)
+              }
+            }
+          }
         }
       }
     }

@@ -14,11 +14,17 @@ Program#wa_p1 {
   }
 
   Let#wa_l2(name=getWeatherJson) {
-    Fn#wa_f2(params=city,mock) {
+    Fn#wa_f2(params=city) {
       Block#wa_b2 {
         If#wa_if1 {
           Eq#wa_eq1 { Var#wa_v1(name=city) Lit#wa_i2(value="Fort Worth") }
-          Block#wa_b3 { Return#wa_r2 { Var#wa_v00(name=sampleWeatherJson) } }
+          Block#wa_b3 {
+            Return#wa_r2 {
+              Call#wa_c100(target=sys.http_get) {
+                Lit#wa_i200(value="https://api.open-meteo.com/v1/forecast?latitude=32.7555&longitude=-97.3308&current=temperature_2m,weather_code&temperature_unit=celsius&wind_speed_unit=kmh&precipitation_unit=mm")
+              }
+            }
+          }
           Block#wa_b4 { Return#wa_r3 { Lit#wa_i4(value="{\"city\":\"Unknown\",\"tempC\":0,\"condition\":\"Unknown\",\"source\":\"mock\"}") } }
         }
       }
@@ -32,9 +38,9 @@ Program#wa_p1 {
         Let#wa_l5(name=req) { Call#wa_c1(target=compiler.parseHttpRequest) { Var#wa_v3(name=reqPayload) } }
         Let#wa_l6(name=reqPath) { AttrValueString#wa_a2 { Var#wa_v4(name=req) Lit#wa_i6(value=1) } }
         If#wa_if2 {
-          Eq#wa_eq2 { Var#wa_v5(name=reqPath) Lit#wa_i7(value="/weather?city=Fort%20Worth&mock=1") }
+          Eq#wa_eq2 { Var#wa_v5(name=reqPath) Lit#wa_i7(value="/weather?city=Fort%20Worth") }
           Block#wa_b6 {
-            Let#wa_l7(name=bodyJson) { Call#wa_c2(target=getWeatherJson) { Lit#wa_i8(value="Fort Worth") Lit#wa_i9(value=true) } }
+            Let#wa_l7(name=bodyJson) { Call#wa_c2(target=getWeatherJson) { Lit#wa_i8(value="Fort Worth") } }
             Let#wa_l8(name=cmdText) {
               StrConcat#wa_s1 {
                 Lit#wa_i10(value="Program#cmdp1 { Command#Emit(type=\"http.response\" payload=\"")
