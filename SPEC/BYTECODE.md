@@ -60,11 +60,27 @@ Each `Inst` has required `op` and optional operands `a`, `b`, `s`.
 - structured concurrency: `PAR_BEGIN`, `PAR_FORK`, `PAR_JOIN`, `PAR_CANCEL`
 - primitive ops: `EQ`, `ADD_INT`, `STR_CONCAT`, `TO_STRING`, `STR_ESCAPE`
 - node ops: `NODE_KIND`, `NODE_ID`, `ATTR_COUNT`, `ATTR_KEY`, `ATTR_VALUE_KIND`, `ATTR_VALUE_STRING`, `ATTR_VALUE_INT`, `ATTR_VALUE_BOOL`, `CHILD_COUNT`, `CHILD_AT`, `MAKE_BLOCK`, `APPEND_CHILD`, `MAKE_ERR`, `MAKE_LIT_STRING`, `MAKE_NODE`
+- async/structured concurrency ops: `ASYNC_CALL`, `AWAIT`, `PAR_BEGIN`, `PAR_FORK`, `PAR_JOIN`, `PAR_CANCEL`
 
 ## Binary Mapping
 
 When serialized to raw bytes by backend tooling, numeric fields are little-endian.
 Canonical byte streams must be deterministic for identical input programs.
+
+## Async Bytecode Contract
+
+- `ASYNC_CALL` starts async function execution and pushes deterministic `Task` handle.
+- `AWAIT` blocks until task completion and pushes resolved value (or deterministic error).
+- `PAR_BEGIN` starts a structured parallel scope.
+- `PAR_FORK` schedules one branch from current scope snapshot.
+- `PAR_JOIN` collects branch completions in declaration order.
+- `PAR_CANCEL` deterministically cancels unresolved sibling branches after first failure.
+
+Scheduler/ordering contract:
+
+- Internal scheduling may vary, but `PAR_JOIN` materialization order is lexical branch order.
+- Failure/cancellation ordering visible to IL must be deterministic across runs.
+- Bytecode runtimes that do not implement async instructions must reject program load/emit deterministically with `VM001`.
 
 ## Error Model
 

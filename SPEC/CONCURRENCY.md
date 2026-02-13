@@ -1,16 +1,13 @@
 # Concurrency Contract (Draft)
 
-Status: Draft proposal only. Not implemented.
-
-This document is intentionally non-normative for current runtime behavior.
-Current normative execution remains defined by:
+Status: Design companion. Core async contracts are now normative in:
 
 - `SPEC/IL.md`
 - `SPEC/EVAL.md`
 - `SPEC/VALIDATION.md`
 - `SPEC/BYTECODE.md`
 
-Until this draft is adopted and the normative specs are updated, runtimes and validators should reject draft concurrency nodes.
+This document remains explanatory and design-oriented for implementation strategy details.
 
 ## Purpose
 
