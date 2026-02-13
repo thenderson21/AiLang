@@ -1,3 +1,5 @@
+using System.Text;
+
 namespace AiLang.Core;
 
 public sealed partial class AosInterpreter
@@ -118,28 +120,46 @@ public sealed partial class AosInterpreter
             return string.Empty;
         }
 
-        var chars = new char[value.Length];
-        var write = 0;
+        var bytes = new List<byte>(value.Length);
         for (var i = 0; i < value.Length; i++)
         {
             var ch = value[i];
             if (ch == '+')
             {
-                chars[write++] = ' ';
+                bytes.Add((byte)' ');
                 continue;
             }
 
             if (ch == '%' && i + 2 < value.Length && TryParseHexByte(value[i + 1], value[i + 2], out var decoded))
             {
-                chars[write++] = (char)decoded;
+                bytes.Add(decoded);
                 i += 2;
                 continue;
             }
 
-            chars[write++] = ch;
+            var scalarLength = 1;
+            if (char.IsHighSurrogate(ch) &&
+                i + 1 < value.Length &&
+                char.IsLowSurrogate(value[i + 1]))
+            {
+                scalarLength = 2;
+            }
+
+            var charByteCount = Encoding.UTF8.GetByteCount(value.AsSpan(i, scalarLength));
+            if (charByteCount == 1)
+            {
+                bytes.Add((byte)ch);
+                i += scalarLength - 1;
+                continue;
+            }
+
+            var encoded = new byte[charByteCount];
+            Encoding.UTF8.GetBytes(value.AsSpan(i, scalarLength), encoded);
+            bytes.AddRange(encoded);
+            i += scalarLength - 1;
         }
 
-        return new string(chars, 0, write);
+        return Encoding.UTF8.GetString(bytes.ToArray());
     }
 
     private static bool TryParseHexByte(char hi, char lo, out byte value)
