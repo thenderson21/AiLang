@@ -147,5 +147,10 @@ Normative semantic contracts live in:
 - `SPEC/IL.md`
 - `SPEC/EVAL.md`
 - `SPEC/VALIDATION.md`
+- `SPEC/BYTECODE.md`
+
+Draft proposal (not implemented):
+
+- `SPEC/CONCURRENCY.md`
 
 When semantics change, update these specs and matching goldens together.

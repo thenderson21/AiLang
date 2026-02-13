@@ -527,6 +527,7 @@ public static class AosCliExecutionEngine
         runtime.Permissions.Add("console");
         runtime.Permissions.Add("io");
         runtime.Permissions.Add("compiler");
+        runtime.Permissions.Add("sys");
         runtime.ModuleBaseDir = Path.GetDirectoryName(Path.GetFullPath(path)) ?? Directory.GetCurrentDirectory();
         runtime.TraceEnabled = false;
         runtime.Env["argv"] = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(argv));

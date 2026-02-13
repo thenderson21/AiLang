@@ -1,15 +1,33 @@
 Program#cf_p1 {
-  Import#cf_imp1(path="../../weather-api/src/app.aos")
   Export#cf_e1(name=start)
   Export#cf_e2(name=formatWeather)
+  Export#cf_e4(name=getWeatherText)
+
+  Let#cf_l0(name=sampleCliText) { Lit#cf_i0(value="Weather for Fort Worth: Fort Worth: +22C") }
   Export#cf_e3(name=sampleCliText)
 
-  Let#cf_l0(name=sampleCliText) { Lit#cf_i0(value="Weather for Fort Worth: {\"city\":\"Fort Worth\",\"tempC\":22,\"condition\":\"Sunny\",\"source\":\"mock\"}") }
+  Let#cf_l1(name=getWeatherText) {
+    Fn#cf_f0(params=city) {
+      Block#cf_b0 {
+        Return#cf_r0 {
+          Call#cf_c0(target=sys.http_get) {
+            StrConcat#cf_s0 {
+              Lit#cf_i20(value="https://wttr.in/")
+              StrConcat#cf_s00 {
+                Var#cf_v0(name=city)
+                Lit#cf_i21(value="?format=3")
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
-  Let#cf_l1(name=formatWeather) {
+  Let#cf_l11(name=formatWeather) {
     Fn#cf_f1(params=city) {
       Block#cf_b1 {
-        Let#cf_l2(name=bodyJson) { Call#cf_c1(target=getWeatherJson) { Var#cf_v1(name=city) } }
+        Let#cf_l2(name=bodyJson) { Call#cf_c1(target=getWeatherText) { Var#cf_v1(name=city) } }
         Return#cf_r1 {
           StrConcat#cf_s1 {
             Lit#cf_i2(value="Weather for ")
@@ -33,7 +51,7 @@ Program#cf_p1 {
           If#cf_if1 {
             Eq#cf_eq1 { ChildCount#cf_cc1 { Var#cf_v4(name=args) } Lit#cf_i4(value=0) }
             Block#cf_b3 { Lit#cf_i5(value="Fort Worth") }
-            Block#cf_b4 { AttrValueString#cf_a1 { ChildAt#cf_ca1 { Var#cf_v5(name=args) Lit#cf_i6(value=0) } Lit#cf_i7(value=0) } }
+            Block#cf_b4 { AttrValueString#cf_a1 { ChildAt#cf_ca1 { Var#cf_v5(name=args) Lit#cf_i6(value=0) } Lit#cf_i7(value="value") } }
           }
         }
         Call#cf_c2(target=io.print) { Call#cf_c3(target=formatWeather) { Var#cf_v6(name=city) } }
@@ -41,4 +59,6 @@ Program#cf_p1 {
       }
     }
   }
+
+  Call#cf_c4(target=start) { Var#cf_v7(name=argv) }
 }

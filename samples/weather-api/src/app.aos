@@ -1,11 +1,5 @@
 Program#wa_p1 {
-  Export#wa_e1(name=init)
-  Export#wa_e2(name=update)
-  Export#wa_e3(name=start)
-  Export#wa_e4(name=getWeatherJson)
-  Export#wa_e5(name=sampleWeatherJson)
-
-  Let#wa_l0(name=sampleWeatherJson) { Lit#wa_i0(value="{\"city\":\"Fort Worth\",\"tempC\":22,\"condition\":\"Sunny\",\"source\":\"mock\"}") }
+  Let#wa_l0(name=sampleWeatherJson) { Lit#wa_i0(value="Fort Worth: +22C") }
 
   Let#wa_l1(name=init) {
     Fn#wa_f1(params=args) {
@@ -16,16 +10,16 @@ Program#wa_p1 {
   Let#wa_l2(name=getWeatherJson) {
     Fn#wa_f2(params=city) {
       Block#wa_b2 {
-        If#wa_if1 {
-          Eq#wa_eq1 { Var#wa_v1(name=city) Lit#wa_i2(value="Fort Worth") }
-          Block#wa_b3 {
-            Return#wa_r2 {
-              Call#wa_c100(target=sys.http_get) {
-                Lit#wa_i200(value="https://api.open-meteo.com/v1/forecast?latitude=32.7555&longitude=-97.3308&current=temperature_2m,weather_code&temperature_unit=celsius&wind_speed_unit=kmh&precipitation_unit=mm")
+        Return#wa_r2 {
+          Call#wa_c100(target=sys.http_get) {
+            StrConcat#wa_s100 {
+              Lit#wa_i200(value="https://wttr.in/")
+              StrConcat#wa_s101 {
+                Var#wa_v1(name=city)
+                Lit#wa_i201(value="?format=3")
               }
             }
           }
-          Block#wa_b4 { Return#wa_r3 { Lit#wa_i4(value="{\"city\":\"Unknown\",\"tempC\":0,\"condition\":\"Unknown\",\"source\":\"mock\"}") } }
         }
       }
     }
@@ -73,4 +67,10 @@ Program#wa_p1 {
       Block#wa_b8 { Return#wa_r6 { Lit#wa_i15(value=0) } }
     }
   }
+
+  Export#wa_e1(name=init)
+  Export#wa_e2(name=update)
+  Export#wa_e3(name=start)
+  Export#wa_e4(name=getWeatherJson)
+  Export#wa_e5(name=sampleWeatherJson)
 }

@@ -1,12 +1,7 @@
 Program#ws_p1 {
   Import#ws_imp1(path="../../weather-api/src/app.aos")
-  Export#ws_e1(name=init)
-  Export#ws_e2(name=update)
-  Export#ws_e3(name=start)
-  Export#ws_e4(name=renderHomeHtml)
-  Export#ws_e5(name=sampleHomeHtml)
 
-  Let#ws_l0(name=sampleHomeHtml) { Lit#ws_i0(value="<html><body><h1>Weather</h1><p>Fort Worth</p><pre>{\"city\":\"Fort Worth\",\"tempC\":22,\"condition\":\"Sunny\",\"source\":\"mock\"}</pre></body></html>") }
+  Let#ws_l0(name=sampleHomeHtml) { Lit#ws_i0(value="<html><body><h1>Weather</h1><p>Fort Worth</p><pre>Fort Worth: +22C</pre></body></html>") }
 
   Let#ws_l1(name=init) {
     Fn#ws_f1(params=args) {
@@ -73,4 +68,10 @@ Program#ws_p1 {
       Block#ws_b6 { Return#ws_r5 { Lit#ws_i15(value=0) } }
     }
   }
+
+  Export#ws_e1(name=init)
+  Export#ws_e2(name=update)
+  Export#ws_e3(name=start)
+  Export#ws_e4(name=renderHomeHtml)
+  Export#ws_e5(name=sampleHomeHtml)
 }

@@ -12,6 +12,7 @@ The root `README.md` is human-oriented.
 - `../SPEC/IL.md`
 - `../SPEC/EVAL.md`
 - `../SPEC/VALIDATION.md`
+- `../SPEC/BYTECODE.md`
 
 If a doc in `Docs/` conflicts with `SPEC/`, follow `SPEC/`.
 
@@ -22,6 +23,7 @@ If a doc in `Docs/` conflicts with `SPEC/`, follow `SPEC/`.
 - [Host Boundary](./HOST_BOUNDARY.md)
 - [Agent Code Map](./Agent-CodeMap.md)
 - [Conventions](./Conventions.md)
+- [Draft Concurrency Contract](../SPEC/CONCURRENCY.md)
 
 ## Hard Constraints
 
