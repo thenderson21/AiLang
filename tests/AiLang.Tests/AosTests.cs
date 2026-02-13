@@ -19,6 +19,7 @@ public class AosTests
     {
         public string? LastStdoutLine { get; private set; }
         public int IoPrintCount { get; private set; }
+        public bool FsPathExistsResult { get; set; }
         public string HttpGetResult { get; set; } = string.Empty;
         public string PlatformResult { get; set; } = "test-os";
         public string ArchitectureResult { get; set; } = "test-arch";
@@ -38,6 +39,11 @@ public class AosTests
         public override int StrUtf8ByteCount(string text)
         {
             return 777;
+        }
+
+        public override bool FsPathExists(string path)
+        {
+            return FsPathExistsResult;
         }
 
         public override string HttpGet(string url)
@@ -297,6 +303,46 @@ public class AosTests
 
             Assert.That(count, Is.EqualTo(777));
             Assert.That(host.LastStdoutLine, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_FsPathExists_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { FsPathExistsResult = true };
+        try
+        {
+            VmSyscalls.Host = host;
+            Assert.That(VmSyscalls.FsPathExists("x"), Is.True);
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_FsPathExists_ReturnsBool()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.fs_pathExists) { Lit#s1(value=\"x\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { FsPathExistsResult = true };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Bool));
+            Assert.That(value.AsBool(), Is.True);
         }
         finally
         {
