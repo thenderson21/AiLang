@@ -1,0 +1,203 @@
+Program#std_http_p1 {
+  Let#std_http_l1(name=httpHeaders) {
+    Fn#std_http_f1(params=req) {
+      Block#std_http_b1 {
+        Return#std_http_r1 { ChildAt#std_http_ca1 { Var#std_http_v1(name=req) Lit#std_http_i1(value=0) } }
+      }
+    }
+  }
+
+  Let#std_http_l2(name=httpQuery) {
+    Fn#std_http_f2(params=req) {
+      Block#std_http_b2 {
+        Return#std_http_r2 { ChildAt#std_http_ca2 { Var#std_http_v2(name=req) Lit#std_http_i2(value=1) } }
+      }
+    }
+  }
+
+  Let#std_http_l3(name=httpPath) {
+    Fn#std_http_f3(params=req) {
+      Block#std_http_b3 {
+        Return#std_http_r3 { AttrValueString#std_http_a1 { Var#std_http_v3(name=req) Lit#std_http_i3(value=1) } }
+      }
+    }
+  }
+
+  Let#std_http_l4(name=httpMapGetString) {
+    Fn#std_http_f4(params=map,key,fallback) {
+      Block#std_http_b4 {
+        Return#std_http_r4 {
+          Call#std_http_c1(target=httpMapGetStringAt) {
+            Var#std_http_v4(name=map)
+            Var#std_http_v5(name=key)
+            Lit#std_http_i4(value=0)
+            Var#std_http_v6(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l5(name=httpMapGetStringAt) {
+    Fn#std_http_f5(params=map,key,index,fallback) {
+      Block#std_http_b5 {
+        If#std_http_if1 {
+          Eq#std_http_eq1 { Var#std_http_v7(name=index) ChildCount#std_http_cc1 { Var#std_http_v8(name=map) } }
+          Block#std_http_b6 { Return#std_http_r5 { Var#std_http_v9(name=fallback) } }
+          Block#std_http_b7 {
+            Let#std_http_l6(name=field) { ChildAt#std_http_ca3 { Var#std_http_v10(name=map) Var#std_http_v11(name=index) } }
+            Let#std_http_l7(name=fieldKey) { AttrValueString#std_http_a2 { Var#std_http_v12(name=field) Lit#std_http_i5(value=0) } }
+            If#std_http_if2 {
+              Eq#std_http_eq2 { Var#std_http_v13(name=fieldKey) Var#std_http_v14(name=key) }
+              Block#std_http_b8 {
+                If#std_http_if3 {
+                  Eq#std_http_eq3 { ChildCount#std_http_cc2 { Var#std_http_v15(name=field) } Lit#std_http_i6(value=0) }
+                  Block#std_http_b9 { Return#std_http_r6 { Var#std_http_v16(name=fallback) } }
+                  Block#std_http_b10 {
+                    Let#std_http_l8(name=lit) { ChildAt#std_http_ca4 { Var#std_http_v17(name=field) Lit#std_http_i7(value=0) } }
+                    Return#std_http_r7 { AttrValueString#std_http_a3 { Var#std_http_v18(name=lit) Lit#std_http_i8(value=0) } }
+                  }
+                }
+              }
+              Block#std_http_b11 {
+                Return#std_http_r8 {
+                  Call#std_http_c2(target=httpMapGetStringAt) {
+                    Var#std_http_v19(name=map)
+                    Var#std_http_v20(name=key)
+                    Add#std_http_add1 { Var#std_http_v21(name=index) Lit#std_http_i9(value=1) }
+                    Var#std_http_v22(name=fallback)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l9(name=httpHeaderGet) {
+    Fn#std_http_f6(params=req,key,fallback) {
+      Block#std_http_b12 {
+        Return#std_http_r9 {
+          Call#std_http_c3(target=httpMapGetString) {
+            Call#std_http_c4(target=httpHeaders) { Var#std_http_v23(name=req) }
+            Var#std_http_v24(name=key)
+            Var#std_http_v25(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l10(name=httpQueryGet) {
+    Fn#std_http_f7(params=req,key,fallback) {
+      Block#std_http_b13 {
+        Return#std_http_r10 {
+          Call#std_http_c5(target=httpMapGetString) {
+            Call#std_http_c6(target=httpQuery) { Var#std_http_v26(name=req) }
+            Var#std_http_v27(name=key)
+            Var#std_http_v28(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l11(name=httpResponse) {
+    Fn#std_http_f8(params=statusCode,reason,contentType,body) {
+      Block#std_http_b14 {
+        Let#std_http_l12(name=length) { Call#std_http_c7(target=sys.str_utf8ByteCount) { Var#std_http_v29(name=body) } }
+        Return#std_http_r11 {
+          StrConcat#std_http_s1 {
+            Lit#std_http_i10(value="HTTP/1.1 ")
+            StrConcat#std_http_s2 {
+              ToString#std_http_t1 { Var#std_http_v30(name=statusCode) }
+              StrConcat#std_http_s3 {
+                Lit#std_http_i11(value=" ")
+                StrConcat#std_http_s4 {
+                  Var#std_http_v31(name=reason)
+                  StrConcat#std_http_s5 {
+                    Lit#std_http_i12(value="\r\nContent-Type: ")
+                    StrConcat#std_http_s6 {
+                      Var#std_http_v32(name=contentType)
+                      StrConcat#std_http_s7 {
+                        Lit#std_http_i13(value="\r\nContent-Length: ")
+                        StrConcat#std_http_s8 {
+                          ToString#std_http_t2 { Var#std_http_v33(name=length) }
+                          StrConcat#std_http_s9 {
+                            Lit#std_http_i14(value="\r\n\r\n")
+                            Var#std_http_v34(name=body)
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l13(name=httpErrorJson) {
+    Fn#std_http_f9(params=code,message) {
+      Block#std_http_b15 {
+        Return#std_http_r12 {
+          StrConcat#std_http_s10 {
+            Lit#std_http_i15(value="{\"error\":\"")
+            StrConcat#std_http_s11 {
+              StrEscape#std_http_se1 { Var#std_http_v35(name=code) }
+              StrConcat#std_http_s12 {
+                Lit#std_http_i16(value="\",\"message\":\"")
+                StrConcat#std_http_s13 {
+                  StrEscape#std_http_se2 { Var#std_http_v36(name=message) }
+                  Lit#std_http_i17(value="\"}")
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l14(name=httpEmitRaw) {
+    Fn#std_http_f10(params=state,responseText) {
+      Block#std_http_b16 {
+        Let#std_http_l15(name=cmdText) {
+          StrConcat#std_http_s14 {
+            Lit#std_http_i18(value="Program#std_http_cmdp1 { Command#Emit(type=\"http.raw\" payload=\"")
+            StrConcat#std_http_s15 {
+              StrEscape#std_http_se3 { Var#std_http_v37(name=responseText) }
+              Lit#std_http_i19(value="\") }")
+            }
+          }
+        }
+        Let#std_http_l16(name=cmdParsed) { Call#std_http_c8(target=compiler.parse) { Var#std_http_v38(name=cmdText) } }
+        Let#std_http_l17(name=cmdNode) { ChildAt#std_http_ca5 { Var#std_http_v39(name=cmdParsed) Lit#std_http_i20(value=0) } }
+        Return#std_http_r13 {
+          AppendChild#std_http_ap1 {
+            AppendChild#std_http_ap2 {
+              MakeBlock#std_http_mb1 { Lit#std_http_i21(value="next") }
+              Var#std_http_v40(name=state)
+            }
+            Var#std_http_v41(name=cmdNode)
+          }
+        }
+      }
+    }
+  }
+
+  Export#std_http_e1(name=httpHeaders)
+  Export#std_http_e2(name=httpQuery)
+  Export#std_http_e3(name=httpPath)
+  Export#std_http_e4(name=httpMapGetString)
+  Export#std_http_e5(name=httpHeaderGet)
+  Export#std_http_e6(name=httpQueryGet)
+  Export#std_http_e7(name=httpResponse)
+  Export#std_http_e8(name=httpErrorJson)
+  Export#std_http_e9(name=httpEmitRaw)
+}

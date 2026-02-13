@@ -19,9 +19,17 @@ public sealed class AosValidator
     private readonly AosStructuralValidator _structuralValidator = new();
 
     public AosValidationResult Validate(AosNode root, Dictionary<string, AosValueKind>? envTypes, HashSet<string> permissions)
-        => Validate(root, envTypes, permissions, runStructural: true);
+        => Validate(root, envTypes, permissions, runStructural: true, moduleBaseDir: null);
 
     public AosValidationResult Validate(AosNode root, Dictionary<string, AosValueKind>? envTypes, HashSet<string> permissions, bool runStructural)
+        => Validate(root, envTypes, permissions, runStructural, moduleBaseDir: null);
+
+    public AosValidationResult Validate(
+        AosNode root,
+        Dictionary<string, AosValueKind>? envTypes,
+        HashSet<string> permissions,
+        bool runStructural,
+        string? moduleBaseDir)
     {
         _diagnostics.Clear();
         _ids.Clear();
@@ -39,7 +47,7 @@ public sealed class AosValidator
         var env = envTypes is null
             ? new Dictionary<string, AosValueKind>(StringComparer.Ordinal)
             : new Dictionary<string, AosValueKind>(envTypes, StringComparer.Ordinal);
-        PredeclareFunctions(root, env);
+        PredeclareFunctions(root, env, moduleBaseDir, new HashSet<string>(StringComparer.Ordinal));
         ValidateNode(root, env, permissions);
         return new AosValidationResult(_diagnostics.ToList());
     }
@@ -936,7 +944,7 @@ public sealed class AosValidator
         }
     }
 
-    private void PredeclareFunctions(AosNode node, Dictionary<string, AosValueKind> env)
+    private void PredeclareFunctions(AosNode node, Dictionary<string, AosValueKind> env, string? moduleBaseDir, HashSet<string> loading)
     {
         if (node.Kind == "Let" && node.Children.Count == 1 && node.Children[0].Kind == "Fn")
         {
@@ -945,10 +953,68 @@ public sealed class AosValidator
                 env[nameAttr.AsString()] = AosValueKind.Function;
             }
         }
+        else if (node.Kind == "Import" &&
+                 moduleBaseDir is not null &&
+                 node.Attrs.TryGetValue("path", out var pathAttr) &&
+                 pathAttr.Kind == AosAttrKind.String)
+        {
+            var relativePath = pathAttr.AsString();
+            if (!Path.IsPathRooted(relativePath))
+            {
+                var fullPath = Path.GetFullPath(Path.Combine(moduleBaseDir, relativePath));
+                if (loading.Add(fullPath) && File.Exists(fullPath))
+                {
+                    try
+                    {
+                        var parse = AosParsing.ParseFile(fullPath);
+                        if (parse.Root is not null && parse.Diagnostics.Count == 0 && parse.Root.Kind == "Program")
+                        {
+                            var importedDir = Path.GetDirectoryName(fullPath) ?? moduleBaseDir;
+                            PredeclareFunctions(parse.Root, env, importedDir, loading);
+                            PredeclareImportedExports(parse.Root, env);
+                        }
+                    }
+                    catch
+                    {
+                        // Validation diagnostics for bad imports are handled elsewhere; keep predeclare best-effort.
+                    }
+                }
+            }
+        }
 
         foreach (var child in node.Children)
         {
-            PredeclareFunctions(child, env);
+            PredeclareFunctions(child, env, moduleBaseDir, loading);
+        }
+    }
+
+    private static void PredeclareImportedExports(AosNode program, Dictionary<string, AosValueKind> env)
+    {
+        var lets = new Dictionary<string, AosValueKind>(StringComparer.Ordinal);
+        foreach (var child in program.Children)
+        {
+            if (child.Kind != "Let" || !child.Attrs.TryGetValue("name", out var nameAttr) || nameAttr.Kind != AosAttrKind.Identifier)
+            {
+                continue;
+            }
+
+            lets[nameAttr.AsString()] = child.Children.Count == 1 && child.Children[0].Kind == "Fn"
+                ? AosValueKind.Function
+                : AosValueKind.Unknown;
+        }
+
+        foreach (var child in program.Children)
+        {
+            if (child.Kind != "Export" || !child.Attrs.TryGetValue("name", out var nameAttr) || nameAttr.Kind != AosAttrKind.Identifier)
+            {
+                continue;
+            }
+
+            var exportName = nameAttr.AsString();
+            if (lets.TryGetValue(exportName, out var exportType))
+            {
+                env[exportName] = exportType;
+            }
         }
     }
 

@@ -1,5 +1,9 @@
 Program#ws_p1 {
-  Let#ws_l0(name=sampleHomeHtml) { Lit#ws_i0(value="<html><body><h1>AiLang Weather Site</h1><p>This page fetches live weather from the AiLang sample weather API.</p><p>Fort Worth</p><pre>Fort Worth: +22C</pre></body></html>") }
+  Import#ws_i0(path="../../../src/std/http.aos")
+
+  Let#ws_l0(name=sampleHomeHtml) {
+    Lit#ws_i0(value="<html><body><h1>AiLang Weather Site</h1><p>This page fetches live weather from the same upstream provider used by weather-api.</p><p>Try the API at <code>/weather?city=Fort%20Worth</code> on the weather-api sample.</p><p>Fort Worth</p><pre>Fort Worth: +22C</pre></body></html>")
+  }
 
   Let#ws_l1(name=init) {
     Fn#ws_f1(params=args) {
@@ -7,33 +11,16 @@ Program#ws_p1 {
     }
   }
 
-  Let#ws_l2(name=renderHomeHtml) {
-    Fn#ws_f2(params=_) {
+  Let#ws_l2(name=getWeatherText) {
+    Fn#ws_f2(params=city) {
       Block#ws_b2 {
-        Let#ws_l3(name=bodyJson) { Call#ws_c1(target=getWeatherJson) { Lit#ws_i2(value="Fort Worth") } }
         Return#ws_r2 {
-          StrConcat#ws_s1 {
-            Lit#ws_i4(value="<html><body><h1>AiLang Weather Site</h1><p>This page fetches live weather from the AiLang sample weather API.</p><p>Fort Worth</p><pre>")
-            StrConcat#ws_s2 {
-              Var#ws_v1(name=bodyJson)
-              Lit#ws_i5(value="</pre></body></html>")
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#ws_l13(name=getWeatherJson) {
-    Fn#ws_f5(params=city) {
-      Block#ws_b7 {
-        Return#ws_r6 {
-          Call#ws_c5(target=sys.http_get) {
-            StrConcat#ws_s5 {
-              Lit#ws_i16(value="https://wttr.in/")
-              StrConcat#ws_s6 {
-                Var#ws_v11(name=city)
-                Lit#ws_i17(value="?format=3")
+          Call#ws_c1(target=sys.http_get) {
+            StrConcat#ws_s1 {
+              Lit#ws_i2(value="https://wttr.in/")
+              StrConcat#ws_s2 {
+                Var#ws_v1(name=city)
+                Lit#ws_i3(value="?format=3")
               }
             }
           }
@@ -42,67 +29,63 @@ Program#ws_p1 {
     }
   }
 
-  Let#ws_l4(name=update) {
-    Fn#ws_f3(params=state,event) {
+  Let#ws_l3(name=renderHomeHtml) {
+    Fn#ws_f3(params=_) {
       Block#ws_b3 {
-        Let#ws_l5(name=reqPayload) { AttrValueString#ws_a1 { Var#ws_v2(name=event) Lit#ws_i6(value=0) } }
-        Let#ws_l6(name=req) { Call#ws_c2(target=compiler.parseHttpRequest) { Var#ws_v3(name=reqPayload) } }
-        Let#ws_l7(name=reqPath) { AttrValueString#ws_a2 { Var#ws_v4(name=req) Lit#ws_i7(value=1) } }
+        Let#ws_l4(name=report) { Call#ws_c2(target=getWeatherText) { Lit#ws_i4(value="Fort Worth") } }
+        Return#ws_r3 {
+          StrConcat#ws_s3 {
+            Lit#ws_i5(value="<html><body><h1>AiLang Weather Site</h1><p>This page fetches live weather from the same upstream provider used by weather-api.</p><p>Try the API at <code>/weather?city=Fort%20Worth</code> on the weather-api sample.</p><p>Fort Worth</p><pre>")
+            StrConcat#ws_s4 {
+              Var#ws_v2(name=report)
+              Lit#ws_i6(value="</pre></body></html>")
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#ws_l5(name=update) {
+    Fn#ws_f4(params=state,event) {
+      Block#ws_b4 {
+        Let#ws_l6(name=reqPayload) { AttrValueString#ws_a1 { Var#ws_v3(name=event) Lit#ws_i7(value=0) } }
+        Let#ws_l7(name=req) { Call#ws_c3(target=compiler.parseHttpRequest) { Var#ws_v4(name=reqPayload) } }
+        Let#ws_l8(name=reqPath) { Call#ws_c4(target=httpPath) { Var#ws_v5(name=req) } }
         If#ws_if1 {
-          Eq#ws_eq1 { Var#ws_v5(name=reqPath) Lit#ws_i8(value="/") }
-          Block#ws_b4 {
-            Let#ws_l8(name=htmlText) { Call#ws_c3(target=renderHomeHtml) { Lit#ws_i9(value=0) } }
-            Let#ws_l14(name=httpText) { Call#ws_c6(target=buildHttpHtml200) { Var#ws_v12(name=htmlText) } }
-            Let#ws_l9(name=cmdText) {
-              StrConcat#ws_s3 {
-                Lit#ws_i10(value="Program#cmdp1 { Command#Emit(type=\"http.raw\" payload=\"")
-                StrConcat#ws_s4 {
-                  StrEscape#ws_se1 { Var#ws_v13(name=httpText) }
-                  Lit#ws_i11(value="\") }")
-                }
+          Eq#ws_eq1 { Var#ws_v6(name=reqPath) Lit#ws_i8(value="/") }
+          Block#ws_b5 {
+            Let#ws_l9(name=htmlText) { Call#ws_c5(target=renderHomeHtml) { Lit#ws_i9(value=0) } }
+            Let#ws_l10(name=httpText) {
+              Call#ws_c6(target=httpResponse) {
+                Lit#ws_i10(value=200)
+                Lit#ws_i11(value="OK")
+                Lit#ws_i12(value="text/html; charset=utf-8")
+                Var#ws_v7(name=htmlText)
               }
             }
-            Let#ws_l10(name=cmdParsed) { Call#ws_c4(target=compiler.parse) { Var#ws_v7(name=cmdText) } }
-            Let#ws_l11(name=cmdNode) { ChildAt#ws_ca1 { Var#ws_v8(name=cmdParsed) Lit#ws_i12(value=0) } }
-            Return#ws_r3 {
-              AppendChild#ws_ap1 {
-                AppendChild#ws_ap2 {
-                  MakeBlock#ws_mb2 { Lit#ws_i13(value="next") }
-                  Var#ws_v9(name=state)
-                }
-                Var#ws_v10(name=cmdNode)
-              }
-            }
+            Return#ws_r4 { Call#ws_c7(target=httpEmitRaw) { Var#ws_v8(name=state) Var#ws_v9(name=httpText) } }
           }
-          Block#ws_b5 { Return#ws_r4 { MakeBlock#ws_mb3 { Lit#ws_i14(value="next") } } }
-        }
-      }
-    }
-  }
-
-  Let#ws_l15(name=buildHttpHtml200) {
-    Fn#ws_f6(params=body) {
-      Block#ws_b8 {
-        Let#ws_l16(name=length) { Call#ws_c7(target=sys.str_utf8ByteCount) { Var#ws_v14(name=body) } }
-        Return#ws_r7 {
-          StrConcat#ws_s7 {
-            Lit#ws_i18(value="HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: ")
-            StrConcat#ws_s8 {
-              ToString#ws_t1 { Var#ws_v15(name=length) }
-              StrConcat#ws_s9 {
-                Lit#ws_i19(value="\r\n\r\n")
-                Var#ws_v16(name=body)
+          Block#ws_b6 {
+            Let#ws_l11(name=errBody) { Call#ws_c8(target=httpErrorJson) { Lit#ws_i13(value="NOT_FOUND") Lit#ws_i14(value="Route not found.") } }
+            Let#ws_l12(name=http404) {
+              Call#ws_c9(target=httpResponse) {
+                Lit#ws_i15(value=404)
+                Lit#ws_i16(value="Not Found")
+                Lit#ws_i17(value="application/json")
+                Var#ws_v10(name=errBody)
               }
             }
+            Return#ws_r5 { Call#ws_c10(target=httpEmitRaw) { Var#ws_v11(name=state) Var#ws_v12(name=http404) } }
           }
         }
       }
     }
   }
 
-  Let#ws_l12(name=start) {
-    Fn#ws_f4(params=args) {
-      Block#ws_b6 { Return#ws_r5 { Lit#ws_i15(value=0) } }
+  Let#ws_l13(name=start) {
+    Fn#ws_f5(params=args) {
+      Block#ws_b7 { Return#ws_r6 { Lit#ws_i18(value=0) } }
     }
   }
 
@@ -111,6 +94,5 @@ Program#ws_p1 {
   Export#ws_e3(name=start)
   Export#ws_e4(name=renderHomeHtml)
   Export#ws_e5(name=sampleHomeHtml)
-  Export#ws_e6(name=getWeatherJson)
-  Export#ws_e7(name=buildHttpHtml200)
+  Export#ws_e6(name=getWeatherText)
 }

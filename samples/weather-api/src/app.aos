@@ -1,5 +1,9 @@
 Program#wa_p1 {
-  Let#wa_l0(name=sampleWeatherJson) { Lit#wa_i0(value="{\"message\":\"AiLang weather API response\",\"city\":\"Fort Worth\",\"report\":\"Fort Worth: +22C\"}") }
+  Import#wa_i0(path="../../../src/std/http.aos")
+
+  Let#wa_l0(name=sampleWeatherJson) {
+    Lit#wa_v0(value="{\"message\":\"AiLang weather API response\",\"city\":\"Fort Worth\",\"report\":\"Fort Worth: +22C\"}")
+  }
 
   Let#wa_l1(name=init) {
     Fn#wa_f1(params=args) {
@@ -11,12 +15,12 @@ Program#wa_p1 {
     Fn#wa_f2(params=city) {
       Block#wa_b2 {
         Return#wa_r2 {
-          Call#wa_c100(target=sys.http_get) {
-            StrConcat#wa_s100 {
-              Lit#wa_i200(value="https://wttr.in/")
-              StrConcat#wa_s101 {
+          Call#wa_c2(target=sys.http_get) {
+            StrConcat#wa_s1 {
+              Lit#wa_i2(value="https://wttr.in/")
+              StrConcat#wa_s2 {
                 Var#wa_v1(name=city)
-                Lit#wa_i201(value="?format=3")
+                Lit#wa_i3(value="?format=3")
               }
             }
           }
@@ -25,28 +29,19 @@ Program#wa_p1 {
     }
   }
 
-  Let#wa_l2b(name=getWeatherJson) {
-    Fn#wa_f2b(params=city) {
-      Block#wa_b2b {
-        Let#wa_l2x(name=report) { Call#wa_c101(target=getWeatherText) { Var#wa_v1b(name=city) } }
-        Return#wa_r2b { Call#wa_c102(target=buildWeatherJson) { Var#wa_v1c(name=city) Var#wa_v1d(name=report) } }
-      }
-    }
-  }
-
-  Let#wa_l2c1(name=buildWeatherJson) {
-    Fn#wa_f2c(params=city,report) {
-      Block#wa_b2c {
-        Return#wa_r2c {
-          StrConcat#wa_s200 {
-            Lit#wa_i202(value="{\"message\":\"AiLang weather API response\",\"city\":\"")
-            StrConcat#wa_s201 {
-              StrEscape#wa_se200 { Var#wa_v1e(name=city) }
-              StrConcat#wa_s202 {
-                Lit#wa_i203(value="\",\"report\":\"")
-                StrConcat#wa_s203 {
-                  StrEscape#wa_se201 { Var#wa_v1f(name=report) }
-                  Lit#wa_i204(value="\"}")
+  Let#wa_l3(name=buildWeatherJson) {
+    Fn#wa_f3(params=city,report) {
+      Block#wa_b3 {
+        Return#wa_r3 {
+          StrConcat#wa_s3 {
+            Lit#wa_i4(value="{\"message\":\"AiLang weather API response\",\"city\":\"")
+            StrConcat#wa_s4 {
+              StrEscape#wa_se1 { Var#wa_v2(name=city) }
+              StrConcat#wa_s5 {
+                Lit#wa_i5(value="\",\"report\":\"")
+                StrConcat#wa_s6 {
+                  StrEscape#wa_se2 { Var#wa_v3(name=report) }
+                  Lit#wa_i6(value="\"}")
                 }
               }
             }
@@ -56,19 +51,19 @@ Program#wa_p1 {
     }
   }
 
-  Let#wa_l2d(name=buildWeatherXml) {
-    Fn#wa_f2d(params=city,report) {
-      Block#wa_b2d {
-        Return#wa_r2d {
-          StrConcat#wa_s204 {
-            Lit#wa_i205(value="<weather><message>AiLang weather API response</message><city>")
-            StrConcat#wa_s205 {
-              Var#wa_v1g(name=city)
-              StrConcat#wa_s206 {
-                Lit#wa_i206(value="</city><report>")
-                StrConcat#wa_s207 {
-                  Var#wa_v1h(name=report)
-                  Lit#wa_i207(value="</report></weather>")
+  Let#wa_l4(name=buildWeatherXml) {
+    Fn#wa_f4(params=city,report) {
+      Block#wa_b4 {
+        Return#wa_r4 {
+          StrConcat#wa_s7 {
+            Lit#wa_i7(value="<weather><message>AiLang weather API response</message><city>")
+            StrConcat#wa_s8 {
+              Var#wa_v4(name=city)
+              StrConcat#wa_s9 {
+                Lit#wa_i8(value="</city><report>")
+                StrConcat#wa_s10 {
+                  Var#wa_v5(name=report)
+                  Lit#wa_i9(value="</report></weather>")
                 }
               }
             }
@@ -78,203 +73,17 @@ Program#wa_p1 {
     }
   }
 
-  Let#wa_l2e(name=buildWeatherCsv) {
-    Fn#wa_f2e(params=city,report) {
-      Block#wa_b2e {
-        Return#wa_r2e {
-          StrConcat#wa_s208 {
-            Lit#wa_i208(value="message,city,report\nAiLang weather API response,")
-            StrConcat#wa_s209 {
-              Var#wa_v1i(name=city)
-              StrConcat#wa_s210 {
-                Lit#wa_i209(value=",")
-                Var#wa_v1j(name=report)
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#wa_l2f(name=formatWeatherByAccept) {
-    Fn#wa_f2f(params=city,report,contentType) {
-      Block#wa_b2f {
-        If#wa_if200 {
-          Eq#wa_eq200 { Var#wa_v1k(name=contentType) Lit#wa_i210(value="text/plain") }
-          Block#wa_b203 { Return#wa_r2f { Var#wa_v1l(name=report) } }
-          Block#wa_b204 {
-            If#wa_if301 {
-              Eq#wa_eq301 { Var#wa_v1m(name=contentType) Lit#wa_i211(value="text/csv") }
-              Block#wa_b205 { Return#wa_r2g { Call#wa_c103(target=buildWeatherCsv) { Var#wa_v1n(name=city) Var#wa_v1o(name=report) } } }
-              Block#wa_b206 {
-                If#wa_if302 {
-                  Eq#wa_eq302 { Var#wa_v1p(name=contentType) Lit#wa_i212(value="application/xml") }
-                  Block#wa_b207 { Return#wa_r2h { Call#wa_c104(target=buildWeatherXml) { Var#wa_v1q(name=city) Var#wa_v1r(name=report) } } }
-                  Block#wa_b208 {
-                    If#wa_if303 {
-                      Eq#wa_eq303 { Var#wa_v1s(name=contentType) Lit#wa_i213(value="text/xml") }
-                      Block#wa_b209 { Return#wa_r2i { Call#wa_c105(target=buildWeatherXml) { Var#wa_v1t(name=city) Var#wa_v1u(name=report) } } }
-                      Block#wa_b210 {
-                        If#wa_if304 {
-                          Eq#wa_eq304 { Var#wa_v1v(name=contentType) Lit#wa_i214(value="text/toon") }
-                          Block#wa_b213 { Return#wa_r2k { Call#wa_c107(target=buildWeatherToon) { Var#wa_v1w(name=city) Var#wa_v1x(name=report) } } }
-                          Block#wa_b214 { Return#wa_r2j { Call#wa_c106(target=buildWeatherJson) { Var#wa_v1y(name=city) Var#wa_v1z(name=report) } } }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#wa_l3(name=update) {
-    Fn#wa_f3(params=state,event) {
+  Let#wa_l5(name=buildWeatherCsv) {
+    Fn#wa_f5(params=city,report) {
       Block#wa_b5 {
-        Let#wa_l4(name=reqPayload) { AttrValueString#wa_a1 { Var#wa_v2(name=event) Lit#wa_i5(value=0) } }
-        Let#wa_l5(name=req) { Call#wa_c1(target=compiler.parseHttpRequest) { Var#wa_v3(name=reqPayload) } }
-        Let#wa_l6(name=reqPath) { AttrValueString#wa_a2 { Var#wa_v4(name=req) Lit#wa_i6(value=1) } }
-        If#wa_if2 {
-          Eq#wa_eq2 { Var#wa_v5(name=reqPath) Lit#wa_i7(value="/weather") }
-          Block#wa_b6 {
-            Let#wa_l60(name=headersMap) { ChildAt#wa_ca10 { Var#wa_v40(name=req) Lit#wa_i60(value=0) } }
-            Let#wa_l64(name=acceptRaw) {
-              Call#wa_c202(target=queryGetString) {
-                Var#wa_v46(name=headersMap)
-                Lit#wa_i66(value="Accept")
-                Lit#wa_i67(value="")
-              }
-            }
-            Let#wa_l65(name=accept) {
-              If#wa_if204 {
-                Eq#wa_eq204 { Var#wa_v47(name=acceptRaw) Lit#wa_i68(value="") }
-                Block#wa_b211 {
-                  Call#wa_c203(target=queryGetString) {
-                    Var#wa_v48(name=headersMap)
-                    Lit#wa_i69(value="accept")
-                    Lit#wa_i70(value="application/json")
-                  }
-                }
-                Block#wa_b212 { Var#wa_v49(name=acceptRaw) }
-              }
-            }
-            Let#wa_l67(name=contentType) { Call#wa_c206(target=selectContentType) { Var#wa_v531(name=accept) } }
-            Let#wa_l61(name=queryMap) { ChildAt#wa_ca11 { Var#wa_v41(name=req) Lit#wa_i61(value=1) } }
-            Let#wa_l62(name=city) {
-              Call#wa_c201(target=queryGetString) {
-                Var#wa_v42(name=queryMap)
-                Lit#wa_i62(value="city")
-                Lit#wa_i63(value="")
-              }
-            }
-            If#wa_if201 {
-              Eq#wa_eq201 { Var#wa_v43(name=city) Lit#wa_i64(value="") }
-              Block#wa_b201 {
-                Let#wa_l69(name=errBody400) { Call#wa_c208(target=buildErrorJson) { Lit#wa_i71(value="CITY_REQUIRED") Lit#wa_i72(value="Query parameter 'city' is required.") } }
-                Let#wa_l70(name=http400) { Call#wa_c209(target=buildHttpResponse) { Lit#wa_i73(value=400) Lit#wa_i74(value="Bad Request") Lit#wa_i75(value="application/json") Var#wa_v57(name=errBody400) } }
-                Let#wa_l71(name=cmdText400) {
-                  StrConcat#wa_s21 {
-                    Lit#wa_i76(value="Program#cmdp400 { Command#Emit(type=\"http.raw\" payload=\"")
-                    StrConcat#wa_s22 {
-                      StrEscape#wa_se2 { Var#wa_v58(name=http400) }
-                      Lit#wa_i77(value="\") }")
-                    }
-                  }
-                }
-                Let#wa_l72(name=cmdParsed400) { Call#wa_c210(target=compiler.parse) { Var#wa_v59(name=cmdText400) } }
-                Let#wa_l73(name=cmdNode400) { ChildAt#wa_ca12 { Var#wa_v60(name=cmdParsed400) Lit#wa_i78(value=0) } }
-                Return#wa_r40 {
-                  AppendChild#wa_ap10 {
-                    AppendChild#wa_ap11 {
-                      MakeBlock#wa_mb10 { Lit#wa_i79(value="next") }
-                      Var#wa_v61(name=state)
-                    }
-                    Var#wa_v62(name=cmdNode400)
-                  }
-                }
-              }
-              Block#wa_b202 {
-                Let#wa_l66(name=weatherText) { Call#wa_c204(target=getWeatherText) { Var#wa_v50(name=city) } }
-                If#wa_if202 {
-                  Eq#wa_eq202 { Var#wa_v63(name=weatherText) Lit#wa_i80(value="") }
-                  Block#wa_b303 {
-                    Let#wa_l74(name=errBody502) { Call#wa_c211(target=buildErrorJson) { Lit#wa_i81(value="UPSTREAM_UNAVAILABLE") Lit#wa_i82(value="Weather provider returned no data.") } }
-                    Let#wa_l75(name=http502) { Call#wa_c212(target=buildHttpResponse) { Lit#wa_i83(value=502) Lit#wa_i84(value="Bad Gateway") Lit#wa_i85(value="application/json") Var#wa_v64(name=errBody502) } }
-                    Let#wa_l76(name=cmdText502) {
-                      StrConcat#wa_s23 {
-                        Lit#wa_i86(value="Program#cmdp502 { Command#Emit(type=\"http.raw\" payload=\"")
-                        StrConcat#wa_s24 {
-                          StrEscape#wa_se3 { Var#wa_v65(name=http502) }
-                          Lit#wa_i87(value="\") }")
-                        }
-                      }
-                    }
-                    Let#wa_l77(name=cmdParsed502) { Call#wa_c213(target=compiler.parse) { Var#wa_v66(name=cmdText502) } }
-                    Let#wa_l78(name=cmdNode502) { ChildAt#wa_ca13 { Var#wa_v67(name=cmdParsed502) Lit#wa_i88(value=0) } }
-                    Return#wa_r41 {
-                      AppendChild#wa_ap12 {
-                        AppendChild#wa_ap13 {
-                          MakeBlock#wa_mb11 { Lit#wa_i89(value="next") }
-                          Var#wa_v68(name=state)
-                        }
-                        Var#wa_v69(name=cmdNode502)
-                      }
-                    }
-                  }
-                  Block#wa_b304 {
-                    Let#wa_l7(name=bodyJson) { Call#wa_c205(target=formatWeatherByAccept) { Var#wa_v45(name=city) Var#wa_v51(name=weatherText) Var#wa_v532(name=contentType) } }
-                    Let#wa_l68(name=httpResponse) { Call#wa_c207(target=buildHttpResponse) { Lit#wa_i90(value=200) Lit#wa_i91(value="OK") Var#wa_v54(name=contentType) Var#wa_v55(name=bodyJson) } }
-                    Let#wa_l8(name=cmdText) {
-                      StrConcat#wa_s1 {
-                        Lit#wa_i10(value="Program#cmdp1 { Command#Emit(type=\"http.raw\" payload=\"")
-                        StrConcat#wa_s2 {
-                          StrEscape#wa_se1 { Var#wa_v56(name=httpResponse) }
-                          Lit#wa_i11(value="\") }")
-                        }
-                      }
-                    }
-                    Let#wa_l9(name=cmdParsed) { Call#wa_c3(target=compiler.parse) { Var#wa_v7(name=cmdText) } }
-                    Let#wa_l10(name=cmdNode) { ChildAt#wa_ca1 { Var#wa_v8(name=cmdParsed) Lit#wa_i12(value=0) } }
-                    Return#wa_r4 {
-                      AppendChild#wa_ap1 {
-                        AppendChild#wa_ap2 {
-                          MakeBlock#wa_mb2 { Lit#wa_i13(value="next") }
-                          Var#wa_v9(name=state)
-                        }
-                        Var#wa_v10(name=cmdNode)
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-          Block#wa_b7 {
-            Let#wa_l79(name=errBody404) { Call#wa_c214(target=buildErrorJson) { Lit#wa_i92(value="NOT_FOUND") Lit#wa_i93(value="Route not found.") } }
-            Let#wa_l80(name=http404) { Call#wa_c215(target=buildHttpResponse) { Lit#wa_i94(value=404) Lit#wa_i95(value="Not Found") Lit#wa_i96(value="application/json") Var#wa_v70(name=errBody404) } }
-            Let#wa_l81(name=cmdText404) {
-              StrConcat#wa_s25 {
-                Lit#wa_i97(value="Program#cmdp404 { Command#Emit(type=\"http.raw\" payload=\"")
-                StrConcat#wa_s26 {
-                  StrEscape#wa_se4 { Var#wa_v71(name=http404) }
-                  Lit#wa_i98(value="\") }")
-                }
-              }
-            }
-            Let#wa_l82(name=cmdParsed404) { Call#wa_c216(target=compiler.parse) { Var#wa_v72(name=cmdText404) } }
-            Let#wa_l83(name=cmdNode404) { ChildAt#wa_ca14 { Var#wa_v73(name=cmdParsed404) Lit#wa_i99(value=0) } }
-            Return#wa_r42 {
-              AppendChild#wa_ap14 {
-                AppendChild#wa_ap15 {
-                  MakeBlock#wa_mb12 { Lit#wa_i100(value="next") }
-                  Var#wa_v74(name=state)
-                }
-                Var#wa_v75(name=cmdNode404)
+        Return#wa_r5 {
+          StrConcat#wa_s11 {
+            Lit#wa_i10(value="message,city,report\nAiLang weather API response,")
+            StrConcat#wa_s12 {
+              Var#wa_v6(name=city)
+              StrConcat#wa_s13 {
+                Lit#wa_i11(value=",")
+                Var#wa_v7(name=report)
               }
             }
           }
@@ -283,49 +92,54 @@ Program#wa_p1 {
     }
   }
 
-  Let#wa_l20(name=queryGetString) {
-    Fn#wa_f20(params=map,key,fallback) {
-      Block#wa_b20 {
-        Return#wa_r20 {
-          Call#wa_c20(target=queryGetStringAt) {
-            Var#wa_v20(name=map)
-            Var#wa_v21(name=key)
-            Lit#wa_i20(value=0)
-            Var#wa_v22(name=fallback)
+  Let#wa_l6(name=buildWeatherToon) {
+    Fn#wa_f6(params=city,report) {
+      Block#wa_b6 {
+        Return#wa_r6 {
+          StrConcat#wa_s14 {
+            Lit#wa_i12(value="TOON(city=\"")
+            StrConcat#wa_s15 {
+              StrEscape#wa_se3 { Var#wa_v8(name=city) }
+              StrConcat#wa_s16 {
+                Lit#wa_i13(value="\",report=\"")
+                StrConcat#wa_s17 {
+                  StrEscape#wa_se4 { Var#wa_v9(name=report) }
+                  Lit#wa_i14(value="\")")
+                }
+              }
+            }
           }
         }
       }
     }
   }
 
-  Let#wa_l21(name=queryGetStringAt) {
-    Fn#wa_f21(params=map,key,index,fallback) {
-      Block#wa_b21 {
-        If#wa_if21 {
-          Eq#wa_eq21 { Var#wa_v23(name=index) ChildCount#wa_cc21 { Var#wa_v24(name=map) } }
-          Block#wa_b22 { Return#wa_r21 { Var#wa_v25(name=fallback) } }
-          Block#wa_b23 {
-            Let#wa_l22(name=field) { ChildAt#wa_ca21 { Var#wa_v26(name=map) Var#wa_v27(name=index) } }
-            Let#wa_l23(name=fieldKey) { AttrValueString#wa_avs21 { Var#wa_v28(name=field) Lit#wa_i21(value=0) } }
-            If#wa_if22 {
-              Eq#wa_eq22 { Var#wa_v29(name=fieldKey) Var#wa_v30(name=key) }
-              Block#wa_b24 {
-                If#wa_if23 {
-                  Eq#wa_eq23 { ChildCount#wa_cc22 { Var#wa_v31(name=field) } Lit#wa_i22(value=0) }
-                  Block#wa_b25 { Return#wa_r22 { Var#wa_v32(name=fallback) } }
-                  Block#wa_b26 {
-                    Let#wa_l24(name=lit) { ChildAt#wa_ca22 { Var#wa_v33(name=field) Lit#wa_i23(value=0) } }
-                    Return#wa_r23 { AttrValueString#wa_avs22 { Var#wa_v34(name=lit) Lit#wa_i24(value=0) } }
-                  }
-                }
-              }
-              Block#wa_b27 {
-                Return#wa_r24 {
-                  Call#wa_c21(target=queryGetStringAt) {
-                    Var#wa_v35(name=map)
-                    Var#wa_v36(name=key)
-                    Add#wa_add21 { Var#wa_v37(name=index) Lit#wa_i25(value=1) }
-                    Var#wa_v38(name=fallback)
+  Let#wa_l7(name=selectContentType) {
+    Fn#wa_f7(params=accept) {
+      Block#wa_b7 {
+        If#wa_if1 {
+          Eq#wa_eq1 { Var#wa_v10(name=accept) Lit#wa_i15(value="text/plain") }
+          Block#wa_b8 { Return#wa_r7 { Lit#wa_i16(value="text/plain") } }
+          Block#wa_b9 {
+            If#wa_if2 {
+              Eq#wa_eq2 { Var#wa_v11(name=accept) Lit#wa_i17(value="text/csv") }
+              Block#wa_b10 { Return#wa_r8 { Lit#wa_i18(value="text/csv") } }
+              Block#wa_b11 {
+                If#wa_if3 {
+                  Eq#wa_eq3 { Var#wa_v12(name=accept) Lit#wa_i19(value="application/xml") }
+                  Block#wa_b12 { Return#wa_r9 { Lit#wa_i20(value="application/xml") } }
+                  Block#wa_b13 {
+                    If#wa_if4 {
+                      Eq#wa_eq4 { Var#wa_v13(name=accept) Lit#wa_i21(value="text/xml") }
+                      Block#wa_b14 { Return#wa_r10 { Lit#wa_i22(value="text/xml") } }
+                      Block#wa_b15 {
+                        If#wa_if5 {
+                          Eq#wa_eq5 { Var#wa_v14(name=accept) Lit#wa_i23(value="text/toon") }
+                          Block#wa_b16 { Return#wa_r11 { Lit#wa_i24(value="text/toon") } }
+                          Block#wa_b17 { Return#wa_r12 { Lit#wa_i25(value="application/json") } }
+                        }
+                      }
+                    }
                   }
                 }
               }
@@ -336,56 +150,129 @@ Program#wa_p1 {
     }
   }
 
-  Let#wa_l30(name=selectContentType) {
-    Fn#wa_f30(params=accept) {
+  Let#wa_l8(name=formatWeatherByAccept) {
+    Fn#wa_f8(params=city,report,contentType) {
+      Block#wa_b18 {
+        If#wa_if6 {
+          Eq#wa_eq6 { Var#wa_v15(name=contentType) Lit#wa_i26(value="text/plain") }
+          Block#wa_b19 { Return#wa_r13 { Var#wa_v16(name=report) } }
+          Block#wa_b20 {
+            If#wa_if7 {
+              Eq#wa_eq7 { Var#wa_v17(name=contentType) Lit#wa_i27(value="text/csv") }
+              Block#wa_b21 { Return#wa_r14 { Call#wa_c3(target=buildWeatherCsv) { Var#wa_v18(name=city) Var#wa_v19(name=report) } } }
+              Block#wa_b22 {
+                If#wa_if8 {
+                  Eq#wa_eq8 { Var#wa_v20(name=contentType) Lit#wa_i28(value="application/xml") }
+                  Block#wa_b23 { Return#wa_r15 { Call#wa_c4(target=buildWeatherXml) { Var#wa_v21(name=city) Var#wa_v22(name=report) } } }
+                  Block#wa_b24 {
+                    If#wa_if9 {
+                      Eq#wa_eq9 { Var#wa_v23(name=contentType) Lit#wa_i29(value="text/xml") }
+                      Block#wa_b25 { Return#wa_r16 { Call#wa_c5(target=buildWeatherXml) { Var#wa_v24(name=city) Var#wa_v25(name=report) } } }
+                      Block#wa_b26 {
+                        If#wa_if10 {
+                          Eq#wa_eq10 { Var#wa_v26(name=contentType) Lit#wa_i30(value="text/toon") }
+                          Block#wa_b27 { Return#wa_r17 { Call#wa_c6(target=buildWeatherToon) { Var#wa_v27(name=city) Var#wa_v28(name=report) } } }
+                          Block#wa_b28 { Return#wa_r18 { Call#wa_c7(target=buildWeatherJson) { Var#wa_v29(name=city) Var#wa_v30(name=report) } } }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#wa_l9(name=respondError) {
+    Fn#wa_f9(params=state,status,reason,code,message) {
+      Block#wa_b29 {
+        Let#wa_l10(name=body) { Call#wa_c8(target=httpErrorJson) { Var#wa_v31(name=code) Var#wa_v32(name=message) } }
+        Let#wa_l11(name=response) { Call#wa_c9(target=httpResponse) { Var#wa_v33(name=status) Var#wa_v34(name=reason) Lit#wa_i31(value="application/json") Var#wa_v35(name=body) } }
+        Return#wa_r19 { Call#wa_c10(target=httpEmitRaw) { Var#wa_v36(name=state) Var#wa_v37(name=response) } }
+      }
+    }
+  }
+
+  Let#wa_l12(name=update) {
+    Fn#wa_f10(params=state,event) {
       Block#wa_b30 {
-        If#wa_if500 {
-          Eq#wa_eq500 { Var#wa_v500(name=accept) Lit#wa_i500(value="text/plain") }
-          Block#wa_b500 { Return#wa_r500 { Lit#wa_i501(value="text/plain") } }
-          Block#wa_b501 {
-            If#wa_if501 {
-              Eq#wa_eq501 { Var#wa_v501(name=accept) Lit#wa_i502(value="text/csv") }
-              Block#wa_b502 { Return#wa_r501 { Lit#wa_i503(value="text/csv") } }
-              Block#wa_b503 {
-                If#wa_if502 {
-                  Eq#wa_eq502 { Var#wa_v502(name=accept) Lit#wa_i504(value="application/xml") }
-                  Block#wa_b504 { Return#wa_r502 { Lit#wa_i505(value="application/xml") } }
-                  Block#wa_b505 {
-                    If#wa_if503 {
-                      Eq#wa_eq503 { Var#wa_v503(name=accept) Lit#wa_i506(value="text/xml") }
-                      Block#wa_b506 { Return#wa_r503 { Lit#wa_i507(value="text/xml") } }
-                      Block#wa_b507 {
-                        If#wa_if504 {
-                          Eq#wa_eq504 { Var#wa_v504(name=accept) Lit#wa_i508(value="text/toon") }
-                          Block#wa_b508 { Return#wa_r504 { Lit#wa_i509(value="text/toon") } }
-                          Block#wa_b509 { Return#wa_r505 { Lit#wa_i510(value="application/json") } }
-                        }
+        Let#wa_l13(name=reqPayload) { AttrValueString#wa_a1 { Var#wa_v38(name=event) Lit#wa_i32(value=0) } }
+        Let#wa_l14(name=req) { Call#wa_c11(target=compiler.parseHttpRequest) { Var#wa_v39(name=reqPayload) } }
+        Let#wa_l15(name=reqPath) { Call#wa_c12(target=httpPath) { Var#wa_v40(name=req) } }
+        If#wa_if11 {
+          Eq#wa_eq11 { Var#wa_v41(name=reqPath) Lit#wa_i33(value="/weather") }
+          Block#wa_b31 {
+            Let#wa_l16(name=city) { Call#wa_c13(target=httpQueryGet) { Var#wa_v42(name=req) Lit#wa_i34(value="city") Lit#wa_i35(value="") } }
+            Let#wa_l17(name=acceptRaw) { Call#wa_c14(target=httpHeaderGet) { Var#wa_v43(name=req) Lit#wa_i36(value="Accept") Lit#wa_i37(value="") } }
+            Let#wa_l18(name=accept) {
+              If#wa_if12 {
+                Eq#wa_eq12 { Var#wa_v44(name=acceptRaw) Lit#wa_i38(value="") }
+                Block#wa_b32 { Call#wa_c15(target=httpHeaderGet) { Var#wa_v45(name=req) Lit#wa_i39(value="accept") Lit#wa_i40(value="application/json") } }
+                Block#wa_b33 { Var#wa_v46(name=acceptRaw) }
+              }
+            }
+            Let#wa_l19(name=contentType) { Call#wa_c16(target=selectContentType) { Var#wa_v47(name=accept) } }
+            If#wa_if13 {
+              Eq#wa_eq13 { Var#wa_v48(name=city) Lit#wa_i41(value="") }
+              Block#wa_b34 {
+                Return#wa_r20 {
+                  Call#wa_c17(target=respondError) {
+                    Var#wa_v49(name=state)
+                    Lit#wa_i42(value=400)
+                    Lit#wa_i43(value="Bad Request")
+                    Lit#wa_i44(value="CITY_REQUIRED")
+                    Lit#wa_i45(value="Query parameter 'city' is required.")
+                  }
+                }
+              }
+              Block#wa_b35 {
+                Let#wa_l20(name=weatherText) { Call#wa_c18(target=getWeatherText) { Var#wa_v50(name=city) } }
+                If#wa_if14 {
+                  Eq#wa_eq14 { Var#wa_v51(name=weatherText) Lit#wa_i46(value="") }
+                  Block#wa_b36 {
+                    Return#wa_r21 {
+                      Call#wa_c19(target=respondError) {
+                        Var#wa_v52(name=state)
+                        Lit#wa_i47(value=502)
+                        Lit#wa_i48(value="Bad Gateway")
+                        Lit#wa_i49(value="UPSTREAM_UNAVAILABLE")
+                        Lit#wa_i50(value="Weather provider returned no data.")
                       }
                     }
+                  }
+                  Block#wa_b37 {
+                    Let#wa_l21(name=body) {
+                      Call#wa_c20(target=formatWeatherByAccept) {
+                        Var#wa_v53(name=city)
+                        Var#wa_v54(name=weatherText)
+                        Var#wa_v55(name=contentType)
+                      }
+                    }
+                    Let#wa_l22(name=response) {
+                      Call#wa_c21(target=httpResponse) {
+                        Lit#wa_i51(value=200)
+                        Lit#wa_i52(value="OK")
+                        Var#wa_v56(name=contentType)
+                        Var#wa_v57(name=body)
+                      }
+                    }
+                    Return#wa_r22 { Call#wa_c22(target=httpEmitRaw) { Var#wa_v58(name=state) Var#wa_v59(name=response) } }
                   }
                 }
               }
             }
           }
-        }
-      }
-    }
-  }
-
-  Let#wa_l31(name=buildWeatherToon) {
-    Fn#wa_f31(params=city,report) {
-      Block#wa_b31 {
-        Return#wa_r510 {
-          StrConcat#wa_s510 {
-            Lit#wa_i511(value="TOON(city=\"")
-            StrConcat#wa_s511 {
-              StrEscape#wa_se510 { Var#wa_v510(name=city) }
-              StrConcat#wa_s512 {
-                Lit#wa_i512(value="\",report=\"")
-                StrConcat#wa_s513 {
-                  StrEscape#wa_se511 { Var#wa_v511(name=report) }
-                  Lit#wa_i513(value="\")")
-                }
+          Block#wa_b38 {
+            Return#wa_r23 {
+              Call#wa_c23(target=respondError) {
+                Var#wa_v60(name=state)
+                Lit#wa_i53(value=404)
+                Lit#wa_i54(value="Not Found")
+                Lit#wa_i55(value="NOT_FOUND")
+                Lit#wa_i56(value="Route not found.")
               }
             }
           }
@@ -394,81 +281,17 @@ Program#wa_p1 {
     }
   }
 
-  Let#wa_l32(name=buildHttpResponse) {
-    Fn#wa_f32(params=statusCode,reason,contentType,body) {
-      Block#wa_b32 {
-        Let#wa_l33(name=length) { Call#wa_c510(target=sys.str_utf8ByteCount) { Var#wa_v512(name=body) } }
-        Return#wa_r511 {
-          StrConcat#wa_s514 {
-            Lit#wa_i514(value="HTTP/1.1 ")
-            StrConcat#wa_s515 {
-              ToString#wa_t511 { Var#wa_v516(name=statusCode) }
-              StrConcat#wa_s516 {
-                Lit#wa_i515(value=" ")
-                StrConcat#wa_s517 {
-                  Var#wa_v517(name=reason)
-                  StrConcat#wa_s518 {
-                    Lit#wa_i516(value="\r\nContent-Type: ")
-                    StrConcat#wa_s519 {
-                      Var#wa_v513(name=contentType)
-                      StrConcat#wa_s520 {
-                        Lit#wa_i517(value="\r\nContent-Length: ")
-                        StrConcat#wa_s521 {
-                          ToString#wa_t510 { Var#wa_v514(name=length) }
-                          StrConcat#wa_s522 {
-                            Lit#wa_i518(value="\r\n\r\n")
-                            Var#wa_v515(name=body)
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#wa_l34(name=buildErrorJson) {
-    Fn#wa_f34(params=code,message) {
-      Block#wa_b34 {
-        Return#wa_r512 {
-          StrConcat#wa_s523 {
-            Lit#wa_i519(value="{\"error\":\"")
-            StrConcat#wa_s524 {
-              StrEscape#wa_se5 { Var#wa_v518(name=code) }
-              StrConcat#wa_s525 {
-                Lit#wa_i520(value="\",\"message\":\"")
-                StrConcat#wa_s526 {
-                  StrEscape#wa_se6 { Var#wa_v519(name=message) }
-                  Lit#wa_i521(value="\"}")
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  Let#wa_l11(name=start) {
-    Fn#wa_f4(params=args) {
-      Block#wa_b8 { Return#wa_r6 { Lit#wa_i15(value=0) } }
+  Let#wa_l23(name=start) {
+    Fn#wa_f11(params=args) {
+      Block#wa_b39 { Return#wa_r24 { Lit#wa_i57(value=0) } }
     }
   }
 
   Export#wa_e1(name=init)
   Export#wa_e2(name=update)
   Export#wa_e3(name=start)
-  Export#wa_e7(name=getWeatherText)
-  Export#wa_e4(name=getWeatherJson)
+  Export#wa_e4(name=getWeatherText)
   Export#wa_e5(name=sampleWeatherJson)
-  Export#wa_e6(name=queryGetString)
-  Export#wa_e8(name=formatWeatherByAccept)
-  Export#wa_e9(name=selectContentType)
-  Export#wa_e10(name=buildHttpResponse)
-  Export#wa_e11(name=buildErrorJson)
+  Export#wa_e6(name=formatWeatherByAccept)
+  Export#wa_e7(name=selectContentType)
 }

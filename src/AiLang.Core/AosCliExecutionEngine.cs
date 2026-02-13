@@ -546,7 +546,7 @@ public static class AosCliExecutionEngine
         };
 
         var validator = new AosValidator();
-        var validation = validator.Validate(parse.Root, envTypes, runtime.Permissions, runStructural: false);
+        var validation = validator.Validate(parse.Root, envTypes, runtime.Permissions, runStructural: false, moduleBaseDir: runtime.ModuleBaseDir);
         if (validation.Diagnostics.Count > 0)
         {
             var diagnostic = validation.Diagnostics[0];

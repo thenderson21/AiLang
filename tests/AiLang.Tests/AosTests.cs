@@ -462,6 +462,59 @@ public class AosTests
     }
 
     [Test]
+    public void StdHttpHelpers_QueryAndHeaderGet_Work()
+    {
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("compiler");
+        var interpreter = new AosInterpreter();
+        var stdHttpProgram = Parse(File.ReadAllText(FindRepoFile("src/std/http.aos")));
+        Assert.That(stdHttpProgram.Diagnostics, Is.Empty);
+        var stdHttpResult = interpreter.EvaluateProgram(stdHttpProgram.Root!, runtime);
+        Assert.That(stdHttpResult.Kind, Is.Not.EqualTo(AosValueKind.Unknown));
+
+        var queryParse = Parse("Program#p1 { Call#c1(target=httpQueryGet) { Call#c2(target=compiler.parseHttpRequest) { Lit#s1(value=\"GET /weather?city=Fort%20Worth HTTP/1.1\\r\\nAccept: text/csv\\r\\n\\r\\n\") } Lit#s2(value=\"city\") Lit#s3(value=\"missing\") } }");
+        Assert.That(queryParse.Diagnostics, Is.Empty);
+        var queryValue = interpreter.EvaluateProgram(queryParse.Root!, runtime);
+        Assert.That(queryValue.Kind, Is.EqualTo(AosValueKind.String));
+        Assert.That(queryValue.AsString(), Is.EqualTo("Fort Worth"));
+
+        var headerParse = Parse("Program#p1 { Call#c1(target=httpHeaderGet) { Call#c2(target=compiler.parseHttpRequest) { Lit#s1(value=\"GET /weather HTTP/1.1\\r\\nAccept: text/csv\\r\\n\\r\\n\") } Lit#s2(value=\"Accept\") Lit#s3(value=\"application/json\") } }");
+        Assert.That(headerParse.Diagnostics, Is.Empty);
+        var headerValue = interpreter.EvaluateProgram(headerParse.Root!, runtime);
+        Assert.That(headerValue.Kind, Is.EqualTo(AosValueKind.String));
+        Assert.That(headerValue.AsString(), Is.EqualTo("text/csv"));
+    }
+
+    [Test]
+    public void StdHttpHelpers_ResponseAndEmitRaw_AreDeterministic()
+    {
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("compiler");
+        runtime.Permissions.Add("sys");
+        var interpreter = new AosInterpreter();
+        var stdHttpProgram = Parse(File.ReadAllText(FindRepoFile("src/std/http.aos")));
+        Assert.That(stdHttpProgram.Diagnostics, Is.Empty);
+        var stdHttpResult = interpreter.EvaluateProgram(stdHttpProgram.Root!, runtime);
+        Assert.That(stdHttpResult.Kind, Is.Not.EqualTo(AosValueKind.Unknown));
+
+        var responseParse = Parse("Program#p1 { Call#c1(target=httpResponse) { Lit#i1(value=200) Lit#s1(value=\"OK\") Lit#s2(value=\"text/plain\") Lit#s3(value=\"hi\") } }");
+        Assert.That(responseParse.Diagnostics, Is.Empty);
+        var responseValue = interpreter.EvaluateProgram(responseParse.Root!, runtime);
+        Assert.That(responseValue.Kind, Is.EqualTo(AosValueKind.String));
+        Assert.That(responseValue.AsString(), Is.EqualTo("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 2\r\n\r\nhi"));
+
+        var emitParse = Parse("Program#p1 { Call#c1(target=httpEmitRaw) { MakeBlock#b1 { Lit#s1(value=\"state\") } Lit#s2(value=\"HTTP/1.1 200 OK\\r\\nContent-Length: 0\\r\\n\\r\\n\") } }");
+        Assert.That(emitParse.Diagnostics, Is.Empty);
+        var emitValue = interpreter.EvaluateProgram(emitParse.Root!, runtime);
+        Assert.That(emitValue.Kind, Is.EqualTo(AosValueKind.Node));
+        var next = emitValue.AsNode();
+        Assert.That(next.Kind, Is.EqualTo("Block"));
+        Assert.That(next.Children.Count, Is.EqualTo(2));
+        Assert.That(next.Children[1].Kind, Is.EqualTo("Command"));
+        Assert.That(next.Children[1].Attrs["type"].AsString(), Is.EqualTo("http.raw"));
+    }
+
+    [Test]
     public void UnknownSysTarget_DoesNotEvaluateArguments()
     {
         var parse = Parse("Program#p1 { Call#c1(target=sys.unknown) { Call#c2(target=io.print) { Lit#s1(value=\"side-effect\") } } }");
