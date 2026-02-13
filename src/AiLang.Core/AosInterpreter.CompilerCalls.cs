@@ -144,6 +144,46 @@ public sealed partial class AosInterpreter
             return true;
         }
 
+        if (target == "compiler.parseHttpBodyForm")
+        {
+            if (node.Children.Count != 1)
+            {
+                return true;
+            }
+
+            var text = EvalNode(node.Children[0], runtime, env);
+            if (text.Kind != AosValueKind.String)
+            {
+                return true;
+            }
+
+            result = AosValue.FromNode(ParseFormBodyNode(text.AsString(), node.Span));
+            return true;
+        }
+
+        if (target == "compiler.parseHttpBodyJson")
+        {
+            if (node.Children.Count != 1)
+            {
+                return true;
+            }
+
+            var text = EvalNode(node.Children[0], runtime, env);
+            if (text.Kind != AosValueKind.String)
+            {
+                return true;
+            }
+
+            if (!TryParseJsonBodyNode(text.AsString(), node.Span, out var parsed, out var error))
+            {
+                result = AosValue.FromNode(CreateErrNode("parse_http_json_err", "PARHTTP001", error, node.Id, node.Span));
+                return true;
+            }
+
+            result = AosValue.FromNode(parsed);
+            return true;
+        }
+
         if (target == "compiler.format")
         {
             if (node.Children.Count != 1)

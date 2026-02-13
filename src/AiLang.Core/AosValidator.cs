@@ -755,6 +755,34 @@ public sealed class AosValidator
             return AosValueKind.Node;
         }
 
+        if (target == "compiler.parseHttpBodyForm")
+        {
+            RequirePermission(node, "compiler", permissions);
+            if (argTypes.Count != 1)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL160", "compiler.parseHttpBodyForm expects 1 argument.", node.Id, node.Span));
+            }
+            else if (argTypes[0] != AosValueKind.String && argTypes[0] != AosValueKind.Unknown)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL161", "compiler.parseHttpBodyForm arg must be string.", node.Id, node.Span));
+            }
+            return AosValueKind.Node;
+        }
+
+        if (target == "compiler.parseHttpBodyJson")
+        {
+            RequirePermission(node, "compiler", permissions);
+            if (argTypes.Count != 1)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL162", "compiler.parseHttpBodyJson expects 1 argument.", node.Id, node.Span));
+            }
+            else if (argTypes[0] != AosValueKind.String && argTypes[0] != AosValueKind.Unknown)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL163", "compiler.parseHttpBodyJson arg must be string.", node.Id, node.Span));
+            }
+            return AosValueKind.Node;
+        }
+
         if (target == "compiler.route")
         {
             RequirePermission(node, "compiler", permissions);

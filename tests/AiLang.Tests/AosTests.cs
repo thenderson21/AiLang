@@ -459,6 +459,70 @@ public class AosTests
         Assert.That(query.Children[3].Children[0].Attrs["value"].AsString(), Is.EqualTo("São Paulo"));
         Assert.That(query.Children[4].Attrs["key"].AsString(), Is.EqualTo("emoji"));
         Assert.That(query.Children[4].Children[0].Attrs["value"].AsString(), Is.EqualTo("😀"));
+        Assert.That(req.Children[2].Kind, Is.EqualTo("Lit"));
+        Assert.That(req.Children[2].Attrs["value"].AsString(), Is.EqualTo(string.Empty));
+    }
+
+    [Test]
+    public void CompilerParseHttpRequest_IncludesBody()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=compiler.parseHttpRequest) { Lit#s1(value=\"POST /submit HTTP/1.1\\r\\nContent-Type: application/json\\r\\n\\r\\n{\\\"name\\\":\\\"Ada\\\"}\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("compiler");
+        var interpreter = new AosInterpreter();
+        var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+        Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+        var req = value.AsNode();
+        Assert.That(req.Kind, Is.EqualTo("HttpRequest"));
+        Assert.That(req.Children.Count, Is.EqualTo(3));
+        Assert.That(req.Children[2].Kind, Is.EqualTo("Lit"));
+        Assert.That(req.Children[2].Attrs["value"].AsString(), Is.EqualTo("{\"name\":\"Ada\"}"));
+    }
+
+    [Test]
+    public void CompilerParseHttpBodyForm_ParsesDeterministically()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=compiler.parseHttpBodyForm) { Lit#s1(value=\"city=Fort%20Worth&name=Ada+Lovelace\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("compiler");
+        var interpreter = new AosInterpreter();
+        var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+        Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+        var map = value.AsNode();
+        Assert.That(map.Kind, Is.EqualTo("Map"));
+        Assert.That(map.Children.Count, Is.EqualTo(2));
+        Assert.That(map.Children[0].Attrs["key"].AsString(), Is.EqualTo("city"));
+        Assert.That(map.Children[0].Children[0].Attrs["value"].AsString(), Is.EqualTo("Fort Worth"));
+        Assert.That(map.Children[1].Attrs["key"].AsString(), Is.EqualTo("name"));
+        Assert.That(map.Children[1].Children[0].Attrs["value"].AsString(), Is.EqualTo("Ada Lovelace"));
+    }
+
+    [Test]
+    public void CompilerParseHttpBodyJson_ReturnsMapForValidJson_AndErrForInvalid()
+    {
+        var validParse = Parse("Program#p1 { Call#c1(target=compiler.parseHttpBodyJson) { Lit#s1(value=\"{\\\"city\\\":\\\"Fort Worth\\\",\\\"ok\\\":true,\\\"count\\\":7}\") } }");
+        Assert.That(validParse.Diagnostics, Is.Empty);
+
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("compiler");
+        var interpreter = new AosInterpreter();
+        var validValue = interpreter.EvaluateProgram(validParse.Root!, runtime);
+        Assert.That(validValue.Kind, Is.EqualTo(AosValueKind.Node));
+        var map = validValue.AsNode();
+        Assert.That(map.Kind, Is.EqualTo("Map"));
+        Assert.That(map.Children.Count, Is.EqualTo(3));
+
+        var invalidParse = Parse("Program#p2 { Call#c2(target=compiler.parseHttpBodyJson) { Lit#s2(value=\"{\\\"city\\\":}\") } }");
+        Assert.That(invalidParse.Diagnostics, Is.Empty);
+        var invalidValue = interpreter.EvaluateProgram(invalidParse.Root!, runtime);
+        Assert.That(invalidValue.Kind, Is.EqualTo(AosValueKind.Node));
+        var err = invalidValue.AsNode();
+        Assert.That(err.Kind, Is.EqualTo("Err"));
+        Assert.That(err.Attrs["code"].AsString(), Is.EqualTo("PARHTTP001"));
     }
 
     [Test]
