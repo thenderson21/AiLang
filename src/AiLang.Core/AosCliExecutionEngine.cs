@@ -504,7 +504,20 @@ public static class AosCliExecutionEngine
         errMessage = string.Empty;
         errNodeId = "unknown";
 
-        var source = File.ReadAllText(path);
+        if (!TryResolveExecutionSource(
+                path,
+                out var sourcePath,
+                out var moduleBaseDir,
+                out var entryExportOverride,
+                out var resolvedFromManifest,
+                out errCode,
+                out errMessage,
+                out errNodeId))
+        {
+            return false;
+        }
+
+        var source = File.ReadAllText(sourcePath);
         var parse = Parse(source);
         if (parse.Root is null || parse.Diagnostics.Count > 0)
         {
@@ -523,18 +536,27 @@ public static class AosCliExecutionEngine
             return false;
         }
 
+        var executionProgram = resolvedFromManifest
+            ? BuildManifestExecutionProgram(parse.Root, entryExportOverride)
+            : parse.Root;
+
         runtime = new AosRuntime();
         runtime.Permissions.Add("console");
         runtime.Permissions.Add("io");
         runtime.Permissions.Add("compiler");
         runtime.Permissions.Add("sys");
-        runtime.ModuleBaseDir = Path.GetDirectoryName(Path.GetFullPath(path)) ?? Directory.GetCurrentDirectory();
+        runtime.ModuleBaseDir = moduleBaseDir;
         runtime.TraceEnabled = false;
         runtime.Env["argv"] = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(argv));
         runtime.ReadOnlyBindings.Add("argv");
+        if (!string.IsNullOrEmpty(entryExportOverride))
+        {
+            runtime.Env["__entryExport"] = AosValue.FromString(entryExportOverride);
+            runtime.ReadOnlyBindings.Add("__entryExport");
+        }
         runtime.Env["__vm_mode"] = AosValue.FromString(vmMode);
         runtime.ReadOnlyBindings.Add("__vm_mode");
-        runtime.Env["__program"] = AosValue.FromNode(parse.Root);
+        runtime.Env["__program"] = AosValue.FromNode(executionProgram);
         runtime.ReadOnlyBindings.Add("__program");
         var bootstrapInterpreter = new AosInterpreter();
         AosStandardLibraryLoader.EnsureLoaded(runtime, bootstrapInterpreter);
@@ -546,7 +568,7 @@ public static class AosCliExecutionEngine
         };
 
         var validator = new AosValidator();
-        var validation = validator.Validate(parse.Root, envTypes, runtime.Permissions, runStructural: false);
+        var validation = validator.Validate(executionProgram, envTypes, runtime.Permissions, runStructural: false);
         if (validation.Diagnostics.Count > 0)
         {
             var diagnostic = validation.Diagnostics[0];
@@ -558,12 +580,12 @@ public static class AosCliExecutionEngine
 
         var shouldEvaluateProgram = evaluateProgram ||
                                     (string.Equals(vmMode, "bytecode", StringComparison.Ordinal) &&
-                                     HasNamedExport(parse.Root, "init") &&
-                                     HasNamedExport(parse.Root, "update"));
+                                     HasNamedExport(executionProgram, "init") &&
+                                     HasNamedExport(executionProgram, "update"));
 
         if (shouldEvaluateProgram)
         {
-            var initResult = bootstrapInterpreter.EvaluateProgram(parse.Root, runtime);
+            var initResult = bootstrapInterpreter.EvaluateProgram(executionProgram, runtime);
             if (IsErrNode(initResult, out var errNode))
             {
                 errCode = errNode!.Attrs.TryGetValue("code", out var codeAttr) && codeAttr.Kind == AosAttrKind.Identifier ? codeAttr.AsString() : "RUN001";
@@ -575,8 +597,183 @@ public static class AosCliExecutionEngine
             runtime.ReadOnlyBindings.Add("__program_result");
         }
 
-        program = parse.Root;
+        program = executionProgram;
         return true;
+    }
+
+    private static bool TryResolveExecutionSource(
+        string path,
+        out string sourcePath,
+        out string moduleBaseDir,
+        out string entryExportOverride,
+        out bool resolvedFromManifest,
+        out string errCode,
+        out string errMessage,
+        out string errNodeId)
+    {
+        sourcePath = path;
+        moduleBaseDir = Path.GetDirectoryName(Path.GetFullPath(path)) ?? Directory.GetCurrentDirectory();
+        entryExportOverride = string.Empty;
+        resolvedFromManifest = false;
+        errCode = string.Empty;
+        errMessage = string.Empty;
+        errNodeId = "unknown";
+
+        if (!path.EndsWith(".aiproj", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (!HostFileSystem.FileExists(path))
+        {
+            errCode = "RUN002";
+            errMessage = "project.aiproj not found.";
+            errNodeId = "project";
+            return false;
+        }
+
+        AosParseResult parse;
+        try
+        {
+            parse = AosParsing.ParseFile(path);
+        }
+        catch (Exception ex)
+        {
+            errCode = "RUN002";
+            errMessage = $"Failed to read project manifest: {ex.Message}";
+            errNodeId = "project";
+            return false;
+        }
+
+        if (parse.Root is null || parse.Diagnostics.Count > 0)
+        {
+            var diagnostic = parse.Diagnostics.FirstOrDefault() ?? new AosDiagnostic("PAR000", "Parse failed.", "project", null);
+            errCode = diagnostic.Code;
+            errMessage = diagnostic.Message;
+            errNodeId = diagnostic.NodeId ?? "project";
+            return false;
+        }
+
+        if (!string.Equals(parse.Root.Kind, "Program", StringComparison.Ordinal))
+        {
+            errCode = "RUN002";
+            errMessage = "project.aiproj must contain Program root.";
+            errNodeId = parse.Root.Id;
+            return false;
+        }
+
+        var projectNodes = parse.Root.Children.Where(node => string.Equals(node.Kind, "Project", StringComparison.Ordinal)).ToList();
+        if (projectNodes.Count != 1)
+        {
+            errCode = "RUN002";
+            errMessage = "project.aiproj must contain Program with one Project child.";
+            errNodeId = parse.Root.Id;
+            return false;
+        }
+
+        var validator = new AosValidator();
+        var validation = validator.Validate(parse.Root, null, new HashSet<string>(StringComparer.Ordinal), runStructural: false);
+        if (validation.Diagnostics.Count > 0)
+        {
+            var diagnostic = validation.Diagnostics[0];
+            errCode = diagnostic.Code;
+            errMessage = diagnostic.Message;
+            errNodeId = diagnostic.NodeId ?? "project";
+            return false;
+        }
+
+        var project = projectNodes[0];
+        if (!project.Attrs.TryGetValue("entryFile", out var entryFileAttr) || entryFileAttr.Kind != AosAttrKind.String)
+        {
+            errCode = "RUN002";
+            errMessage = "Project entryFile must be string.";
+            errNodeId = project.Id;
+            return false;
+        }
+        if (!project.Attrs.TryGetValue("entryExport", out var entryExportAttr) || entryExportAttr.Kind != AosAttrKind.String)
+        {
+            errCode = "RUN002";
+            errMessage = "Project entryExport must be string.";
+            errNodeId = project.Id;
+            return false;
+        }
+
+        var entryFile = entryFileAttr.AsString();
+        moduleBaseDir = Path.GetDirectoryName(Path.GetFullPath(path)) ?? Directory.GetCurrentDirectory();
+        sourcePath = Path.GetFullPath(Path.Combine(moduleBaseDir, entryFile));
+        if (!HostFileSystem.FileExists(sourcePath))
+        {
+            errCode = "RUN002";
+            errMessage = $"Entry file not found: {entryFile}";
+            errNodeId = project.Id;
+            return false;
+        }
+
+        entryExportOverride = entryExportAttr.AsString();
+        resolvedFromManifest = true;
+        return true;
+    }
+
+    private static AosNode BuildManifestExecutionProgram(AosNode sourceProgram, string entryExport)
+    {
+        var callId = NextSyntheticId(sourceProgram, "run_manifest_entry_call");
+        var argsId = NextSyntheticId(sourceProgram, "run_manifest_entry_args");
+        var children = new List<AosNode>(sourceProgram.Children.Count + 1);
+        children.AddRange(sourceProgram.Children);
+        children.Add(new AosNode(
+            "Call",
+            callId,
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+            {
+                ["target"] = new AosAttrValue(AosAttrKind.Identifier, entryExport)
+            },
+            new List<AosNode>
+            {
+                new AosNode(
+                    "Var",
+                    argsId,
+                    new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                    {
+                        ["name"] = new AosAttrValue(AosAttrKind.Identifier, "argv")
+                    },
+                    new List<AosNode>(),
+                    sourceProgram.Span)
+            },
+            sourceProgram.Span));
+
+        return new AosNode(
+            "Program",
+            sourceProgram.Id,
+            sourceProgram.Attrs,
+            children,
+            sourceProgram.Span);
+    }
+
+    private static string NextSyntheticId(AosNode program, string baseId)
+    {
+        var used = new HashSet<string>(StringComparer.Ordinal);
+        CollectIds(program, used);
+        if (!used.Contains(baseId))
+        {
+            return baseId;
+        }
+
+        var suffix = 1;
+        while (used.Contains($"{baseId}_{suffix}"))
+        {
+            suffix++;
+        }
+
+        return $"{baseId}_{suffix}";
+    }
+
+    private static void CollectIds(AosNode node, HashSet<string> used)
+    {
+        used.Add(node.Id);
+        foreach (var child in node.Children)
+        {
+            CollectIds(child, used);
+        }
     }
 
     private static bool HasNamedExport(AosNode program, string exportName)
