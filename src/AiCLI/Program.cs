@@ -53,6 +53,14 @@ static int RunCli(string[] args)
         return 1;
     }
 
+    if (filteredArgs.Length == 1 &&
+        (string.Equals(filteredArgs[0], "--version", StringComparison.Ordinal) ||
+         string.Equals(filteredArgs[0], "version", StringComparison.Ordinal)))
+    {
+        Console.WriteLine(CliVersionInfo.BuildLine(InAosDevMode()));
+        return 0;
+    }
+
     switch (filteredArgs[0])
     {
         case "repl":
@@ -108,11 +116,11 @@ static void PrintUsage()
 {
     if (InAosDevMode())
     {
-        Console.WriteLine("Usage: airun repl | airun run <path.aos> | airun serve <path.aos> [--port <n>] [--tls-cert <path>] [--tls-key <path>] [--vm=bytecode|ast] | airun bench [--iterations <n>] [--human]");
+        Console.WriteLine("Usage: airun --version | airun repl | airun run <path.aos> | airun serve <path.aos> [--port <n>] [--tls-cert <path>] [--tls-key <path>] [--vm=bytecode|ast] | airun bench [--iterations <n>] [--human]");
         return;
     }
 
-    Console.WriteLine("Usage: airun <embedded-binary> [args...]");
+    Console.WriteLine("Usage: airun --version | airun <embedded-binary> [args...]");
 }
 
 static bool InAosDevMode()

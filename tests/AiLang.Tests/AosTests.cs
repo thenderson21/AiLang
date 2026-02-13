@@ -1,4 +1,5 @@
 using AiLang.Core;
+using AiCLI;
 using AiVM.Core;
 using System.Diagnostics;
 using System.Globalization;
@@ -436,7 +437,7 @@ public class AosTests
     [Test]
     public void CompilerParseHttpRequest_DecodesQueryValues()
     {
-        var parse = Parse("Program#p1 { Call#c1(target=compiler.parseHttpRequest) { Lit#s1(value=\"GET /weather?city=Fort%20Worth&name=Ada+Lovelace HTTP/1.1\\r\\n\\r\\n\") } }");
+        var parse = Parse("Program#p1 { Call#c1(target=compiler.parseHttpRequest) { Lit#s1(value=\"GET /weather?city=Fort%20Worth&name=Ada+Lovelace&mark=%E2%9C%93&metro=S%C3%A3o+Paulo HTTP/1.1\\r\\n\\r\\n\") } }");
         Assert.That(parse.Diagnostics, Is.Empty);
 
         var runtime = new AosRuntime();
@@ -452,6 +453,10 @@ public class AosTests
         Assert.That(query.Children[0].Children[0].Attrs["value"].AsString(), Is.EqualTo("Fort Worth"));
         Assert.That(query.Children[1].Attrs["key"].AsString(), Is.EqualTo("name"));
         Assert.That(query.Children[1].Children[0].Attrs["value"].AsString(), Is.EqualTo("Ada Lovelace"));
+        Assert.That(query.Children[2].Attrs["key"].AsString(), Is.EqualTo("mark"));
+        Assert.That(query.Children[2].Children[0].Attrs["value"].AsString(), Is.EqualTo("✓"));
+        Assert.That(query.Children[3].Attrs["key"].AsString(), Is.EqualTo("metro"));
+        Assert.That(query.Children[3].Children[0].Attrs["value"].AsString(), Is.EqualTo("São Paulo"));
     }
 
     [Test]
@@ -884,6 +889,23 @@ public class AosTests
         Assert.That(parsed.Root, Is.Not.Null);
         Assert.That(parsed.Root!.Kind, Is.EqualTo("Benchmark"));
         Assert.That(parsed.Root.Children.Count, Is.EqualTo(5));
+    }
+
+    [Test]
+    public void Cli_Version_PrintsDeterministicMetadataLine()
+    {
+        var devLine = CliVersionInfo.BuildLine(devMode: true);
+        var prodLine = CliVersionInfo.BuildLine(devMode: false);
+
+        Assert.That(devLine.StartsWith("airun version=", StringComparison.Ordinal), Is.True);
+        Assert.That(devLine.Contains(" aibc=1 ", StringComparison.Ordinal), Is.True);
+        Assert.That(devLine.Contains(" mode=dev ", StringComparison.Ordinal), Is.True);
+        Assert.That(devLine.Contains(" commit=", StringComparison.Ordinal), Is.True);
+
+        Assert.That(prodLine.StartsWith("airun version=", StringComparison.Ordinal), Is.True);
+        Assert.That(prodLine.Contains(" aibc=1 ", StringComparison.Ordinal), Is.True);
+        Assert.That(prodLine.Contains(" mode=prod ", StringComparison.Ordinal), Is.True);
+        Assert.That(prodLine.Contains(" commit=", StringComparison.Ordinal), Is.True);
     }
 
     private static AosParseResult Parse(string source)

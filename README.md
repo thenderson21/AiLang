@@ -38,6 +38,18 @@ Use the repo-local launcher:
 ./tools/airun repl
 ```
 
+Show runtime/build metadata:
+
+```bash
+./tools/airun --version
+```
+
+Output format:
+
+```text
+airun version=<semver> aibc=1 mode=<dev|prod> commit=<hash-or-unknown>
+```
+
 Run program execution uses the AiBC1 VM by default:
 
 ```bash

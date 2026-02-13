@@ -48,6 +48,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\AiCLI\AiCLI.csproj" />
     <ProjectReference Include="..\..\src\AiLang.Core\AiLang.Core.csproj" />
   </ItemGroup>
 
