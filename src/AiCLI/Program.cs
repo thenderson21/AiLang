@@ -35,14 +35,6 @@ static int RunCli(string[] args)
     }
 
     if (filteredArgs.Length == 1 &&
-        (string.Equals(filteredArgs[0], "--help", StringComparison.Ordinal) ||
-         string.Equals(filteredArgs[0], "help", StringComparison.Ordinal)))
-    {
-        Console.WriteLine(CliHelpText.Build(InAosDevMode()));
-        return 0;
-    }
-
-    if (filteredArgs.Length == 1 &&
         (string.Equals(filteredArgs[0], "--version", StringComparison.Ordinal) ||
          string.Equals(filteredArgs[0], "version", StringComparison.Ordinal)))
     {
@@ -67,6 +59,14 @@ static int RunCli(string[] args)
     {
         PrintUsage();
         return 1;
+    }
+
+    if (filteredArgs.Length == 1 &&
+        (string.Equals(filteredArgs[0], "--help", StringComparison.Ordinal) ||
+         string.Equals(filteredArgs[0], "help", StringComparison.Ordinal)))
+    {
+        Console.WriteLine(CliHelpText.Build(InAosDevMode()));
+        return 0;
     }
 
     switch (filteredArgs[0])
