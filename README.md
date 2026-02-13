@@ -62,6 +62,12 @@ Run program execution uses the AiBC1 VM by default:
 ./tools/airun run examples/hello.aos
 ```
 
+Run from project manifest:
+
+```bash
+./tools/airun run samples/cli-fetch/project.aiproj
+```
+
 Force AST interpreter mode for debugging only:
 
 ```bash
