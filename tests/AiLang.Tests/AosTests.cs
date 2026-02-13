@@ -910,6 +910,25 @@ public class AosTests
         Assert.That(prodLine.Contains(" commit=", StringComparison.Ordinal), Is.True);
     }
 
+    [Test]
+    public void Cli_HelpText_ContainsCommandSectionsAndExamples()
+    {
+        var help = CliHelpText.Build(devMode: true);
+
+        Assert.That(help.Contains("Commands:", StringComparison.Ordinal), Is.True);
+        Assert.That(help.Contains("run <path.aos> [args...]", StringComparison.Ordinal), Is.True);
+        Assert.That(help.Contains("Example: airun run examples/hello.aos", StringComparison.Ordinal), Is.True);
+        Assert.That(help.Contains("serve <path.aos>", StringComparison.Ordinal), Is.True);
+        Assert.That(help.Contains("--vm=bytecode|ast", StringComparison.Ordinal), Is.True);
+    }
+
+    [Test]
+    public void Cli_HelpText_UnknownCommand_ReferencesHelp()
+    {
+        var message = CliHelpText.BuildUnknownCommand("oops");
+        Assert.That(message, Is.EqualTo("Unknown command: oops. See airun --help."));
+    }
+
     private static AosParseResult Parse(string source)
     {
         var tokenizer = new AosTokenizer(source);

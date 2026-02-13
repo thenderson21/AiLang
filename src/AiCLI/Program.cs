@@ -35,6 +35,14 @@ static int RunCli(string[] args)
     }
 
     if (filteredArgs.Length == 1 &&
+        (string.Equals(filteredArgs[0], "--help", StringComparison.Ordinal) ||
+         string.Equals(filteredArgs[0], "help", StringComparison.Ordinal)))
+    {
+        Console.WriteLine(CliHelpText.Build(InAosDevMode()));
+        return 0;
+    }
+
+    if (filteredArgs.Length == 1 &&
         (string.Equals(filteredArgs[0], "--version", StringComparison.Ordinal) ||
          string.Equals(filteredArgs[0], "version", StringComparison.Ordinal)))
     {
@@ -107,6 +115,7 @@ static int RunCli(string[] args)
             }
             return AosCliExecutionEngine.RunBench(filteredArgs.Skip(1).ToArray(), Console.WriteLine);
         default:
+            Console.WriteLine(CliHelpText.BuildUnknownCommand(filteredArgs[0]));
             PrintUsage();
             return 1;
     }
@@ -114,13 +123,7 @@ static int RunCli(string[] args)
 
 static void PrintUsage()
 {
-    if (InAosDevMode())
-    {
-        Console.WriteLine("Usage: airun --version | airun repl | airun run <path.aos> | airun serve <path.aos> [--port <n>] [--tls-cert <path>] [--tls-key <path>] [--vm=bytecode|ast] | airun bench [--iterations <n>] [--human]");
-        return;
-    }
-
-    Console.WriteLine("Usage: airun --version | airun <embedded-binary> [args...]");
+    Console.WriteLine(CliHelpText.Build(InAosDevMode()));
 }
 
 static bool InAosDevMode()

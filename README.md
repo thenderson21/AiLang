@@ -44,6 +44,12 @@ Show runtime/build metadata:
 ./tools/airun --version
 ```
 
+Show command help with examples:
+
+```bash
+./tools/airun --help
+```
+
 Output format:
 
 ```text
