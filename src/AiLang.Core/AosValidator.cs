@@ -970,8 +970,7 @@ public sealed class AosValidator
                         if (parse.Root is not null && parse.Diagnostics.Count == 0 && parse.Root.Kind == "Program")
                         {
                             var importedDir = Path.GetDirectoryName(fullPath) ?? moduleBaseDir;
-                            PredeclareFunctions(parse.Root, env, importedDir, loading);
-                            PredeclareImportedExports(parse.Root, env);
+                            PredeclareImportedExports(parse.Root, importedDir, env, loading);
                         }
                     }
                     catch
@@ -988,32 +987,71 @@ public sealed class AosValidator
         }
     }
 
-    private static void PredeclareImportedExports(AosNode program, Dictionary<string, AosValueKind> env)
+    private static void PredeclareImportedExports(
+        AosNode program,
+        string moduleBaseDir,
+        Dictionary<string, AosValueKind> env,
+        HashSet<string> loading)
     {
-        var lets = new Dictionary<string, AosValueKind>(StringComparer.Ordinal);
+        var visible = new Dictionary<string, AosValueKind>(StringComparer.Ordinal);
         foreach (var child in program.Children)
         {
-            if (child.Kind != "Let" || !child.Attrs.TryGetValue("name", out var nameAttr) || nameAttr.Kind != AosAttrKind.Identifier)
+            if (child.Kind == "Import" &&
+                child.Attrs.TryGetValue("path", out var pathAttr) &&
+                pathAttr.Kind == AosAttrKind.String)
             {
+                try
+                {
+                    var relativePath = pathAttr.AsString();
+                    if (Path.IsPathRooted(relativePath))
+                    {
+                        continue;
+                    }
+
+                    var fullPath = Path.GetFullPath(Path.Combine(moduleBaseDir, relativePath));
+                    if (!loading.Add(fullPath) || !File.Exists(fullPath))
+                    {
+                        continue;
+                    }
+
+                    var parse = AosParsing.ParseFile(fullPath);
+                    if (parse.Root is null || parse.Diagnostics.Count > 0 || parse.Root.Kind != "Program")
+                    {
+                        continue;
+                    }
+
+                    var importedDir = Path.GetDirectoryName(fullPath) ?? moduleBaseDir;
+                    var nestedExports = new Dictionary<string, AosValueKind>(StringComparer.Ordinal);
+                    PredeclareImportedExports(parse.Root, importedDir, nestedExports, loading);
+                    foreach (var kv in nestedExports)
+                    {
+                        visible[kv.Key] = kv.Value;
+                    }
+                }
+                catch
+                {
+                    // Keep import predeclaration best-effort; validation emits diagnostics in normal pass.
+                }
+
                 continue;
             }
 
-            lets[nameAttr.AsString()] = child.Children.Count == 1 && child.Children[0].Kind == "Fn"
-                ? AosValueKind.Function
-                : AosValueKind.Unknown;
-        }
-
-        foreach (var child in program.Children)
-        {
-            if (child.Kind != "Export" || !child.Attrs.TryGetValue("name", out var nameAttr) || nameAttr.Kind != AosAttrKind.Identifier)
+            if (child.Kind == "Let" &&
+                child.Attrs.TryGetValue("name", out var letNameAttr) &&
+                letNameAttr.Kind == AosAttrKind.Identifier)
             {
+                visible[letNameAttr.AsString()] = child.Children.Count == 1 && child.Children[0].Kind == "Fn"
+                    ? AosValueKind.Function
+                    : AosValueKind.Unknown;
                 continue;
             }
 
-            var exportName = nameAttr.AsString();
-            if (lets.TryGetValue(exportName, out var exportType))
+            if (child.Kind == "Export" &&
+                child.Attrs.TryGetValue("name", out var exportNameAttr) &&
+                exportNameAttr.Kind == AosAttrKind.Identifier &&
+                visible.TryGetValue(exportNameAttr.AsString(), out var exportType))
             {
-                env[exportName] = exportType;
+                env[exportNameAttr.AsString()] = exportType;
             }
         }
     }

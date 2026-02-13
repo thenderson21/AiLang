@@ -674,6 +674,50 @@ public class AosTests
     }
 
     [Test]
+    public void Validator_ImportPredeclare_DoesNotExposePrivateFunctions()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("ailang-import-private-");
+        try
+        {
+            var depPath = Path.Combine(tempDir.FullName, "dep.aos");
+            File.WriteAllText(depPath, "Program#dp { Let#d1(name=privateFn) { Fn#d2(params=_) { Block#d3 { Return#d4 { Lit#d5(value=1) } } } } Let#d6(name=publicFn) { Fn#d7(params=_) { Block#d8 { Return#d9 { Lit#d10(value=2) } } } } Export#d11(name=publicFn) }");
+
+            var main = Parse("Program#mp { Import#mi(path=\"dep.aos\") Call#mc(target=privateFn) { Lit#mv(value=0) } }").Root!;
+            var validator = new AosValidator();
+            var permissions = new HashSet<string>(StringComparer.Ordinal) { "compiler", "sys", "io", "console" };
+            var diagnostics = validator.Validate(main, null, permissions, runStructural: false, moduleBaseDir: tempDir.FullName).Diagnostics;
+
+            Assert.That(diagnostics.Any(d => d.Code == "VAL036"), Is.True);
+        }
+        finally
+        {
+            tempDir.Delete(true);
+        }
+    }
+
+    [Test]
+    public void Validator_ImportPredeclare_RespectsExportOrder()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("ailang-import-order-");
+        try
+        {
+            var depPath = Path.Combine(tempDir.FullName, "dep.aos");
+            File.WriteAllText(depPath, "Program#dp { Export#de(name=lateFn) Let#dl(name=lateFn) { Fn#df(params=_) { Block#db { Return#dr { Lit#dv(value=1) } } } } }");
+
+            var main = Parse("Program#mp { Import#mi(path=\"dep.aos\") Call#mc(target=lateFn) { Lit#mv(value=0) } }").Root!;
+            var validator = new AosValidator();
+            var permissions = new HashSet<string>(StringComparer.Ordinal) { "compiler", "sys", "io", "console" };
+            var diagnostics = validator.Validate(main, null, permissions, runStructural: false, moduleBaseDir: tempDir.FullName).Diagnostics;
+
+            Assert.That(diagnostics.Any(d => d.Code == "VAL036"), Is.True);
+        }
+        finally
+        {
+            tempDir.Delete(true);
+        }
+    }
+
+    [Test]
     public void Evaluator_ReportsCircularImport()
     {
         var tempDir = Directory.CreateTempSubdirectory("ailang-import-cycle-");
