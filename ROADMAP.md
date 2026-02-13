@@ -236,6 +236,43 @@ Focus on:
 
 ⸻
 
+## Syscall Capability Audit v1 (Execution Track)
+
+Objective: Establish the minimal syscall capability surface required for AI-authored libraries to support CLI, server, and GUI applications.
+
+Scope:
+	•	Capability-layer primitives only (no standard library implementation in this track)
+	•	No host-level lifecycle or business semantics
+	•	No architectural bypass of deterministic VM/syscall boundaries
+
+Required capability groups:
+	•	console
+	•	process
+	•	file
+	•	net
+	•	time
+	•	crypto (minimal)
+	•	ui (window/frame/event)
+
+Execution sequence:
+	1. Spec and permission model update for capability-group syscall gating
+	2. Validator + syscall contract updates for new primitive signatures
+	3. Host adapter implementation per group with stable error contracts
+	4. Golden and integration coverage for deterministic behavior under capability calls
+
+Definition of done for this track:
+	•	Capability surface is sufficient for library-level CLI runtime support
+	•	Capability surface is sufficient for library-level TCP/HTTP/WebSocket support
+	•	Capability surface is sufficient for basic desktop GUI + event loop support
+	•	No stdlib/framework semantics moved into host layer
+
+Related planning docs:
+	•	`Docs/SyscallAudit.md`
+	•	`Docs/SyscallRequiredSpec_v1.md`
+	•	`Docs/SyscallCoverageSummary.md`
+
+⸻
+
 Immediate Next Milestone
 
 Choose ONE and execute fully:
