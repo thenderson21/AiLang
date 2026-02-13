@@ -17,6 +17,7 @@ public sealed partial class AosInterpreter
         private readonly Dictionary<string, int> _constantIndex = new(StringComparer.Ordinal);
         private readonly List<AosValue> _constants = new();
         private readonly Dictionary<string, AosNode> _functions = new(StringComparer.Ordinal);
+        private readonly HashSet<string> _asyncFunctions = new(StringComparer.Ordinal);
         private readonly List<string> _functionOrder = new();
         private int _instructionId;
 
@@ -46,6 +47,7 @@ public sealed partial class AosInterpreter
 
         public void DiscoverFunctions()
         {
+            _asyncFunctions.Clear();
             foreach (var child in Program.Children)
             {
                 if (child.Kind != "Let")
@@ -62,6 +64,12 @@ public sealed partial class AosInterpreter
                 }
                 var name = nameAttr.AsString();
                 _functions[name] = child.Children[0];
+                if (child.Children[0].Attrs.TryGetValue("async", out var asyncAttr) &&
+                    asyncAttr.Kind == AosAttrKind.Bool &&
+                    asyncAttr.AsBool())
+                {
+                    _asyncFunctions.Add(name);
+                }
             }
 
             _functionOrder.Clear();
@@ -78,6 +86,8 @@ public sealed partial class AosInterpreter
         {
             return _functions.TryGetValue(name, out var fn) ? fn : null;
         }
+
+        public bool IsAsyncFunction(string name) => _asyncFunctions.Contains(name);
 
         public AosNode BuildInstruction(string op, int? a = null, int? b = null, string? s = null)
         {
@@ -675,12 +685,43 @@ public sealed partial class AosInterpreter
                     }
                     if (fnIndex >= 0)
                     {
-                        state.Emit("CALL", fnIndex, node.Children.Count);
+                        state.Emit(context.IsAsyncFunction(target) ? "ASYNC_CALL" : "CALL", fnIndex, node.Children.Count);
                     }
                     else
                     {
                         state.Emit("CALL_SYS", node.Children.Count, null, target);
                     }
+                    return;
+                }
+                case "Await":
+                {
+                    if (node.Children.Count != 1)
+                    {
+                        throw new VmRuntimeException("VM001", "Await expects 1 child.", node.Id);
+                    }
+                    CompileExpression(context, state, node.Children[0]);
+                    state.Emit("AWAIT");
+                    return;
+                }
+                case "Par":
+                {
+                    if (node.Children.Count < 2)
+                    {
+                        throw new VmRuntimeException("VM001", "Par requires at least 2 children.", node.Id);
+                    }
+                    state.Emit("PAR_BEGIN", node.Children.Count);
+                    foreach (var child in node.Children)
+                    {
+                        if (TryCompileAsyncParCall(context, state, child))
+                        {
+                            state.Emit("PAR_FORK");
+                            continue;
+                        }
+
+                        CompileExpression(context, state, child);
+                        state.Emit("PAR_FORK");
+                    }
+                    state.Emit("PAR_JOIN", node.Children.Count);
                     return;
                 }
                 case "If":
@@ -757,6 +798,41 @@ public sealed partial class AosInterpreter
                 node.Span);
             var constIndex = context.AddConstant(AosValue.FromNode(template));
             state.Emit("MAKE_NODE", constIndex, node.Children.Count);
+        }
+
+        private static bool TryCompileAsyncParCall(VmCompileContext context, VmFunctionCompileState state, AosNode node)
+        {
+            if (node.Kind != "Call" ||
+                !node.Attrs.TryGetValue("target", out var targetAttr) ||
+                targetAttr.Kind != AosAttrKind.Identifier)
+            {
+                return false;
+            }
+
+            var target = targetAttr.AsString();
+            var fnIndex = -1;
+            for (var i = 0; i < context.FunctionOrder.Count; i++)
+            {
+                if (string.Equals(context.FunctionOrder[i], target, StringComparison.Ordinal))
+                {
+                    fnIndex = i;
+                    break;
+                }
+            }
+
+            if (fnIndex >= 0)
+            {
+                // In-process user function calls remain synchronous in Par branch compilation.
+                return false;
+            }
+
+            foreach (var child in node.Children)
+            {
+                CompileExpression(context, state, child);
+            }
+
+            state.Emit("ASYNC_CALL_SYS", node.Children.Count, null, target);
+            return true;
         }
     }
 

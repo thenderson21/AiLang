@@ -632,6 +632,137 @@ public class AosTests
     }
 
     [Test]
+    public void VmRunBytecode_AsyncCallAndAwait_ReturnsResolvedValue()
+    {
+        var source = "Program#p1 { Let#l1(name=worker) { Fn#f1(params=x async=true) { Block#b1 { Return#r1 { Add#a1 { Var#v1(name=x) Lit#i1(value=1) } } } } } Let#l2(name=start) { Fn#f2(params=argv) { Block#b2 { Let#l3(name=t) { Call#c1(target=worker) { Lit#i2(value=41) } } Return#r2 { Await#aw1 { Var#v2(name=t) } } } } } }";
+        var parse = Parse(source);
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var interpreter = new AosInterpreter();
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("compiler");
+        runtime.Env["__program"] = AosValue.FromNode(parse.Root!);
+
+        var emitCall = Parse("Call#c1(target=compiler.emitBytecode) { Var#v1(name=__program) }").Root!;
+        var bytecodeValue = interpreter.EvaluateExpression(emitCall, runtime);
+        Assert.That(bytecodeValue.Kind, Is.EqualTo(AosValueKind.Node));
+
+        var args = Parse("Block#argv").Root!;
+        var result = interpreter.RunBytecode(bytecodeValue.AsNode(), "start", args, runtime);
+        Assert.That(result.Kind, Is.EqualTo(AosValueKind.Int));
+        Assert.That(result.AsInt(), Is.EqualTo(42));
+    }
+
+    [Test]
+    public void VmRunBytecode_ParJoin_PreservesDeclarationOrder()
+    {
+        var source = "Program#p1 { Let#l1(name=start) { Fn#f1(params=argv) { Block#b1 { Return#r1 { Par#par1 { Lit#s1(value=\"first\") Lit#s2(value=\"second\") } } } } } }";
+        var parse = Parse(source);
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var interpreter = new AosInterpreter();
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("compiler");
+        runtime.Env["__program"] = AosValue.FromNode(parse.Root!);
+
+        var emitCall = Parse("Call#c1(target=compiler.emitBytecode) { Var#v1(name=__program) }").Root!;
+        var bytecodeValue = interpreter.EvaluateExpression(emitCall, runtime);
+        Assert.That(bytecodeValue.Kind, Is.EqualTo(AosValueKind.Node));
+
+        var args = Parse("Block#argv").Root!;
+        var result = interpreter.RunBytecode(bytecodeValue.AsNode(), "start", args, runtime);
+        Assert.That(result.Kind, Is.EqualTo(AosValueKind.Node));
+        var block = result.AsNode();
+        Assert.That(block.Kind, Is.EqualTo("Block"));
+        Assert.That(block.Children.Count, Is.EqualTo(2));
+        Assert.That(block.Children[0].Kind, Is.EqualTo("Lit"));
+        Assert.That(block.Children[0].Attrs["value"].AsString(), Is.EqualTo("first"));
+        Assert.That(block.Children[1].Kind, Is.EqualTo("Lit"));
+        Assert.That(block.Children[1].Attrs["value"].AsString(), Is.EqualTo("second"));
+    }
+
+    [Test]
+    public void VmRunBytecode_ParAsyncSyscalls_MergesInDeclarationOrder()
+    {
+        var source = "Program#p1 { Let#l1(name=start) { Fn#f1(params=argv) { Block#b1 { Return#r1 { Par#par1 { Call#c1(target=sys.str_utf8ByteCount) { Lit#s1(value=\"abc\") } Call#c2(target=sys.str_utf8ByteCount) { Lit#s2(value=\"hello\") } } } } } } }";
+        var parse = Parse(source);
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var interpreter = new AosInterpreter();
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("compiler");
+        runtime.Permissions.Add("sys");
+        runtime.Env["__program"] = AosValue.FromNode(parse.Root!);
+
+        var emitCall = Parse("Call#c1(target=compiler.emitBytecode) { Var#v1(name=__program) }").Root!;
+        var bytecodeValue = interpreter.EvaluateExpression(emitCall, runtime);
+        Assert.That(bytecodeValue.Kind, Is.EqualTo(AosValueKind.Node));
+
+        var args = Parse("Block#argv").Root!;
+        var result = interpreter.RunBytecode(bytecodeValue.AsNode(), "start", args, runtime);
+        Assert.That(result.Kind, Is.EqualTo(AosValueKind.Node));
+        var block = result.AsNode();
+        Assert.That(block.Kind, Is.EqualTo("Block"));
+        Assert.That(block.Children.Count, Is.EqualTo(2));
+        Assert.That(block.Children[0].Kind, Is.EqualTo("Lit"));
+        Assert.That(block.Children[0].Attrs["value"].AsInt(), Is.EqualTo(3));
+        Assert.That(block.Children[1].Kind, Is.EqualTo("Lit"));
+        Assert.That(block.Children[1].Attrs["value"].AsInt(), Is.EqualTo(5));
+    }
+
+    [Test]
+    public void VmRunBytecode_ParAsyncSyscalls_UnsupportedTarget_FailsDeterministically()
+    {
+        var source = "Program#p1 { Let#l1(name=start) { Fn#f1(params=argv) { Block#b1 { Return#r1 { Par#par1 { Call#c1(target=sys.unknown) { Lit#s1(value=\"x\") } Call#c2(target=sys.str_utf8ByteCount) { Lit#s2(value=\"ok\") } } } } } } }";
+        var parse = Parse(source);
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var interpreter = new AosInterpreter();
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("compiler");
+        runtime.Permissions.Add("sys");
+        runtime.Env["__program"] = AosValue.FromNode(parse.Root!);
+
+        var emitCall = Parse("Call#c1(target=compiler.emitBytecode) { Var#v1(name=__program) }").Root!;
+        var bytecodeValue = interpreter.EvaluateExpression(emitCall, runtime);
+        Assert.That(bytecodeValue.Kind, Is.EqualTo(AosValueKind.Node));
+
+        var args = Parse("Block#argv").Root!;
+        var result = interpreter.RunBytecode(bytecodeValue.AsNode(), "start", args, runtime);
+        Assert.That(result.Kind, Is.EqualTo(AosValueKind.Node));
+        var err = result.AsNode();
+        Assert.That(err.Kind, Is.EqualTo("Err"));
+        Assert.That(err.Attrs["code"].AsString(), Is.EqualTo("VM001"));
+        Assert.That(err.Attrs["message"].AsString(), Is.EqualTo("Unsupported call target in bytecode mode: sys.unknown."));
+    }
+
+    [Test]
+    public void VmRunBytecode_ParAsyncSyscalls_OutputIsDeterministicAcrossRuns()
+    {
+        var source = "Program#p1 { Let#l1(name=start) { Fn#f1(params=argv) { Block#b1 { Return#r1 { Par#par1 { Call#c1(target=sys.str_utf8ByteCount) { Lit#s1(value=\"abc\") } Call#c2(target=sys.str_utf8ByteCount) { Lit#s2(value=\"abcd\") } } } } } } }";
+        var parse = Parse(source);
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var interpreter = new AosInterpreter();
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("compiler");
+        runtime.Permissions.Add("sys");
+        runtime.Env["__program"] = AosValue.FromNode(parse.Root!);
+
+        var emitCall = Parse("Call#c1(target=compiler.emitBytecode) { Var#v1(name=__program) }").Root!;
+        var bytecodeValue = interpreter.EvaluateExpression(emitCall, runtime);
+        Assert.That(bytecodeValue.Kind, Is.EqualTo(AosValueKind.Node));
+
+        var args = Parse("Block#argv").Root!;
+        var result1 = interpreter.RunBytecode(bytecodeValue.AsNode(), "start", args, runtime);
+        var result2 = interpreter.RunBytecode(bytecodeValue.AsNode(), "start", args, runtime);
+
+        Assert.That(result1.Kind, Is.EqualTo(AosValueKind.Node));
+        Assert.That(result2.Kind, Is.EqualTo(AosValueKind.Node));
+        Assert.That(AosFormatter.Format(result1.AsNode()), Is.EqualTo(AosFormatter.Format(result2.AsNode())));
+    }
+
+    [Test]
     public void Evaluator_ImportsAndMergesExplicitExports()
     {
         var tempDir = Directory.CreateTempSubdirectory("ailang-import-ok-");
