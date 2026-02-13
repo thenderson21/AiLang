@@ -1,0 +1,8 @@
+Program#t1 {
+  Let#t2(name=parsed) { Call#t3(target=compiler.parse) { Call#t4(target=io.readFile) { Lit#t5(value="samples/weather-api/src/app.aos") } } }
+  If#t6 {
+    Eq#t7 { NodeKind#t8 { Var#t9(name=parsed) } Lit#t10(value="Err") }
+    Block#t11 { Call#t12(target=io.print) { Lit#t13(value="fail-weather-api") } }
+    Block#t14 { Call#t15(target=io.print) { Lit#t16(value="ok-weather-api") } }
+  }
+}

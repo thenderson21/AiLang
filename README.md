@@ -115,6 +115,24 @@ Dotnet is only required for `scripts/build-airun.sh`.
 
 See `examples/hello.aos` for a full program using `console.print`, and `examples/golden` for evaluator/fmt/check goldens.
 
+## Sample Apps
+
+Canonical sample projects live in `samples/`:
+
+- `samples/weather-api`: lifecycle HTTP app with `/weather?city=Fort%20Worth`.
+- `samples/weather-site`: lifecycle HTTP app serving `/` HTML using shared weather data logic.
+- `samples/cli-fetch`: CLI-style app that formats and prints weather output.
+
+Note: weather samples now call a live upstream weather endpoint via `sys.http_get`, so runtime internet access is required.
+
+Run samples:
+
+```bash
+./tools/airun run samples/cli-fetch/src/app.aos Fort\ Worth
+./tools/airun serve samples/weather-api/src/app.aos --port 8080
+./tools/airun serve samples/weather-site/src/app.aos --port 8081
+```
+
 Run deterministic benchmark cases:
 
 ```bash
@@ -129,5 +147,10 @@ Normative semantic contracts live in:
 - `SPEC/IL.md`
 - `SPEC/EVAL.md`
 - `SPEC/VALIDATION.md`
+- `SPEC/BYTECODE.md`
+
+Draft proposal (not implemented):
+
+- `SPEC/CONCURRENCY.md`
 
 When semantics change, update these specs and matching goldens together.

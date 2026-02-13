@@ -1,0 +1,11 @@
+Program#std_platform_p1 {
+  Let#std_platform_l1(name=current) {
+    Fn#std_platform_f1(params=_) {
+      Block#std_platform_b1 {
+        Return#std_platform_r1 { Call#std_platform_c1(target=sys.platform) }
+      }
+    }
+  }
+
+  Export#std_platform_e1(name=current)
+}

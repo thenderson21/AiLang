@@ -70,8 +70,8 @@ public sealed partial class AosInterpreter
             {
                 var part = queryParts[i];
                 var eq = part.IndexOf('=');
-                var key = eq >= 0 ? part[..eq] : part;
-                var value = eq >= 0 && eq + 1 < part.Length ? part[(eq + 1)..] : string.Empty;
+                var key = UrlDecodeComponent(eq >= 0 ? part[..eq] : part);
+                var value = UrlDecodeComponent(eq >= 0 && eq + 1 < part.Length ? part[(eq + 1)..] : string.Empty);
                 queryMapChildren.Add(new AosNode(
                     "Field",
                     $"http_query_{i}",
@@ -109,5 +109,72 @@ public sealed partial class AosInterpreter
                 new AosNode("Map", "http_query", new Dictionary<string, AosAttrValue>(StringComparer.Ordinal), queryMapChildren, span)
             },
             span);
+    }
+
+    private static string UrlDecodeComponent(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        var chars = new char[value.Length];
+        var write = 0;
+        for (var i = 0; i < value.Length; i++)
+        {
+            var ch = value[i];
+            if (ch == '+')
+            {
+                chars[write++] = ' ';
+                continue;
+            }
+
+            if (ch == '%' && i + 2 < value.Length && TryParseHexByte(value[i + 1], value[i + 2], out var decoded))
+            {
+                chars[write++] = (char)decoded;
+                i += 2;
+                continue;
+            }
+
+            chars[write++] = ch;
+        }
+
+        return new string(chars, 0, write);
+    }
+
+    private static bool TryParseHexByte(char hi, char lo, out byte value)
+    {
+        value = 0;
+        if (!TryParseHexNibble(hi, out var hiNibble) || !TryParseHexNibble(lo, out var loNibble))
+        {
+            return false;
+        }
+
+        value = (byte)((hiNibble << 4) | loNibble);
+        return true;
+    }
+
+    private static bool TryParseHexNibble(char ch, out int value)
+    {
+        if (ch is >= '0' and <= '9')
+        {
+            value = ch - '0';
+            return true;
+        }
+
+        if (ch is >= 'A' and <= 'F')
+        {
+            value = ch - 'A' + 10;
+            return true;
+        }
+
+        if (ch is >= 'a' and <= 'f')
+        {
+            value = ch - 'a' + 10;
+            return true;
+        }
+
+        value = 0;
+        return false;
     }
 }

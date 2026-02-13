@@ -687,15 +687,27 @@ public sealed partial class AosInterpreter
                     CompileIfExpression(context, state, node);
                     return;
                 case "Block":
-                    foreach (var child in node.Children)
+                    if (node.Children.Count == 1 && !IsStatementOnlyNode(node.Children[0]))
                     {
-                        CompileStatement(context, state, child);
+                        CompileExpression(context, state, node.Children[0]);
                     }
-                    state.Emit("CONST", context.AddConstant(AosValue.Unknown));
+                    else
+                    {
+                        foreach (var child in node.Children)
+                        {
+                            CompileStatement(context, state, child);
+                        }
+                        state.Emit("CONST", context.AddConstant(AosValue.Unknown));
+                    }
                     return;
                 default:
                     throw new VmRuntimeException("VM001", $"Unsupported construct in bytecode mode: {node.Kind}.", node.Id);
             }
+        }
+
+        private static bool IsStatementOnlyNode(AosNode node)
+        {
+            return node.Kind is "Let" or "Return" or "Import" or "Export";
         }
 
         private static void CompileIfExpression(VmCompileContext context, VmFunctionCompileState state, AosNode node)

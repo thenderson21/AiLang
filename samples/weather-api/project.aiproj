@@ -1,0 +1,7 @@
+Program#p1 {
+  Project#proj1(
+    name="weather-api"
+    entryFile="src/app.aos"
+    entryExport="start"
+  )
+}

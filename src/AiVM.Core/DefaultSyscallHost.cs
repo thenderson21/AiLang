@@ -1,14 +1,18 @@
 using System.Net;
+using System.Net.Http;
 using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Runtime.InteropServices;
 
 namespace AiVM.Core;
 
 public class DefaultSyscallHost : ISyscallHost
 {
+    private static readonly HttpClient HttpClient = new();
+
     public virtual void ConsolePrintLine(string text) => Console.WriteLine(text);
 
     public virtual void IoPrint(string text) => Console.WriteLine(text);
@@ -34,6 +38,54 @@ public class DefaultSyscallHost : ISyscallHost
     public virtual bool FsFileExists(string path) => File.Exists(path);
 
     public virtual int StrUtf8ByteCount(string text) => Encoding.UTF8.GetByteCount(text);
+
+    public virtual string HttpGet(string url)
+    {
+        try
+        {
+            var normalizedUrl = url.Replace(" ", "%20", StringComparison.Ordinal);
+            return HttpClient.GetStringAsync(normalizedUrl).GetAwaiter().GetResult();
+        }
+        catch
+        {
+            return string.Empty;
+        }
+    }
+
+    public virtual string Platform()
+    {
+        if (OperatingSystem.IsMacOS())
+        {
+            return "macos";
+        }
+
+        if (OperatingSystem.IsWindows())
+        {
+            return "windows";
+        }
+
+        if (OperatingSystem.IsLinux())
+        {
+            return "linux";
+        }
+
+        return "unknown";
+    }
+
+    public virtual string Architecture()
+    {
+        return RuntimeInformation.OSArchitecture.ToString().ToLowerInvariant();
+    }
+
+    public virtual string OsVersion()
+    {
+        return RuntimeInformation.OSDescription;
+    }
+
+    public virtual string Runtime()
+    {
+        return "airun-dotnet";
+    }
 
     public virtual int NetListen(VmNetworkState state, int port)
     {

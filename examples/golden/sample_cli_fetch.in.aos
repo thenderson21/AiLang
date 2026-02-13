@@ -1,0 +1,8 @@
+Program#v1 {
+  Let#v2(name=parsed) { Call#v3(target=compiler.parse) { Call#v4(target=io.readFile) { Lit#v5(value="samples/cli-fetch/src/app.aos") } } }
+  If#v6 {
+    Eq#v7 { NodeKind#v8 { Var#v9(name=parsed) } Lit#v10(value="Err") }
+    Block#v11 { Call#v12(target=io.print) { Lit#v13(value="fail-cli-fetch") } }
+    Block#v14 { Call#v15(target=io.print) { Lit#v16(value="ok-cli-fetch") } }
+  }
+}

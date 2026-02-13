@@ -69,6 +69,31 @@ public static class VmSyscalls
         return Host.StrUtf8ByteCount(text);
     }
 
+    public static string HttpGet(string url)
+    {
+        return Host.HttpGet(url);
+    }
+
+    public static string Platform()
+    {
+        return Host.Platform();
+    }
+
+    public static string Architecture()
+    {
+        return Host.Architecture();
+    }
+
+    public static string OsVersion()
+    {
+        return Host.OsVersion();
+    }
+
+    public static string Runtime()
+    {
+        return Host.Runtime();
+    }
+
     public static int NetListen(VmNetworkState state, int port)
     {
         return Host.NetListen(state, port);

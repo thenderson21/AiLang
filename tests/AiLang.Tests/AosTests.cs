@@ -18,6 +18,11 @@ public class AosTests
     {
         public string? LastStdoutLine { get; private set; }
         public int IoPrintCount { get; private set; }
+        public string HttpGetResult { get; set; } = string.Empty;
+        public string PlatformResult { get; set; } = "test-os";
+        public string ArchitectureResult { get; set; } = "test-arch";
+        public string OsVersionResult { get; set; } = "test-version";
+        public string RuntimeResult { get; set; } = "test-runtime";
 
         public override void StdoutWriteLine(string text)
         {
@@ -32,6 +37,31 @@ public class AosTests
         public override int StrUtf8ByteCount(string text)
         {
             return 777;
+        }
+
+        public override string HttpGet(string url)
+        {
+            return HttpGetResult;
+        }
+
+        public override string Platform()
+        {
+            return PlatformResult;
+        }
+
+        public override string Architecture()
+        {
+            return ArchitectureResult;
+        }
+
+        public override string OsVersion()
+        {
+            return OsVersionResult;
+        }
+
+        public override string Runtime()
+        {
+            return RuntimeResult;
         }
     }
 
@@ -274,6 +304,157 @@ public class AosTests
     }
 
     [Test]
+    public void VmSyscalls_HttpGet_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { HttpGetResult = "http-ok" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var parse = Parse("Program#p1 { Call#c1(target=sys.http_get) { Lit#s1(value=\"https://example.com\") } }");
+            Assert.That(parse.Diagnostics, Is.Empty);
+
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(value.AsString(), Is.EqualTo("http-ok"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_Platform_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { PlatformResult = "host-platform" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var result = VmSyscalls.Platform();
+            Assert.That(result, Is.EqualTo("host-platform"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_Platform_ReturnsString()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.platform) }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { PlatformResult = "vm-platform" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(value.AsString(), Is.EqualTo("vm-platform"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_SystemInfo_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost
+        {
+            ArchitectureResult = "arm64",
+            OsVersionResult = "test-os-version",
+            RuntimeResult = "airun-test"
+        };
+        try
+        {
+            VmSyscalls.Host = host;
+            Assert.That(VmSyscalls.Architecture(), Is.EqualTo("arm64"));
+            Assert.That(VmSyscalls.OsVersion(), Is.EqualTo("test-os-version"));
+            Assert.That(VmSyscalls.Runtime(), Is.EqualTo("airun-test"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_SystemInfo_ReturnsStrings()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost
+        {
+            ArchitectureResult = "x64",
+            OsVersionResult = "os-v",
+            RuntimeResult = "runtime-v"
+        };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+
+            var arch = Parse("Program#p1 { Call#c1(target=sys.arch) }");
+            var osVersion = Parse("Program#p1 { Call#c2(target=sys.os_version) }");
+            var runtimeName = Parse("Program#p1 { Call#c3(target=sys.runtime) }");
+            Assert.That(arch.Diagnostics, Is.Empty);
+            Assert.That(osVersion.Diagnostics, Is.Empty);
+            Assert.That(runtimeName.Diagnostics, Is.Empty);
+
+            var archValue = interpreter.EvaluateProgram(arch.Root!, runtime);
+            var osVersionValue = interpreter.EvaluateProgram(osVersion.Root!, runtime);
+            var runtimeValue = interpreter.EvaluateProgram(runtimeName.Root!, runtime);
+
+            Assert.That(archValue.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(osVersionValue.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(runtimeValue.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(archValue.AsString(), Is.EqualTo("x64"));
+            Assert.That(osVersionValue.AsString(), Is.EqualTo("os-v"));
+            Assert.That(runtimeValue.AsString(), Is.EqualTo("runtime-v"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void CompilerParseHttpRequest_DecodesQueryValues()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=compiler.parseHttpRequest) { Lit#s1(value=\"GET /weather?city=Fort%20Worth&name=Ada+Lovelace HTTP/1.1\\r\\n\\r\\n\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("compiler");
+        var interpreter = new AosInterpreter();
+        var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+        Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+        var req = value.AsNode();
+        Assert.That(req.Kind, Is.EqualTo("HttpRequest"));
+        var query = req.Children[1];
+        Assert.That(query.Kind, Is.EqualTo("Map"));
+        Assert.That(query.Children[0].Attrs["key"].AsString(), Is.EqualTo("city"));
+        Assert.That(query.Children[0].Children[0].Attrs["value"].AsString(), Is.EqualTo("Fort Worth"));
+        Assert.That(query.Children[1].Attrs["key"].AsString(), Is.EqualTo("name"));
+        Assert.That(query.Children[1].Children[0].Attrs["value"].AsString(), Is.EqualTo("Ada Lovelace"));
+    }
+
+    [Test]
     public void UnknownSysTarget_DoesNotEvaluateArguments()
     {
         var parse = Parse("Program#p1 { Call#c1(target=sys.unknown) { Call#c2(target=io.print) { Lit#s1(value=\"side-effect\") } } }");
@@ -384,6 +565,29 @@ public class AosTests
             step.Attrs.TryGetValue("op", out var opAttr) &&
             opAttr.Kind == AosAttrKind.String &&
             opAttr.AsString() == "RETURN"), Is.True);
+    }
+
+    [Test]
+    public void VmRunBytecode_IfBlockExpression_PreservesBranchValue()
+    {
+        var source = "Program#p1 { Let#l1(name=buildUrl) { Fn#f1(params=_) { Block#b0 { Let#l2(name=city) { If#if1 { Eq#eq1 { Lit#i1(value=1) Lit#i2(value=1) } Block#b1 { Lit#s1(value=\"Fort Worth\") } Block#b2 { Lit#s2(value=\"Else\") } } } Return#r1 { StrConcat#sc1 { Lit#s3(value=\"https://wttr.in/\") Var#v1(name=city) } } } } } }";
+        var parse = Parse(source);
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var interpreter = new AosInterpreter();
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("compiler");
+        var program = parse.Root!;
+        runtime.Env["__program"] = AosValue.FromNode(program);
+
+        var emitCall = Parse("Call#c1(target=compiler.emitBytecode) { Var#v1(name=__program) }").Root!;
+        var bytecodeValue = interpreter.EvaluateExpression(emitCall, runtime);
+        Assert.That(bytecodeValue.Kind, Is.EqualTo(AosValueKind.Node));
+
+        var args = Parse("Block#argv { Lit#a1(value=0) }").Root!;
+        var result = interpreter.RunBytecode(bytecodeValue.AsNode(), "buildUrl", args, runtime);
+        Assert.That(result.Kind, Is.EqualTo(AosValueKind.String));
+        Assert.That(result.AsString(), Is.EqualTo("https://wttr.in/Fort Worth"));
     }
 
     [Test]

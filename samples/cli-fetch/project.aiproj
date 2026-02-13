@@ -1,0 +1,7 @@
+Program#p1 {
+  Project#proj1(
+    name="cli-fetch"
+    entryFile="src/app.aos"
+    entryExport="start"
+  )
+}

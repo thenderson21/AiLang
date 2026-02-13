@@ -1,0 +1,8 @@
+Program#u1 {
+  Let#u2(name=parsed) { Call#u3(target=compiler.parse) { Call#u4(target=io.readFile) { Lit#u5(value="samples/weather-site/src/app.aos") } } }
+  If#u6 {
+    Eq#u7 { NodeKind#u8 { Var#u9(name=parsed) } Lit#u10(value="Err") }
+    Block#u11 { Call#u12(target=io.print) { Lit#u13(value="fail-weather-site") } }
+    Block#u14 { Call#u15(target=io.print) { Lit#u16(value="ok-weather-site") } }
+  }
+}

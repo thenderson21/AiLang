@@ -132,6 +132,14 @@ Program#rt_p1 {
           }
           Block#rt_b_tls2 { Lit#rt_i_tls6(value=0) }
         }
+        Let#rt_l9000(name=serveMsg) {
+          StrConcat#rt_s9000 {
+            Lit#rt_i9000(value="host started on: localhost:")
+            ToString#rt_t9000 { Var#rt_v9000(name=port) }
+          }
+        }
+        Call#rt_c9000(target=sys.stdout_writeLine) { Var#rt_v9001(name=serveMsg) }
+        Call#rt_c9001(target=sys.stdout_writeLine) { Lit#rt_i9001(value="ctrl c to exit..") }
         Let#rt_l6(name=state) { Call#rt_c5(target=init) { Var#rt_v6(name=argv) } }
         Return#rt_r3 { Call#rt_c6(target=runtime_serve_loop) { Var#rt_v7(name=listener) Var#rt_v8(name=state) } }
       }
@@ -266,6 +274,21 @@ Program#rt_p1 {
                             }
                           }
                           Block#rt_b29 { Lit#rt_i35(value=0) }
+                        }
+                        If#rt_if120 {
+                          Eq#rt_eq110 { Var#rt_v550(name=emitType) Lit#rt_i320(value="http.raw") }
+                          Block#rt_b280 {
+                            Call#rt_c290(target=sys.net_write) { Var#rt_v560(name=conn) Var#rt_v570(name=emitPayload) }
+                            Return#rt_r150 {
+                              Call#rt_c310(target=runtime_handle_commands) {
+                                Var#rt_v580(name=block)
+                                Add#rt_a10 { Var#rt_v590(name=index) Lit#rt_i330(value=1) }
+                                Var#rt_v600(name=conn)
+                                Lit#rt_i340(value=true)
+                              }
+                            }
+                          }
+                          Block#rt_b290 { Lit#rt_i350(value=0) }
                         }
                       }
                       Block#rt_b30 { Lit#rt_i36(value=0) }
