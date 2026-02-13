@@ -29,6 +29,9 @@ This file is normative for `aic run` evaluation behavior.
 - `Call`: evaluate arguments, then dispatch:
 - native target (`io.*`, `compiler.*`) dispatches directly.
 - otherwise resolve function binding, apply closure with captured env.
+- async function call (`Fn(async=true)`) returns `Task(handle=...)` and schedules child evaluation under structured parent scope.
+- `Await`: evaluate child expression; child must resolve to `Task`; block until completion and return resolved value or propagate resolved `Err`.
+- `Par`: evaluate each child in isolated branch state from the same lexical snapshot, then join all branches before continuing.
 - `Import(path)`: resolve path relative to current module file; parse via frontend; validate with `validate.aos`; evaluate imported module in isolated environment; merge only names explicitly listed by `Export`.
 - `Export(name)`: mark an existing binding as exported from the current module evaluation scope.
 
@@ -37,6 +40,19 @@ This file is normative for `aic run` evaluation behavior.
 - Import resolution is strictly relative (absolute paths are rejected).
 - Circular imports fail deterministically with runtime `Err`.
 - Missing import files fail deterministically with runtime `Err`.
+
+## Async Determinism Rules
+
+- Observable result ordering is declaration order, never completion order.
+- Parent scope completion requires all child async work to resolve or fail.
+- On first branch failure in a structured async scope, unresolved sibling branches are deterministically canceled.
+- Cancellation and failure propagation always resolve to deterministic `Err` values with stable `code/message/nodeId`.
+- Async execution may overlap in host scheduling, but language-visible state transitions must remain deterministic.
+
+## Async Non-Goals
+
+- No detached fire-and-forget execution in language semantics.
+- No implicit background retries/backoff in evaluator semantics.
 
 ## Result Emission
 

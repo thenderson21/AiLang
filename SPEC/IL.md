@@ -21,6 +21,8 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 | `StrConcat` | none | `2` | String concatenation. |
 | `Add` | none | `2` | Integer addition. |
 | `Fn` | `params` (identifier) | `1` | Function literal with captured env. |
+| `Await` | none | `1` | Waits on async handle and yields resolved value or error. |
+| `Par` | none | `2..N` | Structured parallel expression group; results preserve declaration order. |
 
 ## Value Shapes
 
@@ -28,8 +30,23 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 - `Lit(value=...)` for primitive values.
 - `Block#void` as the canonical void value.
 - `Err(code=... message="..." nodeId=...)` for runtime errors.
+- `Task(handle=...)` for async in-flight work handles returned by async calls.
 - Function values are closures represented as block nodes containing:
 - function node + captured environment.
+
+## Async Function Contract
+
+- `Fn` may include optional attribute `async` (bool, default `false`).
+- Calling a function declared with `Fn(async=true)` returns `Task` immediately.
+- `Await` resolves one `Task` value and returns the underlying value.
+- `Par` evaluates multiple child expressions as a structured async scope and returns `Block` of results in declaration order.
+- Async work is lexical and structured; detached background tasks are not part of IL.
+
+## Async Non-Goals
+
+- No user-level threads.
+- No user-level locks/mutex primitives.
+- No ambient scheduler primitives in language IL.
 
 ## Stability Rule
 
