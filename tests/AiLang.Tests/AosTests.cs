@@ -36,6 +36,7 @@ public class AosTests
         public bool FsPathExistsResult { get; set; }
         public string[] ProcessArgvResult { get; set; } = Array.Empty<string>();
         public string ProcessEnvGetResult { get; set; } = string.Empty;
+        public int TimeNowUnixMsResult { get; set; }
 
         public override void ConsoleWrite(string text)
         {
@@ -96,6 +97,11 @@ public class AosTests
         public override string ProcessEnvGet(string name)
         {
             return ProcessEnvGetResult;
+        }
+
+        public override int TimeNowUnixMs()
+        {
+            return TimeNowUnixMsResult;
         }
 
         public override string ProcessCwd()
@@ -613,6 +619,46 @@ public class AosTests
             var value = interpreter.EvaluateProgram(parse.Root!, runtime);
             Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
             Assert.That(value.AsString(), Is.EqualTo("v1"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_TimeNowUnixMs_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { TimeNowUnixMsResult = 123456789 };
+        try
+        {
+            VmSyscalls.Host = host;
+            Assert.That(VmSyscalls.TimeNowUnixMs(), Is.EqualTo(123456789));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_TimeNowUnixMs_ReturnsInt()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.time_nowUnixMs) }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { TimeNowUnixMsResult = 4242 };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
+            Assert.That(value.AsInt(), Is.EqualTo(4242));
         }
         finally
         {
