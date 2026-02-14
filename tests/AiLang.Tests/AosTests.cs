@@ -371,6 +371,38 @@ public class AosTests
     }
 
     [Test]
+    public void CompilerEmitBytecode_EncodesSyscallIdForCallSys()
+    {
+        var source = "Program#p1 { Let#l1(name=start) { Fn#f1(params=argv) { Block#b1 { Return#r1 { Call#c1(target=sys.time_nowUnixMs) } } } } }";
+        var parse = Parse(source);
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("compiler");
+        runtime.Env["__program"] = AosValue.FromNode(parse.Root!);
+        var interpreter = new AosInterpreter();
+        var emitCall = Parse("Call#c1(target=compiler.emitBytecode) { Var#v1(name=__program) }").Root!;
+        var value = interpreter.EvaluateExpression(emitCall, runtime);
+
+        Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+        var bytecode = value.AsNode();
+        var functionNode = bytecode.Children.FirstOrDefault(child =>
+            child.Kind == "Func" &&
+            child.Attrs.TryGetValue("name", out var nameAttr) &&
+            nameAttr.Kind == AosAttrKind.Identifier &&
+            nameAttr.AsString() == "start");
+        Assert.That(functionNode, Is.Not.Null);
+        var callSysInst = functionNode!.Children.FirstOrDefault(child =>
+            child.Kind == "Inst" &&
+            child.Attrs.TryGetValue("op", out var opAttr) &&
+            opAttr.AsString() == "CALL_SYS");
+        Assert.That(callSysInst, Is.Not.Null);
+        Assert.That(callSysInst!.Attrs.TryGetValue("b", out var syscallIdAttr), Is.True);
+        Assert.That(syscallIdAttr.Kind, Is.EqualTo(AosAttrKind.Int));
+        Assert.That(syscallIdAttr.AsInt(), Is.GreaterThan(0));
+    }
+
+    [Test]
     public void SyscallDispatch_Utf8Count_ReturnsInt()
     {
         var parse = Parse("Program#p1 { Call#c1(target=sys.str_utf8ByteCount) { Lit#s1(value=\"abc\") } }");

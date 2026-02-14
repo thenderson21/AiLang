@@ -196,6 +196,59 @@ public sealed partial class AosInterpreter
 
         public AosNode ValueToNode(AosValue value) => ToRuntimeNode(value);
 
+        public bool TryExecuteSyscall(SyscallId id, IReadOnlyList<AosValue> args, out AosValue result)
+        {
+            switch (id)
+            {
+                case SyscallId.ProcessArgv:
+                    if (args.Count != 0 || !_runtime.Permissions.Contains("sys"))
+                    {
+                        result = AosValue.Unknown;
+                        return true;
+                    }
+                    result = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(VmSyscalls.ProcessArgv()));
+                    return true;
+                case SyscallId.FsReadDir:
+                    if (!_runtime.Permissions.Contains("sys") || args.Count != 1 || args[0].Kind != AosValueKind.String)
+                    {
+                        result = AosValue.Unknown;
+                        return true;
+                    }
+                    result = AosValue.FromNode(AosRuntimeNodes.BuildStringListNode("dirEntries", "entry", VmSyscalls.FsReadDir(args[0].AsString())));
+                    return true;
+                case SyscallId.FsStat:
+                    if (!_runtime.Permissions.Contains("sys") || args.Count != 1 || args[0].Kind != AosValueKind.String)
+                    {
+                        result = AosValue.Unknown;
+                        return true;
+                    }
+                    var stat = VmSyscalls.FsStat(args[0].AsString());
+                    result = AosValue.FromNode(AosRuntimeNodes.BuildFsStatNode(stat.Type, stat.Size, stat.MtimeUnixMs));
+                    return true;
+            }
+
+            if (!_runtime.Permissions.Contains("sys"))
+            {
+                result = AosValue.Unknown;
+                return true;
+            }
+
+            if (!TryConvertToSysValues(args, out var sysArgs))
+            {
+                result = AosValue.Unknown;
+                return true;
+            }
+
+            if (!VmSyscallDispatcher.TryInvoke(id, sysArgs, _runtime.Network, out var sysResult))
+            {
+                result = AosValue.Unknown;
+                return false;
+            }
+
+            result = FromSysValue(sysResult);
+            return true;
+        }
+
         public AosValue ExecuteCall(string target, IReadOnlyList<AosValue> args)
         {
             var callNode = new AosNode(
@@ -209,6 +262,30 @@ public sealed partial class AosInterpreter
                 new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
             var env = new Dictionary<string, AosValue>(_runtime.Env, StringComparer.Ordinal);
             return _interpreter.EvalCall(callNode, _runtime, env);
+        }
+
+        private static bool TryConvertToSysValues(IReadOnlyList<AosValue> args, out List<SysValue> sysArgs)
+        {
+            sysArgs = new List<SysValue>(args.Count);
+            for (var i = 0; i < args.Count; i++)
+            {
+                var arg = args[i];
+                var sysValue = arg.Kind switch
+                {
+                    AosValueKind.String => SysValue.String(arg.AsString()),
+                    AosValueKind.Int => SysValue.Int(arg.AsInt()),
+                    AosValueKind.Bool => SysValue.Bool(arg.AsBool()),
+                    AosValueKind.Void => SysValue.Void(),
+                    _ => SysValue.Unknown()
+                };
+                if (sysValue.Kind == VmValueKind.Unknown)
+                {
+                    return false;
+                }
+                sysArgs.Add(sysValue);
+            }
+
+            return true;
         }
 
         public void TraceInstruction(string functionName, int pc, string op)

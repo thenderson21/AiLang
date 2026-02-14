@@ -689,7 +689,10 @@ public sealed partial class AosInterpreter
                     }
                     else
                     {
-                        state.Emit("CALL_SYS", node.Children.Count, null, target);
+                        var syscallSlot = SyscallRegistry.TryResolve(target, out var syscallId)
+                            ? (int)syscallId + 1
+                            : 0;
+                        state.Emit("CALL_SYS", node.Children.Count, syscallSlot, target);
                     }
                     return;
                 }
@@ -831,7 +834,10 @@ public sealed partial class AosInterpreter
                 CompileExpression(context, state, child);
             }
 
-            state.Emit("ASYNC_CALL_SYS", node.Children.Count, null, target);
+            var syscallSlot = SyscallRegistry.TryResolve(target, out var syscallId)
+                ? (int)syscallId + 1
+                : 0;
+            state.Emit("ASYNC_CALL_SYS", node.Children.Count, syscallSlot, target);
             return true;
         }
     }
