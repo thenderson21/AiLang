@@ -6,12 +6,17 @@ public static class AosRuntimeNodes
 
     public static AosNode BuildArgvNode(string[] values)
     {
+        return BuildStringListNode("argv", "argv", values);
+    }
+
+    public static AosNode BuildStringListNode(string rootId, string childIdPrefix, string[] values)
+    {
         var children = new List<AosNode>(values.Length);
         for (var i = 0; i < values.Length; i++)
         {
             children.Add(new AosNode(
                 "Lit",
-                $"argv{i}",
+                $"{childIdPrefix}{i}",
                 new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
                 {
                     ["value"] = new AosAttrValue(AosAttrKind.String, values[i])
@@ -22,7 +27,7 @@ public static class AosRuntimeNodes
 
         return new AosNode(
             "Block",
-            "argv",
+            rootId,
             new Dictionary<string, AosAttrValue>(StringComparer.Ordinal),
             children,
             ZeroSpan);

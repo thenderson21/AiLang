@@ -36,6 +36,8 @@ public class AosTests
         public bool FsPathExistsResult { get; set; }
         public string[] ProcessArgvResult { get; set; } = Array.Empty<string>();
         public string ProcessEnvGetResult { get; set; } = string.Empty;
+        public string[] FsReadDirResult { get; set; } = Array.Empty<string>();
+        public string? LastFsReadDirPath { get; private set; }
         public VmFsStat FsStatResult { get; set; } = new("missing", 0, 0);
         public string? LastFsStatPath { get; private set; }
         public int TimeNowUnixMsResult { get; set; }
@@ -85,6 +87,12 @@ public class AosTests
         public override bool FsPathExists(string path)
         {
             return FsPathExistsResult;
+        }
+
+        public override string[] FsReadDir(string path)
+        {
+            LastFsReadDirPath = path;
+            return FsReadDirResult;
         }
 
         public override VmFsStat FsStat(string path)
@@ -825,6 +833,24 @@ public class AosTests
     }
 
     [Test]
+    public void VmSyscalls_FsReadDir_UsesConfiguredHost_AndSortsEntries()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { FsReadDirResult = new[] { "zeta", "alpha", "beta" } };
+        try
+        {
+            VmSyscalls.Host = host;
+            var entries = VmSyscalls.FsReadDir("x");
+            Assert.That(host.LastFsReadDirPath, Is.EqualTo("x"));
+            Assert.That(entries, Is.EqualTo(new[] { "alpha", "beta", "zeta" }));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
     public void VmSyscalls_FsStat_UsesConfiguredHost()
     {
         var previous = VmSyscalls.Host;
@@ -837,6 +863,35 @@ public class AosTests
             Assert.That(stat.Type, Is.EqualTo("file"));
             Assert.That(stat.Size, Is.EqualTo(12));
             Assert.That(stat.MtimeUnixMs, Is.EqualTo(99));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_FsReadDir_ReturnsNode()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.fs_readDir) { Lit#s1(value=\"x\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { FsReadDirResult = new[] { "zeta", "alpha", "beta" } };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+            var entries = value.AsNode();
+            Assert.That(entries.Kind, Is.EqualTo("Block"));
+            Assert.That(entries.Children.Count, Is.EqualTo(3));
+            Assert.That(entries.Children[0].Attrs["value"].AsString(), Is.EqualTo("alpha"));
+            Assert.That(entries.Children[1].Attrs["value"].AsString(), Is.EqualTo("beta"));
+            Assert.That(entries.Children[2].Attrs["value"].AsString(), Is.EqualTo("zeta"));
         }
         finally
         {
@@ -865,6 +920,33 @@ public class AosTests
             Assert.That(stat.Attrs["type"].AsString(), Is.EqualTo("file"));
             Assert.That(stat.Attrs["size"].AsInt(), Is.EqualTo(12));
             Assert.That(stat.Attrs["mtime"].AsInt(), Is.EqualTo(99));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscallDispatcher_FsReadDir_IsWired()
+    {
+        Assert.That(VmSyscallDispatcher.SupportsTarget("sys.fs_readDir"), Is.True);
+        Assert.That(VmSyscallDispatcher.TryGetExpectedArity("sys.fs_readDir", out var arity), Is.True);
+        Assert.That(arity, Is.EqualTo(1));
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { FsReadDirResult = new[] { "x" } };
+        try
+        {
+            VmSyscalls.Host = host;
+            var invoked = VmSyscallDispatcher.TryInvoke(
+                "sys.fs_readDir",
+                new[] { SysValue.String("path") },
+                new VmNetworkState(),
+                out var result);
+            Assert.That(invoked, Is.True);
+            Assert.That(host.LastFsReadDirPath, Is.EqualTo("path"));
+            Assert.That(result.Kind, Is.EqualTo(VmValueKind.Unknown));
         }
         finally
         {

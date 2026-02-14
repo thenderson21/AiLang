@@ -104,6 +104,13 @@ public static class VmSyscalls
         return Host.FsFileExists(path);
     }
 
+    public static string[] FsReadDir(string path)
+    {
+        var entries = Host.FsReadDir(path);
+        Array.Sort(entries, StringComparer.Ordinal);
+        return entries;
+    }
+
     public static VmFsStat FsStat(string path)
     {
         return Host.FsStat(path);
