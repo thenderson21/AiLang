@@ -403,6 +403,112 @@ public class AosTests
     }
 
     [Test]
+    public void VmRunBytecode_CallSys_PrefersSyscallIdOverStringTarget()
+    {
+        var source = "Program#p1 { Let#l1(name=start) { Fn#f1(params=argv) { Block#b1 { Return#r1 { Call#c1(target=sys.str_utf8ByteCount) { Lit#s1(value=\"abc\") } } } } } }";
+        var parse = Parse(source);
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var interpreter = new AosInterpreter();
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("compiler");
+        runtime.Permissions.Add("sys");
+        runtime.Env["__program"] = AosValue.FromNode(parse.Root!);
+
+        var emitCall = Parse("Call#c1(target=compiler.emitBytecode) { Var#v1(name=__program) }").Root!;
+        var bytecodeValue = interpreter.EvaluateExpression(emitCall, runtime);
+        Assert.That(bytecodeValue.Kind, Is.EqualTo(AosValueKind.Node));
+        var bytecode = bytecodeValue.AsNode();
+
+        var startFuncIndex = bytecode.Children.FindIndex(child =>
+            child.Kind == "Func" &&
+            child.Attrs.TryGetValue("name", out var nameAttr) &&
+            nameAttr.Kind == AosAttrKind.Identifier &&
+            nameAttr.AsString() == "start");
+        Assert.That(startFuncIndex, Is.GreaterThanOrEqualTo(0));
+
+        var startFunc = bytecode.Children[startFuncIndex];
+        var callSysIndex = startFunc.Children.FindIndex(child =>
+            child.Kind == "Inst" &&
+            child.Attrs.TryGetValue("op", out var opAttr) &&
+            opAttr.AsString() == "CALL_SYS");
+        Assert.That(callSysIndex, Is.GreaterThanOrEqualTo(0));
+
+        var callSysInst = startFunc.Children[callSysIndex];
+        Assert.That(callSysInst.Attrs.TryGetValue("b", out var idAttr), Is.True);
+        Assert.That(idAttr.Kind, Is.EqualTo(AosAttrKind.Int));
+        Assert.That(idAttr.AsInt(), Is.GreaterThan(0));
+
+        var mutatedAttrs = new Dictionary<string, AosAttrValue>(callSysInst.Attrs, StringComparer.Ordinal)
+        {
+            ["s"] = new AosAttrValue(AosAttrKind.String, "sys.unknown")
+        };
+        startFunc.Children[callSysIndex] = new AosNode(callSysInst.Kind, callSysInst.Id, mutatedAttrs, callSysInst.Children, callSysInst.Span);
+
+        bytecode.Children[startFuncIndex] = startFunc;
+
+        var args = Parse("Block#argv").Root!;
+        var result = interpreter.RunBytecode(bytecode, "start", args, runtime);
+        Assert.That(result.Kind, Is.EqualTo(AosValueKind.Int));
+        Assert.That(result.AsInt(), Is.EqualTo(3));
+    }
+
+    [Test]
+    public void VmRunBytecode_AsyncCallSys_PrefersSyscallIdOverStringTarget()
+    {
+        var source = "Program#p1 { Let#l1(name=start) { Fn#f1(params=argv) { Block#b1 { Return#r1 { Par#p2 { Call#c1(target=sys.str_utf8ByteCount) { Lit#s1(value=\"abc\") } Call#c2(target=sys.str_utf8ByteCount) { Lit#s2(value=\"de\") } } } } } } }";
+        var parse = Parse(source);
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var interpreter = new AosInterpreter();
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("compiler");
+        runtime.Permissions.Add("sys");
+        runtime.Env["__program"] = AosValue.FromNode(parse.Root!);
+
+        var emitCall = Parse("Call#c1(target=compiler.emitBytecode) { Var#v1(name=__program) }").Root!;
+        var bytecodeValue = interpreter.EvaluateExpression(emitCall, runtime);
+        Assert.That(bytecodeValue.Kind, Is.EqualTo(AosValueKind.Node));
+        var bytecode = bytecodeValue.AsNode();
+
+        var startFuncIndex = bytecode.Children.FindIndex(child =>
+            child.Kind == "Func" &&
+            child.Attrs.TryGetValue("name", out var nameAttr) &&
+            nameAttr.Kind == AosAttrKind.Identifier &&
+            nameAttr.AsString() == "start");
+        Assert.That(startFuncIndex, Is.GreaterThanOrEqualTo(0));
+
+        var startFunc = bytecode.Children[startFuncIndex];
+        var asyncCallSysIndex = startFunc.Children.FindIndex(child =>
+            child.Kind == "Inst" &&
+            child.Attrs.TryGetValue("op", out var opAttr) &&
+            opAttr.AsString() == "ASYNC_CALL_SYS");
+        Assert.That(asyncCallSysIndex, Is.GreaterThanOrEqualTo(0));
+
+        var asyncCallSysInst = startFunc.Children[asyncCallSysIndex];
+        Assert.That(asyncCallSysInst.Attrs.TryGetValue("b", out var idAttr), Is.True);
+        Assert.That(idAttr.Kind, Is.EqualTo(AosAttrKind.Int));
+        Assert.That(idAttr.AsInt(), Is.GreaterThan(0));
+
+        var mutatedAttrs = new Dictionary<string, AosAttrValue>(asyncCallSysInst.Attrs, StringComparer.Ordinal)
+        {
+            ["s"] = new AosAttrValue(AosAttrKind.String, "sys.unknown")
+        };
+        startFunc.Children[asyncCallSysIndex] = new AosNode(asyncCallSysInst.Kind, asyncCallSysInst.Id, mutatedAttrs, asyncCallSysInst.Children, asyncCallSysInst.Span);
+
+        bytecode.Children[startFuncIndex] = startFunc;
+
+        var args = Parse("Block#argv").Root!;
+        var result = interpreter.RunBytecode(bytecode, "start", args, runtime);
+        Assert.That(result.Kind, Is.EqualTo(AosValueKind.Node));
+        var block = result.AsNode();
+        Assert.That(block.Kind, Is.EqualTo("Block"));
+        Assert.That(block.Children.Count, Is.EqualTo(2));
+        Assert.That(block.Children[0].Attrs["value"].AsInt(), Is.EqualTo(3));
+        Assert.That(block.Children[1].Attrs["value"].AsInt(), Is.EqualTo(2));
+    }
+
+    [Test]
     public void SyscallDispatch_Utf8Count_ReturnsInt()
     {
         var parse = Parse("Program#p1 { Call#c1(target=sys.str_utf8ByteCount) { Lit#s1(value=\"abc\") } }");
