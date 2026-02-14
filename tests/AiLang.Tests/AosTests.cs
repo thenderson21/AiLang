@@ -17,6 +17,8 @@ public class AosTests
 {
     private sealed class RecordingSyscallHost : DefaultSyscallHost
     {
+        public string? LastFsWritePath { get; private set; }
+        public string? LastFsWriteText { get; private set; }
         public string? LastFsMakeDirPath { get; private set; }
         public string? LastConsoleErrLine { get; private set; }
         public string? LastConsoleWrite { get; private set; }
@@ -76,6 +78,12 @@ public class AosTests
         public override bool FsPathExists(string path)
         {
             return FsPathExistsResult;
+        }
+
+        public override void FsWriteFile(string path, string text)
+        {
+            LastFsWritePath = path;
+            LastFsWriteText = text;
         }
 
         public override string ProcessCwd()
@@ -588,6 +596,49 @@ public class AosTests
             var value = interpreter.EvaluateProgram(parse.Root!, runtime);
             Assert.That(value.Kind, Is.EqualTo(AosValueKind.Bool));
             Assert.That(value.AsBool(), Is.True);
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_FsWriteFile_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            VmSyscalls.FsWriteFile("file.txt", "content");
+            Assert.That(host.LastFsWritePath, Is.EqualTo("file.txt"));
+            Assert.That(host.LastFsWriteText, Is.EqualTo("content"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_FsWriteFile_ReturnsVoid()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.fs_writeFile) { Lit#s1(value=\"file.txt\") Lit#s2(value=\"content\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastFsWritePath, Is.EqualTo("file.txt"));
+            Assert.That(host.LastFsWriteText, Is.EqualTo("content"));
         }
         finally
         {

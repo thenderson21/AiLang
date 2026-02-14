@@ -84,6 +84,11 @@ public static class VmSyscalls
         return Host.FsPathExists(path);
     }
 
+    public static void FsWriteFile(string path, string text)
+    {
+        Host.FsWriteFile(path, text);
+    }
+
     public static void FsMakeDir(string path)
     {
         Host.FsMakeDir(path);

@@ -19,6 +19,7 @@ public interface ISyscallHost
     string FsReadFile(string path);
     bool FsFileExists(string path);
     bool FsPathExists(string path);
+    void FsWriteFile(string path, string text);
     void FsMakeDir(string path);
     int StrUtf8ByteCount(string text);
     string HttpGet(string url);
