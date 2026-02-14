@@ -13,6 +13,8 @@ public class DefaultSyscallHost : ISyscallHost
 {
     private static readonly HttpClient HttpClient = new();
 
+    public virtual void ConsoleWriteErrLine(string text) => Console.Error.WriteLine(text);
+
     public virtual void ConsoleWrite(string text) => Console.Write(text);
 
     public virtual string ProcessCwd() => Directory.GetCurrentDirectory();

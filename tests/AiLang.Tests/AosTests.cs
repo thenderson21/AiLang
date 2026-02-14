@@ -17,6 +17,7 @@ public class AosTests
 {
     private sealed class RecordingSyscallHost : DefaultSyscallHost
     {
+        public string? LastConsoleErrLine { get; private set; }
         public string? LastConsoleWrite { get; private set; }
         public string? LastConsoleLine { get; private set; }
         public string? LastStdoutLine { get; private set; }
@@ -32,6 +33,11 @@ public class AosTests
         public override void ConsoleWrite(string text)
         {
             LastConsoleWrite = text;
+        }
+
+        public override void ConsoleWriteErrLine(string text)
+        {
+            LastConsoleErrLine = text;
         }
 
         public override void ConsolePrintLine(string text)
@@ -362,6 +368,47 @@ public class AosTests
             var value = interpreter.EvaluateProgram(parse.Root!, runtime);
             Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
             Assert.That(host.LastConsoleWrite, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_ConsoleWriteErrLine_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            VmSyscalls.ConsoleWriteErrLine("err-line");
+            Assert.That(host.LastConsoleErrLine, Is.EqualTo("err-line"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_ConsoleWriteErrLine_ReturnsVoid()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.console_writeErrLine) { Lit#s1(value=\"err-line\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastConsoleErrLine, Is.EqualTo("err-line"));
         }
         finally
         {
