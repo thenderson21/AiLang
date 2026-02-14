@@ -80,12 +80,12 @@ public sealed partial class AosInterpreter
             return true;
         }
 
-        if (!VmSyscallDispatcher.SupportsTarget(target))
+        if (!SyscallRegistry.TryResolve(target, out var syscallId))
         {
             return false;
         }
 
-        if (VmSyscallDispatcher.TryGetExpectedArity(target, out var sysArity) &&
+        if (VmSyscallDispatcher.TryGetExpectedArity(syscallId, out var sysArity) &&
             callNode.Children.Count != sysArity)
         {
             return true;
@@ -97,7 +97,7 @@ public sealed partial class AosInterpreter
             args.Add(ToSysValue(EvalNode(callNode.Children[i], runtime, env)));
         }
 
-        if (!VmSyscallDispatcher.TryInvoke(target, args, runtime.Network, out var sysResult))
+        if (!VmSyscallDispatcher.TryInvoke(syscallId, args, runtime.Network, out var sysResult))
         {
             return false;
         }

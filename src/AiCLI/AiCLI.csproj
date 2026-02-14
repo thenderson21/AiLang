@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\AiLang.Core\AiLang.Core.csproj" />
+    <ProjectReference Include="..\AiVM.Core\AiVM.Core.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

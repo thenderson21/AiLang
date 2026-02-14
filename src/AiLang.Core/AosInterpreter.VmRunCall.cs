@@ -44,7 +44,7 @@ public sealed partial class AosInterpreter
                 vm,
                 entryName,
                 args,
-                new VmExecutionAdapter(this, runtime));
+                new VmExecutionAdapter(runtime));
             return true;
         }
         catch (VmRuntimeException ex)

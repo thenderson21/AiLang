@@ -165,6 +165,14 @@ Run deterministic benchmark cases:
 ./tools/airun bench --human
 ```
 
+Benchmark syscall ABI runtime + AOT binary size between two refs:
+
+```bash
+RUNS=40 ./scripts/bench-syscall-abi.sh <base-ref> <candidate-ref>
+# example:
+RUNS=40 ./scripts/bench-syscall-abi.sh main HEAD
+```
+
 ## Language Contracts
 
 Normative semantic contracts live in:

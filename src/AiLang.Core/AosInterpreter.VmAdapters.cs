@@ -77,12 +77,10 @@ public sealed partial class AosInterpreter
 
     private sealed class VmExecutionAdapter : IVmExecutionAdapter<AosValue, AosNode>
     {
-        private readonly AosInterpreter _interpreter;
         private readonly AosRuntime _runtime;
 
-        public VmExecutionAdapter(AosInterpreter interpreter, AosRuntime runtime)
+        public VmExecutionAdapter(AosRuntime runtime)
         {
-            _interpreter = interpreter;
             _runtime = runtime;
         }
 
@@ -259,27 +257,6 @@ public sealed partial class AosInterpreter
                     ArrayPool<SysValue>.Shared.Return(rentedBuffer);
                 }
             }
-        }
-
-        public AosValue ExecuteCall(string target, ReadOnlySpan<AosValue> args)
-        {
-            var children = new List<AosNode>(args.Length);
-            for (var i = 0; i < args.Length; i++)
-            {
-                children.Add(ToRuntimeNode(args[i]));
-            }
-
-            var callNode = new AosNode(
-                "Call",
-                "vm_call",
-                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
-                {
-                    ["target"] = new AosAttrValue(AosAttrKind.Identifier, target)
-                },
-                children,
-                new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
-            var env = new Dictionary<string, AosValue>(_runtime.Env, StringComparer.Ordinal);
-            return _interpreter.EvalCall(callNode, _runtime, env);
         }
 
         private static bool TryConvertToSysValues(ReadOnlySpan<AosValue> args, out SysValue[]? rentedBuffer, out ReadOnlySpan<SysValue> sysArgs)
