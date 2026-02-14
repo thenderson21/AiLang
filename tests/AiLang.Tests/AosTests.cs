@@ -53,6 +53,8 @@ public class AosTests
         public int NetTcpWriteResult { get; set; } = -1;
         public string? LastCryptoBase64EncodeInput { get; private set; }
         public string CryptoBase64EncodeResult { get; set; } = string.Empty;
+        public string? LastCryptoBase64DecodeInput { get; private set; }
+        public string CryptoBase64DecodeResult { get; set; } = string.Empty;
 
         public override void ConsoleWrite(string text)
         {
@@ -202,6 +204,12 @@ public class AosTests
         {
             LastCryptoBase64EncodeInput = text;
             return CryptoBase64EncodeResult;
+        }
+
+        public override string CryptoBase64Decode(string text)
+        {
+            LastCryptoBase64DecodeInput = text;
+            return CryptoBase64DecodeResult;
         }
     }
 
@@ -1233,6 +1241,31 @@ public class AosTests
             Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
             Assert.That(value.AsString(), Is.EqualTo("aGVsbG8="));
             Assert.That(host.LastCryptoBase64EncodeInput, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_CryptoBase64Decode_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.crypto_base64Decode) { Lit#s1(value=\"aGVsbG8=\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { CryptoBase64DecodeResult = "hello" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("crypto");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(value.AsString(), Is.EqualTo("hello"));
+            Assert.That(host.LastCryptoBase64DecodeInput, Is.EqualTo("aGVsbG8="));
         }
         finally
         {
