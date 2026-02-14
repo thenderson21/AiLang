@@ -74,7 +74,7 @@ jobs:
             archive: tar.gz
             frontend: aos_frontend
             airun: airun
-          - os: macos-13
+          - os: macos-14
             rid: osx-x64
             archive: tar.gz
             frontend: aos_frontend

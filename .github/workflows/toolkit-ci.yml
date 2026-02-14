@@ -4,7 +4,6 @@ on:
   pull_request:
   push:
     branches:
-      - main
       - develop
       - develope
       - "codex/**"
@@ -23,7 +22,7 @@ jobs:
           - os: macos-14
             rid: osx-arm64
             frontend: aos_frontend
-          - os: macos-13
+          - os: macos-14
             rid: osx-x64
             frontend: aos_frontend
           - os: windows-latest
