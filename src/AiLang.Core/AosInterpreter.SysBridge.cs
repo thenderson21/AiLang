@@ -32,6 +32,27 @@ public sealed partial class AosInterpreter
             return true;
         }
 
+        if (target == "sys.fs_readDir")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return true;
+            }
+            if (callNode.Children.Count != 1)
+            {
+                return true;
+            }
+
+            var pathValue = EvalNode(callNode.Children[0], runtime, env);
+            if (pathValue.Kind != AosValueKind.String)
+            {
+                return true;
+            }
+
+            result = AosValue.FromNode(AosRuntimeNodes.BuildStringListNode("dirEntries", "entry", VmSyscalls.FsReadDir(pathValue.AsString())));
+            return true;
+        }
+
         if (!runtime.Permissions.Contains("sys"))
         {
             return true;

@@ -36,6 +36,8 @@ public class AosTests
         public bool FsPathExistsResult { get; set; }
         public string[] ProcessArgvResult { get; set; } = Array.Empty<string>();
         public string ProcessEnvGetResult { get; set; } = string.Empty;
+        public string[] FsReadDirResult { get; set; } = Array.Empty<string>();
+        public string? LastFsReadDirPath { get; private set; }
 
         public override void ConsoleWrite(string text)
         {
@@ -80,6 +82,12 @@ public class AosTests
         public override bool FsPathExists(string path)
         {
             return FsPathExistsResult;
+        }
+
+        public override string[] FsReadDir(string path)
+        {
+            LastFsReadDirPath = path;
+            return FsReadDirResult;
         }
 
         public override void FsWriteFile(string path, string text)
@@ -670,6 +678,53 @@ public class AosTests
         {
             VmSyscalls.Host = host;
             Assert.That(VmSyscalls.FsPathExists("x"), Is.True);
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_FsReadDir_UsesConfiguredHost_AndSortsEntries()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { FsReadDirResult = new[] { "zeta", "alpha", "beta" } };
+        try
+        {
+            VmSyscalls.Host = host;
+            var entries = VmSyscalls.FsReadDir("x");
+            Assert.That(host.LastFsReadDirPath, Is.EqualTo("x"));
+            Assert.That(entries, Is.EqualTo(new[] { "alpha", "beta", "zeta" }));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_FsReadDir_ReturnsNode()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.fs_readDir) { Lit#s1(value=\"x\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { FsReadDirResult = new[] { "zeta", "alpha", "beta" } };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+            var entries = value.AsNode();
+            Assert.That(entries.Kind, Is.EqualTo("Block"));
+            Assert.That(entries.Children.Count, Is.EqualTo(3));
+            Assert.That(entries.Children[0].Attrs["value"].AsString(), Is.EqualTo("alpha"));
+            Assert.That(entries.Children[1].Attrs["value"].AsString(), Is.EqualTo("beta"));
+            Assert.That(entries.Children[2].Attrs["value"].AsString(), Is.EqualTo("zeta"));
         }
         finally
         {
