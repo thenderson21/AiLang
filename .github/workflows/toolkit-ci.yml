@@ -1,0 +1,99 @@
+name: Toolkit CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - develop
+      - develope
+      - "codex/**"
+
+jobs:
+  build-toolkit:
+    name: build-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+            frontend: aos_frontend
+          - os: macos-latest
+            rid: osx-arm64
+            frontend: aos_frontend
+          - os: windows-latest
+            rid: win-x64
+            frontend: aos_frontend.exe
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore ./src/AiCLI/AiCLI.csproj
+
+      - name: Publish airun (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet publish ./src/AiCLI/AiCLI.csproj \
+            -c Release \
+            -r "${{ matrix.rid }}" \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:PublishTrimmed=false \
+            -o ./dist
+
+      - name: Publish airun (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          dotnet publish .\src\AiCLI\AiCLI.csproj `
+            -c Release `
+            -r ${{ matrix.rid }} `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:PublishTrimmed=false `
+            -o .\dist
+
+      - name: Build frontend parser (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
+          chmod +x "./dist/${{ matrix.frontend }}"
+
+      - name: Setup MSVC tools
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build frontend parser (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
+          Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
+
+      - name: Verify toolkit files (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x ./dist/airun
+          test -x "./dist/${{ matrix.frontend }}"
+
+      - name: Verify toolkit files (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (!(Test-Path .\dist\airun.exe)) { throw "missing airun.exe" }
+          if (!(Test-Path .\dist\${{ matrix.frontend }})) { throw "missing frontend exe" }

@@ -1,0 +1,160 @@
+name: Toolkit Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    name: package-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+            archive: tar.gz
+            frontend: aos_frontend
+            airun: airun
+          - os: macos-latest
+            rid: osx-arm64
+            archive: tar.gz
+            frontend: aos_frontend
+            airun: airun
+          - os: windows-latest
+            rid: win-x64
+            archive: zip
+            frontend: aos_frontend.exe
+            airun: airun.exe
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Enforce main-based tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin main --depth=1
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" "origin/main"; then
+            echo "Tag ${GITHUB_REF_NAME} is not based on origin/main." >&2
+            exit 1
+          fi
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Compute version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          VERSION="${TAG#v}"
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+
+      - name: Restore
+        run: dotnet restore ./src/AiCLI/AiCLI.csproj
+
+      - name: Publish airun (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet publish ./src/AiCLI/AiCLI.csproj \
+            -c Release \
+            -r "${{ matrix.rid }}" \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:PublishTrimmed=false \
+            -p:Version="${{ steps.version.outputs.version }}" \
+            -o ./dist
+
+      - name: Publish airun (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          dotnet publish .\src\AiCLI\AiCLI.csproj `
+            -c Release `
+            -r ${{ matrix.rid }} `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:PublishTrimmed=false `
+            -p:Version=${{ steps.version.outputs.version }} `
+            -o .\dist
+
+      - name: Build frontend parser (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
+          chmod +x "./dist/${{ matrix.frontend }}"
+
+      - name: Setup MSVC tools
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build frontend parser (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
+          Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
+
+      - name: Pack release artifact (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ steps.version.outputs.version }}"
+          PACKAGE_DIR="airun-${VERSION}-${{ matrix.rid }}"
+          mkdir -p "${PACKAGE_DIR}"
+          cp "./dist/${{ matrix.airun }}" "${PACKAGE_DIR}/"
+          cp "./dist/${{ matrix.frontend }}" "${PACKAGE_DIR}/"
+          cp ./LICENSE "${PACKAGE_DIR}/"
+          tar -czf "${PACKAGE_DIR}.tar.gz" "${PACKAGE_DIR}"
+
+      - name: Pack release artifact (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $packageDir = "airun-$version-${{ matrix.rid }}"
+          New-Item -ItemType Directory -Force $packageDir | Out-Null
+          Copy-Item ".\dist\${{ matrix.airun }}" "$packageDir\${{ matrix.airun }}"
+          Copy-Item ".\dist\${{ matrix.frontend }}" "$packageDir\${{ matrix.frontend }}"
+          Copy-Item ".\LICENSE" "$packageDir\LICENSE"
+          Compress-Archive -Path $packageDir -DestinationPath "$packageDir.zip"
+
+      - name: Upload packaged artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: airun-${{ matrix.rid }}
+          path: airun-${{ steps.version.outputs.version }}-${{ matrix.rid }}.${{ matrix.archive }}
+
+  release:
+    name: github-release
+    runs-on: ubuntu-latest
+    needs: package
+
+    steps:
+      - name: Download packaged artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./release-assets
+          merge-multiple: true
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./release-assets/*
