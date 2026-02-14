@@ -62,6 +62,8 @@ public class AosTests
         public string? LastCryptoHmacSha256Key { get; private set; }
         public string? LastCryptoHmacSha256Text { get; private set; }
         public string CryptoHmacSha256Result { get; set; } = string.Empty;
+        public int LastCryptoRandomBytesCount { get; private set; } = -1;
+        public string CryptoRandomBytesResult { get; set; } = string.Empty;
 
         public override void ConsoleWrite(string text)
         {
@@ -236,6 +238,12 @@ public class AosTests
             LastCryptoHmacSha256Key = key;
             LastCryptoHmacSha256Text = text;
             return CryptoHmacSha256Result;
+        }
+
+        public override string CryptoRandomBytes(int count)
+        {
+            LastCryptoRandomBytesCount = count;
+            return CryptoRandomBytesResult;
         }
     }
 
@@ -1368,6 +1376,31 @@ public class AosTests
             Assert.That(value.AsString(), Is.EqualTo("hmachex"));
             Assert.That(host.LastCryptoHmacSha256Key, Is.EqualTo("secret"));
             Assert.That(host.LastCryptoHmacSha256Text, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_CryptoRandomBytes_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.crypto_randomBytes) { Lit#n1(value=8) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { CryptoRandomBytesResult = "AQIDBAUGBwg=" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("crypto");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(value.AsString(), Is.EqualTo("AQIDBAUGBwg="));
+            Assert.That(host.LastCryptoRandomBytesCount, Is.EqualTo(8));
         }
         finally
         {
