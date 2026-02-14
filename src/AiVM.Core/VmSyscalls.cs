@@ -9,6 +9,11 @@ public static class VmSyscalls
         Host.ConsoleWrite(text);
     }
 
+    public static string ProcessCwd()
+    {
+        return Host.ProcessCwd();
+    }
+
     public static void ConsolePrintLine(string text)
     {
         Host.ConsolePrintLine(text);

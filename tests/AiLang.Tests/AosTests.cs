@@ -17,9 +17,10 @@ public class AosTests
 {
     private sealed class RecordingSyscallHost : DefaultSyscallHost
     {
-        public string? LastStdoutLine { get; private set; }
         public string? LastConsoleWrite { get; private set; }
+        public string? LastStdoutLine { get; private set; }
         public int IoPrintCount { get; private set; }
+        public string ProcessCwdResult { get; set; } = string.Empty;
         public string HttpGetResult { get; set; } = string.Empty;
         public string PlatformResult { get; set; } = "test-os";
         public string ArchitectureResult { get; set; } = "test-arch";
@@ -39,6 +40,11 @@ public class AosTests
         public override void IoPrint(string text)
         {
             IoPrintCount++;
+        }
+
+        public override string ProcessCwd()
+        {
+            return ProcessCwdResult;
         }
 
         public override int StrUtf8ByteCount(string text)
@@ -344,6 +350,46 @@ public class AosTests
             var value = interpreter.EvaluateProgram(parse.Root!, runtime);
             Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
             Assert.That(host.LastConsoleWrite, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_ProcessCwd_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { ProcessCwdResult = "/tmp/cwd" };
+        try
+        {
+            VmSyscalls.Host = host;
+            Assert.That(VmSyscalls.ProcessCwd(), Is.EqualTo("/tmp/cwd"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_ProcessCwd_ReturnsString()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.process_cwd) }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { ProcessCwdResult = "/tmp/cwd" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(value.AsString(), Is.EqualTo("/tmp/cwd"));
         }
         finally
         {
