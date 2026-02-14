@@ -17,14 +17,27 @@ public class AosTests
 {
     private sealed class RecordingSyscallHost : DefaultSyscallHost
     {
+        public string? LastConsoleWrite { get; private set; }
+        public string? LastConsoleLine { get; private set; }
         public string? LastStdoutLine { get; private set; }
         public int IoPrintCount { get; private set; }
+        public string ProcessCwdResult { get; set; } = string.Empty;
         public string HttpGetResult { get; set; } = string.Empty;
         public string PlatformResult { get; set; } = "test-os";
         public string ArchitectureResult { get; set; } = "test-arch";
         public string OsVersionResult { get; set; } = "test-version";
         public string RuntimeResult { get; set; } = "test-runtime";
         public string IoReadLineResult { get; set; } = string.Empty;
+
+        public override void ConsoleWrite(string text)
+        {
+            LastConsoleWrite = text;
+        }
+
+        public override void ConsolePrintLine(string text)
+        {
+            LastConsoleLine = text;
+        }
 
         public override void StdoutWriteLine(string text)
         {
@@ -39,6 +52,11 @@ public class AosTests
         public override string IoReadLine()
         {
             return IoReadLineResult;
+        }
+
+        public override string ProcessCwd()
+        {
+            return ProcessCwdResult;
         }
 
         public override int StrUtf8ByteCount(string text)
@@ -311,6 +329,47 @@ public class AosTests
     }
 
     [Test]
+    public void VmSyscalls_ConsoleWrite_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            VmSyscalls.ConsoleWrite("hello");
+            Assert.That(host.LastConsoleWrite, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_ConsoleWrite_ReturnsVoid()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.console_write) { Lit#s1(value=\"hello\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastConsoleWrite, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
     public void VmSyscalls_IoReadLine_UsesConfiguredHost()
     {
         var previous = VmSyscalls.Host;
@@ -343,6 +402,87 @@ public class AosTests
             var value = interpreter.EvaluateProgram(parse.Root!, runtime);
             Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
             Assert.That(value.AsString(), Is.EqualTo("typed-line"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_ProcessCwd_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { ProcessCwdResult = "/tmp/cwd" };
+        try
+        {
+            VmSyscalls.Host = host;
+            Assert.That(VmSyscalls.ProcessCwd(), Is.EqualTo("/tmp/cwd"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_ProcessCwd_ReturnsString()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.process_cwd) }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { ProcessCwdResult = "/tmp/cwd" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(value.AsString(), Is.EqualTo("/tmp/cwd"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_ConsolePrintLine_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            VmSyscalls.ConsolePrintLine("line");
+            Assert.That(host.LastConsoleLine, Is.EqualTo("line"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_ConsoleWriteLine_ReturnsVoid()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.console_writeLine) { Lit#s1(value=\"line\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastConsoleLine, Is.EqualTo("line"));
         }
         finally
         {
