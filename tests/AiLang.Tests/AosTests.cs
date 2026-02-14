@@ -55,6 +55,8 @@ public class AosTests
         public string CryptoBase64EncodeResult { get; set; } = string.Empty;
         public string? LastCryptoBase64DecodeInput { get; private set; }
         public string CryptoBase64DecodeResult { get; set; } = string.Empty;
+        public string? LastCryptoSha1Input { get; private set; }
+        public string CryptoSha1Result { get; set; } = string.Empty;
 
         public override void ConsoleWrite(string text)
         {
@@ -210,6 +212,12 @@ public class AosTests
         {
             LastCryptoBase64DecodeInput = text;
             return CryptoBase64DecodeResult;
+        }
+
+        public override string CryptoSha1(string text)
+        {
+            LastCryptoSha1Input = text;
+            return CryptoSha1Result;
         }
     }
 
@@ -1266,6 +1274,31 @@ public class AosTests
             Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
             Assert.That(value.AsString(), Is.EqualTo("hello"));
             Assert.That(host.LastCryptoBase64DecodeInput, Is.EqualTo("aGVsbG8="));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_CryptoSha1_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.crypto_sha1) { Lit#s1(value=\"hello\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { CryptoSha1Result = "sha1hex" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("crypto");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(value.AsString(), Is.EqualTo("sha1hex"));
+            Assert.That(host.LastCryptoSha1Input, Is.EqualTo("hello"));
         }
         finally
         {
