@@ -27,4 +27,19 @@ public static class AosRuntimeNodes
             children,
             ZeroSpan);
     }
+
+    public static AosNode BuildFsStatNode(string type, int size, int mtimeUnixMs)
+    {
+        return new AosNode(
+            "Stat",
+            "stat",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+            {
+                ["type"] = new AosAttrValue(AosAttrKind.String, type),
+                ["size"] = new AosAttrValue(AosAttrKind.Int, size),
+                ["mtime"] = new AosAttrValue(AosAttrKind.Int, mtimeUnixMs)
+            },
+            new List<AosNode>(),
+            ZeroSpan);
+    }
 }
