@@ -20,7 +20,7 @@ public sealed partial class AosInterpreter
 
         if (target == "sys.process_argv")
         {
-            if (!runtime.Permissions.Contains("sys"))
+            if (!SyscallPermissions.HasPermission(runtime.Permissions, syscallId))
             {
                 return true;
             }
@@ -35,7 +35,7 @@ public sealed partial class AosInterpreter
 
         if (target == "sys.fs_readDir")
         {
-            if (!runtime.Permissions.Contains("sys"))
+            if (!SyscallPermissions.HasPermission(runtime.Permissions, syscallId))
             {
                 return true;
             }
@@ -56,7 +56,7 @@ public sealed partial class AosInterpreter
 
         if (target == "sys.fs_stat")
         {
-            if (!runtime.Permissions.Contains("sys"))
+            if (!SyscallPermissions.HasPermission(runtime.Permissions, syscallId))
             {
                 return true;
             }
@@ -76,7 +76,7 @@ public sealed partial class AosInterpreter
             return true;
         }
 
-        if (!runtime.Permissions.Contains("sys"))
+        if (!SyscallPermissions.HasPermission(runtime.Permissions, syscallId))
         {
             return true;
         }

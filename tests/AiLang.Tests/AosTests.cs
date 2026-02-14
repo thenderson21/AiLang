@@ -277,6 +277,23 @@ public class AosTests
     }
 
     [Test]
+    public void Validator_SyscallGroupPermission_UsesMappedGroup()
+    {
+        var source = "Call#c1(target=sys.time_nowUnixMs)";
+        var parse = Parse(source);
+        var validator = new AosValidator();
+
+        var denied = validator.Validate(parse.Root!, null, new HashSet<string>(StringComparer.Ordinal) { "math" });
+        Assert.That(denied.Diagnostics.Any(d => d.Code == "VAL040" && d.Message.Contains("'time'", StringComparison.Ordinal)), Is.True);
+
+        var allowedByGroup = validator.Validate(parse.Root!, null, new HashSet<string>(StringComparer.Ordinal) { "time" });
+        Assert.That(allowedByGroup.Diagnostics.Any(d => d.Code == "VAL040"), Is.False);
+
+        var allowedByLegacy = validator.Validate(parse.Root!, null, new HashSet<string>(StringComparer.Ordinal) { "sys" });
+        Assert.That(allowedByLegacy.Diagnostics.Any(d => d.Code == "VAL040"), Is.False);
+    }
+
+    [Test]
     public void Validator_ReportsMissingAttribute()
     {
         var source = "Let#l1 { Lit#v1(value=1) }";
@@ -887,6 +904,30 @@ public class AosTests
             var value = interpreter.EvaluateProgram(parse.Root!, runtime);
             Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
             Assert.That(value.AsInt(), Is.EqualTo(4242));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_TimeNowUnixMs_AllowsGroupPermissionWithoutSys()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.time_nowUnixMs) }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { TimeNowUnixMsResult = 9191 };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("time");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
+            Assert.That(value.AsInt(), Is.EqualTo(9191));
         }
         finally
         {

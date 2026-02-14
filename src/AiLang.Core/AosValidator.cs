@@ -731,7 +731,15 @@ public sealed class AosValidator
                 (code, message) => _diagnostics.Add(new AosDiagnostic(code, message, node.Id, node.Span)),
                 out var syscallReturnKind))
         {
-            RequirePermission(node, "sys", permissions);
+            if (SyscallRegistry.TryResolve(target, out var syscallId) &&
+                SyscallPermissions.TryGetRequiredPermission(syscallId, out var requiredPermission))
+            {
+                RequireSysPermission(node, requiredPermission, permissions);
+            }
+            else
+            {
+                RequirePermission(node, "sys", permissions);
+            }
             return FromVmValueKind(syscallReturnKind);
         }
 
@@ -966,6 +974,14 @@ public sealed class AosValidator
     private void RequirePermission(AosNode node, string permission, HashSet<string> permissions)
     {
         if (!permissions.Contains(permission))
+        {
+            _diagnostics.Add(new AosDiagnostic("VAL040", $"Permission '{permission}' denied.", node.Id, node.Span));
+        }
+    }
+
+    private void RequireSysPermission(AosNode node, string permission, HashSet<string> permissions)
+    {
+        if (!permissions.Contains(permission) && !permissions.Contains("sys"))
         {
             _diagnostics.Add(new AosDiagnostic("VAL040", $"Permission '{permission}' denied.", node.Id, node.Span));
         }

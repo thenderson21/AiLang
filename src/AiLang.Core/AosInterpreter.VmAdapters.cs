@@ -200,7 +200,7 @@ public sealed partial class AosInterpreter
             switch (id)
             {
                 case SyscallId.ProcessArgv:
-                    if (args.Length != 0 || !_runtime.Permissions.Contains("sys"))
+                    if (args.Length != 0 || !SyscallPermissions.HasPermission(_runtime.Permissions, id))
                     {
                         result = AosValue.Unknown;
                         return true;
@@ -208,7 +208,7 @@ public sealed partial class AosInterpreter
                     result = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(VmSyscalls.ProcessArgv()));
                     return true;
                 case SyscallId.FsReadDir:
-                    if (!_runtime.Permissions.Contains("sys") || args.Length != 1 || args[0].Kind != AosValueKind.String)
+                    if (!SyscallPermissions.HasPermission(_runtime.Permissions, id) || args.Length != 1 || args[0].Kind != AosValueKind.String)
                     {
                         result = AosValue.Unknown;
                         return true;
@@ -216,7 +216,7 @@ public sealed partial class AosInterpreter
                     result = AosValue.FromNode(AosRuntimeNodes.BuildStringListNode("dirEntries", "entry", VmSyscalls.FsReadDir(args[0].AsString())));
                     return true;
                 case SyscallId.FsStat:
-                    if (!_runtime.Permissions.Contains("sys") || args.Length != 1 || args[0].Kind != AosValueKind.String)
+                    if (!SyscallPermissions.HasPermission(_runtime.Permissions, id) || args.Length != 1 || args[0].Kind != AosValueKind.String)
                     {
                         result = AosValue.Unknown;
                         return true;
@@ -226,7 +226,7 @@ public sealed partial class AosInterpreter
                     return true;
             }
 
-            if (!_runtime.Permissions.Contains("sys"))
+            if (!SyscallPermissions.HasPermission(_runtime.Permissions, id))
             {
                 result = AosValue.Unknown;
                 return true;
