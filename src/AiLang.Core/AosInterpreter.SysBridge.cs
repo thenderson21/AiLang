@@ -17,6 +17,21 @@ public sealed partial class AosInterpreter
             return false;
         }
 
+        if (target == "sys.process_argv")
+        {
+            if (!runtime.Permissions.Contains("sys"))
+            {
+                return true;
+            }
+            if (callNode.Children.Count != 0)
+            {
+                return true;
+            }
+
+            result = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(VmSyscalls.ProcessArgv()));
+            return true;
+        }
+
         if (!runtime.Permissions.Contains("sys"))
         {
             return true;

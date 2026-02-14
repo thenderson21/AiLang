@@ -34,6 +34,7 @@ public class AosTests
         public string IoReadLineResult { get; set; } = string.Empty;
         public string IoReadAllStdinResult { get; set; } = string.Empty;
         public bool FsPathExistsResult { get; set; }
+        public string[] ProcessArgvResult { get; set; } = Array.Empty<string>();
 
         public override void ConsoleWrite(string text)
         {
@@ -84,6 +85,11 @@ public class AosTests
         {
             LastFsWritePath = path;
             LastFsWriteText = text;
+        }
+
+        public override string[] ProcessArgv()
+        {
+            return ProcessArgvResult;
         }
 
         public override string ProcessCwd()
@@ -515,6 +521,52 @@ public class AosTests
             var value = interpreter.EvaluateProgram(parse.Root!, runtime);
             Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
             Assert.That(value.AsString(), Is.EqualTo("all-stdin"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_ProcessArgv_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { ProcessArgvResult = new[] { "aic", "run", "sample.aos" } };
+        try
+        {
+            VmSyscalls.Host = host;
+            var argv = VmSyscalls.ProcessArgv();
+            Assert.That(argv, Is.EqualTo(new[] { "aic", "run", "sample.aos" }));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_ProcessArgv_ReturnsArgvNode()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.process_argv) }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { ProcessArgvResult = new[] { "aic", "run", "sample.aos" } };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+            var argv = value.AsNode();
+            Assert.That(argv.Kind, Is.EqualTo("Block"));
+            Assert.That(argv.Children.Count, Is.EqualTo(3));
+            Assert.That(argv.Children[0].Attrs["value"].AsString(), Is.EqualTo("aic"));
+            Assert.That(argv.Children[1].Attrs["value"].AsString(), Is.EqualTo("run"));
+            Assert.That(argv.Children[2].Attrs["value"].AsString(), Is.EqualTo("sample.aos"));
         }
         finally
         {

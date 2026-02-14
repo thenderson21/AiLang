@@ -2,6 +2,7 @@ namespace AiVM.Core;
 
 public interface ISyscallHost
 {
+    string[] ProcessArgv();
     void ConsoleWriteErrLine(string text);
     void ConsoleWrite(string text);
     string ProcessCwd();
