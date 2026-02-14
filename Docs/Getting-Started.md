@@ -25,9 +25,10 @@ Run build and verification flows with deterministic outputs.
 ```
 4. Run compiler driver modes:
 ```bash
-cat examples/golden/fmt_basic.in.aos | ./tools/airun run src/compiler/aic.aos fmt
-cat examples/golden/check_missing_name.in.aos | ./tools/airun run src/compiler/aic.aos check
-cat examples/golden/run_var.in.aos | ./tools/airun run src/compiler/aic.aos run
+cat examples/golden/fmt_basic.in.aos | ./tools/airun run --vm=ast src/compiler/aic.aos fmt
+cat examples/golden/fmt_basic.in.aos | ./tools/airun run --vm=ast src/compiler/aic.aos fmt --ids
+cat examples/golden/check_missing_name.in.aos | ./tools/airun run --vm=ast src/compiler/aic.aos check
+cat examples/golden/run_var.in.aos | ./tools/airun run --vm=ast src/compiler/aic.aos run
 ```
 
 ## Expected Output
@@ -35,6 +36,7 @@ cat examples/golden/run_var.in.aos | ./tools/airun run src/compiler/aic.aos run
 - `build-airun.sh`: rebuilds `tools/airun`.
 - `test.sh`: prints `PASS/FAIL` per golden and final `Ok#ok1(type=int value=0)` on success.
 - `aic fmt/check/run`: emits canonical AOS only.
+- Source node ids are optional; canonical ids are assigned deterministically.
 
 ## Failure Codes
 

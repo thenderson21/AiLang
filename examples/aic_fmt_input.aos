@@ -1,1 +1,1 @@
-Program#p1{Let#l1(name=x){Lit#v1(value=1)}}
+Program{Let(name=x){Lit(value=1)}}

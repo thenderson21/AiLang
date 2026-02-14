@@ -409,25 +409,39 @@ static Node *parse_node(TokenList *toks, ParseError *err) {
         return NULL;
     }
     advance_tok(toks);
-    if (!expect(toks, TK_HASH, err, "PAR003", "expected '#' after kind")) return NULL;
-    Token *id = peek_tok(toks);
-    if (id->kind != TK_IDENT && id->kind != TK_INT && id->kind != TK_TRUE && id->kind != TK_FALSE) {
-        set_error(err, id->line, id->col, "PAR004", "expected node id");
-        return NULL;
+    char *id_text = NULL;
+    if (match(toks, TK_HASH)) {
+        Token *id = peek_tok(toks);
+        if (id->kind != TK_IDENT && id->kind != TK_INT && id->kind != TK_TRUE && id->kind != TK_FALSE) {
+            set_error(err, id->line, id->col, "PAR004", "expected node id");
+            return NULL;
+        }
+        if (!is_id_name(id->text)) {
+            set_error(err, id->line, id->col, "PAR005", "invalid node id");
+            return NULL;
+        }
+        id_text = dup_slice(id->text, strlen(id->text));
+        if (!id_text) {
+            set_error(err, id->line, id->col, "PAR900", "out of memory");
+            return NULL;
+        }
+        advance_tok(toks);
+    } else {
+        id_text = dup_slice("", 0);
+        if (!id_text) {
+            set_error(err, kind->line, kind->col, "PAR900", "out of memory");
+            return NULL;
+        }
     }
-    if (!is_id_name(id->text)) {
-        set_error(err, id->line, id->col, "PAR005", "invalid node id");
-        return NULL;
-    }
-    advance_tok(toks);
 
     Node *n = new_node();
     if (!n) {
         set_error(err, kind->line, kind->col, "PAR900", "out of memory");
+        free(id_text);
         return NULL;
     }
     n->kind = dup_slice(kind->text, strlen(kind->text));
-    n->id = dup_slice(id->text, strlen(id->text));
+    n->id = id_text;
 
     if (match(toks, TK_LPAREN)) {
         while (peek_tok(toks)->kind != TK_RPAREN && peek_tok(toks)->kind != TK_EOF) {

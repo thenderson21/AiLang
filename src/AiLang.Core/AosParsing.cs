@@ -6,7 +6,14 @@ public static class AosParsing
 {
     public static AosParseResult Parse(string source)
     {
-        return AosExternalFrontend.Parse(source);
+        var parse = AosExternalFrontend.Parse(source);
+        if (parse.Root is null)
+        {
+            return parse;
+        }
+
+        var withIds = AosNodeIdCanonicalizer.AssignMissingIds(parse.Root);
+        return new AosParseResult(withIds, parse.Diagnostics);
     }
 
     public static AosParseResult ParseFile(string path)

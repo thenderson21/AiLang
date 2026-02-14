@@ -2555,7 +2555,10 @@ public class AosTests
         var runInput = File.ReadAllText(FindRepoFile("examples/aic_run_input.aos"));
 
         var fmtOutput = ExecuteAic(aicPath, "fmt", fmtInput);
-        Assert.That(fmtOutput, Is.EqualTo("Program#p1 { Let#l1(name=x) { Lit#v1(value=1) } }"));
+        Assert.That(fmtOutput, Is.EqualTo("Program#program_cef1fc82ba90 { Let#let_3ad75de6b0e8(name=x) { Lit#lit_168514cb3fef(value=1) } }"));
+
+        var fmtIdsOutput = ExecuteAic(aicPath, "fmt", fmtInput, "--ids");
+        Assert.That(fmtIdsOutput, Is.EqualTo("Program#program_cef1fc82ba90 { Let#let_3ad75de6b0e8(name=x) { Lit#lit_168514cb3fef(value=1) } }"));
 
         var checkOutput = ExecuteAic(aicPath, "check", checkInput);
         Assert.That(checkOutput.Contains("Err#diag0(code=VAL002"), Is.True);
@@ -2838,6 +2841,17 @@ public class AosTests
         Assert.That(message, Is.EqualTo("Unknown command: oops. See airun --help."));
     }
 
+    [Test]
+    public void Parsing_AssignsDeterministicIds_WhenSourceOmitsIds()
+    {
+        var parse = AosParsing.Parse("Program { Let(name=x) { Lit(value=1) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+        Assert.That(parse.Root, Is.Not.Null);
+        Assert.That(parse.Root!.Id, Is.EqualTo("program_cef1fc82ba90"));
+        Assert.That(parse.Root.Children[0].Id, Is.EqualTo("let_3ad75de6b0e8"));
+        Assert.That(parse.Root.Children[0].Children[0].Id, Is.EqualTo("lit_168514cb3fef"));
+    }
+
     private static AosParseResult Parse(string source)
     {
         var tokenizer = new AosTokenizer(source);
@@ -2848,14 +2862,16 @@ public class AosTests
         return result;
     }
 
-    private static string ExecuteAic(string aicPath, string mode, string stdin)
+    private static string ExecuteAic(string aicPath, string mode, string stdin, params string[] extraArgs)
     {
         var aicProgram = Parse(File.ReadAllText(aicPath)).Root!;
         var runtime = new AosRuntime();
         runtime.Permissions.Add("io");
         runtime.Permissions.Add("compiler");
         runtime.ModuleBaseDir = Path.GetDirectoryName(FindRepoFile("AiLang.slnx"))!;
-        runtime.Env["argv"] = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(new[] { mode }));
+        var argv = new List<string> { mode };
+        argv.AddRange(extraArgs);
+        runtime.Env["argv"] = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(argv.ToArray()));
         runtime.ReadOnlyBindings.Add("argv");
 
         var validator = new AosValidator();

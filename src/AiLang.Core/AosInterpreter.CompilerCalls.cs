@@ -201,6 +201,24 @@ public sealed partial class AosInterpreter
             return true;
         }
 
+        if (target == "compiler.formatIds")
+        {
+            if (node.Children.Count != 1)
+            {
+                return true;
+            }
+
+            var input = EvalNode(node.Children[0], runtime, env);
+            if (input.Kind != AosValueKind.Node)
+            {
+                return true;
+            }
+
+            var normalized = AosNodeIdCanonicalizer.NormalizeIds(input.AsNode());
+            result = AosValue.FromString(AosFormatter.Format(normalized));
+            return true;
+        }
+
         if (target == "compiler.validate")
         {
             if (node.Children.Count != 1)

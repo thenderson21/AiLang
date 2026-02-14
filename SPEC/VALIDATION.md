@@ -13,7 +13,8 @@ This file is normative for semantic validation used by `aic check` (default path
 
 ## Required Structural Rules
 
-- Node ids must be unique (`VAL001`).
+- Source may omit node ids (`Kind(...)` / `Kind { ... }`); parser/canonicalizer assigns deterministic ids before validation.
+- Node ids in the canonical tree must be unique (`VAL001`).
 - Required attributes must exist (for example `Let.name`, `Var.name`, `Lit.value`, `Call.target`).
 - Module nodes require:
 - `Import.path` (string) with `0` children.
@@ -47,6 +48,11 @@ This file is normative for semantic validation used by `aic check` (default path
 - Output is canonical AOS:
 - `Ok#...` when no diagnostics exist.
 - first diagnostic `Err#...` when diagnostics exist.
+
+## Compiler Host Calls
+
+- `compiler.format` expects one node argument and returns canonical AOS text.
+- `compiler.formatIds` expects one node argument and returns canonical AOS text with deterministic rewritten ids (`VAL171`, `VAL172` on misuse).
 
 ## Change Control
 

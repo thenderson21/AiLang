@@ -757,6 +757,20 @@ public sealed class AosValidator
             return AosValueKind.String;
         }
 
+        if (target == "compiler.formatIds")
+        {
+            RequirePermission(node, "compiler", permissions);
+            if (argTypes.Count != 1)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL171", "compiler.formatIds expects 1 argument.", node.Id, node.Span));
+            }
+            else if (argTypes[0] != AosValueKind.Node && argTypes[0] != AosValueKind.Unknown)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL172", "compiler.formatIds arg must be node.", node.Id, node.Span));
+            }
+            return AosValueKind.String;
+        }
+
         if (target == "compiler.parseHttpRequest")
         {
             RequirePermission(node, "compiler", permissions);

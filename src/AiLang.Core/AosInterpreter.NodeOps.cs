@@ -19,6 +19,7 @@ public sealed partial class AosInterpreter
             AosValueKind.String => AosValue.FromBool(left.AsString() == right.AsString()),
             AosValueKind.Int => AosValue.FromBool(left.AsInt() == right.AsInt()),
             AosValueKind.Bool => AosValue.FromBool(left.AsBool() == right.AsBool()),
+            AosValueKind.Unknown => AosValue.FromBool(true),
             _ => AosValue.FromBool(false)
         };
     }

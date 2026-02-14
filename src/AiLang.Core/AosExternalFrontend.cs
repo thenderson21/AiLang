@@ -26,6 +26,12 @@ public static class AosExternalFrontend
 
             if (process.ExitCode != 0)
             {
+                var fallback = FallbackParse(source);
+                if (fallback.Root is not null && fallback.Diagnostics.Count == 0)
+                {
+                    return fallback;
+                }
+
                 return new AosParseResult(null, new List<AosDiagnostic> { ParseFrontendError(process.Stderr) });
             }
 
