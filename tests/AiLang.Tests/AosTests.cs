@@ -43,6 +43,14 @@ public class AosTests
         public int TimeNowUnixMsResult { get; set; }
         public int TimeMonotonicMsResult { get; set; }
         public int LastSleepMs { get; private set; } = -1;
+        public string? LastNetTcpListenHost { get; private set; }
+        public int LastNetTcpListenPort { get; private set; } = -1;
+        public string? LastNetTcpReadPayload { get; set; }
+        public int LastNetTcpReadHandle { get; private set; } = -1;
+        public int LastNetTcpReadMaxBytes { get; private set; } = -1;
+        public int LastNetTcpWriteHandle { get; private set; } = -1;
+        public string? LastNetTcpWriteData { get; private set; }
+        public int NetTcpWriteResult { get; set; } = -1;
 
         public override void ConsoleWrite(string text)
         {
@@ -165,6 +173,27 @@ public class AosTests
         public override string Runtime()
         {
             return RuntimeResult;
+        }
+
+        public override int NetTcpListen(VmNetworkState state, string host, int port)
+        {
+            LastNetTcpListenHost = host;
+            LastNetTcpListenPort = port;
+            return 77;
+        }
+
+        public override string NetTcpRead(VmNetworkState state, int connectionHandle, int maxBytes)
+        {
+            LastNetTcpReadHandle = connectionHandle;
+            LastNetTcpReadMaxBytes = maxBytes;
+            return LastNetTcpReadPayload ?? string.Empty;
+        }
+
+        public override int NetTcpWrite(VmNetworkState state, int connectionHandle, string data)
+        {
+            LastNetTcpWriteHandle = connectionHandle;
+            LastNetTcpWriteData = data;
+            return NetTcpWriteResult;
         }
     }
 
@@ -1058,6 +1087,78 @@ public class AosTests
             Assert.That(stat.Attrs["type"].AsString(), Is.EqualTo("file"));
             Assert.That(stat.Attrs["size"].AsInt(), Is.EqualTo(12));
             Assert.That(stat.Attrs["mtime"].AsInt(), Is.EqualTo(99));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallRegistry_ResolvesTcpAliases()
+    {
+        Assert.That(SyscallRegistry.TryResolve("sys.net_tcpListen", out var listenId), Is.True);
+        Assert.That(listenId, Is.EqualTo(SyscallId.NetTcpListen));
+        Assert.That(SyscallRegistry.TryResolve("sys.net_tcpAccept", out var acceptId), Is.True);
+        Assert.That(acceptId, Is.EqualTo(SyscallId.NetTcpAccept));
+        Assert.That(SyscallRegistry.TryResolve("sys.net_tcpRead", out var readId), Is.True);
+        Assert.That(readId, Is.EqualTo(SyscallId.NetTcpRead));
+        Assert.That(SyscallRegistry.TryResolve("sys.net_tcpWrite", out var writeId), Is.True);
+        Assert.That(writeId, Is.EqualTo(SyscallId.NetTcpWrite));
+    }
+
+    [Test]
+    public void SyscallDispatch_NetTcpListen_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.net_tcpListen) { Lit#h1(value=\"127.0.0.1\") Lit#p1(value=4040) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
+            Assert.That(value.AsInt(), Is.EqualTo(77));
+            Assert.That(host.LastNetTcpListenHost, Is.EqualTo("127.0.0.1"));
+            Assert.That(host.LastNetTcpListenPort, Is.EqualTo(4040));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_NetTcpReadAndWrite_CallHost()
+    {
+        var parse = Parse("Program#p1 { Let#l1(name=r) { Call#c1(target=sys.net_tcpRead) { Lit#h1(value=10) Lit#m1(value=32) } } Call#c2(target=sys.net_tcpWrite) { Lit#h2(value=10) Lit#d1(value=\"hello\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost
+        {
+            LastNetTcpReadPayload = "payload",
+            NetTcpWriteResult = 5
+        };
+
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
+            Assert.That(value.AsInt(), Is.EqualTo(5));
+            Assert.That(host.LastNetTcpReadHandle, Is.EqualTo(10));
+            Assert.That(host.LastNetTcpReadMaxBytes, Is.EqualTo(32));
+            Assert.That(host.LastNetTcpWriteHandle, Is.EqualTo(10));
+            Assert.That(host.LastNetTcpWriteData, Is.EqualTo("hello"));
         }
         finally
         {
