@@ -1634,6 +1634,59 @@ public class AosTests
     }
 
     [Test]
+    public void VmSyscallDispatcher_NetUdpRecv_IsWired()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost
+        {
+            NetUdpRecvResult = new VmUdpPacket("127.0.0.1", 9000, "data")
+        };
+        try
+        {
+            VmSyscalls.Host = host;
+            var invoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.NetUdpRecv,
+                new[] { SysValue.Int(12), SysValue.Int(64) }.AsSpan(),
+                new VmNetworkState(),
+                out var result);
+            Assert.That(invoked, Is.True);
+            Assert.That(result.Kind, Is.EqualTo(VmValueKind.Unknown));
+            Assert.That(host.LastNetUdpRecvHandle, Is.EqualTo(12));
+            Assert.That(host.LastNetUdpRecvMaxBytes, Is.EqualTo(64));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscallDispatcher_UiPollEvent_IsWired()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost
+        {
+            UiPollEventResult = new VmUiEvent("none", string.Empty, 0, 0)
+        };
+        try
+        {
+            VmSyscalls.Host = host;
+            var invoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.UiPollEvent,
+                new[] { SysValue.Int(9) }.AsSpan(),
+                new VmNetworkState(),
+                out var result);
+            Assert.That(invoked, Is.True);
+            Assert.That(result.Kind, Is.EqualTo(VmValueKind.Unknown));
+            Assert.That(host.LastUiPollHandle, Is.EqualTo(9));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
     public void SyscallDispatch_FsPathExists_ReturnsBool()
     {
         var parse = Parse("Program#p1 { Call#c1(target=sys.fs_pathExists) { Lit#s1(value=\"x\") } }");
