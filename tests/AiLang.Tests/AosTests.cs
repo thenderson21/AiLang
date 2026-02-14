@@ -31,6 +31,7 @@ public class AosTests
         public string RuntimeResult { get; set; } = "test-runtime";
         public string IoReadLineResult { get; set; } = string.Empty;
         public string IoReadAllStdinResult { get; set; } = string.Empty;
+        public bool FsPathExistsResult { get; set; }
 
         public override void ConsoleWrite(string text)
         {
@@ -70,6 +71,11 @@ public class AosTests
         public override void FsMakeDir(string path)
         {
             LastFsMakeDirPath = path;
+        }
+
+        public override bool FsPathExists(string path)
+        {
+            return FsPathExistsResult;
         }
 
         public override string ProcessCwd()
@@ -542,6 +548,46 @@ public class AosTests
             var value = interpreter.EvaluateProgram(parse.Root!, runtime);
             Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
             Assert.That(host.LastFsMakeDirPath, Is.EqualTo("new-dir"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_FsPathExists_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { FsPathExistsResult = true };
+        try
+        {
+            VmSyscalls.Host = host;
+            Assert.That(VmSyscalls.FsPathExists("x"), Is.True);
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_FsPathExists_ReturnsBool()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.fs_pathExists) { Lit#s1(value=\"x\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { FsPathExistsResult = true };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Bool));
+            Assert.That(value.AsBool(), Is.True);
         }
         finally
         {
