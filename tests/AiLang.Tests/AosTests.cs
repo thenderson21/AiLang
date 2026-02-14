@@ -17,6 +17,7 @@ public class AosTests
 {
     private sealed class RecordingSyscallHost : DefaultSyscallHost
     {
+        public string? LastFsMakeDirPath { get; private set; }
         public string? LastConsoleErrLine { get; private set; }
         public string? LastConsoleWrite { get; private set; }
         public string? LastConsoleLine { get; private set; }
@@ -64,6 +65,11 @@ public class AosTests
         public override string IoReadAllStdin()
         {
             return IoReadAllStdinResult;
+        }
+
+        public override void FsMakeDir(string path)
+        {
+            LastFsMakeDirPath = path;
         }
 
         public override string ProcessCwd()
@@ -495,6 +501,47 @@ public class AosTests
             var value = interpreter.EvaluateProgram(parse.Root!, runtime);
             Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
             Assert.That(value.AsString(), Is.EqualTo("all-stdin"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscalls_FsMakeDir_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            VmSyscalls.FsMakeDir("new-dir");
+            Assert.That(host.LastFsMakeDirPath, Is.EqualTo("new-dir"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_FsMakeDir_ReturnsVoid()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.fs_makeDir) { Lit#s1(value=\"new-dir\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastFsMakeDirPath, Is.EqualTo("new-dir"));
         }
         finally
         {
