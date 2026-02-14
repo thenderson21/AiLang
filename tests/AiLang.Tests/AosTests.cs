@@ -57,6 +57,8 @@ public class AosTests
         public string CryptoBase64DecodeResult { get; set; } = string.Empty;
         public string? LastCryptoSha1Input { get; private set; }
         public string CryptoSha1Result { get; set; } = string.Empty;
+        public string? LastCryptoSha256Input { get; private set; }
+        public string CryptoSha256Result { get; set; } = string.Empty;
 
         public override void ConsoleWrite(string text)
         {
@@ -218,6 +220,12 @@ public class AosTests
         {
             LastCryptoSha1Input = text;
             return CryptoSha1Result;
+        }
+
+        public override string CryptoSha256(string text)
+        {
+            LastCryptoSha256Input = text;
+            return CryptoSha256Result;
         }
     }
 
@@ -1299,6 +1307,31 @@ public class AosTests
             Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
             Assert.That(value.AsString(), Is.EqualTo("sha1hex"));
             Assert.That(host.LastCryptoSha1Input, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_CryptoSha256_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.crypto_sha256) { Lit#s1(value=\"hello\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { CryptoSha256Result = "sha256hex" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("crypto");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(value.AsString(), Is.EqualTo("sha256hex"));
+            Assert.That(host.LastCryptoSha256Input, Is.EqualTo("hello"));
         }
         finally
         {
