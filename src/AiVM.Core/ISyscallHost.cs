@@ -41,6 +41,28 @@ public interface ISyscallHost
     string NetReadHeaders(VmNetworkState state, int connectionHandle);
     bool NetWrite(VmNetworkState state, int connectionHandle, string text);
     void NetClose(VmNetworkState state, int handle);
+    int NetTcpListen(VmNetworkState state, string host, int port);
+    int NetTcpListenTls(VmNetworkState state, string host, int port, string certPath, string keyPath);
+    int NetTcpAccept(VmNetworkState state, int listenerHandle);
+    string NetTcpRead(VmNetworkState state, int connectionHandle, int maxBytes);
+    int NetTcpWrite(VmNetworkState state, int connectionHandle, string data);
+    int NetUdpBind(VmNetworkState state, string host, int port);
+    VmUdpPacket NetUdpRecv(VmNetworkState state, int handle, int maxBytes);
+    int NetUdpSend(VmNetworkState state, int handle, string host, int port, string data);
+    int UiCreateWindow(string title, int width, int height);
+    void UiBeginFrame(int windowHandle);
+    void UiDrawRect(int windowHandle, int x, int y, int width, int height, string color);
+    void UiDrawText(int windowHandle, int x, int y, string text, string color, int size);
+    void UiEndFrame(int windowHandle);
+    VmUiEvent UiPollEvent(int windowHandle);
+    void UiPresent(int windowHandle);
+    void UiCloseWindow(int windowHandle);
+    string CryptoBase64Encode(string text);
+    string CryptoBase64Decode(string text);
+    string CryptoSha1(string text);
+    string CryptoSha256(string text);
+    string CryptoHmacSha256(string key, string text);
+    string CryptoRandomBytes(int count);
 
     void StdoutWriteLine(string text);
     void ProcessExit(int code);

@@ -18,9 +18,14 @@ public sealed partial class AosInterpreter
             return false;
         }
 
+        if (!SyscallRegistry.TryResolve(target, out var syscallId))
+        {
+            return false;
+        }
+
         if (target == "sys.process_argv")
         {
-            if (!runtime.Permissions.Contains("sys"))
+            if (!SyscallPermissions.HasPermission(runtime.Permissions, syscallId))
             {
                 return true;
             }
@@ -35,7 +40,7 @@ public sealed partial class AosInterpreter
 
         if (target == "sys.fs_readDir")
         {
-            if (!runtime.Permissions.Contains("sys"))
+            if (!SyscallPermissions.HasPermission(runtime.Permissions, syscallId))
             {
                 return true;
             }
@@ -56,7 +61,7 @@ public sealed partial class AosInterpreter
 
         if (target == "sys.fs_stat")
         {
-            if (!runtime.Permissions.Contains("sys"))
+            if (!SyscallPermissions.HasPermission(runtime.Permissions, syscallId))
             {
                 return true;
             }
@@ -76,14 +81,54 @@ public sealed partial class AosInterpreter
             return true;
         }
 
-        if (!runtime.Permissions.Contains("sys"))
+        if (target == "sys.net_udpRecv")
         {
+            if (!SyscallPermissions.HasPermission(runtime.Permissions, syscallId))
+            {
+                return true;
+            }
+            if (callNode.Children.Count != 2)
+            {
+                return true;
+            }
+
+            var handleValue = EvalNode(callNode.Children[0], runtime, env);
+            var maxBytesValue = EvalNode(callNode.Children[1], runtime, env);
+            if (handleValue.Kind != AosValueKind.Int || maxBytesValue.Kind != AosValueKind.Int)
+            {
+                return true;
+            }
+
+            var packet = VmSyscalls.NetUdpRecv(runtime.Network, handleValue.AsInt(), maxBytesValue.AsInt());
+            result = AosValue.FromNode(AosRuntimeNodes.BuildUdpPacketNode(packet.Host, packet.Port, packet.Data));
             return true;
         }
 
-        if (!SyscallRegistry.TryResolve(target, out var syscallId))
+        if (target == "sys.ui_pollEvent")
         {
-            return false;
+            if (!SyscallPermissions.HasPermission(runtime.Permissions, syscallId))
+            {
+                return true;
+            }
+            if (callNode.Children.Count != 1)
+            {
+                return true;
+            }
+
+            var handleValue = EvalNode(callNode.Children[0], runtime, env);
+            if (handleValue.Kind != AosValueKind.Int)
+            {
+                return true;
+            }
+
+            var uiEvent = VmSyscalls.UiPollEvent(handleValue.AsInt());
+            result = AosValue.FromNode(AosRuntimeNodes.BuildUiEventNode(uiEvent.Type, uiEvent.Detail, uiEvent.X, uiEvent.Y));
+            return true;
+        }
+
+        if (!SyscallPermissions.HasPermission(runtime.Permissions, syscallId))
+        {
+            return true;
         }
 
         if (VmSyscallDispatcher.TryGetExpectedArity(syscallId, out var sysArity) &&

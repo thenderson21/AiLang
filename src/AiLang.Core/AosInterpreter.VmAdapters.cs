@@ -200,7 +200,7 @@ public sealed partial class AosInterpreter
             switch (id)
             {
                 case SyscallId.ProcessArgv:
-                    if (args.Length != 0 || !_runtime.Permissions.Contains("sys"))
+                    if (args.Length != 0 || !SyscallPermissions.HasPermission(_runtime.Permissions, id))
                     {
                         result = AosValue.Unknown;
                         return true;
@@ -208,7 +208,7 @@ public sealed partial class AosInterpreter
                     result = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(VmSyscalls.ProcessArgv()));
                     return true;
                 case SyscallId.FsReadDir:
-                    if (!_runtime.Permissions.Contains("sys") || args.Length != 1 || args[0].Kind != AosValueKind.String)
+                    if (!SyscallPermissions.HasPermission(_runtime.Permissions, id) || args.Length != 1 || args[0].Kind != AosValueKind.String)
                     {
                         result = AosValue.Unknown;
                         return true;
@@ -216,7 +216,7 @@ public sealed partial class AosInterpreter
                     result = AosValue.FromNode(AosRuntimeNodes.BuildStringListNode("dirEntries", "entry", VmSyscalls.FsReadDir(args[0].AsString())));
                     return true;
                 case SyscallId.FsStat:
-                    if (!_runtime.Permissions.Contains("sys") || args.Length != 1 || args[0].Kind != AosValueKind.String)
+                    if (!SyscallPermissions.HasPermission(_runtime.Permissions, id) || args.Length != 1 || args[0].Kind != AosValueKind.String)
                     {
                         result = AosValue.Unknown;
                         return true;
@@ -224,9 +224,32 @@ public sealed partial class AosInterpreter
                     var stat = VmSyscalls.FsStat(args[0].AsString());
                     result = AosValue.FromNode(AosRuntimeNodes.BuildFsStatNode(stat.Type, stat.Size, stat.MtimeUnixMs));
                     return true;
+                case SyscallId.NetUdpRecv:
+                    if (!SyscallPermissions.HasPermission(_runtime.Permissions, id) ||
+                        args.Length != 2 ||
+                        args[0].Kind != AosValueKind.Int ||
+                        args[1].Kind != AosValueKind.Int)
+                    {
+                        result = AosValue.Unknown;
+                        return true;
+                    }
+                    var packet = VmSyscalls.NetUdpRecv(_runtime.Network, args[0].AsInt(), args[1].AsInt());
+                    result = AosValue.FromNode(AosRuntimeNodes.BuildUdpPacketNode(packet.Host, packet.Port, packet.Data));
+                    return true;
+                case SyscallId.UiPollEvent:
+                    if (!SyscallPermissions.HasPermission(_runtime.Permissions, id) ||
+                        args.Length != 1 ||
+                        args[0].Kind != AosValueKind.Int)
+                    {
+                        result = AosValue.Unknown;
+                        return true;
+                    }
+                    var uiEvent = VmSyscalls.UiPollEvent(args[0].AsInt());
+                    result = AosValue.FromNode(AosRuntimeNodes.BuildUiEventNode(uiEvent.Type, uiEvent.Detail, uiEvent.X, uiEvent.Y));
+                    return true;
             }
 
-            if (!_runtime.Permissions.Contains("sys"))
+            if (!SyscallPermissions.HasPermission(_runtime.Permissions, id))
             {
                 result = AosValue.Unknown;
                 return true;

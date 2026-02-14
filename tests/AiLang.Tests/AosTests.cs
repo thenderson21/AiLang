@@ -43,6 +43,44 @@ public class AosTests
         public int TimeNowUnixMsResult { get; set; }
         public int TimeMonotonicMsResult { get; set; }
         public int LastSleepMs { get; private set; } = -1;
+        public string? LastNetTcpListenHost { get; private set; }
+        public int LastNetTcpListenPort { get; private set; } = -1;
+        public string? LastNetTcpReadPayload { get; set; }
+        public int LastNetTcpReadHandle { get; private set; } = -1;
+        public int LastNetTcpReadMaxBytes { get; private set; } = -1;
+        public int LastNetTcpWriteHandle { get; private set; } = -1;
+        public string? LastNetTcpWriteData { get; private set; }
+        public int NetTcpWriteResult { get; set; } = -1;
+        public string? LastCryptoBase64EncodeInput { get; private set; }
+        public string CryptoBase64EncodeResult { get; set; } = string.Empty;
+        public string? LastCryptoBase64DecodeInput { get; private set; }
+        public string CryptoBase64DecodeResult { get; set; } = string.Empty;
+        public string? LastCryptoSha1Input { get; private set; }
+        public string CryptoSha1Result { get; set; } = string.Empty;
+        public string? LastCryptoSha256Input { get; private set; }
+        public string CryptoSha256Result { get; set; } = string.Empty;
+        public string? LastCryptoHmacSha256Key { get; private set; }
+        public string? LastCryptoHmacSha256Text { get; private set; }
+        public string CryptoHmacSha256Result { get; set; } = string.Empty;
+        public int LastCryptoRandomBytesCount { get; private set; } = -1;
+        public string CryptoRandomBytesResult { get; set; } = string.Empty;
+        public string? LastNetUdpBindHost { get; private set; }
+        public int LastNetUdpBindPort { get; private set; } = -1;
+        public int NetUdpBindResult { get; set; } = -1;
+        public int LastNetUdpRecvHandle { get; private set; } = -1;
+        public int LastNetUdpRecvMaxBytes { get; private set; } = -1;
+        public VmUdpPacket NetUdpRecvResult { get; set; }
+        public int LastNetUdpSendHandle { get; private set; } = -1;
+        public string? LastNetUdpSendHost { get; private set; }
+        public int LastNetUdpSendPort { get; private set; } = -1;
+        public string? LastNetUdpSendData { get; private set; }
+        public int NetUdpSendResult { get; set; } = -1;
+        public string? LastUiCreateTitle { get; private set; }
+        public int LastUiCreateWidth { get; private set; } = -1;
+        public int LastUiCreateHeight { get; private set; } = -1;
+        public int UiCreateWindowResult { get; set; } = -1;
+        public int LastUiPollHandle { get; private set; } = -1;
+        public VmUiEvent UiPollEventResult { get; set; }
 
         public override void ConsoleWrite(string text)
         {
@@ -166,6 +204,101 @@ public class AosTests
         {
             return RuntimeResult;
         }
+
+        public override int NetTcpListen(VmNetworkState state, string host, int port)
+        {
+            LastNetTcpListenHost = host;
+            LastNetTcpListenPort = port;
+            return 77;
+        }
+
+        public override string NetTcpRead(VmNetworkState state, int connectionHandle, int maxBytes)
+        {
+            LastNetTcpReadHandle = connectionHandle;
+            LastNetTcpReadMaxBytes = maxBytes;
+            return LastNetTcpReadPayload ?? string.Empty;
+        }
+
+        public override int NetTcpWrite(VmNetworkState state, int connectionHandle, string data)
+        {
+            LastNetTcpWriteHandle = connectionHandle;
+            LastNetTcpWriteData = data;
+            return NetTcpWriteResult;
+        }
+
+        public override string CryptoBase64Encode(string text)
+        {
+            LastCryptoBase64EncodeInput = text;
+            return CryptoBase64EncodeResult;
+        }
+
+        public override string CryptoBase64Decode(string text)
+        {
+            LastCryptoBase64DecodeInput = text;
+            return CryptoBase64DecodeResult;
+        }
+
+        public override string CryptoSha1(string text)
+        {
+            LastCryptoSha1Input = text;
+            return CryptoSha1Result;
+        }
+
+        public override string CryptoSha256(string text)
+        {
+            LastCryptoSha256Input = text;
+            return CryptoSha256Result;
+        }
+
+        public override string CryptoHmacSha256(string key, string text)
+        {
+            LastCryptoHmacSha256Key = key;
+            LastCryptoHmacSha256Text = text;
+            return CryptoHmacSha256Result;
+        }
+
+        public override string CryptoRandomBytes(int count)
+        {
+            LastCryptoRandomBytesCount = count;
+            return CryptoRandomBytesResult;
+        }
+
+        public override int NetUdpBind(VmNetworkState state, string host, int port)
+        {
+            LastNetUdpBindHost = host;
+            LastNetUdpBindPort = port;
+            return NetUdpBindResult;
+        }
+
+        public override VmUdpPacket NetUdpRecv(VmNetworkState state, int handle, int maxBytes)
+        {
+            LastNetUdpRecvHandle = handle;
+            LastNetUdpRecvMaxBytes = maxBytes;
+            return NetUdpRecvResult;
+        }
+
+        public override int NetUdpSend(VmNetworkState state, int handle, string host, int port, string data)
+        {
+            LastNetUdpSendHandle = handle;
+            LastNetUdpSendHost = host;
+            LastNetUdpSendPort = port;
+            LastNetUdpSendData = data;
+            return NetUdpSendResult;
+        }
+
+        public override int UiCreateWindow(string title, int width, int height)
+        {
+            LastUiCreateTitle = title;
+            LastUiCreateWidth = width;
+            LastUiCreateHeight = height;
+            return UiCreateWindowResult;
+        }
+
+        public override VmUiEvent UiPollEvent(int windowHandle)
+        {
+            LastUiPollHandle = windowHandle;
+            return UiPollEventResult;
+        }
     }
 
     [Test]
@@ -245,6 +378,23 @@ public class AosTests
         var permissions = new HashSet<string>(StringComparer.Ordinal) { "math" };
         var result = validator.Validate(parse.Root!, null, permissions);
         Assert.That(result.Diagnostics.Any(d => d.Code == "VAL040"), Is.True);
+    }
+
+    [Test]
+    public void Validator_SyscallGroupPermission_UsesMappedGroup()
+    {
+        var source = "Call#c1(target=sys.time_nowUnixMs)";
+        var parse = Parse(source);
+        var validator = new AosValidator();
+
+        var denied = validator.Validate(parse.Root!, null, new HashSet<string>(StringComparer.Ordinal) { "math" });
+        Assert.That(denied.Diagnostics.Any(d => d.Code == "VAL040" && d.Message.Contains("'time'", StringComparison.Ordinal)), Is.True);
+
+        var allowedByGroup = validator.Validate(parse.Root!, null, new HashSet<string>(StringComparer.Ordinal) { "time" });
+        Assert.That(allowedByGroup.Diagnostics.Any(d => d.Code == "VAL040"), Is.False);
+
+        var allowedByLegacy = validator.Validate(parse.Root!, null, new HashSet<string>(StringComparer.Ordinal) { "sys" });
+        Assert.That(allowedByLegacy.Diagnostics.Any(d => d.Code == "VAL040"), Is.False);
     }
 
     [Test]
@@ -866,6 +1016,30 @@ public class AosTests
     }
 
     [Test]
+    public void SyscallDispatch_TimeNowUnixMs_AllowsGroupPermissionWithoutSys()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.time_nowUnixMs) }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { TimeNowUnixMsResult = 9191 };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("time");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
+            Assert.That(value.AsInt(), Is.EqualTo(9191));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
     public void SyscallDispatch_TimeMonotonicMs_ReturnsInt()
     {
         var parse = Parse("Program#p1 { Call#c1(target=sys.time_monotonicMs) }");
@@ -1066,6 +1240,346 @@ public class AosTests
     }
 
     [Test]
+    public void SyscallRegistry_ResolvesTcpAliases()
+    {
+        Assert.That(SyscallRegistry.TryResolve("sys.net_tcpListen", out var listenId), Is.True);
+        Assert.That(listenId, Is.EqualTo(SyscallId.NetTcpListen));
+        Assert.That(SyscallRegistry.TryResolve("sys.net_tcpAccept", out var acceptId), Is.True);
+        Assert.That(acceptId, Is.EqualTo(SyscallId.NetTcpAccept));
+        Assert.That(SyscallRegistry.TryResolve("sys.net_tcpRead", out var readId), Is.True);
+        Assert.That(readId, Is.EqualTo(SyscallId.NetTcpRead));
+        Assert.That(SyscallRegistry.TryResolve("sys.net_tcpWrite", out var writeId), Is.True);
+        Assert.That(writeId, Is.EqualTo(SyscallId.NetTcpWrite));
+    }
+
+    [Test]
+    public void SyscallDispatch_NetTcpListen_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.net_tcpListen) { Lit#h1(value=\"127.0.0.1\") Lit#p1(value=4040) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
+            Assert.That(value.AsInt(), Is.EqualTo(77));
+            Assert.That(host.LastNetTcpListenHost, Is.EqualTo("127.0.0.1"));
+            Assert.That(host.LastNetTcpListenPort, Is.EqualTo(4040));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_NetTcpReadAndWrite_CallHost()
+    {
+        var parse = Parse("Program#p1 { Let#l1(name=r) { Call#c1(target=sys.net_tcpRead) { Lit#h1(value=10) Lit#m1(value=32) } } Call#c2(target=sys.net_tcpWrite) { Lit#h2(value=10) Lit#d1(value=\"hello\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost
+        {
+            LastNetTcpReadPayload = "payload",
+            NetTcpWriteResult = 5
+        };
+
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
+            Assert.That(value.AsInt(), Is.EqualTo(5));
+            Assert.That(host.LastNetTcpReadHandle, Is.EqualTo(10));
+            Assert.That(host.LastNetTcpReadMaxBytes, Is.EqualTo(32));
+            Assert.That(host.LastNetTcpWriteHandle, Is.EqualTo(10));
+            Assert.That(host.LastNetTcpWriteData, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_NetUdpBindAndSend_CallHost()
+    {
+        var parse = Parse("Program#p1 { Let#l1(name=h) { Call#c1(target=sys.net_udpBind) { Lit#h1(value=\"127.0.0.1\") Lit#p1(value=9090) } } Call#c2(target=sys.net_udpSend) { Var#v1(name=h) Lit#h2(value=\"127.0.0.1\") Lit#p2(value=9999) Lit#d1(value=\"ping\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { NetUdpBindResult = 22, NetUdpSendResult = 4 };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("net");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
+            Assert.That(value.AsInt(), Is.EqualTo(4));
+            Assert.That(host.LastNetUdpBindHost, Is.EqualTo("127.0.0.1"));
+            Assert.That(host.LastNetUdpBindPort, Is.EqualTo(9090));
+            Assert.That(host.LastNetUdpSendHandle, Is.EqualTo(22));
+            Assert.That(host.LastNetUdpSendHost, Is.EqualTo("127.0.0.1"));
+            Assert.That(host.LastNetUdpSendPort, Is.EqualTo(9999));
+            Assert.That(host.LastNetUdpSendData, Is.EqualTo("ping"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_NetUdpRecv_ReturnsNode()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.net_udpRecv) { Lit#h1(value=22) Lit#m1(value=64) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { NetUdpRecvResult = new VmUdpPacket("127.0.0.1", 4444, "pong") };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("net");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+            var packet = value.AsNode();
+            Assert.That(packet.Kind, Is.EqualTo("UdpPacket"));
+            Assert.That(packet.Attrs["host"].AsString(), Is.EqualTo("127.0.0.1"));
+            Assert.That(packet.Attrs["port"].AsInt(), Is.EqualTo(4444));
+            Assert.That(packet.Attrs["data"].AsString(), Is.EqualTo("pong"));
+            Assert.That(host.LastNetUdpRecvHandle, Is.EqualTo(22));
+            Assert.That(host.LastNetUdpRecvMaxBytes, Is.EqualTo(64));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiCreateWindow_ReturnsHandle()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_createWindow) { Lit#t1(value=\"demo\") Lit#w1(value=800) Lit#h1(value=600) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { UiCreateWindowResult = 9 };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
+            Assert.That(value.AsInt(), Is.EqualTo(9));
+            Assert.That(host.LastUiCreateTitle, Is.EqualTo("demo"));
+            Assert.That(host.LastUiCreateWidth, Is.EqualTo(800));
+            Assert.That(host.LastUiCreateHeight, Is.EqualTo(600));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiPollEvent_ReturnsNode()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_pollEvent) { Lit#h1(value=9) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { UiPollEventResult = new VmUiEvent("click", "left", 10, 20) };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+            var uiEvent = value.AsNode();
+            Assert.That(uiEvent.Kind, Is.EqualTo("UiEvent"));
+            Assert.That(uiEvent.Attrs["type"].AsString(), Is.EqualTo("click"));
+            Assert.That(uiEvent.Attrs["detail"].AsString(), Is.EqualTo("left"));
+            Assert.That(uiEvent.Attrs["x"].AsInt(), Is.EqualTo(10));
+            Assert.That(uiEvent.Attrs["y"].AsInt(), Is.EqualTo(20));
+            Assert.That(host.LastUiPollHandle, Is.EqualTo(9));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_CryptoBase64Encode_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.crypto_base64Encode) { Lit#s1(value=\"hello\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { CryptoBase64EncodeResult = "aGVsbG8=" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("crypto");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(value.AsString(), Is.EqualTo("aGVsbG8="));
+            Assert.That(host.LastCryptoBase64EncodeInput, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_CryptoBase64Decode_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.crypto_base64Decode) { Lit#s1(value=\"aGVsbG8=\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { CryptoBase64DecodeResult = "hello" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("crypto");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(value.AsString(), Is.EqualTo("hello"));
+            Assert.That(host.LastCryptoBase64DecodeInput, Is.EqualTo("aGVsbG8="));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_CryptoSha1_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.crypto_sha1) { Lit#s1(value=\"hello\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { CryptoSha1Result = "sha1hex" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("crypto");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(value.AsString(), Is.EqualTo("sha1hex"));
+            Assert.That(host.LastCryptoSha1Input, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_CryptoSha256_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.crypto_sha256) { Lit#s1(value=\"hello\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { CryptoSha256Result = "sha256hex" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("crypto");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(value.AsString(), Is.EqualTo("sha256hex"));
+            Assert.That(host.LastCryptoSha256Input, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_CryptoHmacSha256_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.crypto_hmacSha256) { Lit#k1(value=\"secret\") Lit#s1(value=\"hello\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { CryptoHmacSha256Result = "hmachex" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("crypto");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(value.AsString(), Is.EqualTo("hmachex"));
+            Assert.That(host.LastCryptoHmacSha256Key, Is.EqualTo("secret"));
+            Assert.That(host.LastCryptoHmacSha256Text, Is.EqualTo("hello"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_CryptoRandomBytes_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.crypto_randomBytes) { Lit#n1(value=8) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { CryptoRandomBytesResult = "AQIDBAUGBwg=" };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("crypto");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(value.AsString(), Is.EqualTo("AQIDBAUGBwg="));
+            Assert.That(host.LastCryptoRandomBytesCount, Is.EqualTo(8));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
     public void VmSyscallDispatcher_FsReadDir_IsWired()
     {
         Assert.That(SyscallRegistry.TryResolve("sys.fs_readDir", out var syscallId), Is.True);
@@ -1112,6 +1626,59 @@ public class AosTests
             Assert.That(invoked, Is.True);
             Assert.That(host.LastFsStatPath, Is.EqualTo("path"));
             Assert.That(result.Kind, Is.EqualTo(VmValueKind.Unknown));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscallDispatcher_NetUdpRecv_IsWired()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost
+        {
+            NetUdpRecvResult = new VmUdpPacket("127.0.0.1", 9000, "data")
+        };
+        try
+        {
+            VmSyscalls.Host = host;
+            var invoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.NetUdpRecv,
+                new[] { SysValue.Int(12), SysValue.Int(64) }.AsSpan(),
+                new VmNetworkState(),
+                out var result);
+            Assert.That(invoked, Is.True);
+            Assert.That(result.Kind, Is.EqualTo(VmValueKind.Unknown));
+            Assert.That(host.LastNetUdpRecvHandle, Is.EqualTo(12));
+            Assert.That(host.LastNetUdpRecvMaxBytes, Is.EqualTo(64));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscallDispatcher_UiPollEvent_IsWired()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost
+        {
+            UiPollEventResult = new VmUiEvent("none", string.Empty, 0, 0)
+        };
+        try
+        {
+            VmSyscalls.Host = host;
+            var invoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.UiPollEvent,
+                new[] { SysValue.Int(9) }.AsSpan(),
+                new VmNetworkState(),
+                out var result);
+            Assert.That(invoked, Is.True);
+            Assert.That(result.Kind, Is.EqualTo(VmValueKind.Unknown));
+            Assert.That(host.LastUiPollHandle, Is.EqualTo(9));
         }
         finally
         {

@@ -191,6 +191,116 @@ public static class VmSyscalls
         Host.NetClose(state, handle);
     }
 
+    public static int NetTcpListen(VmNetworkState state, string host, int port)
+    {
+        return Host.NetTcpListen(state, host, port);
+    }
+
+    public static int NetTcpListenTls(VmNetworkState state, string host, int port, string certPath, string keyPath)
+    {
+        return Host.NetTcpListenTls(state, host, port, certPath, keyPath);
+    }
+
+    public static int NetTcpAccept(VmNetworkState state, int listenerHandle)
+    {
+        return Host.NetTcpAccept(state, listenerHandle);
+    }
+
+    public static string NetTcpRead(VmNetworkState state, int connectionHandle, int maxBytes)
+    {
+        return Host.NetTcpRead(state, connectionHandle, maxBytes);
+    }
+
+    public static int NetTcpWrite(VmNetworkState state, int connectionHandle, string data)
+    {
+        return Host.NetTcpWrite(state, connectionHandle, data);
+    }
+
+    public static int NetUdpBind(VmNetworkState state, string host, int port)
+    {
+        return Host.NetUdpBind(state, host, port);
+    }
+
+    public static VmUdpPacket NetUdpRecv(VmNetworkState state, int handle, int maxBytes)
+    {
+        return Host.NetUdpRecv(state, handle, maxBytes);
+    }
+
+    public static int NetUdpSend(VmNetworkState state, int handle, string host, int port, string data)
+    {
+        return Host.NetUdpSend(state, handle, host, port, data);
+    }
+
+    public static int UiCreateWindow(string title, int width, int height)
+    {
+        return Host.UiCreateWindow(title, width, height);
+    }
+
+    public static void UiBeginFrame(int windowHandle)
+    {
+        Host.UiBeginFrame(windowHandle);
+    }
+
+    public static void UiDrawRect(int windowHandle, int x, int y, int width, int height, string color)
+    {
+        Host.UiDrawRect(windowHandle, x, y, width, height, color);
+    }
+
+    public static void UiDrawText(int windowHandle, int x, int y, string text, string color, int size)
+    {
+        Host.UiDrawText(windowHandle, x, y, text, color, size);
+    }
+
+    public static void UiEndFrame(int windowHandle)
+    {
+        Host.UiEndFrame(windowHandle);
+    }
+
+    public static VmUiEvent UiPollEvent(int windowHandle)
+    {
+        return Host.UiPollEvent(windowHandle);
+    }
+
+    public static void UiPresent(int windowHandle)
+    {
+        Host.UiPresent(windowHandle);
+    }
+
+    public static void UiCloseWindow(int windowHandle)
+    {
+        Host.UiCloseWindow(windowHandle);
+    }
+
+    public static string CryptoBase64Encode(string text)
+    {
+        return Host.CryptoBase64Encode(text);
+    }
+
+    public static string CryptoBase64Decode(string text)
+    {
+        return Host.CryptoBase64Decode(text);
+    }
+
+    public static string CryptoSha1(string text)
+    {
+        return Host.CryptoSha1(text);
+    }
+
+    public static string CryptoSha256(string text)
+    {
+        return Host.CryptoSha256(text);
+    }
+
+    public static string CryptoHmacSha256(string key, string text)
+    {
+        return Host.CryptoHmacSha256(key, text);
+    }
+
+    public static string CryptoRandomBytes(int count)
+    {
+        return Host.CryptoRandomBytes(count);
+    }
+
     public static void StdoutWriteLine(string text)
     {
         Host.StdoutWriteLine(text);

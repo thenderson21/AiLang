@@ -12,6 +12,28 @@ public static class VmSyscallDispatcher
             SyscallId.NetReadHeaders => 1,
             SyscallId.NetWrite => 2,
             SyscallId.NetClose => 1,
+            SyscallId.NetTcpListen => 2,
+            SyscallId.NetTcpListenTls => 4,
+            SyscallId.NetTcpAccept => 1,
+            SyscallId.NetTcpRead => 2,
+            SyscallId.NetTcpWrite => 2,
+            SyscallId.NetUdpBind => 2,
+            SyscallId.NetUdpRecv => 2,
+            SyscallId.NetUdpSend => 4,
+            SyscallId.UiCreateWindow => 3,
+            SyscallId.UiBeginFrame => 1,
+            SyscallId.UiDrawRect => 6,
+            SyscallId.UiDrawText => 6,
+            SyscallId.UiEndFrame => 1,
+            SyscallId.UiPollEvent => 1,
+            SyscallId.UiPresent => 1,
+            SyscallId.UiCloseWindow => 1,
+            SyscallId.CryptoBase64Encode => 1,
+            SyscallId.CryptoBase64Decode => 1,
+            SyscallId.CryptoSha1 => 1,
+            SyscallId.CryptoSha256 => 1,
+            SyscallId.CryptoHmacSha256 => 2,
+            SyscallId.CryptoRandomBytes => 1,
             SyscallId.ConsoleWrite => 1,
             SyscallId.ConsoleWriteLine => 1,
             SyscallId.ConsoleReadLine => 0,
@@ -99,6 +121,216 @@ public static class VmSyscallDispatcher
                 }
                 VmSyscalls.NetClose(network, closeHandle);
                 result = SysValue.Void();
+                return true;
+
+            case SyscallId.NetTcpListen:
+                if (!TryGetString(args, 0, 2, out var tcpListenHost) ||
+                    !TryGetInt(args, 1, 2, out var tcpListenPort))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.NetTcpListen(network, tcpListenHost, tcpListenPort));
+                return true;
+
+            case SyscallId.NetTcpListenTls:
+                if (!TryGetString(args, 0, 4, out var tcpTlsHost) ||
+                    !TryGetInt(args, 1, 4, out var tcpTlsPort) ||
+                    !TryGetString(args, 2, 4, out var tcpCertPath) ||
+                    !TryGetString(args, 3, 4, out var tcpKeyPath))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.NetTcpListenTls(network, tcpTlsHost, tcpTlsPort, tcpCertPath, tcpKeyPath));
+                return true;
+
+            case SyscallId.NetTcpAccept:
+                if (!TryGetInt(args, 0, 1, out var tcpAcceptListenerHandle))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.NetTcpAccept(network, tcpAcceptListenerHandle));
+                return true;
+
+            case SyscallId.NetTcpRead:
+                if (!TryGetInt(args, 0, 2, out var tcpReadConnectionHandle) ||
+                    !TryGetInt(args, 1, 2, out var tcpReadMaxBytes))
+                {
+                    return true;
+                }
+                result = SysValue.String(VmSyscalls.NetTcpRead(network, tcpReadConnectionHandle, tcpReadMaxBytes));
+                return true;
+
+            case SyscallId.NetTcpWrite:
+                if (!TryGetInt(args, 0, 2, out var tcpWriteConnectionHandle) ||
+                    !TryGetString(args, 1, 2, out var tcpWriteData))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.NetTcpWrite(network, tcpWriteConnectionHandle, tcpWriteData));
+                return true;
+
+            case SyscallId.NetUdpBind:
+                if (!TryGetString(args, 0, 2, out var udpBindHost) ||
+                    !TryGetInt(args, 1, 2, out var udpBindPort))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.NetUdpBind(network, udpBindHost, udpBindPort));
+                return true;
+
+            case SyscallId.NetUdpSend:
+                if (!TryGetInt(args, 0, 4, out var udpSendHandle) ||
+                    !TryGetString(args, 1, 4, out var udpSendHost) ||
+                    !TryGetInt(args, 2, 4, out var udpSendPort) ||
+                    !TryGetString(args, 3, 4, out var udpSendData))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.NetUdpSend(network, udpSendHandle, udpSendHost, udpSendPort, udpSendData));
+                return true;
+
+            case SyscallId.NetUdpRecv:
+                if (!TryGetInt(args, 0, 2, out var udpRecvHandle) ||
+                    !TryGetInt(args, 1, 2, out var udpRecvMaxBytes))
+                {
+                    return true;
+                }
+                // Node-returning syscalls are materialized by interpreter adapters.
+                _ = VmSyscalls.NetUdpRecv(network, udpRecvHandle, udpRecvMaxBytes);
+                result = SysValue.Unknown();
+                return true;
+
+            case SyscallId.UiCreateWindow:
+                if (!TryGetString(args, 0, 3, out var uiTitle) ||
+                    !TryGetInt(args, 1, 3, out var uiWidth) ||
+                    !TryGetInt(args, 2, 3, out var uiHeight))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.UiCreateWindow(uiTitle, uiWidth, uiHeight));
+                return true;
+
+            case SyscallId.UiBeginFrame:
+                if (!TryGetInt(args, 0, 1, out var uiBeginHandle))
+                {
+                    return true;
+                }
+                VmSyscalls.UiBeginFrame(uiBeginHandle);
+                result = SysValue.Void();
+                return true;
+
+            case SyscallId.UiDrawRect:
+                if (!TryGetInt(args, 0, 6, out var uiRectHandle) ||
+                    !TryGetInt(args, 1, 6, out var uiRectX) ||
+                    !TryGetInt(args, 2, 6, out var uiRectY) ||
+                    !TryGetInt(args, 3, 6, out var uiRectW) ||
+                    !TryGetInt(args, 4, 6, out var uiRectH) ||
+                    !TryGetString(args, 5, 6, out var uiRectColor))
+                {
+                    return true;
+                }
+                VmSyscalls.UiDrawRect(uiRectHandle, uiRectX, uiRectY, uiRectW, uiRectH, uiRectColor);
+                result = SysValue.Void();
+                return true;
+
+            case SyscallId.UiDrawText:
+                if (!TryGetInt(args, 0, 6, out var uiTextHandle) ||
+                    !TryGetInt(args, 1, 6, out var uiTextX) ||
+                    !TryGetInt(args, 2, 6, out var uiTextY) ||
+                    !TryGetString(args, 3, 6, out var uiTextValue) ||
+                    !TryGetString(args, 4, 6, out var uiTextColor) ||
+                    !TryGetInt(args, 5, 6, out var uiTextSize))
+                {
+                    return true;
+                }
+                VmSyscalls.UiDrawText(uiTextHandle, uiTextX, uiTextY, uiTextValue, uiTextColor, uiTextSize);
+                result = SysValue.Void();
+                return true;
+
+            case SyscallId.UiEndFrame:
+                if (!TryGetInt(args, 0, 1, out var uiEndHandle))
+                {
+                    return true;
+                }
+                VmSyscalls.UiEndFrame(uiEndHandle);
+                result = SysValue.Void();
+                return true;
+
+            case SyscallId.UiPresent:
+                if (!TryGetInt(args, 0, 1, out var uiPresentHandle))
+                {
+                    return true;
+                }
+                VmSyscalls.UiPresent(uiPresentHandle);
+                result = SysValue.Void();
+                return true;
+
+            case SyscallId.UiCloseWindow:
+                if (!TryGetInt(args, 0, 1, out var uiCloseHandle))
+                {
+                    return true;
+                }
+                VmSyscalls.UiCloseWindow(uiCloseHandle);
+                result = SysValue.Void();
+                return true;
+
+            case SyscallId.UiPollEvent:
+                if (!TryGetInt(args, 0, 1, out var uiPollHandle))
+                {
+                    return true;
+                }
+                // Node-returning syscalls are materialized by interpreter adapters.
+                _ = VmSyscalls.UiPollEvent(uiPollHandle);
+                result = SysValue.Unknown();
+                return true;
+
+            case SyscallId.CryptoBase64Encode:
+                if (!TryGetString(args, 0, 1, out var base64EncodeText))
+                {
+                    return true;
+                }
+                result = SysValue.String(VmSyscalls.CryptoBase64Encode(base64EncodeText));
+                return true;
+
+            case SyscallId.CryptoBase64Decode:
+                if (!TryGetString(args, 0, 1, out var base64DecodeText))
+                {
+                    return true;
+                }
+                result = SysValue.String(VmSyscalls.CryptoBase64Decode(base64DecodeText));
+                return true;
+
+            case SyscallId.CryptoSha1:
+                if (!TryGetString(args, 0, 1, out var sha1Text))
+                {
+                    return true;
+                }
+                result = SysValue.String(VmSyscalls.CryptoSha1(sha1Text));
+                return true;
+
+            case SyscallId.CryptoSha256:
+                if (!TryGetString(args, 0, 1, out var sha256Text))
+                {
+                    return true;
+                }
+                result = SysValue.String(VmSyscalls.CryptoSha256(sha256Text));
+                return true;
+
+            case SyscallId.CryptoHmacSha256:
+                if (!TryGetString(args, 0, 2, out var hmacKey) ||
+                    !TryGetString(args, 1, 2, out var hmacText))
+                {
+                    return true;
+                }
+                result = SysValue.String(VmSyscalls.CryptoHmacSha256(hmacKey, hmacText));
+                return true;
+
+            case SyscallId.CryptoRandomBytes:
+                if (!TryGetInt(args, 0, 1, out var randomCount))
+                {
+                    return true;
+                }
+                result = SysValue.String(VmSyscalls.CryptoRandomBytes(randomCount));
                 return true;
 
             case SyscallId.ConsoleWrite:
