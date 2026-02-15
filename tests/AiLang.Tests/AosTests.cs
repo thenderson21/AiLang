@@ -2635,6 +2635,51 @@ public class AosTests
     }
 
     [Test]
+    public void RunSource_ProjectDirectory_LoadsProjectManifest()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("ailang-run-dir-");
+        try
+        {
+            var srcDir = Path.Combine(tempDir.FullName, "src");
+            Directory.CreateDirectory(srcDir);
+            var manifestPath = Path.Combine(tempDir.FullName, "project.aiproj");
+            var sourcePath = Path.Combine(srcDir, "main.aos");
+
+            File.WriteAllText(manifestPath, "Program#p1 { Project#proj1(name=\"demo\" entryFile=\"src/main.aos\" entryExport=\"start\") }");
+            File.WriteAllText(sourcePath, "Program#p2 { Export#e1(name=start) Let#l1(name=start) { Fn#f1(params=args) { Block#b1 { Call#c1(target=sys.proc_exit) { Lit#i1(value=4) } Return#r1 { Lit#s1(value=\"dir-ok\") } } } } }");
+
+            var lines = new List<string>();
+            var exitCode = AosCliExecutionEngine.RunSource(tempDir.FullName, Array.Empty<string>(), traceEnabled: false, vmMode: "bytecode", lines.Add);
+
+            Assert.That(exitCode, Is.EqualTo(4));
+            Assert.That(lines.Count, Is.EqualTo(0));
+        }
+        finally
+        {
+            tempDir.Delete(recursive: true);
+        }
+    }
+
+    [Test]
+    public void RunSource_ProjectDirectory_MissingManifest_ReturnsRunError()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("ailang-run-dir-missing-");
+        try
+        {
+            var lines = new List<string>();
+            var exitCode = AosCliExecutionEngine.RunSource(tempDir.FullName, Array.Empty<string>(), traceEnabled: false, vmMode: "bytecode", lines.Add);
+
+            Assert.That(exitCode, Is.EqualTo(2));
+            Assert.That(lines.Count, Is.EqualTo(1));
+            Assert.That(lines[0], Is.EqualTo("Err#err1(code=RUN002 message=\"project.aiproj not found in directory.\" nodeId=project)"));
+        }
+        finally
+        {
+            tempDir.Delete(recursive: true);
+        }
+    }
+
+    [Test]
     public void Serve_HealthEndpoint_ReturnsOk()
     {
         var appPath = FindRepoFile("examples/golden/http/health_app.aos");

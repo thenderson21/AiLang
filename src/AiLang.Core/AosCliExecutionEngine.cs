@@ -611,6 +611,24 @@ public static class AosCliExecutionEngine
         out string errMessage,
         out string errNodeId)
     {
+        if (HostFileSystem.DirectoryExists(path))
+        {
+            var manifestInDirectory = Path.Combine(path, "project.aiproj");
+            if (!HostFileSystem.FileExists(manifestInDirectory))
+            {
+                sourcePath = path;
+                moduleBaseDir = Path.GetFullPath(path);
+                entryExportOverride = string.Empty;
+                resolvedFromManifest = false;
+                errCode = "RUN002";
+                errMessage = "project.aiproj not found in directory.";
+                errNodeId = "project";
+                return false;
+            }
+
+            path = manifestInDirectory;
+        }
+
         sourcePath = path;
         moduleBaseDir = Path.GetDirectoryName(Path.GetFullPath(path)) ?? Directory.GetCurrentDirectory();
         entryExportOverride = string.Empty;
@@ -621,6 +639,13 @@ public static class AosCliExecutionEngine
 
         if (!path.EndsWith(".aiproj", StringComparison.OrdinalIgnoreCase))
         {
+            if (!HostFileSystem.FileExists(path))
+            {
+                errCode = "RUN002";
+                errMessage = "Source file not found.";
+                errNodeId = "source";
+                return false;
+            }
             return true;
         }
 
