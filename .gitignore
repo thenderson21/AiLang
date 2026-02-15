@@ -64,6 +64,7 @@ out/
 .tmp/
 .temp/
 .cache/
+*.local.*
 
 ############################################
 # AI / tooling scratch (optional but recommended)

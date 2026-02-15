@@ -757,6 +757,20 @@ public sealed class AosValidator
             return AosValueKind.String;
         }
 
+        if (target == "compiler.formatIds")
+        {
+            RequirePermission(node, "compiler", permissions);
+            if (argTypes.Count != 1)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL171", "compiler.formatIds expects 1 argument.", node.Id, node.Span));
+            }
+            else if (argTypes[0] != AosValueKind.Node && argTypes[0] != AosValueKind.Unknown)
+            {
+                _diagnostics.Add(new AosDiagnostic("VAL172", "compiler.formatIds arg must be node.", node.Id, node.Span));
+            }
+            return AosValueKind.String;
+        }
+
         if (target == "compiler.parseHttpRequest")
         {
             RequirePermission(node, "compiler", permissions);
@@ -1068,6 +1082,7 @@ public sealed class AosValidator
         HashSet<string> loading)
     {
         var visible = new Dictionary<string, AosValueKind>(StringComparer.Ordinal);
+        var exportedNames = new List<string>();
         foreach (var child in program.Children)
         {
             if (child.Kind == "Import" &&
@@ -1122,10 +1137,17 @@ public sealed class AosValidator
 
             if (child.Kind == "Export" &&
                 child.Attrs.TryGetValue("name", out var exportNameAttr) &&
-                exportNameAttr.Kind == AosAttrKind.Identifier &&
-                visible.TryGetValue(exportNameAttr.AsString(), out var exportType))
+                exportNameAttr.Kind == AosAttrKind.Identifier)
             {
-                env[exportNameAttr.AsString()] = exportType;
+                exportedNames.Add(exportNameAttr.AsString());
+            }
+        }
+
+        foreach (var exportName in exportedNames)
+        {
+            if (visible.TryGetValue(exportName, out var exportType))
+            {
+                env[exportName] = exportType;
             }
         }
     }

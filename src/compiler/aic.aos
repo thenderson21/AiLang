@@ -5,7 +5,7 @@ Program#aic_p1 {
         Let#aic_l2(name=cmd) { Call#aic_c1(target=readCmd) { Var#aic_v1(name=args) } }
         If#aic_if1 {
           Eq#aic_e1 { Var#aic_v2(name=cmd) Lit#aic_i1(value="fmt") }
-          Block#aic_b2 { Return#aic_r1 { Call#aic_c2(target=runFmt) { Lit#aic_i2(value=0) } } }
+          Block#aic_b2 { Return#aic_r1 { Call#aic_c2(target=runFmt) { Var#aic_v2f(name=args) } } }
           Block#aic_b3 {
             If#aic_if2 {
               Eq#aic_e2 { Var#aic_v3(name=cmd) Lit#aic_i3(value="check") }
@@ -642,10 +642,15 @@ Program#aic_p1 {
   }
 
   Let#aic_l30(name=runFmt) {
-    Fn#aic_f30(params=_) {
+    Fn#aic_f30(params=args) {
       Block#aic_b30 {
         Let#aic_l31(name=parsed) { Call#aic_c30(target=readAndParse) { Lit#aic_i30(value=0) } }
-        Call#aic_c31(target=io.write) { Call#aic_c32(target=compiler.format) { Var#aic_v30(name=parsed) } }
+        Let#aic_l31b(name=mode) { Call#aic_c30b(target=readArg) { Var#aic_v30b(name=args) Lit#aic_i30b(value=1) } }
+        If#aic_if30 {
+          Eq#aic_e30 { Var#aic_v30c(name=mode) Lit#aic_i30c(value="--ids") }
+          Block#aic_b30b { Call#aic_c31(target=io.write) { Call#aic_c32(target=compiler.formatIds) { Var#aic_v30(name=parsed) } } }
+          Block#aic_b30c { Call#aic_c31b(target=io.write) { Call#aic_c32b(target=compiler.format) { Var#aic_v30d(name=parsed) } } }
+        }
         Return#aic_r30
       }
     }

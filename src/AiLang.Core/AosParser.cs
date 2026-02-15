@@ -49,26 +49,25 @@ public sealed class AosParser
             _diagnostics.Add(new AosDiagnostic("PAR001", $"Invalid node kind '{kindToken.Text}'.", null, kindToken.Span));
         }
 
-        var hashToken = Consume(AosTokenKind.Hash, "Expected '#' after kind.");
-        if (hashToken is null)
+        var idText = string.Empty;
+        if (Match(AosTokenKind.Hash))
         {
-            return null;
-        }
-
-        var idToken = Peek();
-        if (idToken.Kind != AosTokenKind.Identifier && idToken.Kind != AosTokenKind.Int && idToken.Kind != AosTokenKind.Bool)
-        {
-            _diagnostics.Add(new AosDiagnostic("PAR002", "Expected node id after '#'.", null, idToken.Span));
-            return null;
-        }
-        Advance();
-        var idText = idToken.Text;
-        if (!IsId(idText))
-        {
-            _diagnostics.Add(new AosDiagnostic("PAR003", $"Invalid node id '{idText}'.", idText, idToken.Span));
+            var idToken = Peek();
+            if (idToken.Kind != AosTokenKind.Identifier && idToken.Kind != AosTokenKind.Int && idToken.Kind != AosTokenKind.Bool)
+            {
+                _diagnostics.Add(new AosDiagnostic("PAR002", "Expected node id after '#'.", null, idToken.Span));
+                return null;
+            }
+            Advance();
+            idText = idToken.Text;
+            if (!IsId(idText))
+            {
+                _diagnostics.Add(new AosDiagnostic("PAR003", $"Invalid node id '{idText}'.", idText, idToken.Span));
+            }
         }
 
         var attrs = new Dictionary<string, AosAttrValue>(StringComparer.Ordinal);
+        var nodeId = string.IsNullOrEmpty(idText) ? null : idText;
         if (Match(AosTokenKind.LParen))
         {
             while (!Check(AosTokenKind.RParen) && !Check(AosTokenKind.End))
@@ -81,12 +80,12 @@ public sealed class AosParser
 
                 if (!IsKindName(keyToken.Text))
                 {
-                    _diagnostics.Add(new AosDiagnostic("PAR005", $"Invalid attribute name '{keyToken.Text}'.", idText, keyToken.Span));
+                    _diagnostics.Add(new AosDiagnostic("PAR005", $"Invalid attribute name '{keyToken.Text}'.", nodeId, keyToken.Span));
                 }
 
                 Consume(AosTokenKind.Equals, "Expected '=' after attribute name.");
 
-                var value = ParseAttrValue(idText);
+                var value = ParseAttrValue(nodeId);
                 if (value is not null)
                 {
                     attrs[keyToken.Text] = value;

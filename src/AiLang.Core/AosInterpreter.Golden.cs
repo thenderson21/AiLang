@@ -360,6 +360,10 @@ public sealed partial class AosInterpreter
             }
 
             var args = new List<string> { "run", sourcePath };
+            if (testName != "vm_default_is_canonical" && testName != "vm_unsupported_construct")
+            {
+                args.Add("--vm=ast");
+            }
             if (testName == "vm_health_handler")
             {
                 args.Add("__event_message");

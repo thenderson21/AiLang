@@ -12,7 +12,7 @@ Define repository components and stable operating assumptions for agents.
 ## Components
 
 - `tools/airun`: native runtime entrypoint.
-- `src/compiler/aic.aos`: compiler driver (`fmt`, `check`, `run`, `test`).
+- `src/compiler/aic.aos`: compiler driver (`fmt`, `fmt --ids`, `check`, `run`, `test`).
 - `src/compiler/format.aos`: canonical formatter.
 - `src/compiler/validate.aos`: structural validator.
 - `src/std/*.aos`: minimal standard library modules.

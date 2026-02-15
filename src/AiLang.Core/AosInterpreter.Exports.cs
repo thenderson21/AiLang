@@ -20,12 +20,10 @@ public sealed partial class AosInterpreter
         }
 
         var name = nameAttr.AsString();
-        if (!env.TryGetValue(name, out var value))
+        if (env.TryGetValue(name, out var value))
         {
-            return CreateRuntimeErr("RUN029", $"Export name not found: {name}", node.Id, node.Span);
+            runtime.ExportScopes.Peek()[name] = value;
         }
-
-        runtime.ExportScopes.Peek()[name] = value;
         return AosValue.Void;
     }
 }

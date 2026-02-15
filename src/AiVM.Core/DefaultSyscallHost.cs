@@ -8,16 +8,22 @@ using System.Security.Cryptography.X509Certificates;
 using System.Diagnostics;
 using System.Text;
 using System.Runtime.InteropServices;
+using System.Globalization;
+using System.ComponentModel;
+using System.Threading;
 
 namespace AiVM.Core;
 
-public class DefaultSyscallHost : ISyscallHost
+public partial class DefaultSyscallHost : ISyscallHost
 {
     private static readonly HttpClient HttpClient = new();
     private static readonly string[] EmptyArgv = Array.Empty<string>();
     private static readonly Stopwatch MonotonicStopwatch = Stopwatch.StartNew();
     private int _nextUiHandle = 1;
     private readonly HashSet<int> _openWindows = new();
+    private readonly LinuxX11UiBackend? _linuxUi = OperatingSystem.IsLinux() ? new LinuxX11UiBackend() : null;
+    private readonly WindowsWin32UiBackend? _windowsUi = OperatingSystem.IsWindows() ? new WindowsWin32UiBackend() : null;
+    private readonly MacOsScriptUiBackend? _macUi = OperatingSystem.IsMacOS() ? new MacOsScriptUiBackend() : null;
 
     public virtual string[] ProcessArgv() => EmptyArgv;
 
@@ -375,23 +381,79 @@ public class DefaultSyscallHost : ISyscallHost
         }
 
         var handle = _nextUiHandle++;
-        _openWindows.Add(handle);
-        return handle;
+        if (_linuxUi is not null && _linuxUi.TryCreateWindow(handle, title, width, height))
+        {
+            _openWindows.Add(handle);
+            return handle;
+        }
+
+        if (_windowsUi is not null && _windowsUi.TryCreateWindow(handle, title, width, height))
+        {
+            _openWindows.Add(handle);
+            return handle;
+        }
+
+        if (_macUi is not null && _macUi.TryCreateWindow(handle, title, width, height))
+        {
+            _openWindows.Add(handle);
+            return handle;
+        }
+
+        return -1;
     }
 
     public virtual void UiBeginFrame(int windowHandle)
     {
-        _ = _openWindows.Contains(windowHandle);
+        if (_linuxUi is not null && _linuxUi.TryBeginFrame(windowHandle))
+        {
+            return;
+        }
+
+        if (_windowsUi is not null && _windowsUi.TryBeginFrame(windowHandle))
+        {
+            return;
+        }
+
+        if (_macUi is not null && _macUi.TryBeginFrame(windowHandle))
+        {
+            return;
+        }
     }
 
     public virtual void UiDrawRect(int windowHandle, int x, int y, int width, int height, string color)
     {
-        _ = _openWindows.Contains(windowHandle);
+        if (_linuxUi is not null && _linuxUi.TryDrawRect(windowHandle, x, y, width, height, color))
+        {
+            return;
+        }
+
+        if (_windowsUi is not null && _windowsUi.TryDrawRect(windowHandle, x, y, width, height, color))
+        {
+            return;
+        }
+
+        if (_macUi is not null && _macUi.TryDrawRect(windowHandle, x, y, width, height, color))
+        {
+            return;
+        }
     }
 
     public virtual void UiDrawText(int windowHandle, int x, int y, string text, string color, int size)
     {
-        _ = _openWindows.Contains(windowHandle);
+        if (_linuxUi is not null && _linuxUi.TryDrawText(windowHandle, x, y, text, color, size))
+        {
+            return;
+        }
+
+        if (_windowsUi is not null && _windowsUi.TryDrawText(windowHandle, x, y, text, color, size))
+        {
+            return;
+        }
+
+        if (_macUi is not null && _macUi.TryDrawText(windowHandle, x, y, text, color, size))
+        {
+            return;
+        }
     }
 
     public virtual void UiEndFrame(int windowHandle)
@@ -401,19 +463,61 @@ public class DefaultSyscallHost : ISyscallHost
 
     public virtual VmUiEvent UiPollEvent(int windowHandle)
     {
-        return _openWindows.Contains(windowHandle)
-            ? new VmUiEvent("none", string.Empty, 0, 0)
-            : new VmUiEvent("closed", string.Empty, 0, 0);
+        if (_linuxUi is not null)
+        {
+            return _linuxUi.PollEvent(windowHandle);
+        }
+
+        if (_windowsUi is not null)
+        {
+            return _windowsUi.PollEvent(windowHandle);
+        }
+
+        if (_macUi is not null)
+        {
+            return _macUi.PollEvent(windowHandle);
+        }
+
+        return new VmUiEvent("closed", "ui backend unavailable", 0, 0);
     }
 
     public virtual void UiPresent(int windowHandle)
     {
-        _ = _openWindows.Contains(windowHandle);
+        if (_linuxUi is not null && _linuxUi.TryPresent(windowHandle))
+        {
+            return;
+        }
+
+        if (_windowsUi is not null && _windowsUi.TryPresent(windowHandle))
+        {
+            return;
+        }
+
+        if (_macUi is not null && _macUi.TryPresent(windowHandle))
+        {
+            return;
+        }
     }
 
     public virtual void UiCloseWindow(int windowHandle)
     {
-        _openWindows.Remove(windowHandle);
+        if (_linuxUi is not null && _linuxUi.TryCloseWindow(windowHandle))
+        {
+            _openWindows.Remove(windowHandle);
+            return;
+        }
+
+        if (_windowsUi is not null && _windowsUi.TryCloseWindow(windowHandle))
+        {
+            _openWindows.Remove(windowHandle);
+            return;
+        }
+
+        if (_macUi is not null && _macUi.TryCloseWindow(windowHandle))
+        {
+            _openWindows.Remove(windowHandle);
+            return;
+        }
     }
 
     public virtual string NetReadHeaders(VmNetworkState state, int connectionHandle)
@@ -569,4 +673,5 @@ public class DefaultSyscallHost : ISyscallHost
 
         return IPAddress.Loopback;
     }
+
 }
