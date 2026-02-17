@@ -59,9 +59,9 @@ public enum SyscallId : ushort
     UiDrawLine = 54,
     UiDrawEllipse = 55,
     UiDrawPath = 56,
-    UiDrawPolyline = 57,
-    UiDrawPolygon = 58,
-    UiGetWindowSize = 59,
-    StrSubstring = 60,
-    StrRemove = 61
+    UiGetWindowSize = 57,
+    StrSubstring = 58,
+    StrRemove = 59,
+    UiDrawPolyline = 60,
+    UiDrawPolygon = 61
 }
