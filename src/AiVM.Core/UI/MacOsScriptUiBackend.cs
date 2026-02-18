@@ -531,6 +531,46 @@ func modifierText(_ flags: NSEvent.ModifierFlags) -> String {
     return values.joined(separator: "","")
 }
 
+func canonicalMacKeyToken(_ event: NSEvent) -> String {
+    let raw = (event.charactersIgnoringModifiers ?? """").lowercased()
+    if raw == ""\u{7f}"" { return ""backspace"" }
+    if raw == ""\t"" { return ""tab"" }
+    if raw == ""\r"" { return ""enter"" }
+    if raw == "" "" { return ""space"" }
+    if raw == ""\u{1b}"" { return ""escape"" }
+    if raw.count == 1 {
+        return raw
+    }
+
+    switch event.keyCode {
+    case 51: return ""backspace""
+    case 117: return ""delete""
+    case 123: return ""left""
+    case 124: return ""right""
+    case 125: return ""down""
+    case 126: return ""up""
+    case 36, 76: return ""enter""
+    case 48: return ""tab""
+    case 53: return ""escape""
+    case 49: return ""space""
+    default: return ""mac:\(event.keyCode)""
+    }
+}
+
+func printableText(_ value: String) -> String {
+    if value.isEmpty {
+        return """"
+    }
+
+    for scalar in value.unicodeScalars {
+        if CharacterSet.controlCharacters.contains(scalar) {
+            return """"
+        }
+    }
+
+    return value
+}
+
 final class CanvasView: NSView {
     var cmds: [Cmd] = []
     let eventPath: String
@@ -586,11 +626,8 @@ final class CanvasView: NSView {
     }
 
     override func keyDown(with event: NSEvent) {
-        let key = (event.charactersIgnoringModifiers ?? """")
-            .lowercased()
-        let fallbackKey = ""mac:\(event.keyCode)""
-        let keyOut = key.isEmpty ? fallbackKey : key
-        let textOut = event.characters ?? """"
+        let keyOut = canonicalMacKeyToken(event)
+        let textOut = printableText(event.characters ?? """")
         let mods = modifierText(event.modifierFlags)
         let repeatFlag = event.isARepeat ? ""1"" : ""0""
         let keyB64 = encodeBase64(keyOut)

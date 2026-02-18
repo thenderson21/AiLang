@@ -1531,6 +1531,70 @@ public class AosTests
     }
 
     [Test]
+    public void SyscallDispatch_UiPollEvent_KeyPayload_IsCanonicalized()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_pollEvent) { Lit#h1(value=9) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost
+        {
+            UiPollEventResult = new VmUiEvent("key", "input_1", 123, 456, "ArrowLeft", "A", "shift,ctrl,shift,invalid", true)
+        };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+            var uiEvent = value.AsNode();
+            Assert.That(uiEvent.Attrs["type"].AsString(), Is.EqualTo("key"));
+            Assert.That(uiEvent.Attrs["targetId"].AsString(), Is.EqualTo("input_1"));
+            Assert.That(uiEvent.Attrs["x"].AsInt(), Is.EqualTo(-1));
+            Assert.That(uiEvent.Attrs["y"].AsInt(), Is.EqualTo(-1));
+            Assert.That(uiEvent.Attrs["key"].AsString(), Is.EqualTo("left"));
+            Assert.That(uiEvent.Attrs["text"].AsString(), Is.EqualTo("A"));
+            Assert.That(uiEvent.Attrs["modifiers"].AsString(), Is.EqualTo("ctrl,shift"));
+            Assert.That(uiEvent.Attrs["repeat"].AsBool(), Is.True);
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiPollEvent_DerivesKeyFromPrintableText_WhenMissing()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_pollEvent) { Lit#h1(value=9) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost
+        {
+            UiPollEventResult = new VmUiEvent("key", string.Empty, -1, -1, string.Empty, "`", string.Empty, false)
+        };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+            var uiEvent = value.AsNode();
+            Assert.That(uiEvent.Attrs["key"].AsString(), Is.EqualTo("`"));
+            Assert.That(uiEvent.Attrs["text"].AsString(), Is.EqualTo("`"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
     public void SyscallDispatch_UiGetWindowSize_ReturnsNode()
     {
         var parse = Parse("Program#p1 { Call#c1(target=sys.ui_getWindowSize) { Lit#h1(value=9) } }");
@@ -2434,6 +2498,112 @@ public class AosTests
     }
 
     [Test]
+    public void StdUiInput_KeySemantics_AreDeterministic()
+    {
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("sys");
+        var interpreter = new AosInterpreter();
+        var stdUiProgram = Parse(File.ReadAllText(FindRepoFile("src/std/ui_input.aos")));
+        Assert.That(stdUiProgram.Diagnostics, Is.Empty);
+        var stdUiResult = interpreter.EvaluateProgram(stdUiProgram.Root!, runtime);
+        Assert.That(stdUiResult.Kind, Is.Not.EqualTo(AosValueKind.Unknown));
+
+        var cases = new[]
+        {
+            (Key: "a", Text: "a", AllowEnter: false, AllowTab: false, StartText: "hi", StartCursor: 2, ExpectedText: "hia", ExpectedCursor: 3, ExpectedSubmit: false, ExpectedToken: "insert"),
+            (Key: "a", Text: "A", AllowEnter: false, AllowTab: false, StartText: "hi", StartCursor: 2, ExpectedText: "hiA", ExpectedCursor: 3, ExpectedSubmit: false, ExpectedToken: "insert"),
+            (Key: "1", Text: "1", AllowEnter: false, AllowTab: false, StartText: "hi", StartCursor: 2, ExpectedText: "hi1", ExpectedCursor: 3, ExpectedSubmit: false, ExpectedToken: "insert"),
+            (Key: "space", Text: "", AllowEnter: false, AllowTab: false, StartText: "hi", StartCursor: 2, ExpectedText: "hi ", ExpectedCursor: 3, ExpectedSubmit: false, ExpectedToken: "insert"),
+            (Key: "`", Text: "`", AllowEnter: false, AllowTab: false, StartText: "ab", StartCursor: 1, ExpectedText: "a`b", ExpectedCursor: 2, ExpectedSubmit: false, ExpectedToken: "insert"),
+            (Key: "tab", Text: "\t", AllowEnter: false, AllowTab: false, StartText: "ab", StartCursor: 1, ExpectedText: "ab", ExpectedCursor: 1, ExpectedSubmit: false, ExpectedToken: "noop"),
+            (Key: "enter", Text: "\r", AllowEnter: false, AllowTab: false, StartText: "ab", StartCursor: 2, ExpectedText: "ab", ExpectedCursor: 2, ExpectedSubmit: true, ExpectedToken: "submit"),
+            (Key: "enter", Text: "\r", AllowEnter: true, AllowTab: false, StartText: "ab", StartCursor: 2, ExpectedText: "ab\n", ExpectedCursor: 3, ExpectedSubmit: false, ExpectedToken: "insert"),
+            (Key: "backspace", Text: "", AllowEnter: false, AllowTab: false, StartText: "ab", StartCursor: 2, ExpectedText: "a", ExpectedCursor: 1, ExpectedSubmit: false, ExpectedToken: "backspace"),
+            (Key: "delete", Text: "", AllowEnter: false, AllowTab: false, StartText: "ab", StartCursor: 0, ExpectedText: "b", ExpectedCursor: 0, ExpectedSubmit: false, ExpectedToken: "delete"),
+            (Key: "left", Text: "", AllowEnter: false, AllowTab: false, StartText: "ab", StartCursor: 1, ExpectedText: "ab", ExpectedCursor: 0, ExpectedSubmit: false, ExpectedToken: "move"),
+            (Key: "right", Text: "", AllowEnter: false, AllowTab: false, StartText: "ab", StartCursor: 1, ExpectedText: "ab", ExpectedCursor: 2, ExpectedSubmit: false, ExpectedToken: "move")
+        };
+
+        foreach (var testCase in cases)
+        {
+            var callSuffix =
+                $"Lit#t1(value=\"{EscapeAosString(testCase.StartText)}\") " +
+                $"Lit#i1(value={testCase.StartCursor}) " +
+                $"Lit#k1(value=\"{EscapeAosString(testCase.Key)}\") " +
+                $"Lit#e1(value=\"{EscapeAosString(testCase.Text)}\") " +
+                $"Lit#ae1(value={(testCase.AllowEnter ? "true" : "false")}) " +
+                $"Lit#at1(value={(testCase.AllowTab ? "true" : "false")})";
+
+            var textParse = Parse($"Program#p1 {{ Call#c1(target=editNextText) {{ {callSuffix} }} }}");
+            Assert.That(textParse.Diagnostics, Is.Empty);
+            var textValue = interpreter.EvaluateProgram(textParse.Root!, runtime);
+            Assert.That(textValue.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(textValue.AsString(), Is.EqualTo(testCase.ExpectedText), $"Unexpected text for key {testCase.Key}.");
+
+            var cursorParse = Parse($"Program#p2 {{ Call#c2(target=editNextCursor) {{ {callSuffix} }} }}");
+            Assert.That(cursorParse.Diagnostics, Is.Empty);
+            var cursorValue = interpreter.EvaluateProgram(cursorParse.Root!, runtime);
+            Assert.That(cursorValue.Kind, Is.EqualTo(AosValueKind.Int));
+            Assert.That(cursorValue.AsInt(), Is.EqualTo(testCase.ExpectedCursor), $"Unexpected cursor for key {testCase.Key}.");
+
+            var submitParse = Parse(
+                $"Program#p3 {{ Call#c3(target=editShouldSubmit) {{ " +
+                $"Lit#k2(value=\"{EscapeAosString(testCase.Key)}\") " +
+                $"Lit#ae2(value={(testCase.AllowEnter ? "true" : "false")}) }} }}");
+            Assert.That(submitParse.Diagnostics, Is.Empty);
+            var submitValue = interpreter.EvaluateProgram(submitParse.Root!, runtime);
+            Assert.That(submitValue.Kind, Is.EqualTo(AosValueKind.Bool));
+            Assert.That(submitValue.AsBool(), Is.EqualTo(testCase.ExpectedSubmit), $"Unexpected submit flag for key {testCase.Key}.");
+
+            var tokenParse = Parse(
+                $"Program#p4 {{ Call#c4(target=editDebugToken) {{ " +
+                $"Lit#k3(value=\"{EscapeAosString(testCase.Key)}\") " +
+                $"Lit#e2(value=\"{EscapeAosString(testCase.Text)}\") " +
+                $"Lit#ae3(value={(testCase.AllowEnter ? "true" : "false")}) " +
+                $"Lit#at2(value={(testCase.AllowTab ? "true" : "false")}) }} }}");
+            Assert.That(tokenParse.Diagnostics, Is.Empty);
+            var tokenValue = interpreter.EvaluateProgram(tokenParse.Root!, runtime);
+            Assert.That(tokenValue.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(tokenValue.AsString(), Is.EqualTo(testCase.ExpectedToken), $"Unexpected debug token for key {testCase.Key}.");
+        }
+    }
+
+    [Test]
+    public void StdUiInput_FocusRouting_IsDeterministic()
+    {
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("sys");
+        var interpreter = new AosInterpreter();
+        var stdUiProgram = Parse(File.ReadAllText(FindRepoFile("src/std/ui_input.aos")));
+        Assert.That(stdUiProgram.Diagnostics, Is.Empty);
+        _ = interpreter.EvaluateProgram(stdUiProgram.Root!, runtime);
+
+        var focusedParse = Parse("Program#p1 { Call#c1(target=shouldHandleKeyEvent) { Lit#t1(value=\"key\") Lit#f1(value=\"input_1\") Lit#tg1(value=\"\") } }");
+        Assert.That(focusedParse.Diagnostics, Is.Empty);
+        var focused = interpreter.EvaluateProgram(focusedParse.Root!, runtime);
+        Assert.That(focused.Kind, Is.EqualTo(AosValueKind.Bool));
+        Assert.That(focused.AsBool(), Is.True);
+
+        var unfocusedParse = Parse("Program#p2 { Call#c2(target=shouldHandleKeyEvent) { Lit#t2(value=\"key\") Lit#f2(value=\"\") Lit#tg2(value=\"\") } }");
+        Assert.That(unfocusedParse.Diagnostics, Is.Empty);
+        var unfocused = interpreter.EvaluateProgram(unfocusedParse.Root!, runtime);
+        Assert.That(unfocused.Kind, Is.EqualTo(AosValueKind.Bool));
+        Assert.That(unfocused.AsBool(), Is.False);
+
+        var focusSetParse = Parse("Program#p3 { Call#c3(target=nextFocusOnClick) { Lit#t3(value=\"click\") Lit#tg3(value=\"input_2\") Lit#f3(value=\"input_1\") } }");
+        Assert.That(focusSetParse.Diagnostics, Is.Empty);
+        var nextFocused = interpreter.EvaluateProgram(focusSetParse.Root!, runtime);
+        Assert.That(nextFocused.Kind, Is.EqualTo(AosValueKind.String));
+        Assert.That(nextFocused.AsString(), Is.EqualTo("input_2"));
+
+        var focusClearParse = Parse("Program#p4 { Call#c4(target=nextFocusOnClick) { Lit#t4(value=\"click\") Lit#tg4(value=\"\") Lit#f4(value=\"input_2\") } }");
+        Assert.That(focusClearParse.Diagnostics, Is.Empty);
+        var cleared = interpreter.EvaluateProgram(focusClearParse.Root!, runtime);
+        Assert.That(cleared.Kind, Is.EqualTo(AosValueKind.String));
+        Assert.That(cleared.AsString(), Is.EqualTo(string.Empty));
+    }
+
+    [Test]
     public void UnknownSysTarget_DoesNotEvaluateArguments()
     {
         var parse = Parse("Program#p1 { Call#c1(target=sys.unknown) { Call#c2(target=io.print) { Lit#s1(value=\"side-effect\") } } }");
@@ -3286,6 +3456,21 @@ public class AosTests
         }
 
         throw new FileNotFoundException($"Could not find {relativePath} from {AppContext.BaseDirectory}");
+    }
+
+    private static string EscapeAosString(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        return value
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("\"", "\\\"", StringComparison.Ordinal)
+            .Replace("\r", "\\r", StringComparison.Ordinal)
+            .Replace("\n", "\\n", StringComparison.Ordinal)
+            .Replace("\t", "\\t", StringComparison.Ordinal);
     }
 
     private static int FindFreePort()

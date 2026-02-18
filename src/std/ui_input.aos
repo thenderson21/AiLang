@@ -1,0 +1,454 @@
+Program#std_ui_p1 {
+  Let#std_ui_l1(name=isBackspaceKey) {
+    Fn#std_ui_f1(params=key) {
+      Block#std_ui_b1 {
+        Return#std_ui_r1 { Eq#std_ui_eq1 { Var#std_ui_v1(name=key) Lit#std_ui_i1(value="backspace") } }
+      }
+    }
+  }
+
+  Let#std_ui_l2(name=isDeleteKey) {
+    Fn#std_ui_f2(params=key) {
+      Block#std_ui_b2 {
+        Return#std_ui_r2 { Eq#std_ui_eq2 { Var#std_ui_v2(name=key) Lit#std_ui_i2(value="delete") } }
+      }
+    }
+  }
+
+  Let#std_ui_l3(name=isEnterKey) {
+    Fn#std_ui_f3(params=key) {
+      Block#std_ui_b3 {
+        Return#std_ui_r3 { Eq#std_ui_eq3 { Var#std_ui_v3(name=key) Lit#std_ui_i3(value="enter") } }
+      }
+    }
+  }
+
+  Let#std_ui_l4(name=isArrowKey) {
+    Fn#std_ui_f4(params=key) {
+      Block#std_ui_b4 {
+        If#std_ui_if1 {
+          Eq#std_ui_eq4 { Var#std_ui_v4(name=key) Lit#std_ui_i4(value="left") }
+          Block#std_ui_b5 { Return#std_ui_r4 { Lit#std_ui_i5(value=true) } }
+          Block#std_ui_b6 { Lit#std_ui_i6(value=0) }
+        }
+        If#std_ui_if2 {
+          Eq#std_ui_eq5 { Var#std_ui_v5(name=key) Lit#std_ui_i7(value="right") }
+          Block#std_ui_b7 { Return#std_ui_r5 { Lit#std_ui_i8(value=true) } }
+          Block#std_ui_b8 { Lit#std_ui_i9(value=0) }
+        }
+        If#std_ui_if3 {
+          Eq#std_ui_eq6 { Var#std_ui_v6(name=key) Lit#std_ui_i10(value="up") }
+          Block#std_ui_b9 { Return#std_ui_r6 { Lit#std_ui_i11(value=true) } }
+          Block#std_ui_b10 { Lit#std_ui_i12(value=0) }
+        }
+        If#std_ui_if4 {
+          Eq#std_ui_eq7 { Var#std_ui_v7(name=key) Lit#std_ui_i13(value="down") }
+          Block#std_ui_b11 { Return#std_ui_r7 { Lit#std_ui_i14(value=true) } }
+          Block#std_ui_b12 { Return#std_ui_r8 { Lit#std_ui_i15(value=false) } }
+        }
+      }
+    }
+  }
+
+  Let#std_ui_l5(name=sanitizePrintableText) {
+    Fn#std_ui_f5(params=text) {
+      Block#std_ui_b13 {
+        If#std_ui_if5 {
+          Eq#std_ui_eq8 { Var#std_ui_v8(name=text) Lit#std_ui_i16(value="") }
+          Block#std_ui_b14 { Return#std_ui_r9 { Lit#std_ui_i17(value="") } }
+          Block#std_ui_b15 { Lit#std_ui_i18(value=0) }
+        }
+        If#std_ui_if6 {
+          Eq#std_ui_eq9 { Var#std_ui_v9(name=text) Lit#std_ui_i19(value="\t") }
+          Block#std_ui_b16 { Return#std_ui_r10 { Lit#std_ui_i20(value="") } }
+          Block#std_ui_b17 { Lit#std_ui_i21(value=0) }
+        }
+        If#std_ui_if7 {
+          Eq#std_ui_eq10 { Var#std_ui_v10(name=text) Lit#std_ui_i22(value="\r") }
+          Block#std_ui_b18 { Return#std_ui_r11 { Lit#std_ui_i23(value="") } }
+          Block#std_ui_b19 { Lit#std_ui_i24(value=0) }
+        }
+        If#std_ui_if8 {
+          Eq#std_ui_eq11 { Var#std_ui_v11(name=text) Lit#std_ui_i25(value="\n") }
+          Block#std_ui_b20 { Return#std_ui_r12 { Lit#std_ui_i26(value="") } }
+          Block#std_ui_b21 { Return#std_ui_r13 { Var#std_ui_v12(name=text) } }
+        }
+      }
+    }
+  }
+
+  Let#std_ui_l6(name=keyToText) {
+    Fn#std_ui_f6(params=key,text,allowEnter,allowTab) {
+      Block#std_ui_b22 {
+        Let#std_ui_l7(name=normalizedText) { Call#std_ui_c1(target=sanitizePrintableText) { Var#std_ui_v13(name=text) } }
+        If#std_ui_if9 {
+          Eq#std_ui_eq12 { Var#std_ui_v14(name=key) Lit#std_ui_i27(value="space") }
+          Block#std_ui_b23 { Return#std_ui_r14 { Lit#std_ui_i28(value=" ") } }
+          Block#std_ui_b24 { Lit#std_ui_i29(value=0) }
+        }
+        If#std_ui_if10 {
+          Eq#std_ui_eq13 { Var#std_ui_v15(name=key) Lit#std_ui_i30(value="tab") }
+          Block#std_ui_b25 {
+            If#std_ui_if11 {
+              Var#std_ui_v16(name=allowTab)
+              Block#std_ui_b26 { Return#std_ui_r15 { Lit#std_ui_i31(value="\t") } }
+              Block#std_ui_b27 { Return#std_ui_r16 { Lit#std_ui_i32(value="") } }
+            }
+          }
+          Block#std_ui_b28 { Lit#std_ui_i33(value=0) }
+        }
+        If#std_ui_if12 {
+          Eq#std_ui_eq14 { Var#std_ui_v17(name=key) Lit#std_ui_i34(value="enter") }
+          Block#std_ui_b29 {
+            If#std_ui_if13 {
+              Var#std_ui_v18(name=allowEnter)
+              Block#std_ui_b30 { Return#std_ui_r17 { Lit#std_ui_i35(value="\n") } }
+              Block#std_ui_b31 { Return#std_ui_r18 { Lit#std_ui_i36(value="") } }
+            }
+          }
+          Block#std_ui_b32 { Lit#std_ui_i37(value=0) }
+        }
+        If#std_ui_if14 {
+          Call#std_ui_c2(target=isBackspaceKey) { Var#std_ui_v19(name=key) }
+          Block#std_ui_b33 { Return#std_ui_r19 { Lit#std_ui_i38(value="") } }
+          Block#std_ui_b34 { Lit#std_ui_i39(value=0) }
+        }
+        If#std_ui_if15 {
+          Call#std_ui_c3(target=isDeleteKey) { Var#std_ui_v20(name=key) }
+          Block#std_ui_b35 { Return#std_ui_r20 { Lit#std_ui_i40(value="") } }
+          Block#std_ui_b36 { Lit#std_ui_i41(value=0) }
+        }
+        If#std_ui_if16 {
+          Call#std_ui_c4(target=isArrowKey) { Var#std_ui_v21(name=key) }
+          Block#std_ui_b37 { Return#std_ui_r21 { Lit#std_ui_i42(value="") } }
+          Block#std_ui_b38 { Lit#std_ui_i43(value=0) }
+        }
+        If#std_ui_if17 {
+          Eq#std_ui_eq15 { Var#std_ui_v22(name=key) Lit#std_ui_i44(value="escape") }
+          Block#std_ui_b39 { Return#std_ui_r22 { Lit#std_ui_i45(value="") } }
+          Block#std_ui_b40 { Return#std_ui_r23 { Var#std_ui_v23(name=normalizedText) } }
+        }
+      }
+    }
+  }
+
+  Let#std_ui_l8(name=textLengthAt) {
+    Fn#std_ui_f7(params=text,index) {
+      Block#std_ui_b41 {
+        If#std_ui_if18 {
+          Eq#std_ui_eq16 {
+            Call#std_ui_c5(target=sys.str_substring) {
+              Var#std_ui_v24(name=text)
+              Var#std_ui_v25(name=index)
+              Lit#std_ui_i46(value=1)
+            }
+            Lit#std_ui_i47(value="")
+          }
+          Block#std_ui_b42 { Return#std_ui_r24 { Var#std_ui_v26(name=index) } }
+          Block#std_ui_b43 {
+            Return#std_ui_r25 {
+              Call#std_ui_c6(target=textLengthAt) {
+                Var#std_ui_v27(name=text)
+                Add#std_ui_a1 { Var#std_ui_v28(name=index) Lit#std_ui_i48(value=1) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_ui_l9(name=textLength) {
+    Fn#std_ui_f8(params=text) {
+      Block#std_ui_b44 {
+        Return#std_ui_r26 { Call#std_ui_c7(target=textLengthAt) { Var#std_ui_v29(name=text) Lit#std_ui_i49(value=0) } }
+      }
+    }
+  }
+
+  Let#std_ui_l10(name=editNextText) {
+    Fn#std_ui_f9(params=text,cursor,key,eventText,allowEnter,allowTab) {
+      Block#std_ui_b45 {
+        If#std_ui_if19 {
+          Call#std_ui_c8(target=isBackspaceKey) { Var#std_ui_v30(name=key) }
+          Block#std_ui_b46 {
+            If#std_ui_if20 {
+              Eq#std_ui_eq17 { Var#std_ui_v31(name=cursor) Lit#std_ui_i50(value=0) }
+              Block#std_ui_b47 { Return#std_ui_r27 { Var#std_ui_v32(name=text) } }
+              Block#std_ui_b48 {
+                Return#std_ui_r28 {
+                  Call#std_ui_c9(target=sys.str_remove) {
+                    Var#std_ui_v33(name=text)
+                    Add#std_ui_a2 { Var#std_ui_v34(name=cursor) Lit#std_ui_i51(value=-1) }
+                    Lit#std_ui_i52(value=1)
+                  }
+                }
+              }
+            }
+          }
+          Block#std_ui_b49 { Lit#std_ui_i53(value=0) }
+        }
+        If#std_ui_if21 {
+          Call#std_ui_c10(target=isDeleteKey) { Var#std_ui_v35(name=key) }
+          Block#std_ui_b50 {
+            If#std_ui_if22 {
+              Eq#std_ui_eq18 {
+                Call#std_ui_c11(target=sys.str_substring) {
+                  Var#std_ui_v36(name=text)
+                  Var#std_ui_v37(name=cursor)
+                  Lit#std_ui_i54(value=1)
+                }
+                Lit#std_ui_i55(value="")
+              }
+              Block#std_ui_b51 { Return#std_ui_r29 { Var#std_ui_v38(name=text) } }
+              Block#std_ui_b52 {
+                Return#std_ui_r30 {
+                  Call#std_ui_c12(target=sys.str_remove) {
+                    Var#std_ui_v39(name=text)
+                    Var#std_ui_v40(name=cursor)
+                    Lit#std_ui_i56(value=1)
+                  }
+                }
+              }
+            }
+          }
+          Block#std_ui_b53 { Lit#std_ui_i57(value=0) }
+        }
+        If#std_ui_if23 {
+          Call#std_ui_c13(target=isArrowKey) { Var#std_ui_v41(name=key) }
+          Block#std_ui_b54 { Return#std_ui_r31 { Var#std_ui_v42(name=text) } }
+          Block#std_ui_b55 { Lit#std_ui_i58(value=0) }
+        }
+        Let#std_ui_l11(name=insertText) {
+          Call#std_ui_c14(target=keyToText) {
+            Var#std_ui_v43(name=key)
+            Var#std_ui_v44(name=eventText)
+            Var#std_ui_v45(name=allowEnter)
+            Var#std_ui_v46(name=allowTab)
+          }
+        }
+        If#std_ui_if24 {
+          Eq#std_ui_eq19 { Var#std_ui_v47(name=insertText) Lit#std_ui_i59(value="") }
+          Block#std_ui_b56 { Return#std_ui_r32 { Var#std_ui_v48(name=text) } }
+          Block#std_ui_b57 {
+            Let#std_ui_l12(name=prefix) {
+              Call#std_ui_c15(target=sys.str_substring) {
+                Var#std_ui_v49(name=text)
+                Lit#std_ui_i60(value=0)
+                Var#std_ui_v50(name=cursor)
+              }
+            }
+            Let#std_ui_l13(name=suffix) {
+              Call#std_ui_c16(target=sys.str_substring) {
+                Var#std_ui_v51(name=text)
+                Var#std_ui_v52(name=cursor)
+                Call#std_ui_c27(target=textLength) { Var#std_ui_v102(name=text) }
+              }
+            }
+            Return#std_ui_r33 {
+              StrConcat#std_ui_s1 {
+                StrConcat#std_ui_s2 {
+                  Var#std_ui_v53(name=prefix)
+                  Var#std_ui_v54(name=insertText)
+                }
+                Var#std_ui_v55(name=suffix)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_ui_l14(name=editNextCursor) {
+    Fn#std_ui_f10(params=text,cursor,key,eventText,allowEnter,allowTab) {
+      Block#std_ui_b58 {
+        If#std_ui_if25 {
+          Eq#std_ui_eq20 { Var#std_ui_v56(name=key) Lit#std_ui_i62(value="left") }
+          Block#std_ui_b59 {
+            If#std_ui_if26 {
+              Eq#std_ui_eq21 { Var#std_ui_v57(name=cursor) Lit#std_ui_i63(value=0) }
+              Block#std_ui_b60 { Return#std_ui_r34 { Lit#std_ui_i64(value=0) } }
+              Block#std_ui_b61 { Return#std_ui_r35 { Add#std_ui_a3 { Var#std_ui_v58(name=cursor) Lit#std_ui_i65(value=-1) } } }
+            }
+          }
+          Block#std_ui_b62 { Lit#std_ui_i66(value=0) }
+        }
+        If#std_ui_if27 {
+          Eq#std_ui_eq22 { Var#std_ui_v59(name=key) Lit#std_ui_i67(value="right") }
+          Block#std_ui_b63 {
+            If#std_ui_if28 {
+              Eq#std_ui_eq23 {
+                Call#std_ui_c17(target=sys.str_substring) {
+                  Var#std_ui_v60(name=text)
+                  Var#std_ui_v61(name=cursor)
+                  Lit#std_ui_i68(value=1)
+                }
+                Lit#std_ui_i69(value="")
+              }
+              Block#std_ui_b64 { Return#std_ui_r36 { Var#std_ui_v62(name=cursor) } }
+              Block#std_ui_b65 { Return#std_ui_r37 { Add#std_ui_a4 { Var#std_ui_v63(name=cursor) Lit#std_ui_i70(value=1) } } }
+            }
+          }
+          Block#std_ui_b66 { Lit#std_ui_i71(value=0) }
+        }
+        If#std_ui_if29 {
+          Call#std_ui_c18(target=isBackspaceKey) { Var#std_ui_v64(name=key) }
+          Block#std_ui_b67 {
+            If#std_ui_if30 {
+              Eq#std_ui_eq24 { Var#std_ui_v65(name=cursor) Lit#std_ui_i72(value=0) }
+              Block#std_ui_b68 { Return#std_ui_r38 { Lit#std_ui_i73(value=0) } }
+              Block#std_ui_b69 { Return#std_ui_r39 { Add#std_ui_a5 { Var#std_ui_v66(name=cursor) Lit#std_ui_i74(value=-1) } } }
+            }
+          }
+          Block#std_ui_b70 { Lit#std_ui_i75(value=0) }
+        }
+        If#std_ui_if31 {
+          Call#std_ui_c19(target=isDeleteKey) { Var#std_ui_v67(name=key) }
+          Block#std_ui_b71 { Return#std_ui_r40 { Var#std_ui_v68(name=cursor) } }
+          Block#std_ui_b72 { Lit#std_ui_i76(value=0) }
+        }
+        If#std_ui_if32 {
+          Eq#std_ui_eq25 { Var#std_ui_v69(name=key) Lit#std_ui_i77(value="up") }
+          Block#std_ui_b73 { Return#std_ui_r41 { Var#std_ui_v70(name=cursor) } }
+          Block#std_ui_b74 { Lit#std_ui_i78(value=0) }
+        }
+        If#std_ui_if33 {
+          Eq#std_ui_eq26 { Var#std_ui_v71(name=key) Lit#std_ui_i79(value="down") }
+          Block#std_ui_b75 { Return#std_ui_r42 { Var#std_ui_v72(name=cursor) } }
+          Block#std_ui_b76 { Lit#std_ui_i80(value=0) }
+        }
+        Let#std_ui_l15(name=insertText) {
+          Call#std_ui_c20(target=keyToText) {
+            Var#std_ui_v73(name=key)
+            Var#std_ui_v74(name=eventText)
+            Var#std_ui_v75(name=allowEnter)
+            Var#std_ui_v76(name=allowTab)
+          }
+        }
+        If#std_ui_if34 {
+          Eq#std_ui_eq27 { Var#std_ui_v77(name=insertText) Lit#std_ui_i81(value="") }
+          Block#std_ui_b77 { Return#std_ui_r43 { Var#std_ui_v78(name=cursor) } }
+          Block#std_ui_b78 {
+            Return#std_ui_r44 {
+              Add#std_ui_a6 {
+                Var#std_ui_v79(name=cursor)
+                Call#std_ui_c21(target=textLength) { Var#std_ui_v80(name=insertText) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_ui_l16(name=editShouldSubmit) {
+    Fn#std_ui_f11(params=key,allowEnter) {
+      Block#std_ui_b79 {
+        If#std_ui_if35 {
+          Eq#std_ui_eq28 { Var#std_ui_v81(name=key) Lit#std_ui_i82(value="enter") }
+          Block#std_ui_b80 {
+            If#std_ui_if36 {
+              Var#std_ui_v82(name=allowEnter)
+              Block#std_ui_b81 { Return#std_ui_r45 { Lit#std_ui_i83(value=false) } }
+              Block#std_ui_b82 { Return#std_ui_r46 { Lit#std_ui_i84(value=true) } }
+            }
+          }
+          Block#std_ui_b83 { Return#std_ui_r47 { Lit#std_ui_i85(value=false) } }
+        }
+      }
+    }
+  }
+
+  Let#std_ui_l17(name=editDebugToken) {
+    Fn#std_ui_f12(params=key,eventText,allowEnter,allowTab) {
+      Block#std_ui_b84 {
+        If#std_ui_if37 {
+          Call#std_ui_c22(target=isBackspaceKey) { Var#std_ui_v83(name=key) }
+          Block#std_ui_b85 { Return#std_ui_r48 { Lit#std_ui_i86(value="backspace") } }
+          Block#std_ui_b86 { Lit#std_ui_i87(value=0) }
+        }
+        If#std_ui_if38 {
+          Call#std_ui_c23(target=isDeleteKey) { Var#std_ui_v84(name=key) }
+          Block#std_ui_b87 { Return#std_ui_r49 { Lit#std_ui_i88(value="delete") } }
+          Block#std_ui_b88 { Lit#std_ui_i89(value=0) }
+        }
+        If#std_ui_if39 {
+          Call#std_ui_c24(target=isArrowKey) { Var#std_ui_v85(name=key) }
+          Block#std_ui_b89 { Return#std_ui_r50 { Lit#std_ui_i90(value="move") } }
+          Block#std_ui_b90 { Lit#std_ui_i91(value=0) }
+        }
+        If#std_ui_if40 {
+          Call#std_ui_c25(target=editShouldSubmit) { Var#std_ui_v86(name=key) Var#std_ui_v87(name=allowEnter) }
+          Block#std_ui_b91 { Return#std_ui_r51 { Lit#std_ui_i92(value="submit") } }
+          Block#std_ui_b92 { Lit#std_ui_i93(value=0) }
+        }
+        Let#std_ui_l18(name=insertText) {
+          Call#std_ui_c26(target=keyToText) {
+            Var#std_ui_v88(name=key)
+            Var#std_ui_v89(name=eventText)
+            Var#std_ui_v90(name=allowEnter)
+            Var#std_ui_v91(name=allowTab)
+          }
+        }
+        If#std_ui_if41 {
+          Eq#std_ui_eq29 { Var#std_ui_v92(name=insertText) Lit#std_ui_i94(value="") }
+          Block#std_ui_b93 { Return#std_ui_r52 { Lit#std_ui_i95(value="noop") } }
+          Block#std_ui_b94 { Return#std_ui_r53 { Lit#std_ui_i96(value="insert") } }
+        }
+      }
+    }
+  }
+
+  Let#std_ui_l19(name=shouldHandleKeyEvent) {
+    Fn#std_ui_f13(params=eventType,focusedId,targetId) {
+      Block#std_ui_b95 {
+        If#std_ui_if42 {
+          Eq#std_ui_eq30 { Var#std_ui_v93(name=eventType) Lit#std_ui_i97(value="key") }
+          Block#std_ui_b96 { Lit#std_ui_i98(value=0) }
+          Block#std_ui_b97 { Return#std_ui_r54 { Lit#std_ui_i99(value=false) } }
+        }
+        If#std_ui_if43 {
+          Eq#std_ui_eq31 { Var#std_ui_v94(name=focusedId) Lit#std_ui_i100(value="") }
+          Block#std_ui_b98 { Return#std_ui_r55 { Lit#std_ui_i101(value=false) } }
+          Block#std_ui_b99 { Lit#std_ui_i102(value=0) }
+        }
+        If#std_ui_if44 {
+          Eq#std_ui_eq32 { Var#std_ui_v95(name=targetId) Lit#std_ui_i103(value="") }
+          Block#std_ui_b100 { Return#std_ui_r56 { Lit#std_ui_i104(value=true) } }
+          Block#std_ui_b101 { Return#std_ui_r57 { Eq#std_ui_eq33 { Var#std_ui_v96(name=targetId) Var#std_ui_v97(name=focusedId) } } }
+        }
+      }
+    }
+  }
+
+  Let#std_ui_l20(name=nextFocusOnClick) {
+    Fn#std_ui_f14(params=eventType,targetId,currentFocus) {
+      Block#std_ui_b102 {
+        If#std_ui_if45 {
+          Eq#std_ui_eq34 { Var#std_ui_v98(name=eventType) Lit#std_ui_i105(value="click") }
+          Block#std_ui_b103 { Lit#std_ui_i106(value=0) }
+          Block#std_ui_b104 { Return#std_ui_r58 { Var#std_ui_v99(name=currentFocus) } }
+        }
+        If#std_ui_if46 {
+          Eq#std_ui_eq35 { Var#std_ui_v100(name=targetId) Lit#std_ui_i107(value="") }
+          Block#std_ui_b105 { Return#std_ui_r59 { Lit#std_ui_i108(value="") } }
+          Block#std_ui_b106 { Return#std_ui_r60 { Var#std_ui_v101(name=targetId) } }
+        }
+      }
+    }
+  }
+
+  Export#std_ui_e1(name=isBackspaceKey)
+  Export#std_ui_e2(name=isDeleteKey)
+  Export#std_ui_e3(name=isEnterKey)
+  Export#std_ui_e4(name=isArrowKey)
+  Export#std_ui_e5(name=keyToText)
+  Export#std_ui_e6(name=textLength)
+  Export#std_ui_e7(name=editNextText)
+  Export#std_ui_e8(name=editNextCursor)
+  Export#std_ui_e9(name=editShouldSubmit)
+  Export#std_ui_e10(name=editDebugToken)
+  Export#std_ui_e11(name=shouldHandleKeyEvent)
+  Export#std_ui_e12(name=nextFocusOnClick)
+}

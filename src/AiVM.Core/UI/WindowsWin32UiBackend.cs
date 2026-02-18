@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace AiVM.Core;
 
@@ -15,6 +16,7 @@ public partial class DefaultSyscallHost
         private const uint WmClose = 0x0010;
         private const uint WmLButtonDown = 0x0201;
         private const uint WmKeyDown = 0x0100;
+        private const uint WmSysKeyDown = 0x0104;
         private const uint PmRemove = 0x0001;
         private const int ColorWindow = 5;
         private const int SwShow = 5;
@@ -383,14 +385,32 @@ public partial class DefaultSyscallHost
                 }
                 else if (msg == WmKeyDown)
                 {
+                    var vk = (int)(long)wParam;
+                    var scanCode = (int)(((long)lParam >> 16) & 0xff);
+                    var repeat = (((long)lParam >> 30) & 1L) != 0;
+                    var text = BuildPrintableText(vk, scanCode);
+                    state.Events.Enqueue(new VmUiEvent(
+                        "key",
+                        string.Empty,
+                        -1,
+                        -1,
+                        BuildKeyName(vk),
+                        text,
+                        BuildModifiers(),
+                        repeat));
+                }
+                else if (msg == WmSysKeyDown)
+                {
+                    var vk = (int)(long)wParam;
+                    var scanCode = (int)(((long)lParam >> 16) & 0xff);
                     var repeat = (((long)lParam >> 30) & 1L) != 0;
                     state.Events.Enqueue(new VmUiEvent(
                         "key",
                         string.Empty,
                         -1,
                         -1,
-                        BuildKeyName((int)(long)wParam),
-                        string.Empty,
+                        BuildKeyName(vk),
+                        BuildPrintableText(vk, scanCode),
                         BuildModifiers(),
                         repeat));
                 }
@@ -455,8 +475,44 @@ public partial class DefaultSyscallHost
                 0x27 => "right",
                 0x28 => "down",
                 0x2E => "delete",
+                0xBA => ";",
+                0xBB => "=",
+                0xBC => ",",
+                0xBD => "-",
+                0xBE => ".",
+                0xBF => "/",
+                0xC0 => "`",
+                0xDB => "[",
+                0xDC => "\\",
+                0xDD => "]",
+                0xDE => "'",
                 _ => $"vk:{vk}"
             };
+        }
+
+        private static string BuildPrintableText(int vk, int scanCode)
+        {
+            var keyName = BuildKeyName(vk);
+            if (keyName is "backspace" or "tab" or "enter" or "escape" or "left" or "up" or "right" or "down" or "delete")
+            {
+                return string.Empty;
+            }
+
+            var keyboardState = new byte[256];
+            if (!GetKeyboardState(keyboardState))
+            {
+                return string.Empty;
+            }
+
+            var buffer = new StringBuilder(8);
+            var written = ToUnicode((uint)vk, (uint)scanCode, keyboardState, buffer, buffer.Capacity, 0);
+            if (written <= 0)
+            {
+                return string.Empty;
+            }
+
+            var candidate = buffer.ToString(0, written);
+            return IsPrintableText(candidate) ? candidate : string.Empty;
         }
 
         private static string BuildModifiers()
@@ -483,6 +539,24 @@ public partial class DefaultSyscallHost
         }
 
         private static bool IsPressed(int key) => (GetKeyState(key) & 0x8000) != 0;
+
+        private static bool IsPrintableText(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return false;
+            }
+
+            foreach (var rune in value.EnumerateRunes())
+            {
+                if (Rune.IsControl(rune))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
 
         private static int ParseHexByte(string value, int start)
         {
@@ -602,6 +676,18 @@ public partial class DefaultSyscallHost
 
         [DllImport("user32.dll")]
         private static extern short GetKeyState(int nVirtKey);
+
+        [DllImport("user32.dll")]
+        private static extern bool GetKeyboardState([Out] byte[] lpKeyState);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern int ToUnicode(
+            uint wVirtKey,
+            uint wScanCode,
+            [In] byte[] lpKeyState,
+            [Out] StringBuilder pwszBuff,
+            int cchBuff,
+            uint wFlags);
 
         [DllImport("user32.dll")]
         private static extern int FillRect(IntPtr hDC, [In] ref RECT lprc, IntPtr hbr);

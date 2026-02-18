@@ -43,6 +43,7 @@ This file is normative for semantic validation used by `aic check` (default path
 - For non-key events, `key` and `text` must be empty string and `repeat` must be `false`.
 - `targetId` must be empty string when no deterministic destination exists.
 - These constraints are semantic runtime contract requirements and must not be delegated to host-specific UI behavior.
+- Host adapters may normalize transport payloads (key token naming, printable text extraction), but semantic editing behavior remains library-owned.
 
 - `sys.ui_getWindowSize` contract is canonical and deterministic:
 - return value is a `UiWindowSize` node as defined by `SPEC/IL.md`.

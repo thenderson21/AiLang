@@ -381,7 +381,7 @@ public static class VmSyscalls
         };
 
         var targetId = value.TargetId ?? string.Empty;
-        var key = value.Key ?? string.Empty;
+        var key = CanonicalizeKeyToken(value.Key ?? string.Empty, value.Text ?? string.Empty);
         var text = value.Text ?? string.Empty;
         var modifiers = CanonicalizeModifiers(value.Modifiers);
         var repeat = value.Repeat;
@@ -409,6 +409,46 @@ public static class VmSyscalls
         }
 
         return new VmUiEvent(type, targetId, x, y, key, text, modifiers, repeat);
+    }
+
+    private static string CanonicalizeKeyToken(string key, string text)
+    {
+        if (!string.IsNullOrWhiteSpace(key))
+        {
+            return key.ToLowerInvariant() switch
+            {
+                "return" => "enter",
+                "esc" => "escape",
+                "arrowleft" => "left",
+                "arrowright" => "right",
+                "arrowup" => "up",
+                "arrowdown" => "down",
+                _ => key.ToLowerInvariant()
+            };
+        }
+
+        if (string.IsNullOrEmpty(text))
+        {
+            return string.Empty;
+        }
+
+        if (text.Length != 1)
+        {
+            return string.Empty;
+        }
+
+        var ch = text[0];
+        if (char.IsControl(ch))
+        {
+            return string.Empty;
+        }
+
+        if (ch == ' ')
+        {
+            return "space";
+        }
+
+        return char.ToLowerInvariant(ch).ToString();
     }
 
     private static int[] BuildRuneOffsets(string text)

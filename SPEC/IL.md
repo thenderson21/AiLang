@@ -49,6 +49,7 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 - `modifiers` (string): comma-separated sorted set from `alt,ctrl,meta,shift`; empty string for none.
 - `repeat` (bool): `true` only for host key-repeat events, else `false`.
 - `UiEvent` has `0` children.
+- Host/VM role is transport normalization only; key meaning (editing/navigation/submit policy) is defined in AiLang library code.
 
 ## UI Window Size Value Contract
 

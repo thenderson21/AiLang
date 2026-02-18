@@ -23,6 +23,16 @@ public partial class DefaultSyscallHost
         private const uint ControlMask = 4;
         private const uint Mod1Mask = 8;   // Alt
         private const uint Mod4Mask = 64;  // Meta/Super
+        private const ulong XkBackSpace = 0xFF08;
+        private const ulong XkTab = 0xFF09;
+        private const ulong XkReturn = 0xFF0D;
+        private const ulong XkEscape = 0xFF1B;
+        private const ulong XkDelete = 0xFFFF;
+        private const ulong XkLeft = 0xFF51;
+        private const ulong XkUp = 0xFF52;
+        private const ulong XkRight = 0xFF53;
+        private const ulong XkDown = 0xFF54;
+        private const ulong XkSpace = 0x0020;
 
         private readonly object _lock = new();
         private readonly Dictionary<int, LinuxWindowState> _windows = new();
@@ -243,13 +253,15 @@ public partial class DefaultSyscallHost
 
                     if (evt.Type == KeyPress && evt.Key.Window == window.Window)
                     {
+                        var key = BuildKeyName(evt.Key);
+                        var text = BuildPrintableText(evt.Key);
                         return new VmUiEvent(
                             "key",
                             string.Empty,
                             -1,
                             -1,
-                            $"x11:{evt.Key.Keycode}",
-                            string.Empty,
+                            key,
+                            text,
                             BuildModifiers(evt.Key.State),
                             false);
                     }
@@ -349,6 +361,63 @@ public partial class DefaultSyscallHost
             }
 
             return values.Count == 0 ? string.Empty : string.Join(',', values);
+        }
+
+        private static string BuildKeyName(XKeyEvent evt)
+        {
+            var keySym = LookupKeySym(evt, out var text);
+            if (!string.IsNullOrEmpty(text) && text.Length == 1 && char.IsLetterOrDigit(text[0]))
+            {
+                return char.ToLowerInvariant(text[0]).ToString();
+            }
+
+            if (!string.IsNullOrEmpty(text) && string.Equals(text, "`", StringComparison.Ordinal))
+            {
+                return "`";
+            }
+
+            return keySym switch
+            {
+                XkBackSpace => "backspace",
+                XkTab => "tab",
+                XkReturn => "enter",
+                XkEscape => "escape",
+                XkDelete => "delete",
+                XkLeft => "left",
+                XkUp => "up",
+                XkRight => "right",
+                XkDown => "down",
+                XkSpace => "space",
+                _ => $"x11:{evt.Keycode}"
+            };
+        }
+
+        private static string BuildPrintableText(XKeyEvent evt)
+        {
+            _ = LookupKeySym(evt, out var text);
+            if (string.IsNullOrEmpty(text))
+            {
+                return string.Empty;
+            }
+
+            foreach (var rune in text.EnumerateRunes())
+            {
+                if (Rune.IsControl(rune))
+                {
+                    return string.Empty;
+                }
+            }
+
+            return text;
+        }
+
+        private static ulong LookupKeySym(XKeyEvent evt, out string text)
+        {
+            var keyEvent = evt;
+            var buffer = new StringBuilder(16);
+            var written = XLookupString(ref keyEvent, buffer, buffer.Capacity, out var keySym, IntPtr.Zero);
+            text = written > 0 ? buffer.ToString(0, written) : string.Empty;
+            return unchecked((ulong)keySym.ToInt64());
         }
 
         private sealed class LinuxWindowState
@@ -571,5 +640,13 @@ public partial class DefaultSyscallHost
 
         [DllImport("libX11.so.6")]
         private static extern int XGetWindowAttributes(IntPtr display, IntPtr window, out XWindowAttributes windowAttributes);
+
+        [DllImport("libX11.so.6")]
+        private static extern int XLookupString(
+            ref XKeyEvent eventStruct,
+            [Out] StringBuilder bufferReturn,
+            int bytesBuffer,
+            out IntPtr keysymReturn,
+            IntPtr statusInOut);
     }
 }
