@@ -102,6 +102,20 @@ public static class SyscallContracts
                 ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL216", "sys.net_tcpAccept expects 1 argument.", "VAL217", "sys.net_tcpAccept arg must be int.", addDiagnostic);
                 returnKind = VmValueKind.Int;
                 return true;
+            case "sys.net_tcpConnect":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.String, "VAL303", "sys.net_tcpConnect arg 1 must be string."),
+                        (VmValueKind.Int, "VAL304", "sys.net_tcpConnect arg 2 must be int.")
+                    },
+                    "VAL307",
+                    "sys.net_tcpConnect expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
             case "sys.net_tcpRead":
                 ValidateArityAndTypes(
                     argKinds,
@@ -282,35 +296,21 @@ public static class SyscallContracts
                     addDiagnostic);
                 returnKind = VmValueKind.Void;
                 return true;
-            case "sys.ui_drawPolyline":
+            case "sys.ui_drawImage":
                 ValidateArityAndTypes(
                     argKinds,
-                    4,
+                    6,
                     new[]
                     {
-                        (VmValueKind.Int, "VAL296", "sys.ui_drawPolyline arg 1 must be int."),
-                        (VmValueKind.String, "VAL297", "sys.ui_drawPolyline arg 2 must be string."),
-                        (VmValueKind.String, "VAL298", "sys.ui_drawPolyline arg 3 must be string."),
-                        (VmValueKind.Int, "VAL299", "sys.ui_drawPolyline arg 4 must be int.")
+                        (VmValueKind.Int, "VAL296", "sys.ui_drawImage arg 1 must be int."),
+                        (VmValueKind.Int, "VAL297", "sys.ui_drawImage arg 2 must be int."),
+                        (VmValueKind.Int, "VAL298", "sys.ui_drawImage arg 3 must be int."),
+                        (VmValueKind.Int, "VAL299", "sys.ui_drawImage arg 4 must be int."),
+                        (VmValueKind.Int, "VAL300", "sys.ui_drawImage arg 5 must be int."),
+                        (VmValueKind.String, "VAL301", "sys.ui_drawImage arg 6 must be string.")
                     },
-                    "VAL300",
-                    "sys.ui_drawPolyline expects 4 arguments.",
-                    addDiagnostic);
-                returnKind = VmValueKind.Void;
-                return true;
-            case "sys.ui_drawPolygon":
-                ValidateArityAndTypes(
-                    argKinds,
-                    4,
-                    new[]
-                    {
-                        (VmValueKind.Int, "VAL301", "sys.ui_drawPolygon arg 1 must be int."),
-                        (VmValueKind.String, "VAL302", "sys.ui_drawPolygon arg 2 must be string."),
-                        (VmValueKind.String, "VAL303", "sys.ui_drawPolygon arg 3 must be string."),
-                        (VmValueKind.Int, "VAL304", "sys.ui_drawPolygon arg 4 must be int.")
-                    },
-                    "VAL305",
-                    "sys.ui_drawPolygon expects 4 arguments.",
+                    "VAL302",
+                    "sys.ui_drawImage expects 6 arguments.",
                     addDiagnostic);
                 returnKind = VmValueKind.Void;
                 return true;
@@ -331,7 +331,7 @@ public static class SyscallContracts
                 returnKind = VmValueKind.Void;
                 return true;
             case "sys.ui_getWindowSize":
-                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL394", "sys.ui_getWindowSize expects 1 argument.", "VAL395", "sys.ui_getWindowSize arg must be int.", addDiagnostic);
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL276", "sys.ui_getWindowSize expects 1 argument.", "VAL277", "sys.ui_getWindowSize arg must be int.", addDiagnostic);
                 returnKind = VmValueKind.Node;
                 return true;
             case "sys.crypto_base64Encode":
@@ -468,11 +468,11 @@ public static class SyscallContracts
                     3,
                     new[]
                     {
-                        (VmValueKind.String, "VAL396", "sys.str_substring arg 1 must be string."),
-                        (VmValueKind.Int, "VAL397", "sys.str_substring arg 2 must be int."),
-                        (VmValueKind.Int, "VAL398", "sys.str_substring arg 3 must be int.")
+                        (VmValueKind.String, "VAL278", "sys.str_substring arg 1 must be string."),
+                        (VmValueKind.Int, "VAL279", "sys.str_substring arg 2 must be int."),
+                        (VmValueKind.Int, "VAL280", "sys.str_substring arg 3 must be int.")
                     },
-                    "VAL399",
+                    "VAL281",
                     "sys.str_substring expects 3 arguments.",
                     addDiagnostic);
                 returnKind = VmValueKind.String;
@@ -483,17 +483,13 @@ public static class SyscallContracts
                     3,
                     new[]
                     {
-                        (VmValueKind.String, "VAL400", "sys.str_remove arg 1 must be string."),
-                        (VmValueKind.Int, "VAL401", "sys.str_remove arg 2 must be int."),
-                        (VmValueKind.Int, "VAL402", "sys.str_remove arg 3 must be int.")
+                        (VmValueKind.String, "VAL282", "sys.str_remove arg 1 must be string."),
+                        (VmValueKind.Int, "VAL283", "sys.str_remove arg 2 must be int."),
+                        (VmValueKind.Int, "VAL284", "sys.str_remove arg 3 must be int.")
                     },
-                    "VAL403",
+                    "VAL285",
                     "sys.str_remove expects 3 arguments.",
                     addDiagnostic);
-                returnKind = VmValueKind.String;
-                return true;
-            case "sys.http_get":
-                ValidateArityAndType(argKinds, 1, VmValueKind.String, "VAL148", "sys.http_get expects 1 argument.", "VAL149", "sys.http_get arg must be string.", addDiagnostic);
                 returnKind = VmValueKind.String;
                 return true;
             case "sys.platform":

@@ -135,6 +135,20 @@ public partial class DefaultSyscallHost
             return false;
         }
 
+        public bool TryDrawImage(int handle, int x, int y, int width, int height, string rgbaBase64)
+        {
+            lock (_lock)
+            {
+                if (_windows.TryGetValue(handle, out var state))
+                {
+                    state.Commands.Add(UiDrawCommand.FromImage(x, y, width, height, rgbaBase64));
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public bool TryPresent(int handle)
         {
             MacWindowState? state;
@@ -310,6 +324,20 @@ public partial class DefaultSyscallHost
                     sb.Append(command.Color);
                     sb.Append('\n');
                 }
+                else if (command.Kind == "image")
+                {
+                    sb.Append("I|");
+                    sb.Append(command.X.ToString(CultureInfo.InvariantCulture));
+                    sb.Append("|");
+                    sb.Append(command.Y.ToString(CultureInfo.InvariantCulture));
+                    sb.Append("|");
+                    sb.Append(command.Width.ToString(CultureInfo.InvariantCulture));
+                    sb.Append("|");
+                    sb.Append(command.Height.ToString(CultureInfo.InvariantCulture));
+                    sb.Append("|");
+                    sb.Append(command.ImageRgbaBase64);
+                    sb.Append('\n');
+                }
             }
             return sb.ToString();
         }
@@ -474,7 +502,7 @@ public partial class DefaultSyscallHost
                     return _scriptPath;
                 }
 
-                var path = Path.Combine(Path.GetTempPath(), "ailang-macos-ui-runner-v3.swift");
+                var path = Path.Combine(Path.GetTempPath(), "ailang-macos-ui-runner-v4.swift");
                 var script = @"
 import AppKit
 import Foundation
@@ -491,6 +519,7 @@ struct Cmd {
     var size: Int
     var color: String
     var text: String
+    var image: String
 }
 
 func encodeBase64(_ value: String) -> String {
@@ -529,6 +558,46 @@ func modifierText(_ flags: NSEvent.ModifierFlags) -> String {
     if flags.contains(.command) { values.append(""meta"") }
     if flags.contains(.shift) { values.append(""shift"") }
     return values.joined(separator: "","")
+}
+
+func canonicalMacKeyToken(_ event: NSEvent) -> String {
+    let raw = (event.charactersIgnoringModifiers ?? """").lowercased()
+    if raw == ""\u{7f}"" { return ""backspace"" }
+    if raw == ""\t"" { return ""tab"" }
+    if raw == ""\r"" { return ""enter"" }
+    if raw == "" "" { return ""space"" }
+    if raw == ""\u{1b}"" { return ""escape"" }
+    if raw.count == 1 {
+        return raw
+    }
+
+    switch event.keyCode {
+    case 51: return ""backspace""
+    case 117: return ""delete""
+    case 123: return ""left""
+    case 124: return ""right""
+    case 125: return ""down""
+    case 126: return ""up""
+    case 36, 76: return ""enter""
+    case 48: return ""tab""
+    case 53: return ""escape""
+    case 49: return ""space""
+    default: return ""mac:\(event.keyCode)""
+    }
+}
+
+func printableText(_ value: String) -> String {
+    if value.isEmpty {
+        return """"
+    }
+
+    for scalar in value.unicodeScalars {
+        if CharacterSet.controlCharacters.contains(scalar) {
+            return """"
+        }
+    }
+
+    return value
 }
 
 final class CanvasView: NSView {
@@ -573,6 +642,37 @@ final class CanvasView: NSView {
                     .font: NSFont.monospacedSystemFont(ofSize: CGFloat(max(1, c.size)), weight: .regular)
                 ]
                 NSString(string: c.text).draw(at: NSPoint(x: CGFloat(c.x), y: CGFloat(c.y)), withAttributes: attrs)
+            } else if c.kind == ""I"" {
+                if c.w <= 0 || c.h <= 0 {
+                    continue
+                }
+
+                guard let bytes = Data(base64Encoded: c.image) else {
+                    continue
+                }
+
+                let expected = c.w * c.h * 4
+                if bytes.count < expected {
+                    continue
+                }
+
+                let ptr = [UInt8](bytes)
+                var idx = 0
+                for py in 0..<c.h {
+                    for px in 0..<c.w {
+                        if idx + 3 >= ptr.count {
+                            break
+                        }
+
+                        let r = CGFloat(ptr[idx]) / 255.0
+                        let g = CGFloat(ptr[idx + 1]) / 255.0
+                        let b = CGFloat(ptr[idx + 2]) / 255.0
+                        let a = CGFloat(ptr[idx + 3]) / 255.0
+                        idx += 4
+                        NSColor(calibratedRed: r, green: g, blue: b, alpha: a).setFill()
+                        NSRect(x: CGFloat(c.x + px), y: CGFloat(c.y + py), width: 1, height: 1).fill()
+                    }
+                }
             }
         }
     }
@@ -586,11 +686,8 @@ final class CanvasView: NSView {
     }
 
     override func keyDown(with event: NSEvent) {
-        let key = (event.charactersIgnoringModifiers ?? """")
-            .lowercased()
-        let fallbackKey = ""mac:\(event.keyCode)""
-        let keyOut = key.isEmpty ? fallbackKey : key
-        let textOut = event.characters ?? """"
+        let keyOut = canonicalMacKeyToken(event)
+        let textOut = printableText(event.characters ?? """")
         let mods = modifierText(event.modifierFlags)
         let repeatFlag = event.isARepeat ? ""1"" : ""0""
         let keyB64 = encodeBase64(keyOut)
@@ -625,14 +722,16 @@ func loadCommands(path: String) -> [Cmd] {
         let parts = line.split(separator: ""|"", omittingEmptySubsequences: false).map(String.init)
         if parts.count == 0 { continue }
         if parts[0] == ""R"" && parts.count >= 6 {
-            out.append(Cmd(kind: ""R"", x: Int(parts[1]) ?? 0, y: Int(parts[2]) ?? 0, w: Int(parts[3]) ?? 0, h: Int(parts[4]) ?? 0, x2: 0, y2: 0, stroke: 1, size: 0, color: parts[5], text: """"))
+            out.append(Cmd(kind: ""R"", x: Int(parts[1]) ?? 0, y: Int(parts[2]) ?? 0, w: Int(parts[3]) ?? 0, h: Int(parts[4]) ?? 0, x2: 0, y2: 0, stroke: 1, size: 0, color: parts[5], text: """", image: """"))
         } else if parts[0] == ""E"" && parts.count >= 6 {
-            out.append(Cmd(kind: ""E"", x: Int(parts[1]) ?? 0, y: Int(parts[2]) ?? 0, w: Int(parts[3]) ?? 0, h: Int(parts[4]) ?? 0, x2: 0, y2: 0, stroke: 1, size: 0, color: parts[5], text: """"))
+            out.append(Cmd(kind: ""E"", x: Int(parts[1]) ?? 0, y: Int(parts[2]) ?? 0, w: Int(parts[3]) ?? 0, h: Int(parts[4]) ?? 0, x2: 0, y2: 0, stroke: 1, size: 0, color: parts[5], text: """", image: """"))
         } else if parts[0] == ""L"" && parts.count >= 7 {
-            out.append(Cmd(kind: ""L"", x: Int(parts[1]) ?? 0, y: Int(parts[2]) ?? 0, w: 0, h: 0, x2: Int(parts[3]) ?? 0, y2: Int(parts[4]) ?? 0, stroke: Int(parts[5]) ?? 1, size: 0, color: parts[6], text: """"))
+            out.append(Cmd(kind: ""L"", x: Int(parts[1]) ?? 0, y: Int(parts[2]) ?? 0, w: 0, h: 0, x2: Int(parts[3]) ?? 0, y2: Int(parts[4]) ?? 0, stroke: Int(parts[5]) ?? 1, size: 0, color: parts[6], text: """", image: """"))
         } else if parts[0] == ""T"" && parts.count >= 6 {
             let decoded = Data(base64Encoded: parts[5]).flatMap { String(data: $0, encoding: .utf8) } ?? """"
-            out.append(Cmd(kind: ""T"", x: Int(parts[1]) ?? 0, y: Int(parts[2]) ?? 0, w: 0, h: 0, x2: 0, y2: 0, stroke: 1, size: Int(parts[3]) ?? 14, color: parts[4], text: decoded))
+            out.append(Cmd(kind: ""T"", x: Int(parts[1]) ?? 0, y: Int(parts[2]) ?? 0, w: 0, h: 0, x2: 0, y2: 0, stroke: 1, size: Int(parts[3]) ?? 14, color: parts[4], text: decoded, image: """"))
+        } else if parts[0] == ""I"" && parts.count >= 6 {
+            out.append(Cmd(kind: ""I"", x: Int(parts[1]) ?? 0, y: Int(parts[2]) ?? 0, w: Int(parts[3]) ?? 0, h: Int(parts[4]) ?? 0, x2: 0, y2: 0, stroke: 1, size: 0, color: ""#ffffff"", text: """", image: parts[5]))
         }
     }
     return out

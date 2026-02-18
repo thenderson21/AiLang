@@ -136,6 +136,28 @@ This file is normative for `aic run` evaluation behavior.
 - Idle behavior (`type=none`) performs no implicit state mutation.
 - Host scheduling/timing may vary, but language-visible state transitions and presented outputs must be identical for identical input event sequences.
 
+## Host Normalization vs Library Semantics
+
+- Boundary rule:
+- AiVM/host owns transport normalization only.
+- AiLang libraries own input semantics.
+- Host normalization responsibilities:
+- normalize platform key identifiers to canonical tokens (for example `backspace`, `enter`, `left`, printable key tokens).
+- provide printable `text` payload when available.
+- populate canonical `type,key,text,x,y,modifiers,repeat,targetId` fields deterministically.
+- Host must not implement declarative editing semantics (no hidden insert/delete/caret/focus mutation rules).
+- Library responsibilities:
+- interpret canonical key/text payloads (`isBackspaceKey`, `isDeleteKey`, `isArrowKey`, `keyToText`, etc.).
+- define text-edit policy (insert/delete/caret movement/newline or tab policy).
+- route key behavior by explicit focus/target state in language-visible state transitions.
+
+## Raster Image Primitive
+
+- `sys.ui_drawImage(windowHandle, x, y, width, height, rgbaBase64)` is a VM-level raster primitive.
+- `rgbaBase64` encodes raw row-major RGBA8 bytes (`width * height * 4` bytes).
+- Host responsibility is mechanical rendering only (no fit/crop/layout semantics).
+- Image composition semantics (sizing policy, alignment, clipping policy choices) are library-owned.
+
 ## Result Emission
 
 - `aic run` emits canonical AOS:

@@ -173,11 +173,6 @@ public static class VmSyscalls
         return string.Concat(text.AsSpan(0, startOffset), text.AsSpan(endOffset));
     }
 
-    public static string HttpGet(string url)
-    {
-        return Host.HttpGet(url);
-    }
-
     public static string Platform()
     {
         return Host.Platform();
@@ -236,6 +231,11 @@ public static class VmSyscalls
     public static int NetTcpListenTls(VmNetworkState state, string host, int port, string certPath, string keyPath)
     {
         return Host.NetTcpListenTls(state, host, port, certPath, keyPath);
+    }
+
+    public static int NetTcpConnect(VmNetworkState state, string host, int port)
+    {
+        return Host.NetTcpConnect(state, host, port);
     }
 
     public static int NetTcpAccept(VmNetworkState state, int listenerHandle)
@@ -303,14 +303,9 @@ public static class VmSyscalls
         Host.UiDrawPath(windowHandle, path, color, strokeWidth);
     }
 
-    public static void UiDrawPolyline(int windowHandle, string points, string color, int strokeWidth)
+    public static void UiDrawImage(int windowHandle, int x, int y, int width, int height, string rgbaBase64)
     {
-        Host.UiDrawPolyline(windowHandle, points, color, strokeWidth);
-    }
-
-    public static void UiDrawPolygon(int windowHandle, string points, string color, int strokeWidth)
-    {
-        Host.UiDrawPolygon(windowHandle, points, color, strokeWidth);
+        Host.UiDrawImage(windowHandle, x, y, width, height, rgbaBase64);
     }
 
     public static void UiEndFrame(int windowHandle)
@@ -391,7 +386,7 @@ public static class VmSyscalls
         };
 
         var targetId = value.TargetId ?? string.Empty;
-        var key = value.Key ?? string.Empty;
+        var key = CanonicalizeKeyToken(value.Key ?? string.Empty, value.Text ?? string.Empty);
         var text = value.Text ?? string.Empty;
         var modifiers = CanonicalizeModifiers(value.Modifiers);
         var repeat = value.Repeat;
@@ -419,6 +414,46 @@ public static class VmSyscalls
         }
 
         return new VmUiEvent(type, targetId, x, y, key, text, modifiers, repeat);
+    }
+
+    private static string CanonicalizeKeyToken(string key, string text)
+    {
+        if (!string.IsNullOrWhiteSpace(key))
+        {
+            return key.ToLowerInvariant() switch
+            {
+                "return" => "enter",
+                "esc" => "escape",
+                "arrowleft" => "left",
+                "arrowright" => "right",
+                "arrowup" => "up",
+                "arrowdown" => "down",
+                _ => key.ToLowerInvariant()
+            };
+        }
+
+        if (string.IsNullOrEmpty(text))
+        {
+            return string.Empty;
+        }
+
+        if (text.Length != 1)
+        {
+            return string.Empty;
+        }
+
+        var ch = text[0];
+        if (char.IsControl(ch))
+        {
+            return string.Empty;
+        }
+
+        if (ch == ' ')
+        {
+            return "space";
+        }
+
+        return char.ToLowerInvariant(ch).ToString();
     }
 
     private static int[] BuildRuneOffsets(string text)

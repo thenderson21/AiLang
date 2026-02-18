@@ -29,7 +29,7 @@ public enum SyscallId : ushort
     FsWriteFile = 24,
     FsMakeDir = 25,
     StrUtf8ByteCount = 26,
-    HttpGet = 27,
+    NetTcpConnect = 27,
     Platform = 28,
     Arch = 29,
     OsVersion = 30,
@@ -59,9 +59,8 @@ public enum SyscallId : ushort
     UiDrawLine = 54,
     UiDrawEllipse = 55,
     UiDrawPath = 56,
-    UiGetWindowSize = 57,
-    StrSubstring = 58,
-    StrRemove = 59,
-    UiDrawPolyline = 60,
-    UiDrawPolygon = 61
+    UiDrawImage = 57,
+    UiGetWindowSize = 58,
+    StrSubstring = 59,
+    StrRemove = 60
 }

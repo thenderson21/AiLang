@@ -29,7 +29,6 @@ public interface ISyscallHost
     void FsWriteFile(string path, string text);
     void FsMakeDir(string path);
     int StrUtf8ByteCount(string text);
-    string HttpGet(string url);
     string Platform();
     string Architecture();
     string OsVersion();
@@ -43,6 +42,7 @@ public interface ISyscallHost
     void NetClose(VmNetworkState state, int handle);
     int NetTcpListen(VmNetworkState state, string host, int port);
     int NetTcpListenTls(VmNetworkState state, string host, int port, string certPath, string keyPath);
+    int NetTcpConnect(VmNetworkState state, string host, int port);
     int NetTcpAccept(VmNetworkState state, int listenerHandle);
     string NetTcpRead(VmNetworkState state, int connectionHandle, int maxBytes);
     int NetTcpWrite(VmNetworkState state, int connectionHandle, string data);
@@ -56,8 +56,7 @@ public interface ISyscallHost
     void UiDrawLine(int windowHandle, int x1, int y1, int x2, int y2, string color, int strokeWidth);
     void UiDrawEllipse(int windowHandle, int x, int y, int width, int height, string color);
     void UiDrawPath(int windowHandle, string path, string color, int strokeWidth);
-    void UiDrawPolyline(int windowHandle, string points, string color, int strokeWidth);
-    void UiDrawPolygon(int windowHandle, string points, string color, int strokeWidth);
+    void UiDrawImage(int windowHandle, int x, int y, int width, int height, string rgbaBase64);
     void UiEndFrame(int windowHandle);
     VmUiEvent UiPollEvent(int windowHandle);
     VmUiWindowSize UiGetWindowSize(int windowHandle);

@@ -23,6 +23,16 @@ public partial class DefaultSyscallHost
         private const uint ControlMask = 4;
         private const uint Mod1Mask = 8;   // Alt
         private const uint Mod4Mask = 64;  // Meta/Super
+        private const ulong XkBackSpace = 0xFF08;
+        private const ulong XkTab = 0xFF09;
+        private const ulong XkReturn = 0xFF0D;
+        private const ulong XkEscape = 0xFF1B;
+        private const ulong XkDelete = 0xFFFF;
+        private const ulong XkLeft = 0xFF51;
+        private const ulong XkUp = 0xFF52;
+        private const ulong XkRight = 0xFF53;
+        private const ulong XkDown = 0xFF54;
+        private const ulong XkSpace = 0x0020;
 
         private readonly object _lock = new();
         private readonly Dictionary<int, LinuxWindowState> _windows = new();
@@ -170,6 +180,20 @@ public partial class DefaultSyscallHost
             return false;
         }
 
+        public bool TryDrawImage(int handle, int x, int y, int width, int height, string rgbaBase64)
+        {
+            lock (_lock)
+            {
+                if (_windows.TryGetValue(handle, out var window))
+                {
+                    window.Commands.Add(UiDrawCommand.FromImage(x, y, width, height, rgbaBase64));
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public bool TryPresent(int handle)
         {
             lock (_lock)
@@ -200,6 +224,10 @@ public partial class DefaultSyscallHost
                     {
                         var bytes = Encoding.UTF8.GetBytes(command.Text ?? string.Empty);
                         XDrawString(_display, window.Window, window.Gc, command.X, command.Y, bytes, bytes.Length);
+                    }
+                    else if (command.Kind == "image")
+                    {
+                        DrawRgbaImage(window, command.X, command.Y, command.Width, command.Height, command.ImageRgbaBase64);
                     }
                 }
 
@@ -243,13 +271,15 @@ public partial class DefaultSyscallHost
 
                     if (evt.Type == KeyPress && evt.Key.Window == window.Window)
                     {
+                        var key = BuildKeyName(evt.Key);
+                        var text = BuildPrintableText(evt.Key);
                         return new VmUiEvent(
                             "key",
                             string.Empty,
                             -1,
                             -1,
-                            $"x11:{evt.Key.Keycode}",
-                            string.Empty,
+                            key,
+                            text,
                             BuildModifiers(evt.Key.State),
                             false);
                     }
@@ -328,6 +358,44 @@ public partial class DefaultSyscallHost
             };
         }
 
+        private void DrawRgbaImage(LinuxWindowState window, int x, int y, int width, int height, string rgbaBase64)
+        {
+            if (width <= 0 || height <= 0 || string.IsNullOrWhiteSpace(rgbaBase64))
+            {
+                return;
+            }
+
+            byte[] rgba;
+            try
+            {
+                rgba = Convert.FromBase64String(rgbaBase64);
+            }
+            catch
+            {
+                return;
+            }
+
+            var expectedBytes = (long)width * height * 4;
+            if (expectedBytes <= 0 || rgba.Length < expectedBytes)
+            {
+                return;
+            }
+
+            var index = 0;
+            for (var py = 0; py < height; py++)
+            {
+                for (var px = 0; px < width; px++)
+                {
+                    var r = rgba[index];
+                    var g = rgba[index + 1];
+                    var b = rgba[index + 2];
+                    index += 4;
+                    XSetForeground(_display, window.Gc, (ulong)((r << 16) | (g << 8) | b));
+                    XDrawPoint(_display, window.Window, window.Gc, x + px, y + py);
+                }
+            }
+        }
+
         private static string BuildModifiers(uint state)
         {
             var values = new List<string>(4);
@@ -349,6 +417,63 @@ public partial class DefaultSyscallHost
             }
 
             return values.Count == 0 ? string.Empty : string.Join(',', values);
+        }
+
+        private static string BuildKeyName(XKeyEvent evt)
+        {
+            var keySym = LookupKeySym(evt, out var text);
+            if (!string.IsNullOrEmpty(text) && text.Length == 1 && char.IsLetterOrDigit(text[0]))
+            {
+                return char.ToLowerInvariant(text[0]).ToString();
+            }
+
+            if (!string.IsNullOrEmpty(text) && string.Equals(text, "`", StringComparison.Ordinal))
+            {
+                return "`";
+            }
+
+            return keySym switch
+            {
+                XkBackSpace => "backspace",
+                XkTab => "tab",
+                XkReturn => "enter",
+                XkEscape => "escape",
+                XkDelete => "delete",
+                XkLeft => "left",
+                XkUp => "up",
+                XkRight => "right",
+                XkDown => "down",
+                XkSpace => "space",
+                _ => $"x11:{evt.Keycode}"
+            };
+        }
+
+        private static string BuildPrintableText(XKeyEvent evt)
+        {
+            _ = LookupKeySym(evt, out var text);
+            if (string.IsNullOrEmpty(text))
+            {
+                return string.Empty;
+            }
+
+            foreach (var rune in text.EnumerateRunes())
+            {
+                if (Rune.IsControl(rune))
+                {
+                    return string.Empty;
+                }
+            }
+
+            return text;
+        }
+
+        private static ulong LookupKeySym(XKeyEvent evt, out string text)
+        {
+            var keyEvent = evt;
+            var buffer = new StringBuilder(16);
+            var written = XLookupString(ref keyEvent, buffer, buffer.Capacity, out var keySym, IntPtr.Zero);
+            text = written > 0 ? buffer.ToString(0, written) : string.Empty;
+            return unchecked((ulong)keySym.ToInt64());
         }
 
         private sealed class LinuxWindowState
@@ -546,6 +671,9 @@ public partial class DefaultSyscallHost
         private static extern int XDrawString(IntPtr display, IntPtr drawable, IntPtr gc, int x, int y, byte[] text, int length);
 
         [DllImport("libX11.so.6")]
+        private static extern int XDrawPoint(IntPtr display, IntPtr drawable, IntPtr gc, int x, int y);
+
+        [DllImport("libX11.so.6")]
         private static extern int XClearWindow(IntPtr display, IntPtr window);
 
         [DllImport("libX11.so.6")]
@@ -571,5 +699,13 @@ public partial class DefaultSyscallHost
 
         [DllImport("libX11.so.6")]
         private static extern int XGetWindowAttributes(IntPtr display, IntPtr window, out XWindowAttributes windowAttributes);
+
+        [DllImport("libX11.so.6")]
+        private static extern int XLookupString(
+            ref XKeyEvent eventStruct,
+            [Out] StringBuilder bufferReturn,
+            int bytesBuffer,
+            out IntPtr keysymReturn,
+            IntPtr statusInOut);
     }
 }

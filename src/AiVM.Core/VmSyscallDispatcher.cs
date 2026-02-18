@@ -14,6 +14,7 @@ public static class VmSyscallDispatcher
             SyscallId.NetClose => 1,
             SyscallId.NetTcpListen => 2,
             SyscallId.NetTcpListenTls => 4,
+            SyscallId.NetTcpConnect => 2,
             SyscallId.NetTcpAccept => 1,
             SyscallId.NetTcpRead => 2,
             SyscallId.NetTcpWrite => 2,
@@ -27,8 +28,7 @@ public static class VmSyscallDispatcher
             SyscallId.UiDrawLine => 7,
             SyscallId.UiDrawEllipse => 6,
             SyscallId.UiDrawPath => 4,
-            SyscallId.UiDrawPolyline => 4,
-            SyscallId.UiDrawPolygon => 4,
+            SyscallId.UiDrawImage => 6,
             SyscallId.UiEndFrame => 1,
             SyscallId.UiPollEvent => 1,
             SyscallId.UiPresent => 1,
@@ -63,7 +63,6 @@ public static class VmSyscallDispatcher
             SyscallId.StrUtf8ByteCount => 1,
             SyscallId.StrSubstring => 3,
             SyscallId.StrRemove => 3,
-            SyscallId.HttpGet => 1,
             SyscallId.Platform => 0,
             SyscallId.Arch => 0,
             SyscallId.OsVersion => 0,
@@ -157,6 +156,15 @@ public static class VmSyscallDispatcher
                     return true;
                 }
                 result = SysValue.Int(VmSyscalls.NetTcpAccept(network, tcpAcceptListenerHandle));
+                return true;
+
+            case SyscallId.NetTcpConnect:
+                if (!TryGetString(args, 0, 2, out var tcpConnectHost) ||
+                    !TryGetInt(args, 1, 2, out var tcpConnectPort))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.NetTcpConnect(network, tcpConnectHost, tcpConnectPort));
                 return true;
 
             case SyscallId.NetTcpRead:
@@ -296,27 +304,17 @@ public static class VmSyscallDispatcher
                 result = SysValue.Void();
                 return true;
 
-            case SyscallId.UiDrawPolyline:
-                if (!TryGetInt(args, 0, 4, out var uiPolylineHandle) ||
-                    !TryGetString(args, 1, 4, out var uiPolylinePoints) ||
-                    !TryGetString(args, 2, 4, out var uiPolylineColor) ||
-                    !TryGetInt(args, 3, 4, out var uiPolylineStrokeWidth))
+            case SyscallId.UiDrawImage:
+                if (!TryGetInt(args, 0, 6, out var uiImageHandle) ||
+                    !TryGetInt(args, 1, 6, out var uiImageX) ||
+                    !TryGetInt(args, 2, 6, out var uiImageY) ||
+                    !TryGetInt(args, 3, 6, out var uiImageWidth) ||
+                    !TryGetInt(args, 4, 6, out var uiImageHeight) ||
+                    !TryGetString(args, 5, 6, out var uiImageRgbaBase64))
                 {
                     return true;
                 }
-                VmSyscalls.UiDrawPolyline(uiPolylineHandle, uiPolylinePoints, uiPolylineColor, uiPolylineStrokeWidth);
-                result = SysValue.Void();
-                return true;
-
-            case SyscallId.UiDrawPolygon:
-                if (!TryGetInt(args, 0, 4, out var uiPolygonHandle) ||
-                    !TryGetString(args, 1, 4, out var uiPolygonPoints) ||
-                    !TryGetString(args, 2, 4, out var uiPolygonColor) ||
-                    !TryGetInt(args, 3, 4, out var uiPolygonStrokeWidth))
-                {
-                    return true;
-                }
-                VmSyscalls.UiDrawPolygon(uiPolygonHandle, uiPolygonPoints, uiPolygonColor, uiPolygonStrokeWidth);
+                VmSyscalls.UiDrawImage(uiImageHandle, uiImageX, uiImageY, uiImageWidth, uiImageHeight, uiImageRgbaBase64);
                 result = SysValue.Void();
                 return true;
 
@@ -592,14 +590,6 @@ public static class VmSyscallDispatcher
                     return true;
                 }
                 result = SysValue.String(VmSyscalls.StrRemove(removeText, removeStart, removeLength));
-                return true;
-
-            case SyscallId.HttpGet:
-                if (!TryGetString(args, 0, 1, out var url))
-                {
-                    return true;
-                }
-                result = SysValue.String(VmSyscalls.HttpGet(url));
                 return true;
 
             case SyscallId.Platform:

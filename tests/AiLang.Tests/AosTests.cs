@@ -26,7 +26,6 @@ public class AosTests
         public string? LastStdoutLine { get; private set; }
         public int IoPrintCount { get; private set; }
         public string ProcessCwdResult { get; set; } = string.Empty;
-        public string HttpGetResult { get; set; } = string.Empty;
         public string PlatformResult { get; set; } = "test-os";
         public string ArchitectureResult { get; set; } = "test-arch";
         public string OsVersionResult { get; set; } = "test-version";
@@ -43,14 +42,19 @@ public class AosTests
         public int TimeNowUnixMsResult { get; set; }
         public int TimeMonotonicMsResult { get; set; }
         public int LastSleepMs { get; private set; } = -1;
+        public int StrUtf8ByteCountResult { get; set; } = 777;
         public string? LastNetTcpListenHost { get; private set; }
         public int LastNetTcpListenPort { get; private set; } = -1;
+        public string? LastNetTcpConnectHost { get; private set; }
+        public int LastNetTcpConnectPort { get; private set; } = -1;
+        public int NetTcpConnectResult { get; set; } = -1;
         public string? LastNetTcpReadPayload { get; set; }
         public int LastNetTcpReadHandle { get; private set; } = -1;
         public int LastNetTcpReadMaxBytes { get; private set; } = -1;
         public int LastNetTcpWriteHandle { get; private set; } = -1;
         public string? LastNetTcpWriteData { get; private set; }
         public int NetTcpWriteResult { get; set; } = -1;
+        public int LastNetCloseHandle { get; private set; } = -1;
         public string? LastCryptoBase64EncodeInput { get; private set; }
         public string CryptoBase64EncodeResult { get; set; } = string.Empty;
         public string? LastCryptoBase64DecodeInput { get; private set; }
@@ -100,48 +104,12 @@ public class AosTests
         public string? LastUiPathValue { get; private set; }
         public string? LastUiPathColor { get; private set; }
         public int LastUiPathStrokeWidth { get; private set; } = -1;
-        public int LastUiPolylineHandle { get; private set; } = -1;
-        public string? LastUiPolylinePoints { get; private set; }
-        public string? LastUiPolylineColor { get; private set; }
-        public int LastUiPolylineStrokeWidth { get; private set; } = -1;
-        public int LastUiPolygonHandle { get; private set; } = -1;
-        public string? LastUiPolygonPoints { get; private set; }
-        public string? LastUiPolygonColor { get; private set; }
-        public int LastUiPolygonStrokeWidth { get; private set; } = -1;
-        public int LastUiTextPathHandle { get; private set; } = -1;
-        public string? LastUiTextPathPath { get; private set; }
-        public string? LastUiTextPathText { get; private set; }
-        public string? LastUiTextPathColor { get; private set; }
-        public int LastUiTextPathSize { get; private set; } = -1;
-        public int LastUiRectPaintHandle { get; private set; } = -1;
-        public string? LastUiRectPaintFill { get; private set; }
-        public string? LastUiRectPaintStroke { get; private set; }
-        public int LastUiRectPaintStrokeWidth { get; private set; } = -1;
-        public int LastUiRectPaintOpacity { get; private set; } = -1;
-        public int LastUiPathPaintHandle { get; private set; } = -1;
-        public string? LastUiPathPaintPath { get; private set; }
-        public string? LastUiPathPaintFill { get; private set; }
-        public string? LastUiPathPaintStroke { get; private set; }
-        public int LastUiPathPaintStrokeWidth { get; private set; } = -1;
-        public int LastUiPathPaintOpacity { get; private set; } = -1;
-        public int LastUiPathPaintClosed { get; private set; } = -1;
-        public int LastUiBlurHandle { get; private set; } = -1;
-        public string? LastUiBlurPath { get; private set; }
-        public string? LastUiBlurColor { get; private set; }
-        public int LastUiBlurStrokeWidth { get; private set; } = -1;
-        public int LastUiBlurRadius { get; private set; } = -1;
-        public int LastUiBlurOpacity { get; private set; } = -1;
-        public int LastUiBlurClosed { get; private set; } = -1;
-        public int LastUiGroupPushHandle { get; private set; } = -1;
-        public int LastUiGroupPopHandle { get; private set; } = -1;
-        public int LastUiTranslateHandle { get; private set; } = -1;
-        public int LastUiTranslateDx { get; private set; } = -1;
-        public int LastUiTranslateDy { get; private set; } = -1;
-        public int LastUiScaleHandle { get; private set; } = -1;
-        public int LastUiScaleX { get; private set; } = -1;
-        public int LastUiScaleY { get; private set; } = -1;
-        public int LastUiRotateHandle { get; private set; } = -1;
-        public int LastUiRotateDegrees { get; private set; } = -1;
+        public int LastUiImageHandle { get; private set; } = -1;
+        public int LastUiImageX { get; private set; } = -1;
+        public int LastUiImageY { get; private set; } = -1;
+        public int LastUiImageWidth { get; private set; } = -1;
+        public int LastUiImageHeight { get; private set; } = -1;
+        public string? LastUiImageRgbaBase64 { get; private set; }
 
         public override void ConsoleWrite(string text)
         {
@@ -238,12 +206,7 @@ public class AosTests
 
         public override int StrUtf8ByteCount(string text)
         {
-            return 777;
-        }
-
-        public override string HttpGet(string url)
-        {
-            return HttpGetResult;
+            return StrUtf8ByteCountResult;
         }
 
         public override string Platform()
@@ -273,6 +236,13 @@ public class AosTests
             return 77;
         }
 
+        public override int NetTcpConnect(VmNetworkState state, string host, int port)
+        {
+            LastNetTcpConnectHost = host;
+            LastNetTcpConnectPort = port;
+            return NetTcpConnectResult;
+        }
+
         public override string NetTcpRead(VmNetworkState state, int connectionHandle, int maxBytes)
         {
             LastNetTcpReadHandle = connectionHandle;
@@ -285,6 +255,11 @@ public class AosTests
             LastNetTcpWriteHandle = connectionHandle;
             LastNetTcpWriteData = data;
             return NetTcpWriteResult;
+        }
+
+        public override void NetClose(VmNetworkState state, int handle)
+        {
+            LastNetCloseHandle = handle;
         }
 
         public override string CryptoBase64Encode(string text)
@@ -396,157 +371,14 @@ public class AosTests
             LastUiPathStrokeWidth = strokeWidth;
         }
 
-        public override void UiDrawPolyline(int windowHandle, string points, string color, int strokeWidth)
+        public override void UiDrawImage(int windowHandle, int x, int y, int width, int height, string rgbaBase64)
         {
-            LastUiPolylineHandle = windowHandle;
-            LastUiPolylinePoints = points;
-            LastUiPolylineColor = color;
-            LastUiPolylineStrokeWidth = strokeWidth;
-        }
-
-        public override void UiDrawPolygon(int windowHandle, string points, string color, int strokeWidth)
-        {
-            LastUiPolygonHandle = windowHandle;
-            LastUiPolygonPoints = points;
-            LastUiPolygonColor = color;
-            LastUiPolygonStrokeWidth = strokeWidth;
-        }
-
-        public override void UiDrawTextPath(int windowHandle, string path, string text, string color, int size)
-        {
-            LastUiTextPathHandle = windowHandle;
-            LastUiTextPathPath = path;
-            LastUiTextPathText = text;
-            LastUiTextPathColor = color;
-            LastUiTextPathSize = size;
-        }
-
-        public override void UiDrawRectPaint(int windowHandle, int x, int y, int width, int height, string fill, string stroke, int strokeWidth, int opacity)
-        {
-            LastUiRectPaintHandle = windowHandle;
-            LastUiRectPaintFill = fill;
-            LastUiRectPaintStroke = stroke;
-            LastUiRectPaintStrokeWidth = strokeWidth;
-            LastUiRectPaintOpacity = opacity;
-        }
-
-        public override void UiDrawEllipsePaint(int windowHandle, int x, int y, int width, int height, string fill, string stroke, int strokeWidth, int opacity)
-        {
-            LastUiEllipseHandle = windowHandle;
-            LastUiEllipseColor = fill;
-            LastUiLineColor = stroke;
-            LastUiLineStrokeWidth = strokeWidth;
-        }
-
-        public override void UiDrawPolylinePaint(int windowHandle, string points, string stroke, int strokeWidth, int opacity)
-        {
-            LastUiPolylineHandle = windowHandle;
-            LastUiPolylinePoints = points;
-            LastUiPolylineColor = stroke;
-            LastUiPolylineStrokeWidth = strokeWidth;
-        }
-
-        public override void UiDrawPolygonPaint(int windowHandle, string points, string fill, string stroke, int strokeWidth, int opacity)
-        {
-            LastUiPolygonHandle = windowHandle;
-            LastUiPolygonPoints = points;
-            LastUiPolygonColor = fill;
-            LastUiLineColor = stroke;
-            LastUiPolygonStrokeWidth = strokeWidth;
-        }
-
-        public override void UiDrawPathPaint(int windowHandle, string path, string fill, string stroke, int strokeWidth, int opacity, int closed)
-        {
-            LastUiPathPaintHandle = windowHandle;
-            LastUiPathPaintPath = path;
-            LastUiPathPaintFill = fill;
-            LastUiPathPaintStroke = stroke;
-            LastUiPathPaintStrokeWidth = strokeWidth;
-            LastUiPathPaintOpacity = opacity;
-            LastUiPathPaintClosed = closed;
-        }
-
-        public override void UiDrawTextPaint(int windowHandle, int x, int y, string text, string color, int size, int opacity)
-        {
-            LastUiTextPathHandle = windowHandle;
-            LastUiTextPathText = text;
-            LastUiTextPathColor = color;
-            LastUiTextPathSize = size;
-        }
-
-        public override void UiFilterBlur(int windowHandle, string path, string color, int strokeWidth, int radius, int opacity, int closed)
-        {
-            LastUiBlurHandle = windowHandle;
-            LastUiBlurPath = path;
-            LastUiBlurColor = color;
-            LastUiBlurStrokeWidth = strokeWidth;
-            LastUiBlurRadius = radius;
-            LastUiBlurOpacity = opacity;
-            LastUiBlurClosed = closed;
-        }
-
-        public override void UiGroupPush(int windowHandle)
-        {
-            LastUiGroupPushHandle = windowHandle;
-        }
-
-        public override void UiGroupPop(int windowHandle)
-        {
-            LastUiGroupPopHandle = windowHandle;
-        }
-
-        public override void UiTranslate(int windowHandle, int dx, int dy)
-        {
-            LastUiTranslateHandle = windowHandle;
-            LastUiTranslateDx = dx;
-            LastUiTranslateDy = dy;
-        }
-
-        public override void UiScale(int windowHandle, int sx, int sy)
-        {
-            LastUiScaleHandle = windowHandle;
-            LastUiScaleX = sx;
-            LastUiScaleY = sy;
-        }
-
-        public override void UiRotate(int windowHandle, int degrees)
-        {
-            LastUiRotateHandle = windowHandle;
-            LastUiRotateDegrees = degrees;
-        }
-    }
-
-    private sealed class GradientCaptureHost : DefaultSyscallHost
-    {
-        public List<string> LineColors { get; } = new();
-        public List<string> TextColors { get; } = new();
-        public List<(int X, int Y, string Text)> TextDraws { get; } = new();
-
-        public override void UiDrawLine(int windowHandle, int x1, int y1, int x2, int y2, string color, int strokeWidth)
-        {
-            LineColors.Add(color);
-        }
-
-        public override void UiDrawText(int windowHandle, int x, int y, string text, string color, int size)
-        {
-            TextColors.Add(color);
-            TextDraws.Add((x, y, text));
-        }
-
-        public override void UiDrawRect(int windowHandle, int x, int y, int width, int height, string color)
-        {
-            LineColors.Add(color);
-        }
-    }
-
-    private sealed class TransformCaptureHost : DefaultSyscallHost
-    {
-        public List<int> Rotations { get; } = new();
-
-        public override void UiRotate(int windowHandle, int degrees)
-        {
-            Rotations.Add(degrees);
-            base.UiRotate(windowHandle, degrees);
+            LastUiImageHandle = windowHandle;
+            LastUiImageX = x;
+            LastUiImageY = y;
+            LastUiImageWidth = width;
+            LastUiImageHeight = height;
+            LastUiImageRgbaBase64 = rgbaBase64;
         }
     }
 
@@ -1523,6 +1355,8 @@ public class AosTests
     {
         Assert.That(SyscallRegistry.TryResolve("sys.net_tcpListen", out var listenId), Is.True);
         Assert.That(listenId, Is.EqualTo(SyscallId.NetTcpListen));
+        Assert.That(SyscallRegistry.TryResolve("sys.net_tcpConnect", out var connectId), Is.True);
+        Assert.That(connectId, Is.EqualTo(SyscallId.NetTcpConnect));
         Assert.That(SyscallRegistry.TryResolve("sys.net_tcpAccept", out var acceptId), Is.True);
         Assert.That(acceptId, Is.EqualTo(SyscallId.NetTcpAccept));
         Assert.That(SyscallRegistry.TryResolve("sys.net_tcpRead", out var readId), Is.True);
@@ -1534,47 +1368,14 @@ public class AosTests
     [Test]
     public void SyscallRegistry_ResolvesUiShapeAliases()
     {
-        var requiredUiSyscalls = new (string Target, SyscallId Id)[]
-        {
-            ("sys.ui_createWindow", SyscallId.UiCreateWindow),
-            ("sys.ui_beginFrame", SyscallId.UiBeginFrame),
-            ("sys.ui_drawRect", SyscallId.UiDrawRect),
-            ("sys.ui_drawText", SyscallId.UiDrawText),
-            ("sys.ui_drawLine", SyscallId.UiDrawLine),
-            ("sys.ui_drawEllipse", SyscallId.UiDrawEllipse),
-            ("sys.ui_drawPath", SyscallId.UiDrawPath),
-            ("sys.ui_drawPolyline", SyscallId.UiDrawPolyline),
-            ("sys.ui_drawPolygon", SyscallId.UiDrawPolygon),
-            ("sys.ui_endFrame", SyscallId.UiEndFrame),
-            ("sys.ui_pollEvent", SyscallId.UiPollEvent),
-            ("sys.ui_present", SyscallId.UiPresent),
-            ("sys.ui_closeWindow", SyscallId.UiCloseWindow),
-            ("sys.ui_getWindowSize", SyscallId.UiGetWindowSize)
-        };
-
-        foreach (var syscall in requiredUiSyscalls)
-        {
-            Assert.That(SyscallRegistry.TryResolve(syscall.Target, out var resolved), Is.True, $"{syscall.Target} must resolve.");
-            Assert.That(resolved, Is.EqualTo(syscall.Id), $"{syscall.Target} must map to the expected syscall id.");
-        }
-
-        // Keep VM UI syscall surface minimal: composed effects belong in higher-level libraries.
-        Assert.That(SyscallRegistry.TryResolve("sys.ui_filterDropShadow", out _), Is.False);
-        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawTextPath", out _), Is.False);
-        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawRectPaint", out _), Is.False);
-        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawEllipsePaint", out _), Is.False);
-        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawPolylinePaint", out _), Is.False);
-        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawPolygonPaint", out _), Is.False);
-        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawPathPaint", out _), Is.False);
-        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawTextPaint", out _), Is.False);
-        Assert.That(SyscallRegistry.TryResolve("sys.ui_filterBlur", out _), Is.False);
-        Assert.That(SyscallRegistry.TryResolve("sys.ui_groupPush", out _), Is.False);
-        Assert.That(SyscallRegistry.TryResolve("sys.ui_groupPop", out _), Is.False);
-        Assert.That(SyscallRegistry.TryResolve("sys.ui_translate", out _), Is.False);
-        Assert.That(SyscallRegistry.TryResolve("sys.ui_scale", out _), Is.False);
-        Assert.That(SyscallRegistry.TryResolve("sys.ui_rotate", out _), Is.False);
-        Assert.That(SyscallRegistry.TryResolve("sys.ui_filterGlow", out _), Is.False);
-        Assert.That(SyscallRegistry.TryResolve("sys.ui_filterInnerShadow", out _), Is.False);
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawLine", out var lineId), Is.True);
+        Assert.That(lineId, Is.EqualTo(SyscallId.UiDrawLine));
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawEllipse", out var ellipseId), Is.True);
+        Assert.That(ellipseId, Is.EqualTo(SyscallId.UiDrawEllipse));
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawPath", out var pathId), Is.True);
+        Assert.That(pathId, Is.EqualTo(SyscallId.UiDrawPath));
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawImage", out var imageId), Is.True);
+        Assert.That(imageId, Is.EqualTo(SyscallId.UiDrawImage));
     }
 
     [Test]
@@ -1596,6 +1397,32 @@ public class AosTests
             Assert.That(value.AsInt(), Is.EqualTo(77));
             Assert.That(host.LastNetTcpListenHost, Is.EqualTo("127.0.0.1"));
             Assert.That(host.LastNetTcpListenPort, Is.EqualTo(4040));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_NetTcpConnect_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.net_tcpConnect) { Lit#h1(value=\"example.com\") Lit#p1(value=80) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { NetTcpConnectResult = 91 };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
+            Assert.That(value.AsInt(), Is.EqualTo(91));
+            Assert.That(host.LastNetTcpConnectHost, Is.EqualTo("example.com"));
+            Assert.That(host.LastNetTcpConnectPort, Is.EqualTo(80));
         }
         finally
         {
@@ -1761,6 +1588,70 @@ public class AosTests
     }
 
     [Test]
+    public void SyscallDispatch_UiPollEvent_KeyPayload_IsCanonicalized()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_pollEvent) { Lit#h1(value=9) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost
+        {
+            UiPollEventResult = new VmUiEvent("key", "input_1", 123, 456, "ArrowLeft", "A", "shift,ctrl,shift,invalid", true)
+        };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+            var uiEvent = value.AsNode();
+            Assert.That(uiEvent.Attrs["type"].AsString(), Is.EqualTo("key"));
+            Assert.That(uiEvent.Attrs["targetId"].AsString(), Is.EqualTo("input_1"));
+            Assert.That(uiEvent.Attrs["x"].AsInt(), Is.EqualTo(-1));
+            Assert.That(uiEvent.Attrs["y"].AsInt(), Is.EqualTo(-1));
+            Assert.That(uiEvent.Attrs["key"].AsString(), Is.EqualTo("left"));
+            Assert.That(uiEvent.Attrs["text"].AsString(), Is.EqualTo("A"));
+            Assert.That(uiEvent.Attrs["modifiers"].AsString(), Is.EqualTo("ctrl,shift"));
+            Assert.That(uiEvent.Attrs["repeat"].AsBool(), Is.True);
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiPollEvent_DerivesKeyFromPrintableText_WhenMissing()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_pollEvent) { Lit#h1(value=9) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost
+        {
+            UiPollEventResult = new VmUiEvent("key", string.Empty, -1, -1, string.Empty, "`", string.Empty, false)
+        };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Node));
+            var uiEvent = value.AsNode();
+            Assert.That(uiEvent.Attrs["key"].AsString(), Is.EqualTo("`"));
+            Assert.That(uiEvent.Attrs["text"].AsString(), Is.EqualTo("`"));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
     public void SyscallDispatch_UiGetWindowSize_ReturnsNode()
     {
         var parse = Parse("Program#p1 { Call#c1(target=sys.ui_getWindowSize) { Lit#h1(value=9) } }");
@@ -1878,9 +1769,9 @@ public class AosTests
     }
 
     [Test]
-    public void SyscallDispatch_UiDrawPolyline_CallsHost()
+    public void SyscallDispatch_UiDrawImage_CallsHost()
     {
-        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_drawPolyline) { Lit#h1(value=9) Lit#p1(value=\"10,20;30,40;50,60\") Lit#c1(value=\"#123456\") Lit#s1(value=4) } }");
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_drawImage) { Lit#h1(value=9) Lit#x1(value=12) Lit#y1(value=34) Lit#w1(value=2) Lit#h2(value=1) Lit#d1(value=\"AQIDBAUGBwg=\") } }");
         Assert.That(parse.Diagnostics, Is.Empty);
 
         var previous = VmSyscalls.Host;
@@ -1893,37 +1784,12 @@ public class AosTests
             var interpreter = new AosInterpreter();
             var value = interpreter.EvaluateProgram(parse.Root!, runtime);
             Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
-            Assert.That(host.LastUiPolylineHandle, Is.EqualTo(9));
-            Assert.That(host.LastUiPolylinePoints, Is.EqualTo("10,20;30,40;50,60"));
-            Assert.That(host.LastUiPolylineColor, Is.EqualTo("#123456"));
-            Assert.That(host.LastUiPolylineStrokeWidth, Is.EqualTo(4));
-        }
-        finally
-        {
-            VmSyscalls.Host = previous;
-        }
-    }
-
-    [Test]
-    public void SyscallDispatch_UiDrawPolygon_CallsHost()
-    {
-        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_drawPolygon) { Lit#h1(value=9) Lit#p1(value=\"10,20;30,40;50,60\") Lit#c1(value=\"red\") Lit#s1(value=2) } }");
-        Assert.That(parse.Diagnostics, Is.Empty);
-
-        var previous = VmSyscalls.Host;
-        var host = new RecordingSyscallHost();
-        try
-        {
-            VmSyscalls.Host = host;
-            var runtime = new AosRuntime();
-            runtime.Permissions.Add("ui");
-            var interpreter = new AosInterpreter();
-            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
-            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
-            Assert.That(host.LastUiPolygonHandle, Is.EqualTo(9));
-            Assert.That(host.LastUiPolygonPoints, Is.EqualTo("10,20;30,40;50,60"));
-            Assert.That(host.LastUiPolygonColor, Is.EqualTo("red"));
-            Assert.That(host.LastUiPolygonStrokeWidth, Is.EqualTo(2));
+            Assert.That(host.LastUiImageHandle, Is.EqualTo(9));
+            Assert.That(host.LastUiImageX, Is.EqualTo(12));
+            Assert.That(host.LastUiImageY, Is.EqualTo(34));
+            Assert.That(host.LastUiImageWidth, Is.EqualTo(2));
+            Assert.That(host.LastUiImageHeight, Is.EqualTo(1));
+            Assert.That(host.LastUiImageRgbaBase64, Is.EqualTo("AQIDBAUGBwg="));
         }
         finally
         {
@@ -2255,26 +2121,16 @@ public class AosTests
             Assert.That(host.LastUiPathValue, Is.EqualTo("1,1;2,2"));
             Assert.That(host.LastUiPathStrokeWidth, Is.EqualTo(4));
 
-            var polylineInvoked = VmSyscallDispatcher.TryInvoke(
-                SyscallId.UiDrawPolyline,
-                new[] { SysValue.Int(8), SysValue.String("1,1;2,2;3,3"), SysValue.String("#ccc"), SysValue.Int(3) }.AsSpan(),
+            var imageInvoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.UiDrawImage,
+                new[] { SysValue.Int(3), SysValue.Int(8), SysValue.Int(9), SysValue.Int(1), SysValue.Int(1), SysValue.String("AQIDBA==") }.AsSpan(),
                 new VmNetworkState(),
-                out var polylineResult);
-            Assert.That(polylineInvoked, Is.True);
-            Assert.That(polylineResult.Kind, Is.EqualTo(VmValueKind.Void));
-            Assert.That(host.LastUiPolylineHandle, Is.EqualTo(8));
-            Assert.That(host.LastUiPolylinePoints, Is.EqualTo("1,1;2,2;3,3"));
-
-            var polygonInvoked = VmSyscallDispatcher.TryInvoke(
-                SyscallId.UiDrawPolygon,
-                new[] { SysValue.Int(6), SysValue.String("1,1;2,2;3,3"), SysValue.String("blue"), SysValue.Int(2) }.AsSpan(),
-                new VmNetworkState(),
-                out var polygonResult);
-            Assert.That(polygonInvoked, Is.True);
-            Assert.That(polygonResult.Kind, Is.EqualTo(VmValueKind.Void));
-            Assert.That(host.LastUiPolygonHandle, Is.EqualTo(6));
-            Assert.That(host.LastUiPolygonPoints, Is.EqualTo("1,1;2,2;3,3"));
-
+                out var imageResult);
+            Assert.That(imageInvoked, Is.True);
+            Assert.That(imageResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastUiImageHandle, Is.EqualTo(3));
+            Assert.That(host.LastUiImageWidth, Is.EqualTo(1));
+            Assert.That(host.LastUiImageRgbaBase64, Is.EqualTo("AQIDBA=="));
         }
         finally
         {
@@ -2465,22 +2321,24 @@ public class AosTests
     }
 
     [Test]
-    public void VmSyscalls_HttpGet_UsesConfiguredHost()
+    public void VmSyscalls_NetTcpConnect_UsesConfiguredHost()
     {
         var previous = VmSyscalls.Host;
-        var host = new RecordingSyscallHost { HttpGetResult = "http-ok" };
+        var host = new RecordingSyscallHost { NetTcpConnectResult = 44 };
         try
         {
             VmSyscalls.Host = host;
             var runtime = new AosRuntime();
             runtime.Permissions.Add("sys");
             var interpreter = new AosInterpreter();
-            var parse = Parse("Program#p1 { Call#c1(target=sys.http_get) { Lit#s1(value=\"https://example.com\") } }");
+            var parse = Parse("Program#p1 { Call#c1(target=sys.net_tcpConnect) { Lit#h1(value=\"example.com\") Lit#p1(value=80) } }");
             Assert.That(parse.Diagnostics, Is.Empty);
 
             var value = interpreter.EvaluateProgram(parse.Root!, runtime);
-            Assert.That(value.Kind, Is.EqualTo(AosValueKind.String));
-            Assert.That(value.AsString(), Is.EqualTo("http-ok"));
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
+            Assert.That(value.AsInt(), Is.EqualTo(44));
+            Assert.That(host.LastNetTcpConnectHost, Is.EqualTo("example.com"));
+            Assert.That(host.LastNetTcpConnectPort, Is.EqualTo(80));
         }
         finally
         {
@@ -2739,6 +2597,154 @@ public class AosTests
     }
 
     [Test]
+    public void StdHttpHelpers_HttpRequest_UsesTcpSyscalls()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost
+        {
+            NetTcpConnectResult = 12,
+            NetTcpWriteResult = 84,
+            LastNetTcpReadPayload = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok",
+            StrUtf8ByteCountResult = 3
+        };
+
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var stdHttpProgram = Parse(File.ReadAllText(FindRepoFile("src/std/http.aos")));
+            Assert.That(stdHttpProgram.Diagnostics, Is.Empty);
+            var stdHttpResult = interpreter.EvaluateProgram(stdHttpProgram.Root!, runtime);
+            Assert.That(stdHttpResult.Kind, Is.Not.EqualTo(AosValueKind.Unknown));
+
+            var requestParse = Parse("Program#p1 { Call#c1(target=httpRequest) { Lit#m1(value=\"POST\") Lit#h1(value=\"example.com\") Lit#p1(value=80) Lit#pa1(value=\"/submit\") Lit#hd1(value=\"Accept: text/plain\") Lit#b1(value=\"abc\") Lit#mx1(value=4096) } }");
+            Assert.That(requestParse.Diagnostics, Is.Empty);
+            var responseValue = interpreter.EvaluateProgram(requestParse.Root!, runtime);
+            Assert.That(responseValue.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(responseValue.AsString(), Is.EqualTo("HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok"));
+            Assert.That(host.LastNetTcpConnectHost, Is.EqualTo("example.com"));
+            Assert.That(host.LastNetTcpConnectPort, Is.EqualTo(80));
+            Assert.That(host.LastNetTcpWriteHandle, Is.EqualTo(12));
+            Assert.That(host.LastNetTcpWriteData, Is.EqualTo("POST /submit HTTP/1.1\r\nHost: example.com\r\nAccept: text/plain\r\nContent-Length: 3\r\n\r\nabc"));
+            Assert.That(host.LastNetTcpReadHandle, Is.EqualTo(12));
+            Assert.That(host.LastNetTcpReadMaxBytes, Is.EqualTo(4096));
+            Assert.That(host.LastNetCloseHandle, Is.EqualTo(12));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void StdUiInput_KeySemantics_AreDeterministic()
+    {
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("sys");
+        var interpreter = new AosInterpreter();
+        var stdUiProgram = Parse(File.ReadAllText(FindRepoFile("src/std/ui_input.aos")));
+        Assert.That(stdUiProgram.Diagnostics, Is.Empty);
+        var stdUiResult = interpreter.EvaluateProgram(stdUiProgram.Root!, runtime);
+        Assert.That(stdUiResult.Kind, Is.Not.EqualTo(AosValueKind.Unknown));
+
+        var cases = new[]
+        {
+            (Key: "a", Text: "a", AllowEnter: false, AllowTab: false, StartText: "hi", StartCursor: 2, ExpectedText: "hia", ExpectedCursor: 3, ExpectedSubmit: false, ExpectedToken: "insert"),
+            (Key: "a", Text: "A", AllowEnter: false, AllowTab: false, StartText: "hi", StartCursor: 2, ExpectedText: "hiA", ExpectedCursor: 3, ExpectedSubmit: false, ExpectedToken: "insert"),
+            (Key: "1", Text: "1", AllowEnter: false, AllowTab: false, StartText: "hi", StartCursor: 2, ExpectedText: "hi1", ExpectedCursor: 3, ExpectedSubmit: false, ExpectedToken: "insert"),
+            (Key: "space", Text: "", AllowEnter: false, AllowTab: false, StartText: "hi", StartCursor: 2, ExpectedText: "hi ", ExpectedCursor: 3, ExpectedSubmit: false, ExpectedToken: "insert"),
+            (Key: "`", Text: "`", AllowEnter: false, AllowTab: false, StartText: "ab", StartCursor: 1, ExpectedText: "a`b", ExpectedCursor: 2, ExpectedSubmit: false, ExpectedToken: "insert"),
+            (Key: "tab", Text: "\t", AllowEnter: false, AllowTab: false, StartText: "ab", StartCursor: 1, ExpectedText: "ab", ExpectedCursor: 1, ExpectedSubmit: false, ExpectedToken: "noop"),
+            (Key: "enter", Text: "\r", AllowEnter: false, AllowTab: false, StartText: "ab", StartCursor: 2, ExpectedText: "ab", ExpectedCursor: 2, ExpectedSubmit: true, ExpectedToken: "submit"),
+            (Key: "enter", Text: "\r", AllowEnter: true, AllowTab: false, StartText: "ab", StartCursor: 2, ExpectedText: "ab\n", ExpectedCursor: 3, ExpectedSubmit: false, ExpectedToken: "insert"),
+            (Key: "backspace", Text: "", AllowEnter: false, AllowTab: false, StartText: "ab", StartCursor: 2, ExpectedText: "a", ExpectedCursor: 1, ExpectedSubmit: false, ExpectedToken: "backspace"),
+            (Key: "delete", Text: "", AllowEnter: false, AllowTab: false, StartText: "ab", StartCursor: 0, ExpectedText: "b", ExpectedCursor: 0, ExpectedSubmit: false, ExpectedToken: "delete"),
+            (Key: "left", Text: "", AllowEnter: false, AllowTab: false, StartText: "ab", StartCursor: 1, ExpectedText: "ab", ExpectedCursor: 0, ExpectedSubmit: false, ExpectedToken: "move"),
+            (Key: "right", Text: "", AllowEnter: false, AllowTab: false, StartText: "ab", StartCursor: 1, ExpectedText: "ab", ExpectedCursor: 2, ExpectedSubmit: false, ExpectedToken: "move")
+        };
+
+        foreach (var testCase in cases)
+        {
+            var callSuffix =
+                $"Lit#t1(value=\"{EscapeAosString(testCase.StartText)}\") " +
+                $"Lit#i1(value={testCase.StartCursor}) " +
+                $"Lit#k1(value=\"{EscapeAosString(testCase.Key)}\") " +
+                $"Lit#e1(value=\"{EscapeAosString(testCase.Text)}\") " +
+                $"Lit#ae1(value={(testCase.AllowEnter ? "true" : "false")}) " +
+                $"Lit#at1(value={(testCase.AllowTab ? "true" : "false")})";
+
+            var textParse = Parse($"Program#p1 {{ Call#c1(target=editNextText) {{ {callSuffix} }} }}");
+            Assert.That(textParse.Diagnostics, Is.Empty);
+            var textValue = interpreter.EvaluateProgram(textParse.Root!, runtime);
+            Assert.That(textValue.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(textValue.AsString(), Is.EqualTo(testCase.ExpectedText), $"Unexpected text for key {testCase.Key}.");
+
+            var cursorParse = Parse($"Program#p2 {{ Call#c2(target=editNextCursor) {{ {callSuffix} }} }}");
+            Assert.That(cursorParse.Diagnostics, Is.Empty);
+            var cursorValue = interpreter.EvaluateProgram(cursorParse.Root!, runtime);
+            Assert.That(cursorValue.Kind, Is.EqualTo(AosValueKind.Int));
+            Assert.That(cursorValue.AsInt(), Is.EqualTo(testCase.ExpectedCursor), $"Unexpected cursor for key {testCase.Key}.");
+
+            var submitParse = Parse(
+                $"Program#p3 {{ Call#c3(target=editShouldSubmit) {{ " +
+                $"Lit#k2(value=\"{EscapeAosString(testCase.Key)}\") " +
+                $"Lit#ae2(value={(testCase.AllowEnter ? "true" : "false")}) }} }}");
+            Assert.That(submitParse.Diagnostics, Is.Empty);
+            var submitValue = interpreter.EvaluateProgram(submitParse.Root!, runtime);
+            Assert.That(submitValue.Kind, Is.EqualTo(AosValueKind.Bool));
+            Assert.That(submitValue.AsBool(), Is.EqualTo(testCase.ExpectedSubmit), $"Unexpected submit flag for key {testCase.Key}.");
+
+            var tokenParse = Parse(
+                $"Program#p4 {{ Call#c4(target=editDebugToken) {{ " +
+                $"Lit#k3(value=\"{EscapeAosString(testCase.Key)}\") " +
+                $"Lit#e2(value=\"{EscapeAosString(testCase.Text)}\") " +
+                $"Lit#ae3(value={(testCase.AllowEnter ? "true" : "false")}) " +
+                $"Lit#at2(value={(testCase.AllowTab ? "true" : "false")}) }} }}");
+            Assert.That(tokenParse.Diagnostics, Is.Empty);
+            var tokenValue = interpreter.EvaluateProgram(tokenParse.Root!, runtime);
+            Assert.That(tokenValue.Kind, Is.EqualTo(AosValueKind.String));
+            Assert.That(tokenValue.AsString(), Is.EqualTo(testCase.ExpectedToken), $"Unexpected debug token for key {testCase.Key}.");
+        }
+    }
+
+    [Test]
+    public void StdUiInput_FocusRouting_IsDeterministic()
+    {
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("sys");
+        var interpreter = new AosInterpreter();
+        var stdUiProgram = Parse(File.ReadAllText(FindRepoFile("src/std/ui_input.aos")));
+        Assert.That(stdUiProgram.Diagnostics, Is.Empty);
+        _ = interpreter.EvaluateProgram(stdUiProgram.Root!, runtime);
+
+        var focusedParse = Parse("Program#p1 { Call#c1(target=shouldHandleKeyEvent) { Lit#t1(value=\"key\") Lit#f1(value=\"input_1\") Lit#tg1(value=\"\") } }");
+        Assert.That(focusedParse.Diagnostics, Is.Empty);
+        var focused = interpreter.EvaluateProgram(focusedParse.Root!, runtime);
+        Assert.That(focused.Kind, Is.EqualTo(AosValueKind.Bool));
+        Assert.That(focused.AsBool(), Is.True);
+
+        var unfocusedParse = Parse("Program#p2 { Call#c2(target=shouldHandleKeyEvent) { Lit#t2(value=\"key\") Lit#f2(value=\"\") Lit#tg2(value=\"\") } }");
+        Assert.That(unfocusedParse.Diagnostics, Is.Empty);
+        var unfocused = interpreter.EvaluateProgram(unfocusedParse.Root!, runtime);
+        Assert.That(unfocused.Kind, Is.EqualTo(AosValueKind.Bool));
+        Assert.That(unfocused.AsBool(), Is.False);
+
+        var focusSetParse = Parse("Program#p3 { Call#c3(target=nextFocusOnClick) { Lit#t3(value=\"click\") Lit#tg3(value=\"input_2\") Lit#f3(value=\"input_1\") } }");
+        Assert.That(focusSetParse.Diagnostics, Is.Empty);
+        var nextFocused = interpreter.EvaluateProgram(focusSetParse.Root!, runtime);
+        Assert.That(nextFocused.Kind, Is.EqualTo(AosValueKind.String));
+        Assert.That(nextFocused.AsString(), Is.EqualTo("input_2"));
+
+        var focusClearParse = Parse("Program#p4 { Call#c4(target=nextFocusOnClick) { Lit#t4(value=\"click\") Lit#tg4(value=\"\") Lit#f4(value=\"input_2\") } }");
+        Assert.That(focusClearParse.Diagnostics, Is.Empty);
+        var cleared = interpreter.EvaluateProgram(focusClearParse.Root!, runtime);
+        Assert.That(cleared.Kind, Is.EqualTo(AosValueKind.String));
+        Assert.That(cleared.AsString(), Is.EqualTo(string.Empty));
+    }
+
+    [Test]
     public void UnknownSysTarget_DoesNotEvaluateArguments()
     {
         var parse = Parse("Program#p1 { Call#c1(target=sys.unknown) { Call#c2(target=io.print) { Lit#s1(value=\"side-effect\") } } }");
@@ -2803,7 +2809,7 @@ public class AosTests
     [Test]
     public void Validator_ParComputeOnlyRejectsSyscalls()
     {
-        var parse = Parse("Program#p1 { Par#par1 { Call#c1(target=sys.http_get) { Lit#s1(value=\"https://example.com\") } Lit#v1(value=1) } }");
+        var parse = Parse("Program#p1 { Par#par1 { Call#c1(target=sys.net_tcpConnect) { Lit#h1(value=\"example.com\") Lit#p1(value=80) } Lit#v1(value=1) } }");
         Assert.That(parse.Diagnostics, Is.Empty);
 
         var permissions = new HashSet<string>(StringComparer.Ordinal) { "sys" };
@@ -3591,6 +3597,21 @@ public class AosTests
         }
 
         throw new FileNotFoundException($"Could not find {relativePath} from {AppContext.BaseDirectory}");
+    }
+
+    private static string EscapeAosString(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return string.Empty;
+        }
+
+        return value
+            .Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("\"", "\\\"", StringComparison.Ordinal)
+            .Replace("\r", "\\r", StringComparison.Ordinal)
+            .Replace("\n", "\\n", StringComparison.Ordinal)
+            .Replace("\t", "\\t", StringComparison.Ordinal);
     }
 
     private static int FindFreePort()

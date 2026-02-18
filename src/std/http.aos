@@ -191,6 +191,94 @@ Program#std_http_p1 {
     }
   }
 
+  Let#std_http_l18(name=httpRequest) {
+    Fn#std_http_f11(params=method,host,port,path,headers,body,maxBytes) {
+      Block#std_http_b17 {
+        Let#std_http_l19(name=headerText) {
+          If#std_http_if4 {
+            Eq#std_http_eq4 { Var#std_http_v42(name=headers) Lit#std_http_i22(value="") }
+            Block#std_http_b18 { Lit#std_http_i23(value="") }
+            Block#std_http_b19 {
+              StrConcat#std_http_s16 {
+                Var#std_http_v43(name=headers)
+                Lit#std_http_i24(value="\r\n")
+              }
+            }
+          }
+        }
+        Let#std_http_l20(name=bodyLength) { Call#std_http_c9(target=sys.str_utf8ByteCount) { Var#std_http_v44(name=body) } }
+        Let#std_http_l21(name=contentLengthHeader) {
+          If#std_http_if5 {
+            Eq#std_http_eq5 { Var#std_http_v45(name=bodyLength) Lit#std_http_i25(value=0) }
+            Block#std_http_b20 { Lit#std_http_i26(value="") }
+            Block#std_http_b21 {
+              StrConcat#std_http_s17 {
+                Lit#std_http_i27(value="Content-Length: ")
+                StrConcat#std_http_s18 {
+                  ToString#std_http_t3 { Var#std_http_v46(name=bodyLength) }
+                  Lit#std_http_i28(value="\r\n")
+                }
+              }
+            }
+          }
+        }
+        Let#std_http_l22(name=requestText) {
+          StrConcat#std_http_s19 {
+            Var#std_http_v47(name=method)
+            StrConcat#std_http_s20 {
+              Lit#std_http_i29(value=" ")
+              StrConcat#std_http_s21 {
+                Var#std_http_v48(name=path)
+                StrConcat#std_http_s22 {
+                  Lit#std_http_i30(value=" HTTP/1.1\r\nHost: ")
+                  StrConcat#std_http_s23 {
+                    Var#std_http_v49(name=host)
+                    StrConcat#std_http_s24 {
+                      Lit#std_http_i31(value="\r\n")
+                      StrConcat#std_http_s25 {
+                        Var#std_http_v50(name=headerText)
+                        StrConcat#std_http_s26 {
+                          Var#std_http_v51(name=contentLengthHeader)
+                          StrConcat#std_http_s27 {
+                            Lit#std_http_i32(value="\r\n")
+                            Var#std_http_v52(name=body)
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        Let#std_http_l23(name=connection) {
+          Call#std_http_c10(target=sys.net_tcpConnect) {
+            Var#std_http_v53(name=host)
+            Var#std_http_v54(name=port)
+          }
+        }
+        If#std_http_if6 {
+          Eq#std_http_eq6 { Var#std_http_v55(name=connection) Lit#std_http_i33(value=-1) }
+          Block#std_http_b22 { Return#std_http_r14 { Lit#std_http_i34(value="") } }
+          Block#std_http_b23 { Lit#std_http_i35(value=0) }
+        }
+        Call#std_http_c11(target=sys.net_tcpWrite) {
+          Var#std_http_v56(name=connection)
+          Var#std_http_v57(name=requestText)
+        }
+        Let#std_http_l24(name=response) {
+          Call#std_http_c12(target=sys.net_tcpRead) {
+            Var#std_http_v58(name=connection)
+            Var#std_http_v59(name=maxBytes)
+          }
+        }
+        Call#std_http_c13(target=sys.net_close) { Var#std_http_v60(name=connection) }
+        Return#std_http_r15 { Var#std_http_v61(name=response) }
+      }
+    }
+  }
+
   Export#std_http_e1(name=httpHeaders)
   Export#std_http_e2(name=httpQuery)
   Export#std_http_e3(name=httpPath)
@@ -200,4 +288,5 @@ Program#std_http_p1 {
   Export#std_http_e7(name=httpResponse)
   Export#std_http_e8(name=httpErrorJson)
   Export#std_http_e9(name=httpEmitRaw)
+  Export#std_http_e10(name=httpRequest)
 }

@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace AiVM.Core;
 
@@ -15,6 +16,7 @@ public partial class DefaultSyscallHost
         private const uint WmClose = 0x0010;
         private const uint WmLButtonDown = 0x0201;
         private const uint WmKeyDown = 0x0100;
+        private const uint WmSysKeyDown = 0x0104;
         private const uint PmRemove = 0x0001;
         private const int ColorWindow = 5;
         private const int SwShow = 5;
@@ -146,6 +148,20 @@ public partial class DefaultSyscallHost
             return false;
         }
 
+        public bool TryDrawImage(int handle, int x, int y, int width, int height, string rgbaBase64)
+        {
+            lock (_lock)
+            {
+                if (_windows.TryGetValue(handle, out var state))
+                {
+                    state.Commands.Add(UiDrawCommand.FromImage(x, y, width, height, rgbaBase64));
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public bool TryPresent(int handle)
         {
             PumpMessages();
@@ -243,6 +259,10 @@ public partial class DefaultSyscallHost
                             SetBkMode(hdc, 1);
                             _ = command.Size;
                             TextOut(hdc, command.X, command.Y, command.Text ?? string.Empty, (command.Text ?? string.Empty).Length);
+                        }
+                        else if (command.Kind == "image")
+                        {
+                            DrawRgbaImage(hdc, command.X, command.Y, command.Width, command.Height, command.ImageRgbaBase64);
                         }
                     }
                 }
@@ -383,14 +403,32 @@ public partial class DefaultSyscallHost
                 }
                 else if (msg == WmKeyDown)
                 {
+                    var vk = (int)(long)wParam;
+                    var scanCode = (int)(((long)lParam >> 16) & 0xff);
+                    var repeat = (((long)lParam >> 30) & 1L) != 0;
+                    var text = BuildPrintableText(vk, scanCode);
+                    state.Events.Enqueue(new VmUiEvent(
+                        "key",
+                        string.Empty,
+                        -1,
+                        -1,
+                        BuildKeyName(vk),
+                        text,
+                        BuildModifiers(),
+                        repeat));
+                }
+                else if (msg == WmSysKeyDown)
+                {
+                    var vk = (int)(long)wParam;
+                    var scanCode = (int)(((long)lParam >> 16) & 0xff);
                     var repeat = (((long)lParam >> 30) & 1L) != 0;
                     state.Events.Enqueue(new VmUiEvent(
                         "key",
                         string.Empty,
                         -1,
                         -1,
-                        BuildKeyName((int)(long)wParam),
-                        string.Empty,
+                        BuildKeyName(vk),
+                        BuildPrintableText(vk, scanCode),
                         BuildModifiers(),
                         repeat));
                 }
@@ -455,8 +493,44 @@ public partial class DefaultSyscallHost
                 0x27 => "right",
                 0x28 => "down",
                 0x2E => "delete",
+                0xBA => ";",
+                0xBB => "=",
+                0xBC => ",",
+                0xBD => "-",
+                0xBE => ".",
+                0xBF => "/",
+                0xC0 => "`",
+                0xDB => "[",
+                0xDC => "\\",
+                0xDD => "]",
+                0xDE => "'",
                 _ => $"vk:{vk}"
             };
+        }
+
+        private static string BuildPrintableText(int vk, int scanCode)
+        {
+            var keyName = BuildKeyName(vk);
+            if (keyName is "backspace" or "tab" or "enter" or "escape" or "left" or "up" or "right" or "down" or "delete")
+            {
+                return string.Empty;
+            }
+
+            var keyboardState = new byte[256];
+            if (!GetKeyboardState(keyboardState))
+            {
+                return string.Empty;
+            }
+
+            var buffer = new StringBuilder(8);
+            var written = ToUnicode((uint)vk, (uint)scanCode, keyboardState, buffer, buffer.Capacity, 0);
+            if (written <= 0)
+            {
+                return string.Empty;
+            }
+
+            var candidate = buffer.ToString(0, written);
+            return IsPrintableText(candidate) ? candidate : string.Empty;
         }
 
         private static string BuildModifiers()
@@ -484,9 +558,64 @@ public partial class DefaultSyscallHost
 
         private static bool IsPressed(int key) => (GetKeyState(key) & 0x8000) != 0;
 
+        private static bool IsPrintableText(string value)
+        {
+            if (string.IsNullOrEmpty(value))
+            {
+                return false;
+            }
+
+            foreach (var rune in value.EnumerateRunes())
+            {
+                if (Rune.IsControl(rune))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private static int ParseHexByte(string value, int start)
         {
             return int.Parse(value.AsSpan(start, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+        }
+
+        private static void DrawRgbaImage(IntPtr hdc, int x, int y, int width, int height, string rgbaBase64)
+        {
+            if (width <= 0 || height <= 0 || string.IsNullOrWhiteSpace(rgbaBase64))
+            {
+                return;
+            }
+
+            byte[] rgba;
+            try
+            {
+                rgba = Convert.FromBase64String(rgbaBase64);
+            }
+            catch
+            {
+                return;
+            }
+
+            var expectedBytes = (long)width * height * 4;
+            if (expectedBytes <= 0 || rgba.Length < expectedBytes)
+            {
+                return;
+            }
+
+            var index = 0;
+            for (var py = 0; py < height; py++)
+            {
+                for (var px = 0; px < width; px++)
+                {
+                    var r = rgba[index];
+                    var g = rgba[index + 1];
+                    var b = rgba[index + 2];
+                    index += 4;
+                    _ = SetPixel(hdc, x + px, y + py, (uint)(b | (g << 8) | (r << 16)));
+                }
+            }
         }
 
         private sealed class WindowsWindowState
@@ -604,6 +733,18 @@ public partial class DefaultSyscallHost
         private static extern short GetKeyState(int nVirtKey);
 
         [DllImport("user32.dll")]
+        private static extern bool GetKeyboardState([Out] byte[] lpKeyState);
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern int ToUnicode(
+            uint wVirtKey,
+            uint wScanCode,
+            [In] byte[] lpKeyState,
+            [Out] StringBuilder pwszBuff,
+            int cchBuff,
+            uint wFlags);
+
+        [DllImport("user32.dll")]
         private static extern int FillRect(IntPtr hDC, [In] ref RECT lprc, IntPtr hbr);
 
         [DllImport("gdi32.dll")]
@@ -629,6 +770,9 @@ public partial class DefaultSyscallHost
 
         [DllImport("gdi32.dll")]
         private static extern uint SetTextColor(IntPtr hdc, uint color);
+
+        [DllImport("gdi32.dll")]
+        private static extern uint SetPixel(IntPtr hdc, int x, int y, uint color);
 
         [DllImport("gdi32.dll")]
         private static extern int SetBkMode(IntPtr hdc, int mode);
