@@ -303,6 +303,11 @@ public static class VmSyscalls
         Host.UiDrawPath(windowHandle, path, color, strokeWidth);
     }
 
+    public static void UiDrawImage(int windowHandle, int x, int y, int width, int height, string rgbaBase64)
+    {
+        Host.UiDrawImage(windowHandle, x, y, width, height, rgbaBase64);
+    }
+
     public static void UiEndFrame(int windowHandle)
     {
         Host.UiEndFrame(windowHandle);

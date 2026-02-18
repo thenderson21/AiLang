@@ -49,6 +49,10 @@ This file is normative for semantic validation used by `aic check` (default path
 - return value is a `UiWindowSize` node as defined by `SPEC/IL.md`.
 - `width` and `height` must be integers; `-1` is reserved for unavailable/invalid handles.
 
+- `sys.ui_drawImage` contract is deterministic:
+- arguments are `(int windowHandle, int x, int y, int width, int height, string rgbaBase64)`.
+- payload is raw RGBA8 bytes encoded as base64; semantic interpretation stays in libraries.
+
 - `sys.str_substring(text,start,length)` and `sys.str_remove(text,start,length)` are deterministic UTF-8 text-edit helpers:
 - indexing is by Unicode scalar sequence (not bytes).
 - `start` is clamped to valid range, `length <= 0` is a no-op (`""` for substring, original string for remove).

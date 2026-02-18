@@ -282,6 +282,24 @@ public static class SyscallContracts
                     addDiagnostic);
                 returnKind = VmValueKind.Void;
                 return true;
+            case "sys.ui_drawImage":
+                ValidateArityAndTypes(
+                    argKinds,
+                    6,
+                    new[]
+                    {
+                        (VmValueKind.Int, "VAL296", "sys.ui_drawImage arg 1 must be int."),
+                        (VmValueKind.Int, "VAL297", "sys.ui_drawImage arg 2 must be int."),
+                        (VmValueKind.Int, "VAL298", "sys.ui_drawImage arg 3 must be int."),
+                        (VmValueKind.Int, "VAL299", "sys.ui_drawImage arg 4 must be int."),
+                        (VmValueKind.Int, "VAL300", "sys.ui_drawImage arg 5 must be int."),
+                        (VmValueKind.String, "VAL301", "sys.ui_drawImage arg 6 must be string.")
+                    },
+                    "VAL302",
+                    "sys.ui_drawImage expects 6 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Void;
+                return true;
             case "sys.ui_endFrame":
                 ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL268", "sys.ui_endFrame expects 1 argument.", "VAL269", "sys.ui_endFrame arg must be int.", addDiagnostic);
                 returnKind = VmValueKind.Void;

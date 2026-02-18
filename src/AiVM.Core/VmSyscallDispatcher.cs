@@ -27,6 +27,7 @@ public static class VmSyscallDispatcher
             SyscallId.UiDrawLine => 7,
             SyscallId.UiDrawEllipse => 6,
             SyscallId.UiDrawPath => 4,
+            SyscallId.UiDrawImage => 6,
             SyscallId.UiEndFrame => 1,
             SyscallId.UiPollEvent => 1,
             SyscallId.UiPresent => 1,
@@ -291,6 +292,20 @@ public static class VmSyscallDispatcher
                     return true;
                 }
                 VmSyscalls.UiDrawPath(uiPathHandle, uiPathText, uiPathColor, uiPathStrokeWidth);
+                result = SysValue.Void();
+                return true;
+
+            case SyscallId.UiDrawImage:
+                if (!TryGetInt(args, 0, 6, out var uiImageHandle) ||
+                    !TryGetInt(args, 1, 6, out var uiImageX) ||
+                    !TryGetInt(args, 2, 6, out var uiImageY) ||
+                    !TryGetInt(args, 3, 6, out var uiImageWidth) ||
+                    !TryGetInt(args, 4, 6, out var uiImageHeight) ||
+                    !TryGetString(args, 5, 6, out var uiImageRgbaBase64))
+                {
+                    return true;
+                }
+                VmSyscalls.UiDrawImage(uiImageHandle, uiImageX, uiImageY, uiImageWidth, uiImageHeight, uiImageRgbaBase64);
                 result = SysValue.Void();
                 return true;
 

@@ -16,7 +16,8 @@ public partial class DefaultSyscallHost
             int x2,
             int y2,
             string path,
-            int strokeWidth)
+            int strokeWidth,
+            string imageRgbaBase64)
         {
             Kind = kind;
             X = x;
@@ -30,6 +31,7 @@ public partial class DefaultSyscallHost
             Y2 = y2;
             Path = path;
             StrokeWidth = Math.Max(1, strokeWidth);
+            ImageRgbaBase64 = imageRgbaBase64 ?? string.Empty;
         }
 
         public string Kind { get; }
@@ -44,30 +46,36 @@ public partial class DefaultSyscallHost
         public int Y2 { get; }
         public string Path { get; }
         public int StrokeWidth { get; }
+        public string ImageRgbaBase64 { get; }
 
         public static UiDrawCommand Rect(int x, int y, int width, int height, string color)
         {
-            return new UiDrawCommand("rect", x, y, Math.Max(0, width), Math.Max(0, height), color, string.Empty, 0, 0, 0, string.Empty, 1);
+            return new UiDrawCommand("rect", x, y, Math.Max(0, width), Math.Max(0, height), color, string.Empty, 0, 0, 0, string.Empty, 1, string.Empty);
         }
 
         public static UiDrawCommand FromText(int x, int y, string text, string color, int size)
         {
-            return new UiDrawCommand("text", x, y, 0, 0, color, text, size, 0, 0, string.Empty, 1);
+            return new UiDrawCommand("text", x, y, 0, 0, color, text, size, 0, 0, string.Empty, 1, string.Empty);
         }
 
         public static UiDrawCommand Line(int x1, int y1, int x2, int y2, string color, int strokeWidth)
         {
-            return new UiDrawCommand("line", x1, y1, 0, 0, color, string.Empty, 0, x2, y2, string.Empty, strokeWidth);
+            return new UiDrawCommand("line", x1, y1, 0, 0, color, string.Empty, 0, x2, y2, string.Empty, strokeWidth, string.Empty);
         }
 
         public static UiDrawCommand Ellipse(int x, int y, int width, int height, string color)
         {
-            return new UiDrawCommand("ellipse", x, y, Math.Max(0, width), Math.Max(0, height), color, string.Empty, 0, 0, 0, string.Empty, 1);
+            return new UiDrawCommand("ellipse", x, y, Math.Max(0, width), Math.Max(0, height), color, string.Empty, 0, 0, 0, string.Empty, 1, string.Empty);
         }
 
         public static UiDrawCommand FromPath(string path, string color, int strokeWidth)
         {
-            return new UiDrawCommand("path", 0, 0, 0, 0, color, string.Empty, 0, 0, 0, path ?? string.Empty, strokeWidth);
+            return new UiDrawCommand("path", 0, 0, 0, 0, color, string.Empty, 0, 0, 0, path ?? string.Empty, strokeWidth, string.Empty);
+        }
+
+        public static UiDrawCommand FromImage(int x, int y, int width, int height, string rgbaBase64)
+        {
+            return new UiDrawCommand("image", x, y, Math.Max(0, width), Math.Max(0, height), "#ffffff", string.Empty, 0, 0, 0, string.Empty, 1, rgbaBase64 ?? string.Empty);
         }
 
         public static List<(int X, int Y)> ParsePathPoints(string path)

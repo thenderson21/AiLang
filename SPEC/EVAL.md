@@ -131,6 +131,13 @@ This file is normative for `aic run` evaluation behavior.
 - define text-edit policy (insert/delete/caret movement/newline or tab policy).
 - route key behavior by explicit focus/target state in language-visible state transitions.
 
+## Raster Image Primitive
+
+- `sys.ui_drawImage(windowHandle, x, y, width, height, rgbaBase64)` is a VM-level raster primitive.
+- `rgbaBase64` encodes raw row-major RGBA8 bytes (`width * height * 4` bytes).
+- Host responsibility is mechanical rendering only (no fit/crop/layout semantics).
+- Image composition semantics (sizing policy, alignment, clipping policy choices) are library-owned.
+
 ## Result Emission
 
 - `aic run` emits canonical AOS:

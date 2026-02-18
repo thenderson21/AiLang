@@ -27,6 +27,7 @@ public static class SyscallPermissions
             SyscallId.UiDrawLine => "ui",
             SyscallId.UiDrawEllipse => "ui",
             SyscallId.UiDrawPath => "ui",
+            SyscallId.UiDrawImage => "ui",
             SyscallId.UiEndFrame => "ui",
             SyscallId.UiPollEvent => "ui",
             SyscallId.UiPresent => "ui",

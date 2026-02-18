@@ -506,6 +506,24 @@ public partial class DefaultSyscallHost : ISyscallHost
         }
     }
 
+    public virtual void UiDrawImage(int windowHandle, int x, int y, int width, int height, string rgbaBase64)
+    {
+        if (_linuxUi is not null && _linuxUi.TryDrawImage(windowHandle, x, y, width, height, rgbaBase64))
+        {
+            return;
+        }
+
+        if (_windowsUi is not null && _windowsUi.TryDrawImage(windowHandle, x, y, width, height, rgbaBase64))
+        {
+            return;
+        }
+
+        if (_macUi is not null && _macUi.TryDrawImage(windowHandle, x, y, width, height, rgbaBase64))
+        {
+            return;
+        }
+    }
+
     public virtual void UiEndFrame(int windowHandle)
     {
         _ = _openWindows.Contains(windowHandle);

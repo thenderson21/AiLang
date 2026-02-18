@@ -180,6 +180,20 @@ public partial class DefaultSyscallHost
             return false;
         }
 
+        public bool TryDrawImage(int handle, int x, int y, int width, int height, string rgbaBase64)
+        {
+            lock (_lock)
+            {
+                if (_windows.TryGetValue(handle, out var window))
+                {
+                    window.Commands.Add(UiDrawCommand.FromImage(x, y, width, height, rgbaBase64));
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public bool TryPresent(int handle)
         {
             lock (_lock)
@@ -210,6 +224,10 @@ public partial class DefaultSyscallHost
                     {
                         var bytes = Encoding.UTF8.GetBytes(command.Text ?? string.Empty);
                         XDrawString(_display, window.Window, window.Gc, command.X, command.Y, bytes, bytes.Length);
+                    }
+                    else if (command.Kind == "image")
+                    {
+                        DrawRgbaImage(window, command.X, command.Y, command.Width, command.Height, command.ImageRgbaBase64);
                     }
                 }
 
@@ -338,6 +356,44 @@ public partial class DefaultSyscallHost
                 "blue" => 0x000000ff,
                 _ => 0x00ffffff
             };
+        }
+
+        private void DrawRgbaImage(LinuxWindowState window, int x, int y, int width, int height, string rgbaBase64)
+        {
+            if (width <= 0 || height <= 0 || string.IsNullOrWhiteSpace(rgbaBase64))
+            {
+                return;
+            }
+
+            byte[] rgba;
+            try
+            {
+                rgba = Convert.FromBase64String(rgbaBase64);
+            }
+            catch
+            {
+                return;
+            }
+
+            var expectedBytes = (long)width * height * 4;
+            if (expectedBytes <= 0 || rgba.Length < expectedBytes)
+            {
+                return;
+            }
+
+            var index = 0;
+            for (var py = 0; py < height; py++)
+            {
+                for (var px = 0; px < width; px++)
+                {
+                    var r = rgba[index];
+                    var g = rgba[index + 1];
+                    var b = rgba[index + 2];
+                    index += 4;
+                    XSetForeground(_display, window.Gc, (ulong)((r << 16) | (g << 8) | b));
+                    XDrawPoint(_display, window.Window, window.Gc, x + px, y + py);
+                }
+            }
         }
 
         private static string BuildModifiers(uint state)
@@ -613,6 +669,9 @@ public partial class DefaultSyscallHost
 
         [DllImport("libX11.so.6")]
         private static extern int XDrawString(IntPtr display, IntPtr drawable, IntPtr gc, int x, int y, byte[] text, int length);
+
+        [DllImport("libX11.so.6")]
+        private static extern int XDrawPoint(IntPtr display, IntPtr drawable, IntPtr gc, int x, int y);
 
         [DllImport("libX11.so.6")]
         private static extern int XClearWindow(IntPtr display, IntPtr window);

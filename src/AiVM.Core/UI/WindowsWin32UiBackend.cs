@@ -148,6 +148,20 @@ public partial class DefaultSyscallHost
             return false;
         }
 
+        public bool TryDrawImage(int handle, int x, int y, int width, int height, string rgbaBase64)
+        {
+            lock (_lock)
+            {
+                if (_windows.TryGetValue(handle, out var state))
+                {
+                    state.Commands.Add(UiDrawCommand.FromImage(x, y, width, height, rgbaBase64));
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public bool TryPresent(int handle)
         {
             PumpMessages();
@@ -245,6 +259,10 @@ public partial class DefaultSyscallHost
                             SetBkMode(hdc, 1);
                             _ = command.Size;
                             TextOut(hdc, command.X, command.Y, command.Text ?? string.Empty, (command.Text ?? string.Empty).Length);
+                        }
+                        else if (command.Kind == "image")
+                        {
+                            DrawRgbaImage(hdc, command.X, command.Y, command.Width, command.Height, command.ImageRgbaBase64);
                         }
                     }
                 }
@@ -563,6 +581,43 @@ public partial class DefaultSyscallHost
             return int.Parse(value.AsSpan(start, 2), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
         }
 
+        private static void DrawRgbaImage(IntPtr hdc, int x, int y, int width, int height, string rgbaBase64)
+        {
+            if (width <= 0 || height <= 0 || string.IsNullOrWhiteSpace(rgbaBase64))
+            {
+                return;
+            }
+
+            byte[] rgba;
+            try
+            {
+                rgba = Convert.FromBase64String(rgbaBase64);
+            }
+            catch
+            {
+                return;
+            }
+
+            var expectedBytes = (long)width * height * 4;
+            if (expectedBytes <= 0 || rgba.Length < expectedBytes)
+            {
+                return;
+            }
+
+            var index = 0;
+            for (var py = 0; py < height; py++)
+            {
+                for (var px = 0; px < width; px++)
+                {
+                    var r = rgba[index];
+                    var g = rgba[index + 1];
+                    var b = rgba[index + 2];
+                    index += 4;
+                    _ = SetPixel(hdc, x + px, y + py, (uint)(b | (g << 8) | (r << 16)));
+                }
+            }
+        }
+
         private sealed class WindowsWindowState
         {
             public WindowsWindowState(IntPtr hwnd)
@@ -715,6 +770,9 @@ public partial class DefaultSyscallHost
 
         [DllImport("gdi32.dll")]
         private static extern uint SetTextColor(IntPtr hdc, uint color);
+
+        [DllImport("gdi32.dll")]
+        private static extern uint SetPixel(IntPtr hdc, int x, int y, uint color);
 
         [DllImport("gdi32.dll")]
         private static extern int SetBkMode(IntPtr hdc, int mode);

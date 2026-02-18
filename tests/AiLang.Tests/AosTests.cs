@@ -100,6 +100,12 @@ public class AosTests
         public string? LastUiPathValue { get; private set; }
         public string? LastUiPathColor { get; private set; }
         public int LastUiPathStrokeWidth { get; private set; } = -1;
+        public int LastUiImageHandle { get; private set; } = -1;
+        public int LastUiImageX { get; private set; } = -1;
+        public int LastUiImageY { get; private set; } = -1;
+        public int LastUiImageWidth { get; private set; } = -1;
+        public int LastUiImageHeight { get; private set; } = -1;
+        public string? LastUiImageRgbaBase64 { get; private set; }
 
         public override void ConsoleWrite(string text)
         {
@@ -352,6 +358,16 @@ public class AosTests
             LastUiPathValue = path;
             LastUiPathColor = color;
             LastUiPathStrokeWidth = strokeWidth;
+        }
+
+        public override void UiDrawImage(int windowHandle, int x, int y, int width, int height, string rgbaBase64)
+        {
+            LastUiImageHandle = windowHandle;
+            LastUiImageX = x;
+            LastUiImageY = y;
+            LastUiImageWidth = width;
+            LastUiImageHeight = height;
+            LastUiImageRgbaBase64 = rgbaBase64;
         }
     }
 
@@ -1345,6 +1361,8 @@ public class AosTests
         Assert.That(ellipseId, Is.EqualTo(SyscallId.UiDrawEllipse));
         Assert.That(SyscallRegistry.TryResolve("sys.ui_drawPath", out var pathId), Is.True);
         Assert.That(pathId, Is.EqualTo(SyscallId.UiDrawPath));
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_drawImage", out var imageId), Is.True);
+        Assert.That(imageId, Is.EqualTo(SyscallId.UiDrawImage));
     }
 
     [Test]
@@ -1712,6 +1730,35 @@ public class AosTests
     }
 
     [Test]
+    public void SyscallDispatch_UiDrawImage_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_drawImage) { Lit#h1(value=9) Lit#x1(value=12) Lit#y1(value=34) Lit#w1(value=2) Lit#h2(value=1) Lit#d1(value=\"AQIDBAUGBwg=\") } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastUiImageHandle, Is.EqualTo(9));
+            Assert.That(host.LastUiImageX, Is.EqualTo(12));
+            Assert.That(host.LastUiImageY, Is.EqualTo(34));
+            Assert.That(host.LastUiImageWidth, Is.EqualTo(2));
+            Assert.That(host.LastUiImageHeight, Is.EqualTo(1));
+            Assert.That(host.LastUiImageRgbaBase64, Is.EqualTo("AQIDBAUGBwg="));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
     public void SyscallDispatch_CryptoBase64Encode_CallsHost()
     {
         var parse = Parse("Program#p1 { Call#c1(target=sys.crypto_base64Encode) { Lit#s1(value=\"hello\") } }");
@@ -2034,6 +2081,17 @@ public class AosTests
             Assert.That(host.LastUiPathHandle, Is.EqualTo(5));
             Assert.That(host.LastUiPathValue, Is.EqualTo("1,1;2,2"));
             Assert.That(host.LastUiPathStrokeWidth, Is.EqualTo(4));
+
+            var imageInvoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.UiDrawImage,
+                new[] { SysValue.Int(3), SysValue.Int(8), SysValue.Int(9), SysValue.Int(1), SysValue.Int(1), SysValue.String("AQIDBA==") }.AsSpan(),
+                new VmNetworkState(),
+                out var imageResult);
+            Assert.That(imageInvoked, Is.True);
+            Assert.That(imageResult.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastUiImageHandle, Is.EqualTo(3));
+            Assert.That(host.LastUiImageWidth, Is.EqualTo(1));
+            Assert.That(host.LastUiImageRgbaBase64, Is.EqualTo("AQIDBA=="));
         }
         finally
         {
