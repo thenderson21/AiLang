@@ -5,5 +5,5 @@ Program#p1 {
       Field#f2(key="ready") { Lit#b1(value=true) }
     }
   }
-  Call#c1(target=io.print) { Call#c2(target=compiler.toJson) { Var#v1(name=m) } }
+  Call#c1(target=io.print) { Call#c2(target=std.json.stringify) { Var#v1(name=m) } }
 }

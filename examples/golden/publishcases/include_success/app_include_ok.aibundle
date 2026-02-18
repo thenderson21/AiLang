@@ -1,1 +1,0 @@
-Bytecode#bc1(flags=0 format="AiBC1" magic="AIBC" version=1) { Const#k0(kind=int value=0) Func#f_main(locals="argv,start" name=main params="argv") { Inst#i0(a=0 op=CONST) Inst#i1(a=1 op=STORE_LOCAL) Inst#i2(op=RETURN) } }

@@ -29,7 +29,7 @@ Program#h1 {
             Let#h54(name=bodyMap) {
               Map#h55 { Field#h58(key="status") { Lit#h59(value="ok") } }
             }
-            Let#h60(name=bodyJson) { Call#h61(target=compiler.toJson) { Var#h62(name=bodyMap) } }
+            Let#h60(name=bodyJson) { Call#h61(target=std.json.stringify) { Var#h62(name=bodyMap) } }
             Let#h63(name=cmdText) {
               StrConcat#h64 {
                 Lit#h65(value="Program#cmdp1 { Command#Emit(type=\"http.response\" payload=\"")

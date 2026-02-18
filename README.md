@@ -135,7 +135,7 @@ Dotnet is only required for `scripts/build-airun.sh`.
 - AST interpreter: debug-only fallback via `--vm=ast`.
 - New publish artifacts embed bytecode payloads by default.
 - Build flag: `AosDevMode=false` creates a production runtime build with AST mode disabled.
-- HTTP body parsing boundary: `compiler.parseHttpBodyJson` is a constrained HTTP integration helper that converts JSON request body text into canonical AOS nodes. It does not introduce JSON as a runtime value model.
+- HTTP body parsing boundary: `std.json.parse` is a constrained HTTP integration helper that converts JSON request body text into canonical AOS nodes. It does not introduce JSON as a runtime value model.
 
 ## Examples
 

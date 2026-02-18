@@ -1,5 +1,5 @@
 Program#j1 {
-  Call#j2(target=compiler.toJson) {
+  Call#j2(target=std.json.stringify) {
     Map#j3 {
       Field#j9(key="count") { Lit#j10(value=1) }
       Field#j7(key="status") { Lit#j8(value="ok") }

@@ -29,7 +29,7 @@ public static class AosStandardLibraryLoader
 
     private static void EnsureJsonLoaded(AosRuntime runtime, AosInterpreter interpreter)
     {
-        if (runtime.Env.ContainsKey("compiler.toJson"))
+        if (runtime.Env.ContainsKey("std.json.stringify"))
         {
             return;
         }
@@ -40,9 +40,9 @@ public static class AosStandardLibraryLoader
             throw new InvalidOperationException("json.aos evaluation failed.");
         }
 
-        if (!runtime.Env.ContainsKey("compiler.toJson"))
+        if (!runtime.Env.ContainsKey("std.json.stringify"))
         {
-            throw new InvalidOperationException("json.aos did not define compiler.toJson.");
+            throw new InvalidOperationException("json.aos did not define std.json.stringify.");
         }
     }
 

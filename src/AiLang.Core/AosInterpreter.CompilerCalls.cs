@@ -12,6 +12,35 @@ public sealed partial class AosInterpreter
         out AosValue result)
     {
         result = AosValue.Unknown;
+
+        if (target == "std.json.parse")
+        {
+            if (!runtime.Permissions.Contains("compiler"))
+            {
+                return true;
+            }
+
+            if (node.Children.Count != 1)
+            {
+                return true;
+            }
+
+            var text = EvalNode(node.Children[0], runtime, env);
+            if (text.Kind != AosValueKind.String)
+            {
+                return true;
+            }
+
+            if (!TryParseJsonBodyNode(text.AsString(), node.Span, out var parsed, out var error))
+            {
+                result = AosValue.FromNode(CreateErrNode("parse_json_err", "PARJSON001", error, node.Id, node.Span));
+                return true;
+            }
+
+            result = AosValue.FromNode(parsed);
+            return true;
+        }
+
         if (!target.StartsWith("compiler.", StringComparison.Ordinal))
         {
             return false;
@@ -158,29 +187,6 @@ public sealed partial class AosInterpreter
             }
 
             result = AosValue.FromNode(ParseFormBodyNode(text.AsString(), node.Span));
-            return true;
-        }
-
-        if (target == "compiler.parseHttpBodyJson")
-        {
-            if (node.Children.Count != 1)
-            {
-                return true;
-            }
-
-            var text = EvalNode(node.Children[0], runtime, env);
-            if (text.Kind != AosValueKind.String)
-            {
-                return true;
-            }
-
-            if (!TryParseJsonBodyNode(text.AsString(), node.Span, out var parsed, out var error))
-            {
-                result = AosValue.FromNode(CreateErrNode("parse_http_json_err", "PARHTTP001", error, node.Id, node.Span));
-                return true;
-            }
-
-            result = AosValue.FromNode(parsed);
             return true;
         }
 

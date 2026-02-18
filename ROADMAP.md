@@ -84,7 +84,7 @@ Runtime Changes:
 
 Exit Criteria:
 	•	HTTP apps no longer manipulate raw text
-	•	JSON response built via Map + compiler.toJson
+	•	JSON response built via Map + std.json.stringify
 	•	TLS supported via sys.tls_listen
 
 ⸻

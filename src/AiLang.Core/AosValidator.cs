@@ -799,16 +799,16 @@ public sealed class AosValidator
             return AosValueKind.Node;
         }
 
-        if (target == "compiler.parseHttpBodyJson")
+        if (target == "std.json.parse")
         {
             RequirePermission(node, "compiler", permissions);
             if (argTypes.Count != 1)
             {
-                _diagnostics.Add(new AosDiagnostic("VAL162", "compiler.parseHttpBodyJson expects 1 argument.", node.Id, node.Span));
+                _diagnostics.Add(new AosDiagnostic("VAL162", "std.json.parse expects 1 argument.", node.Id, node.Span));
             }
             else if (argTypes[0] != AosValueKind.String && argTypes[0] != AosValueKind.Unknown)
             {
-                _diagnostics.Add(new AosDiagnostic("VAL163", "compiler.parseHttpBodyJson arg must be string.", node.Id, node.Span));
+                _diagnostics.Add(new AosDiagnostic("VAL163", "std.json.parse arg must be string.", node.Id, node.Span));
             }
             return AosValueKind.Node;
         }
@@ -834,16 +834,16 @@ public sealed class AosValidator
             return AosValueKind.Node;
         }
 
-        if (target == "compiler.toJson")
+        if (target == "std.json.stringify")
         {
             RequirePermission(node, "compiler", permissions);
             if (argTypes.Count != 1)
             {
-                _diagnostics.Add(new AosDiagnostic("VAL115", "compiler.toJson expects 1 argument.", node.Id, node.Span));
+                _diagnostics.Add(new AosDiagnostic("VAL115", "std.json.stringify expects 1 argument.", node.Id, node.Span));
             }
             else if (argTypes[0] != AosValueKind.Node && argTypes[0] != AosValueKind.Unknown)
             {
-                _diagnostics.Add(new AosDiagnostic("VAL116", "compiler.toJson arg must be node.", node.Id, node.Span));
+                _diagnostics.Add(new AosDiagnostic("VAL116", "std.json.stringify arg must be node.", node.Id, node.Span));
             }
             return AosValueKind.String;
         }
