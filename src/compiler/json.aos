@@ -1,5 +1,5 @@
 Program#json_p1 {
-  Let#json_l1(name=compiler.toJson) {
+  Let#json_l1(name=std.json.stringify) {
     Fn#json_f1(params=node) {
       Block#json_b1 {
         If#json_if1 {
@@ -216,7 +216,7 @@ Program#json_p1 {
         If#json_if13 {
           Eq#json_e11 { ChildCount#json_cc5 { Var#json_v74(name=field) } Lit#json_lit32(value=1) }
           Block#json_b32 {
-            Let#json_l22(name=valueText) { Call#json_c19(target=compiler.toJson) { ChildAt#json_ca4 { Var#json_v75(name=field) Lit#json_lit33(value=0) } } }
+            Let#json_l22(name=valueText) { Call#json_c19(target=std.json.stringify) { ChildAt#json_ca4 { Var#json_v75(name=field) Lit#json_lit33(value=0) } } }
             Return#json_r19 {
               StrConcat#json_s5 {
                 Lit#json_lit34(value="\"")

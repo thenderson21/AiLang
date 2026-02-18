@@ -16,6 +16,7 @@ project.fragment.lock.json
 artifacts/
 .artifacts/
 .tmp-aot/
+tools/airun
 
 ############################################
 # Test results
@@ -55,6 +56,8 @@ desktop.ini
 # Build / publish output
 ############################################
 publish/
+examples/golden/publishcases/**/app_include_ok
+examples/golden/publishcases/**/*.aibundle
 dist/
 out/
 

@@ -2520,9 +2520,9 @@ public class AosTests
     }
 
     [Test]
-    public void CompilerParseHttpBodyJson_ReturnsMapForValidJson_AndErrForInvalid()
+    public void StdJsonParse_ReturnsMapForValidJson_AndErrForInvalid()
     {
-        var validParse = Parse("Program#p1 { Call#c1(target=compiler.parseHttpBodyJson) { Lit#s1(value=\"{\\\"city\\\":\\\"Fort Worth\\\",\\\"ok\\\":true,\\\"count\\\":7}\") } }");
+        var validParse = Parse("Program#p1 { Call#c1(target=std.json.parse) { Lit#s1(value=\"{\\\"city\\\":\\\"Fort Worth\\\",\\\"ok\\\":true,\\\"count\\\":7}\") } }");
         Assert.That(validParse.Diagnostics, Is.Empty);
 
         var runtime = new AosRuntime();
@@ -2534,13 +2534,13 @@ public class AosTests
         Assert.That(map.Kind, Is.EqualTo("Map"));
         Assert.That(map.Children.Count, Is.EqualTo(3));
 
-        var invalidParse = Parse("Program#p2 { Call#c2(target=compiler.parseHttpBodyJson) { Lit#s2(value=\"{\\\"city\\\":}\") } }");
+        var invalidParse = Parse("Program#p2 { Call#c2(target=std.json.parse) { Lit#s2(value=\"{\\\"city\\\":}\") } }");
         Assert.That(invalidParse.Diagnostics, Is.Empty);
         var invalidValue = interpreter.EvaluateProgram(invalidParse.Root!, runtime);
         Assert.That(invalidValue.Kind, Is.EqualTo(AosValueKind.Node));
         var err = invalidValue.AsNode();
         Assert.That(err.Kind, Is.EqualTo("Err"));
-        Assert.That(err.Attrs["code"].AsString(), Is.EqualTo("PARHTTP001"));
+        Assert.That(err.Attrs["code"].AsString(), Is.EqualTo("PARJSON001"));
     }
 
     [Test]
