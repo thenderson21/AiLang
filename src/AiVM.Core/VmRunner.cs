@@ -4,6 +4,29 @@ namespace AiVM.Core;
 
 public static class VmRunner
 {
+    private static readonly HashSet<string> BlockingCallTargets = new(StringComparer.Ordinal)
+    {
+        "sys.net_asyncAwait",
+        "sys.net_accept",
+        "sys.net_readHeaders",
+        "sys.net_tcpAccept",
+        "sys.net_tcpConnect",
+        "sys.net_tcpConnectTls",
+        "sys.net_tcpRead",
+        "sys.net_tcpWrite",
+        "sys.net_udpRecv",
+        "sys.time_sleepMs",
+        "sys.fs_readFile",
+        "sys.fs_readDir",
+        "sys.fs_stat",
+        "sys.console_readLine",
+        "sys.console_readAllStdin",
+        "io.readLine",
+        "io.readAllStdin",
+        "io.readFile",
+        "httpRequestAwait"
+    };
+
     private sealed class VmAsyncState<TValue>
     {
         public int NextTaskHandle { get; set; } = 1;
@@ -23,7 +46,7 @@ public static class VmRunner
         List<TValue> args,
         IVmExecutionAdapter<TValue, TNode> adapter)
     {
-        return ExecuteFunction(vm, entryFunctionIndex, args, adapter, new VmAsyncState<TValue>());
+        return ExecuteFunction(vm, entryFunctionIndex, args, adapter, new VmAsyncState<TValue>(), inUpdateContext: false);
     }
 
     private static TValue ExecuteFunction<TValue, TNode>(
@@ -31,7 +54,8 @@ public static class VmRunner
         int functionIndex,
         List<TValue> args,
         IVmExecutionAdapter<TValue, TNode> adapter,
-        VmAsyncState<TValue> asyncState)
+        VmAsyncState<TValue> asyncState,
+        bool inUpdateContext)
     {
         if (functionIndex < 0 || functionIndex >= vm.Functions.Count)
         {
@@ -364,6 +388,26 @@ public static class VmRunner
                     pc++;
                     break;
                 }
+                case "MAKE_LIT_INT":
+                {
+                    var intValue = Pop(stack, function.Name);
+                    var idValue = Pop(stack, function.Name);
+                    if (!adapter.TryGetString(idValue, out var id) || id is null ||
+                        !adapter.TryGetInt(intValue, out var value))
+                    {
+                        throw new VmRuntimeException("VM001", "MAKE_LIT_INT requires (string,int).", function.Name);
+                    }
+                    stack.Add(adapter.FromNode(adapter.CreateNode(
+                        "Lit",
+                        id,
+                        new Dictionary<string, VmAttr>(StringComparer.Ordinal)
+                        {
+                            ["value"] = VmAttr.Int(value)
+                        },
+                        new List<TNode>())));
+                    pc++;
+                    break;
+                }
                 case "MAKE_NODE":
                 {
                     if (inst.A < 0 || inst.A >= vm.Constants.Count)
@@ -409,7 +453,10 @@ public static class VmRunner
                 case "CALL":
                 {
                     var callArgs = PopArgs(stack, inst.B, function.Name);
-                    var result = ExecuteFunction(vm, inst.A, callArgs, adapter, asyncState);
+                    var childInUpdateContext = inUpdateContext ||
+                                               (inst.A >= 0 && inst.A < vm.Functions.Count &&
+                                                string.Equals(vm.Functions[inst.A].Name, "update", StringComparison.Ordinal));
+                    var result = ExecuteFunction(vm, inst.A, callArgs, adapter, asyncState, childInUpdateContext);
                     stack.Add(result);
                     pc++;
                     break;
@@ -417,13 +464,20 @@ public static class VmRunner
                 case "ASYNC_CALL":
                 {
                     var callArgs = PopArgs(stack, inst.B, function.Name);
-                    var result = ExecuteFunction(vm, inst.A, callArgs, adapter, asyncState);
+                    var childInUpdateContext = inUpdateContext ||
+                                               (inst.A >= 0 && inst.A < vm.Functions.Count &&
+                                                string.Equals(vm.Functions[inst.A].Name, "update", StringComparison.Ordinal));
+                    var result = ExecuteFunction(vm, inst.A, callArgs, adapter, asyncState, childInUpdateContext);
                     stack.Add(CreateCompletedTaskValue(result, adapter, asyncState));
                     pc++;
                     break;
                 }
                 case "ASYNC_CALL_SYS":
                 {
+                    if (inUpdateContext && BlockingCallTargets.Contains(inst.S))
+                    {
+                        throw new VmRuntimeException("RUN031", $"Blocking call '{inst.S}' is not allowed during update.", function.Name);
+                    }
                     if (inst.A < 0 || stack.Count < inst.A)
                     {
                         throw new VmRuntimeException("VM001", "Invalid call argument count.", function.Name);
@@ -518,6 +572,10 @@ public static class VmRunner
                     break;
                 case "CALL_SYS":
                 {
+                    if (inUpdateContext && BlockingCallTargets.Contains(inst.S))
+                    {
+                        throw new VmRuntimeException("RUN031", $"Blocking call '{inst.S}' is not allowed during update.", function.Name);
+                    }
                     if (inst.A < 0 || stack.Count < inst.A)
                     {
                         throw new VmRuntimeException("VM001", "Invalid call argument count.", function.Name);

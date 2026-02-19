@@ -724,8 +724,8 @@ public static class AosCliExecutionEngine
         }
 
         var entryFile = entryFileAttr.AsString();
-        moduleBaseDir = Path.GetDirectoryName(Path.GetFullPath(path)) ?? Directory.GetCurrentDirectory();
-        sourcePath = Path.GetFullPath(Path.Combine(moduleBaseDir, entryFile));
+        var projectBaseDir = Path.GetDirectoryName(Path.GetFullPath(path)) ?? Directory.GetCurrentDirectory();
+        sourcePath = Path.GetFullPath(Path.Combine(projectBaseDir, entryFile));
         if (!HostFileSystem.FileExists(sourcePath))
         {
             errCode = "RUN002";
@@ -734,6 +734,7 @@ public static class AosCliExecutionEngine
             return false;
         }
 
+        moduleBaseDir = Path.GetDirectoryName(sourcePath) ?? projectBaseDir;
         entryExportOverride = entryExportAttr.AsString();
         resolvedFromManifest = true;
         return true;

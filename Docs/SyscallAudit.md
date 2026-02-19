@@ -52,7 +52,6 @@ Defined `sys.*` targets (dispatcher + contracts):
 | `sys.fs_readFile` | `(path:string)` | `string` | Reads full file text. |
 | `sys.fs_fileExists` | `(path:string)` | `bool` | Returns file existence. |
 | `sys.str_utf8ByteCount` | `(text:string)` | `int` | UTF-8 byte count utility. |
-| `sys.http_get` | `(url:string)` | `string` | Blocking HTTP GET returning response body string; empty string on failure. |
 | `sys.platform` | `()` | `string` | Host OS family (`macos`, `windows`, `linux`, `unknown`). |
 | `sys.arch` | `()` | `string` | Host OS architecture. |
 | `sys.os_version` | `()` | `string` | Host OS version string. |
@@ -99,7 +98,6 @@ Concrete gaps:
 
 - `DefaultSyscallHost` directly uses .NET APIs (`Console`, `File`, `HttpClient`, `TcpListener`, `TcpClient`, TLS classes).
 - Network listener binding is loopback-only in current implementation, which limits server deployment behavior.
-- `sys.http_get` and socket operations are currently synchronous/blocking host calls.
+- Socket operations are currently synchronous/blocking host calls.
 - HTTP parsing behavior is partially embedded in host (`NetReadHeaders` reads headers/body framing), coupling protocol details to host boundary.
 - VM call path remains explicit (`CALL_SYS`), and syscall arity/type checks are centralized in `SyscallContracts`.
-

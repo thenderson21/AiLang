@@ -15,13 +15,21 @@ Program#wa_p1 {
     Fn#wa_f2(params=city) {
       Block#wa_b2 {
         Return#wa_r2 {
-          Call#wa_c2(target=sys.http_get) {
+          Call#wa_c200(target=httpRequestAwait) {
+            Call#wa_c2(target=httpRequest) {
+            Lit#wa_i200(value="GET")
+            Lit#wa_i201(value="wttr.in")
+            Lit#wa_i202(value=443)
             StrConcat#wa_s1 {
-              Lit#wa_i2(value="https://wttr.in/")
+              Lit#wa_i203(value="/")
               StrConcat#wa_s2 {
                 Var#wa_v1(name=city)
-                Lit#wa_i3(value="?format=3")
+                Lit#wa_i204(value="?format=3")
               }
+            }
+            Lit#wa_i205(value="")
+            Lit#wa_i206(value="")
+            Lit#wa_i207(value=16384)
             }
           }
         }

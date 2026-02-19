@@ -650,6 +650,17 @@ public sealed partial class AosInterpreter
                     state.Emit("MAKE_LIT_STRING");
                     return;
                 }
+                case "MakeLitInt":
+                {
+                    if (node.Children.Count != 2)
+                    {
+                        throw new VmRuntimeException("VM001", "MakeLitInt expects 2 children.", node.Id);
+                    }
+                    CompileExpression(context, state, node.Children[0]);
+                    CompileExpression(context, state, node.Children[1]);
+                    state.Emit("MAKE_LIT_INT");
+                    return;
+                }
                 case "Map":
                 case "Field":
                 case "Route":

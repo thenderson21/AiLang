@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using System.Globalization;
 using System.ComponentModel;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace AiVM.Core;
 
@@ -303,6 +304,59 @@ public partial class DefaultSyscallHost : ISyscallHost
         }
     }
 
+    public virtual int NetTcpConnectTls(VmNetworkState state, string host, int port)
+    {
+        try
+        {
+            var client = new TcpClient();
+            client.Connect(host, port);
+            var connectionHandle = state.NextNetHandle++;
+            state.NetConnections[connectionHandle] = client;
+
+            var tlsStream = new SslStream(client.GetStream(), leaveInnerStreamOpen: false);
+            try
+            {
+                tlsStream.AuthenticateAsClient(host);
+            }
+            catch
+            {
+                try { tlsStream.Dispose(); } catch { }
+                try { client.Close(); } catch { }
+                state.NetConnections.Remove(connectionHandle);
+                return -1;
+            }
+
+            state.NetTlsStreams[connectionHandle] = tlsStream;
+            return connectionHandle;
+        }
+        catch
+        {
+            return -1;
+        }
+    }
+
+    public virtual int NetTcpConnectStart(VmNetworkState state, string host, int port)
+    {
+        return StartNetAsyncOperation(state, () =>
+        {
+            var connection = NetTcpConnect(state, host, port);
+            return connection >= 0
+                ? (connection, string.Empty, string.Empty)
+                : (-1, string.Empty, "connect_failed");
+        });
+    }
+
+    public virtual int NetTcpConnectTlsStart(VmNetworkState state, string host, int port)
+    {
+        return StartNetAsyncOperation(state, () =>
+        {
+            var connection = NetTcpConnectTls(state, host, port);
+            return connection >= 0
+                ? (connection, string.Empty, string.Empty)
+                : (-1, string.Empty, "connect_tls_failed");
+        });
+    }
+
     public virtual string NetTcpRead(VmNetworkState state, int connectionHandle, int maxBytes)
     {
         if (maxBytes <= 0 ||
@@ -334,6 +388,104 @@ public partial class DefaultSyscallHost : ISyscallHost
         stream.Write(payload, 0, payload.Length);
         stream.Flush();
         return payload.Length;
+    }
+
+    public virtual int NetTcpReadStart(VmNetworkState state, int connectionHandle, int maxBytes)
+    {
+        return StartNetAsyncOperation(state, () =>
+        {
+            var text = NetTcpRead(state, connectionHandle, maxBytes);
+            return (0, text, string.Empty);
+        });
+    }
+
+    public virtual int NetTcpWriteStart(VmNetworkState state, int connectionHandle, string data)
+    {
+        return StartNetAsyncOperation(state, () =>
+        {
+            var written = NetTcpWrite(state, connectionHandle, data);
+            return written >= 0
+                ? (written, string.Empty, string.Empty)
+                : (-1, string.Empty, "write_failed");
+        });
+    }
+
+    public virtual int NetAsyncPoll(VmNetworkState state, int operationHandle)
+    {
+        lock (state.NetAsyncLock)
+        {
+            return state.NetAsyncOperations.TryGetValue(operationHandle, out var op)
+                ? op.Status
+                : -3;
+        }
+    }
+
+    public virtual int NetAsyncAwait(VmNetworkState state, int operationHandle)
+    {
+        VmNetAsyncOperation? op;
+        lock (state.NetAsyncLock)
+        {
+            if (!state.NetAsyncOperations.TryGetValue(operationHandle, out op))
+            {
+                return -3;
+            }
+        }
+
+        op.Task.Wait();
+        lock (state.NetAsyncLock)
+        {
+            return op.Status;
+        }
+    }
+
+    public virtual bool NetAsyncCancel(VmNetworkState state, int operationHandle)
+    {
+        lock (state.NetAsyncLock)
+        {
+            if (!state.NetAsyncOperations.TryGetValue(operationHandle, out var op))
+            {
+                return false;
+            }
+
+            if (op.Status != 0)
+            {
+                return false;
+            }
+
+            op.Status = -2;
+            op.Error = "cancelled";
+            return true;
+        }
+    }
+
+    public virtual int NetAsyncResultInt(VmNetworkState state, int operationHandle)
+    {
+        lock (state.NetAsyncLock)
+        {
+            return state.NetAsyncOperations.TryGetValue(operationHandle, out var op)
+                ? op.IntResult
+                : 0;
+        }
+    }
+
+    public virtual string NetAsyncResultString(VmNetworkState state, int operationHandle)
+    {
+        lock (state.NetAsyncLock)
+        {
+            return state.NetAsyncOperations.TryGetValue(operationHandle, out var op)
+                ? op.StringResult
+                : string.Empty;
+        }
+    }
+
+    public virtual string NetAsyncError(VmNetworkState state, int operationHandle)
+    {
+        lock (state.NetAsyncLock)
+        {
+            return state.NetAsyncOperations.TryGetValue(operationHandle, out var op)
+                ? op.Error
+                : "unknown_operation";
+        }
     }
 
     public virtual int NetUdpBind(VmNetworkState state, string host, int port)
@@ -716,6 +868,37 @@ public partial class DefaultSyscallHost : ISyscallHost
     public virtual void StdoutWriteLine(string text) => Console.WriteLine(text);
 
     public virtual void ProcessExit(int code) => throw new AosProcessExitException(code);
+
+    private static int StartNetAsyncOperation(VmNetworkState state, Func<(int intResult, string stringResult, string error)> run)
+    {
+        int handle;
+        VmNetAsyncOperation op;
+        lock (state.NetAsyncLock)
+        {
+            handle = state.NextNetAsyncHandle++;
+            op = new VmNetAsyncOperation { Task = Task.CompletedTask };
+            state.NetAsyncOperations[handle] = op;
+        }
+
+        op.Task = Task.Run(() =>
+        {
+            var (intResult, stringResult, error) = run();
+            lock (state.NetAsyncLock)
+            {
+                if (!state.NetAsyncOperations.TryGetValue(handle, out var current) || current.Status == -2)
+                {
+                    return;
+                }
+
+                current.IntResult = intResult;
+                current.StringResult = stringResult;
+                current.Error = error;
+                current.Status = string.IsNullOrEmpty(error) ? 1 : -1;
+            }
+        });
+
+        return handle;
+    }
 
     private static int ParseContentLength(string raw)
     {

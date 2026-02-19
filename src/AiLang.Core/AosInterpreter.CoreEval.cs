@@ -78,6 +78,8 @@ public sealed partial class AosInterpreter
                 return EvalMakeErr(node, runtime, env);
             case "MakeLitString":
                 return EvalMakeLitString(node, runtime, env);
+            case "MakeLitInt":
+                return EvalMakeLitInt(node, runtime, env);
             case "Event":
             case "Command":
             case "HttpRequest":

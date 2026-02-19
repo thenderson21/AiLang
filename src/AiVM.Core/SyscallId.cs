@@ -62,5 +62,16 @@ public enum SyscallId : ushort
     UiDrawImage = 57,
     UiGetWindowSize = 58,
     StrSubstring = 59,
-    StrRemove = 60
+    StrRemove = 60,
+    NetTcpConnectTls = 61,
+    NetTcpConnectStart = 62,
+    NetTcpConnectTlsStart = 63,
+    NetTcpReadStart = 64,
+    NetTcpWriteStart = 65,
+    NetAsyncPoll = 66,
+    NetAsyncAwait = 67,
+    NetAsyncCancel = 68,
+    NetAsyncResultInt = 69,
+    NetAsyncResultString = 70,
+    NetAsyncError = 71
 }

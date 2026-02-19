@@ -10,7 +10,7 @@ Existing syscall surface supports parts of:
 - Process exit and host metadata (`sys.proc_exit`, `sys.platform`, `sys.arch`, `sys.os_version`, `sys.runtime`)
 - File read/existence (`sys.fs_readFile`, `sys.fs_fileExists`)
 - TCP/TLS listener basics and HTTP-style header/body read (`sys.net_*` subset)
-- Simple outbound HTTP GET (`sys.http_get`)
+- Outbound HTTP can be implemented in AiLang stdlib via `httpRequest` over `sys.net_tcp*`
 
 ## What Was Added as Planning Artifacts
 
@@ -88,4 +88,3 @@ After defining and scheduling the v1 primitives, the capability surface is suffi
 - Basic desktop UI/event loop libraries in AiLang
 
 This task intentionally performs planning and issue generation only. No syscall implementations are included.
-

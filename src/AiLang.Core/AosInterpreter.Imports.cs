@@ -63,14 +63,6 @@ public sealed partial class AosInterpreter
             return CreateRuntimeErr("RUN026", "Imported root must be Program.", node.Id, node.Span);
         }
 
-        var structural = new AosStructuralValidator();
-        var validation = structural.Validate(parse.Root);
-        if (validation.Count > 0)
-        {
-            var first = validation[0];
-            return CreateRuntimeErr(first.Code, first.Message, first.NodeId ?? node.Id, node.Span);
-        }
-
         var priorBaseDir = runtime.ModuleBaseDir;
         runtime.ModuleBaseDir = HostFileSystem.GetDirectoryName(absolutePath) ?? priorBaseDir;
         runtime.ModuleLoading.Add(absolutePath);

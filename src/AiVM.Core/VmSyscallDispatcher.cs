@@ -15,9 +15,20 @@ public static class VmSyscallDispatcher
             SyscallId.NetTcpListen => 2,
             SyscallId.NetTcpListenTls => 4,
             SyscallId.NetTcpConnect => 2,
+            SyscallId.NetTcpConnectTls => 2,
+            SyscallId.NetTcpConnectStart => 2,
+            SyscallId.NetTcpConnectTlsStart => 2,
             SyscallId.NetTcpAccept => 1,
             SyscallId.NetTcpRead => 2,
+            SyscallId.NetTcpReadStart => 2,
             SyscallId.NetTcpWrite => 2,
+            SyscallId.NetTcpWriteStart => 2,
+            SyscallId.NetAsyncPoll => 1,
+            SyscallId.NetAsyncAwait => 1,
+            SyscallId.NetAsyncCancel => 1,
+            SyscallId.NetAsyncResultInt => 1,
+            SyscallId.NetAsyncResultString => 1,
+            SyscallId.NetAsyncError => 1,
             SyscallId.NetUdpBind => 2,
             SyscallId.NetUdpRecv => 2,
             SyscallId.NetUdpSend => 4,
@@ -167,6 +178,33 @@ public static class VmSyscallDispatcher
                 result = SysValue.Int(VmSyscalls.NetTcpConnect(network, tcpConnectHost, tcpConnectPort));
                 return true;
 
+            case SyscallId.NetTcpConnectTls:
+                if (!TryGetString(args, 0, 2, out var tcpConnectTlsHost) ||
+                    !TryGetInt(args, 1, 2, out var tcpConnectTlsPort))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.NetTcpConnectTls(network, tcpConnectTlsHost, tcpConnectTlsPort));
+                return true;
+
+            case SyscallId.NetTcpConnectStart:
+                if (!TryGetString(args, 0, 2, out var tcpConnectStartHost) ||
+                    !TryGetInt(args, 1, 2, out var tcpConnectStartPort))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.NetTcpConnectStart(network, tcpConnectStartHost, tcpConnectStartPort));
+                return true;
+
+            case SyscallId.NetTcpConnectTlsStart:
+                if (!TryGetString(args, 0, 2, out var tcpConnectTlsStartHost) ||
+                    !TryGetInt(args, 1, 2, out var tcpConnectTlsStartPort))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.NetTcpConnectTlsStart(network, tcpConnectTlsStartHost, tcpConnectTlsStartPort));
+                return true;
+
             case SyscallId.NetTcpRead:
                 if (!TryGetInt(args, 0, 2, out var tcpReadConnectionHandle) ||
                     !TryGetInt(args, 1, 2, out var tcpReadMaxBytes))
@@ -176,6 +214,15 @@ public static class VmSyscallDispatcher
                 result = SysValue.String(VmSyscalls.NetTcpRead(network, tcpReadConnectionHandle, tcpReadMaxBytes));
                 return true;
 
+            case SyscallId.NetTcpReadStart:
+                if (!TryGetInt(args, 0, 2, out var tcpReadStartConnectionHandle) ||
+                    !TryGetInt(args, 1, 2, out var tcpReadStartMaxBytes))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.NetTcpReadStart(network, tcpReadStartConnectionHandle, tcpReadStartMaxBytes));
+                return true;
+
             case SyscallId.NetTcpWrite:
                 if (!TryGetInt(args, 0, 2, out var tcpWriteConnectionHandle) ||
                     !TryGetString(args, 1, 2, out var tcpWriteData))
@@ -183,6 +230,63 @@ public static class VmSyscallDispatcher
                     return true;
                 }
                 result = SysValue.Int(VmSyscalls.NetTcpWrite(network, tcpWriteConnectionHandle, tcpWriteData));
+                return true;
+
+            case SyscallId.NetTcpWriteStart:
+                if (!TryGetInt(args, 0, 2, out var tcpWriteStartConnectionHandle) ||
+                    !TryGetString(args, 1, 2, out var tcpWriteStartData))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.NetTcpWriteStart(network, tcpWriteStartConnectionHandle, tcpWriteStartData));
+                return true;
+
+            case SyscallId.NetAsyncPoll:
+                if (!TryGetInt(args, 0, 1, out var netAsyncPollHandle))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.NetAsyncPoll(network, netAsyncPollHandle));
+                return true;
+
+            case SyscallId.NetAsyncAwait:
+                if (!TryGetInt(args, 0, 1, out var netAsyncAwaitHandle))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.NetAsyncAwait(network, netAsyncAwaitHandle));
+                return true;
+
+            case SyscallId.NetAsyncCancel:
+                if (!TryGetInt(args, 0, 1, out var netAsyncCancelHandle))
+                {
+                    return true;
+                }
+                result = SysValue.Bool(VmSyscalls.NetAsyncCancel(network, netAsyncCancelHandle));
+                return true;
+
+            case SyscallId.NetAsyncResultInt:
+                if (!TryGetInt(args, 0, 1, out var netAsyncResultIntHandle))
+                {
+                    return true;
+                }
+                result = SysValue.Int(VmSyscalls.NetAsyncResultInt(network, netAsyncResultIntHandle));
+                return true;
+
+            case SyscallId.NetAsyncResultString:
+                if (!TryGetInt(args, 0, 1, out var netAsyncResultStringHandle))
+                {
+                    return true;
+                }
+                result = SysValue.String(VmSyscalls.NetAsyncResultString(network, netAsyncResultStringHandle));
+                return true;
+
+            case SyscallId.NetAsyncError:
+                if (!TryGetInt(args, 0, 1, out var netAsyncErrorHandle))
+                {
+                    return true;
+                }
+                result = SysValue.String(VmSyscalls.NetAsyncError(network, netAsyncErrorHandle));
                 return true;
 
             case SyscallId.NetUdpBind:

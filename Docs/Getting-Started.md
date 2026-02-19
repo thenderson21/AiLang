@@ -42,6 +42,17 @@ cat examples/golden/run_var.in.aos | ./tools/airun run --vm=ast src/compiler/aic
 
 - `airun run`: `0` success, `2` parse/validation error, `3` runtime error.
 - `scripts/test.sh`: nonzero if any golden fails.
+- Update-path blocking guard:
+  - `VAL340` at validation-time
+  - `RUN031` at runtime/VM-time
+
+## Debugging Notes
+
+- For golden verification, prefer native `airun` execution over `dotnet .../airun.dll` because the golden harness spawns subprocesses using the current process path.
+- If `./tools/airun` is not usable in your environment, use the published native artifact:
+```bash
+./.artifacts/airun-osx-arm64/airun run --vm=ast src/compiler/aic.aos test examples/golden
+```
 
 ## Minimal Import Example
 

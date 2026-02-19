@@ -48,6 +48,33 @@ public class AosTests
         public string? LastNetTcpConnectHost { get; private set; }
         public int LastNetTcpConnectPort { get; private set; } = -1;
         public int NetTcpConnectResult { get; set; } = -1;
+        public string? LastNetTcpConnectTlsHost { get; private set; }
+        public int LastNetTcpConnectTlsPort { get; private set; } = -1;
+        public int NetTcpConnectTlsResult { get; set; } = -1;
+        public string? LastNetTcpConnectStartHost { get; private set; }
+        public int LastNetTcpConnectStartPort { get; private set; } = -1;
+        public int NetTcpConnectStartResult { get; set; } = -1;
+        public string? LastNetTcpConnectTlsStartHost { get; private set; }
+        public int LastNetTcpConnectTlsStartPort { get; private set; } = -1;
+        public int NetTcpConnectTlsStartResult { get; set; } = -1;
+        public int LastNetTcpReadStartHandle { get; private set; } = -1;
+        public int LastNetTcpReadStartMaxBytes { get; private set; } = -1;
+        public int NetTcpReadStartResult { get; set; } = -1;
+        public int LastNetTcpWriteStartHandle { get; private set; } = -1;
+        public string? LastNetTcpWriteStartData { get; private set; }
+        public int NetTcpWriteStartResult { get; set; } = -1;
+        public int LastNetAsyncPollHandle { get; private set; } = -1;
+        public int NetAsyncPollResult { get; set; } = 0;
+        public int LastNetAsyncAwaitHandle { get; private set; } = -1;
+        public int NetAsyncAwaitResult { get; set; } = 1;
+        public int LastNetAsyncCancelHandle { get; private set; } = -1;
+        public bool NetAsyncCancelResult { get; set; }
+        public int LastNetAsyncResultIntHandle { get; private set; } = -1;
+        public int NetAsyncResultIntResult { get; set; }
+        public int LastNetAsyncResultStringHandle { get; private set; } = -1;
+        public string NetAsyncResultStringResult { get; set; } = string.Empty;
+        public int LastNetAsyncErrorHandle { get; private set; } = -1;
+        public string NetAsyncErrorResult { get; set; } = string.Empty;
         public string? LastNetTcpReadPayload { get; set; }
         public int LastNetTcpReadHandle { get; private set; } = -1;
         public int LastNetTcpReadMaxBytes { get; private set; } = -1;
@@ -241,6 +268,77 @@ public class AosTests
             LastNetTcpConnectHost = host;
             LastNetTcpConnectPort = port;
             return NetTcpConnectResult;
+        }
+
+        public override int NetTcpConnectTls(VmNetworkState state, string host, int port)
+        {
+            LastNetTcpConnectTlsHost = host;
+            LastNetTcpConnectTlsPort = port;
+            return NetTcpConnectTlsResult;
+        }
+
+        public override int NetTcpConnectStart(VmNetworkState state, string host, int port)
+        {
+            LastNetTcpConnectStartHost = host;
+            LastNetTcpConnectStartPort = port;
+            return NetTcpConnectStartResult;
+        }
+
+        public override int NetTcpConnectTlsStart(VmNetworkState state, string host, int port)
+        {
+            LastNetTcpConnectTlsStartHost = host;
+            LastNetTcpConnectTlsStartPort = port;
+            return NetTcpConnectTlsStartResult;
+        }
+
+        public override int NetTcpReadStart(VmNetworkState state, int connectionHandle, int maxBytes)
+        {
+            LastNetTcpReadStartHandle = connectionHandle;
+            LastNetTcpReadStartMaxBytes = maxBytes;
+            return NetTcpReadStartResult;
+        }
+
+        public override int NetTcpWriteStart(VmNetworkState state, int connectionHandle, string data)
+        {
+            LastNetTcpWriteStartHandle = connectionHandle;
+            LastNetTcpWriteStartData = data;
+            return NetTcpWriteStartResult;
+        }
+
+        public override int NetAsyncPoll(VmNetworkState state, int operationHandle)
+        {
+            LastNetAsyncPollHandle = operationHandle;
+            return NetAsyncPollResult;
+        }
+
+        public override int NetAsyncAwait(VmNetworkState state, int operationHandle)
+        {
+            LastNetAsyncAwaitHandle = operationHandle;
+            return NetAsyncAwaitResult;
+        }
+
+        public override bool NetAsyncCancel(VmNetworkState state, int operationHandle)
+        {
+            LastNetAsyncCancelHandle = operationHandle;
+            return NetAsyncCancelResult;
+        }
+
+        public override int NetAsyncResultInt(VmNetworkState state, int operationHandle)
+        {
+            LastNetAsyncResultIntHandle = operationHandle;
+            return NetAsyncResultIntResult;
+        }
+
+        public override string NetAsyncResultString(VmNetworkState state, int operationHandle)
+        {
+            LastNetAsyncResultStringHandle = operationHandle;
+            return NetAsyncResultStringResult;
+        }
+
+        public override string NetAsyncError(VmNetworkState state, int operationHandle)
+        {
+            LastNetAsyncErrorHandle = operationHandle;
+            return NetAsyncErrorResult;
         }
 
         public override string NetTcpRead(VmNetworkState state, int connectionHandle, int maxBytes)
@@ -1357,6 +1455,8 @@ public class AosTests
         Assert.That(listenId, Is.EqualTo(SyscallId.NetTcpListen));
         Assert.That(SyscallRegistry.TryResolve("sys.net_tcpConnect", out var connectId), Is.True);
         Assert.That(connectId, Is.EqualTo(SyscallId.NetTcpConnect));
+        Assert.That(SyscallRegistry.TryResolve("sys.net_tcpConnectTls", out var connectTlsId), Is.True);
+        Assert.That(connectTlsId, Is.EqualTo(SyscallId.NetTcpConnectTls));
         Assert.That(SyscallRegistry.TryResolve("sys.net_tcpAccept", out var acceptId), Is.True);
         Assert.That(acceptId, Is.EqualTo(SyscallId.NetTcpAccept));
         Assert.That(SyscallRegistry.TryResolve("sys.net_tcpRead", out var readId), Is.True);
@@ -1423,6 +1523,32 @@ public class AosTests
             Assert.That(value.AsInt(), Is.EqualTo(91));
             Assert.That(host.LastNetTcpConnectHost, Is.EqualTo("example.com"));
             Assert.That(host.LastNetTcpConnectPort, Is.EqualTo(80));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_NetTcpConnectTls_CallsHost()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.net_tcpConnectTls) { Lit#h1(value=\"example.com\") Lit#p1(value=443) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost { NetTcpConnectTlsResult = 92 };
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Int));
+            Assert.That(value.AsInt(), Is.EqualTo(92));
+            Assert.That(host.LastNetTcpConnectTlsHost, Is.EqualTo("example.com"));
+            Assert.That(host.LastNetTcpConnectTlsPort, Is.EqualTo(443));
         }
         finally
         {
@@ -2035,7 +2161,7 @@ public class AosTests
         var previous = VmSyscalls.Host;
         var host = new RecordingSyscallHost
         {
-            UiPollEventResult = new VmUiEvent("none", string.Empty, 0, 0)
+            UiPollEventResult = new VmUiEvent("none", string.Empty, 0, 0, string.Empty, string.Empty, string.Empty, false)
         };
         try
         {
@@ -2597,14 +2723,12 @@ public class AosTests
     }
 
     [Test]
-    public void StdHttpHelpers_HttpRequest_UsesTcpSyscalls()
+    public void StdHttpHelpers_HttpRequestStart_UsesTcpStartSyscalls()
     {
         var previous = VmSyscalls.Host;
         var host = new RecordingSyscallHost
         {
-            NetTcpConnectResult = 12,
-            NetTcpWriteResult = 84,
-            LastNetTcpReadPayload = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok",
+            NetTcpConnectStartResult = 101,
             StrUtf8ByteCountResult = 3
         };
 
@@ -2613,6 +2737,7 @@ public class AosTests
             VmSyscalls.Host = host;
             var runtime = new AosRuntime();
             runtime.Permissions.Add("sys");
+            runtime.Permissions.Add("compiler");
             var interpreter = new AosInterpreter();
             var stdHttpProgram = Parse(File.ReadAllText(FindRepoFile("src/std/http.aos")));
             Assert.That(stdHttpProgram.Diagnostics, Is.Empty);
@@ -2621,16 +2746,105 @@ public class AosTests
 
             var requestParse = Parse("Program#p1 { Call#c1(target=httpRequest) { Lit#m1(value=\"POST\") Lit#h1(value=\"example.com\") Lit#p1(value=80) Lit#pa1(value=\"/submit\") Lit#hd1(value=\"Accept: text/plain\") Lit#b1(value=\"abc\") Lit#mx1(value=4096) } }");
             Assert.That(requestParse.Diagnostics, Is.Empty);
+            var stateValue = interpreter.EvaluateProgram(requestParse.Root!, runtime);
+            Assert.That(stateValue.Kind, Is.EqualTo(AosValueKind.Node));
+            var stateNode = stateValue.AsNode();
+            Assert.That(stateNode.Kind, Is.EqualTo("Block"));
+            Assert.That(host.LastNetTcpConnectStartHost, Is.EqualTo("example.com"));
+            Assert.That(host.LastNetTcpConnectStartPort, Is.EqualTo(80));
+            Assert.That(host.LastNetTcpWriteStartHandle, Is.EqualTo(-1));
+            Assert.That(host.LastNetTcpReadStartHandle, Is.EqualTo(-1));
+            Assert.That(host.LastNetCloseHandle, Is.EqualTo(-1));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void StdHttpHelpers_HttpRequestAwait_UsesTlsConnect_ForPort443()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost
+        {
+            NetTcpConnectResult = 77,
+            NetTcpConnectTlsStartResult = 21,
+            NetTcpWriteStartResult = 84,
+            NetTcpReadStartResult = 85,
+            NetAsyncPollResult = 1,
+            NetAsyncResultIntResult = 22,
+            NetAsyncResultStringResult = "HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok",
+            StrUtf8ByteCountResult = 0
+        };
+
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("sys");
+            runtime.Permissions.Add("compiler");
+            var interpreter = new AosInterpreter();
+            var stdHttpProgram = Parse(File.ReadAllText(FindRepoFile("src/std/http.aos")));
+            Assert.That(stdHttpProgram.Diagnostics, Is.Empty);
+            var stdHttpResult = interpreter.EvaluateProgram(stdHttpProgram.Root!, runtime);
+            Assert.That(stdHttpResult.Kind, Is.Not.EqualTo(AosValueKind.Unknown));
+
+            var requestParse = Parse("Program#p1 { Call#c1(target=httpRequestAwait) { Call#c2(target=httpRequest) { Lit#m1(value=\"GET\") Lit#h1(value=\"example.com\") Lit#p1(value=443) Lit#pa1(value=\"/\") Lit#hd1(value=\"\") Lit#b1(value=\"\") Lit#mx1(value=4096) } } }");
+            Assert.That(requestParse.Diagnostics, Is.Empty);
             var responseValue = interpreter.EvaluateProgram(requestParse.Root!, runtime);
             Assert.That(responseValue.Kind, Is.EqualTo(AosValueKind.String));
             Assert.That(responseValue.AsString(), Is.EqualTo("HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\nok"));
-            Assert.That(host.LastNetTcpConnectHost, Is.EqualTo("example.com"));
-            Assert.That(host.LastNetTcpConnectPort, Is.EqualTo(80));
-            Assert.That(host.LastNetTcpWriteHandle, Is.EqualTo(12));
-            Assert.That(host.LastNetTcpWriteData, Is.EqualTo("POST /submit HTTP/1.1\r\nHost: example.com\r\nAccept: text/plain\r\nContent-Length: 3\r\n\r\nabc"));
-            Assert.That(host.LastNetTcpReadHandle, Is.EqualTo(12));
-            Assert.That(host.LastNetTcpReadMaxBytes, Is.EqualTo(4096));
-            Assert.That(host.LastNetCloseHandle, Is.EqualTo(12));
+            Assert.That(host.LastNetTcpConnectTlsStartHost, Is.EqualTo("example.com"));
+            Assert.That(host.LastNetTcpConnectTlsStartPort, Is.EqualTo(443));
+            Assert.That(host.LastNetTcpConnectHost, Is.Null);
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void StdNetHelpers_UdpWrappers_CallSyscalls()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost
+        {
+            NetUdpBindResult = 31,
+            NetUdpSendResult = 4,
+            NetUdpRecvResult = new VmUdpPacket("127.0.0.1", 9001, "pong")
+        };
+
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("net");
+            var interpreter = new AosInterpreter();
+            var stdNetProgram = Parse(File.ReadAllText(FindRepoFile("src/std/net.aos")));
+            Assert.That(stdNetProgram.Diagnostics, Is.Empty);
+            var stdNetResult = interpreter.EvaluateProgram(stdNetProgram.Root!, runtime);
+            Assert.That(stdNetResult.Kind, Is.Not.EqualTo(AosValueKind.Unknown));
+
+            var callParse = Parse("Program#p2 { Let#l2(name=h) { Call#c20(target=udpBind) { Lit#s20(value=\"127.0.0.1\") Lit#i20(value=9000) } } Call#c21(target=udpSend) { Var#v20(name=h) Lit#s21(value=\"127.0.0.1\") Lit#i21(value=9001) Lit#d20(value=\"ping\") } Call#c22(target=udpRecv) { Var#v21(name=h) Lit#i22(value=64) } }");
+            Assert.That(callParse.Diagnostics, Is.Empty);
+            var packetValue = interpreter.EvaluateProgram(callParse.Root!, runtime);
+            Assert.That(packetValue.Kind, Is.EqualTo(AosValueKind.Node));
+            var packet = packetValue.AsNode();
+            Assert.That(packet.Kind, Is.EqualTo("UdpPacket"));
+            Assert.That(packet.Attrs["host"].AsString(), Is.EqualTo("127.0.0.1"));
+            Assert.That(packet.Attrs["port"].AsInt(), Is.EqualTo(9001));
+            Assert.That(packet.Attrs["data"].AsString(), Is.EqualTo("pong"));
+
+            Assert.That(host.LastNetUdpBindHost, Is.EqualTo("127.0.0.1"));
+            Assert.That(host.LastNetUdpBindPort, Is.EqualTo(9000));
+            Assert.That(host.LastNetUdpSendHandle, Is.EqualTo(31));
+            Assert.That(host.LastNetUdpSendHost, Is.EqualTo("127.0.0.1"));
+            Assert.That(host.LastNetUdpSendPort, Is.EqualTo(9001));
+            Assert.That(host.LastNetUdpSendData, Is.EqualTo("ping"));
+            Assert.That(host.LastNetUdpRecvHandle, Is.EqualTo(31));
+            Assert.That(host.LastNetUdpRecvMaxBytes, Is.EqualTo(64));
         }
         finally
         {
@@ -2830,6 +3044,42 @@ public class AosTests
     }
 
     [Test]
+    public void Validator_UpdateContext_RejectsBlockingCalls()
+    {
+        var parse = Parse("Program#p1 { Let#l1(name=update) { Fn#f1(params=state,event) { Block#b1 { Call#c1(target=sys.net_asyncAwait) { Lit#i1(value=1) } Return#r1 { Var#v1(name=state) } } } } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var permissions = new HashSet<string>(StringComparer.Ordinal) { "sys" };
+        var validator = new AosValidator();
+        var validation = validator.Validate(parse.Root!, null, permissions, runStructural: false);
+        Assert.That(validation.Diagnostics.Any(d => d.Code == "VAL340"), Is.True);
+    }
+
+    [Test]
+    public void Validator_UpdateContext_AllowsNonBlockingPoll()
+    {
+        var parse = Parse("Program#p1 { Let#l1(name=update) { Fn#f1(params=state,event) { Block#b1 { Call#c1(target=sys.net_asyncPoll) { Lit#i1(value=1) } Return#r1 { Var#v1(name=state) } } } } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var permissions = new HashSet<string>(StringComparer.Ordinal) { "sys" };
+        var validator = new AosValidator();
+        var validation = validator.Validate(parse.Root!, null, permissions, runStructural: false);
+        Assert.That(validation.Diagnostics.Any(d => d.Code == "VAL340"), Is.False);
+    }
+
+    [Test]
+    public void Validator_NonUpdateContext_DoesNotEmitBlockingDiagnostic()
+    {
+        var parse = Parse("Program#p1 { Let#l1(name=start) { Fn#f1(params=argv) { Block#b1 { Return#r1 { Call#c1(target=sys.net_asyncAwait) { Lit#i1(value=1) } } } } } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var permissions = new HashSet<string>(StringComparer.Ordinal) { "sys" };
+        var validator = new AosValidator();
+        var validation = validator.Validate(parse.Root!, null, permissions, runStructural: false);
+        Assert.That(validation.Diagnostics.Any(d => d.Code == "VAL340"), Is.False);
+    }
+
+    [Test]
     public void SyscallDispatch_InvalidArgs_ReturnsUnknown()
     {
         var parse = Parse("Program#p1 { Call#c1(target=sys.net_close) }");
@@ -2857,6 +3107,51 @@ public class AosTests
         Assert.That(err.Kind, Is.EqualTo("Err"));
         Assert.That(err.Attrs["code"].AsString(), Is.EqualTo("VM001"));
         Assert.That(err.Attrs["message"].AsString(), Is.EqualTo("Unsupported bytecode version."));
+    }
+
+    [Test]
+    public void AstRuntime_UpdateContext_RejectsBlockingCall_Transitively()
+    {
+        var source = "Program#p1 { Let#l1(name=waitNet) { Fn#f1(params=op) { Block#b1 { Return#r1 { Call#c1(target=sys.net_asyncAwait) { Var#v1(name=op) } } } } } Let#l2(name=update) { Fn#f2(params=state,event) { Block#b2 { Call#c2(target=waitNet) { Lit#i1(value=1) } Return#r2 { Var#v2(name=state) } } } } Call#c3(target=update) { Lit#i2(value=0) Lit#i3(value=0) } }";
+        var parse = Parse(source);
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var interpreter = new AosInterpreter();
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("sys");
+
+        var result = interpreter.EvaluateProgram(parse.Root!, runtime);
+        Assert.That(result.Kind, Is.EqualTo(AosValueKind.Node));
+        var err = result.AsNode();
+        Assert.That(err.Kind, Is.EqualTo("Err"));
+        Assert.That(err.Attrs["code"].AsString(), Is.EqualTo("RUN031"));
+        Assert.That(err.Attrs["message"].AsString(), Does.Contain("Blocking call 'sys.net_asyncAwait'"));
+    }
+
+    [Test]
+    public void VmRunBytecode_UpdateContext_RejectsBlockingCall_Transitively()
+    {
+        var source = "Program#p1 { Let#l1(name=waitNet) { Fn#f1(params=op) { Block#b1 { Return#r1 { Call#c1(target=sys.net_asyncAwait) { Var#v1(name=op) } } } } } Let#l2(name=update) { Fn#f2(params=state,event) { Block#b2 { Call#c2(target=waitNet) { Lit#i1(value=1) } Return#r2 { Var#v2(name=state) } } } } Let#l3(name=start) { Fn#f3(params=argv) { Block#b3 { Return#r3 { Call#c3(target=update) { Lit#i2(value=0) Lit#i3(value=0) } } } } } }";
+        var parse = Parse(source);
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var interpreter = new AosInterpreter();
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("compiler");
+        runtime.Permissions.Add("sys");
+        runtime.Env["__program"] = AosValue.FromNode(parse.Root!);
+
+        var emitCall = Parse("Call#c1(target=compiler.emitBytecode) { Var#v1(name=__program) }").Root!;
+        var bytecodeValue = interpreter.EvaluateExpression(emitCall, runtime);
+        Assert.That(bytecodeValue.Kind, Is.EqualTo(AosValueKind.Node));
+
+        var args = Parse("Block#argv").Root!;
+        var result = interpreter.RunBytecode(bytecodeValue.AsNode(), "start", args, runtime);
+        Assert.That(result.Kind, Is.EqualTo(AosValueKind.Node));
+        var err = result.AsNode();
+        Assert.That(err.Kind, Is.EqualTo("Err"));
+        Assert.That(err.Attrs["code"].AsString(), Is.EqualTo("RUN031"));
+        Assert.That(err.Attrs["message"].AsString(), Does.Contain("Blocking call 'sys.net_asyncAwait'"));
     }
 
     [Test]
@@ -3183,6 +3478,136 @@ public class AosTests
     }
 
     [Test]
+    public void WeatherApi_ProgramEvaluation_DoesNotThrow()
+    {
+        var appPath = FindRepoFile("samples/weather-api/src/app.aos");
+        var parse = AosParsing.ParseFile(appPath);
+        Assert.That(parse.Root, Is.Not.Null);
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("compiler");
+        runtime.Permissions.Add("sys");
+        runtime.Permissions.Add("io");
+        runtime.Permissions.Add("console");
+        runtime.ModuleBaseDir = Path.GetDirectoryName(appPath)!;
+
+        var interpreter = new AosInterpreter();
+        AosStandardLibraryLoader.EnsureLoaded(runtime, interpreter);
+
+        var result = interpreter.EvaluateProgram(parse.Root!, runtime);
+        Assert.That(result.Kind, Is.Not.EqualTo(AosValueKind.Unknown));
+    }
+
+    [Test]
+    public void WeatherApi_RuntimeStart_DoesNotThrow()
+    {
+        var appPath = FindRepoFile("samples/weather-api/src/app.aos");
+        var parse = AosParsing.ParseFile(appPath);
+        Assert.That(parse.Root, Is.Not.Null);
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var runtime = new AosRuntime();
+        runtime.Permissions.Add("compiler");
+        runtime.Permissions.Add("sys");
+        runtime.Permissions.Add("io");
+        runtime.Permissions.Add("console");
+        runtime.ModuleBaseDir = Path.GetDirectoryName(appPath)!;
+        runtime.Env["argv"] = AosValue.FromNode(AosRuntimeNodes.BuildArgvNode(Array.Empty<string>()));
+        runtime.ReadOnlyBindings.Add("argv");
+        runtime.Env["__entryExport"] = AosValue.FromString("start");
+        runtime.ReadOnlyBindings.Add("__entryExport");
+        runtime.Env["__vm_mode"] = AosValue.FromString("bytecode");
+        runtime.ReadOnlyBindings.Add("__vm_mode");
+
+        var executionProgram = new AosNode(
+            "Program",
+            parse.Root!.Id,
+            parse.Root.Attrs,
+            parse.Root.Children.Concat(new[]
+            {
+                new AosNode(
+                    "Call",
+                    "run_manifest_entry_call_test",
+                    new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                    {
+                        ["target"] = new AosAttrValue(AosAttrKind.Identifier, "start")
+                    },
+                    new List<AosNode>
+                    {
+                        new AosNode(
+                            "Var",
+                            "run_manifest_entry_args_test",
+                            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                            {
+                                ["name"] = new AosAttrValue(AosAttrKind.Identifier, "argv")
+                            },
+                            new List<AosNode>(),
+                            parse.Root.Span)
+                    },
+                    parse.Root.Span)
+            }).ToList(),
+            parse.Root.Span);
+
+        runtime.Env["__program"] = AosValue.FromNode(executionProgram);
+        runtime.ReadOnlyBindings.Add("__program");
+
+        var interpreter = new AosInterpreter();
+        AosStandardLibraryLoader.EnsureLoaded(runtime, interpreter);
+        var init = interpreter.EvaluateProgram(executionProgram, runtime);
+        Assert.That(init.Kind, Is.Not.EqualTo(AosValueKind.Unknown));
+        runtime.Env["__program_result"] = init;
+        runtime.ReadOnlyBindings.Add("__program_result");
+
+        var runtimeKernel = AosCompilerAssets.LoadRequiredProgram("runtime.aos");
+        var kernelInit = interpreter.EvaluateProgram(runtimeKernel, runtime);
+        Assert.That(kernelInit.Kind, Is.Not.EqualTo(AosValueKind.Unknown));
+
+        runtime.Env["__kernel_args"] = AosValue.FromNode(
+            new AosNode(
+                "Block",
+                "kargv_run_test",
+                new Dictionary<string, AosAttrValue>(StringComparer.Ordinal),
+                new List<AosNode>
+                {
+                    new AosNode(
+                        "Lit",
+                        "karg_run0_test",
+                        new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                        {
+                            ["value"] = new AosAttrValue(AosAttrKind.String, "run")
+                        },
+                        new List<AosNode>(),
+                        parse.Root.Span)
+                },
+                parse.Root.Span));
+
+        var call = new AosNode(
+            "Call",
+            "kernel_call_test",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+            {
+                ["target"] = new AosAttrValue(AosAttrKind.Identifier, "runtime.start")
+            },
+            new List<AosNode>
+            {
+                new AosNode(
+                    "Var",
+                    "kernel_args_test",
+                    new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                    {
+                        ["name"] = new AosAttrValue(AosAttrKind.Identifier, "__kernel_args")
+                    },
+                    new List<AosNode>(),
+                    parse.Root.Span)
+            },
+            parse.Root.Span);
+
+        var result = interpreter.EvaluateExpression(call, runtime);
+        Assert.That(result.Kind, Is.Not.EqualTo(AosValueKind.Unknown));
+    }
+
+    [Test]
     public void Aic_Smoke_FmtCheckRun()
     {
         var aicPath = FindRepoFile("src/compiler/aic.aos");
@@ -3235,6 +3660,35 @@ public class AosTests
             var exitCode = AosCliExecutionEngine.RunSource(manifestPath, Array.Empty<string>(), traceEnabled: false, vmMode: "bytecode", lines.Add);
 
             Assert.That(exitCode, Is.EqualTo(7));
+            Assert.That(lines.Count, Is.EqualTo(0));
+        }
+        finally
+        {
+            tempDir.Delete(recursive: true);
+        }
+    }
+
+    [Test]
+    public void RunSource_ProjectManifest_ResolvesImportsRelativeToEntryFile()
+    {
+        var tempDir = Directory.CreateTempSubdirectory("ailang-run-aiproj-imports-");
+        try
+        {
+            var srcDir = Path.Combine(tempDir.FullName, "src");
+            var libDir = Path.Combine(srcDir, "lib");
+            Directory.CreateDirectory(libDir);
+            var manifestPath = Path.Combine(tempDir.FullName, "project.aiproj");
+            var sourcePath = Path.Combine(srcDir, "main.aos");
+            var depPath = Path.Combine(libDir, "dep.aos");
+
+            File.WriteAllText(manifestPath, "Program#p1 { Project#proj1(name=\"demo\" entryFile=\"src/main.aos\" entryExport=\"start\") }");
+            File.WriteAllText(depPath, "Program#dp1 { Let#dl1(name=codeFromDep) { Fn#df1(params=_) { Block#db1 { Return#dr1 { Lit#di1(value=9) } } } } Export#de1(name=codeFromDep) }");
+            File.WriteAllText(sourcePath, "Program#mp1 { Import#mi1(path=\"lib/dep.aos\") Let#ml1(name=start) { Fn#mf1(params=args) { Block#mb1 { Let#ml2(name=code) { Call#mc1(target=codeFromDep) { Lit#mi2(value=0) } } Call#mc2(target=sys.proc_exit) { Var#mv1(name=code) } Return#mr1 { Lit#mi3(value=0) } } } } Export#me1(name=start) }");
+
+            var lines = new List<string>();
+            var exitCode = AosCliExecutionEngine.RunSource(manifestPath, Array.Empty<string>(), traceEnabled: false, vmMode: "bytecode", lines.Add);
+
+            Assert.That(exitCode, Is.EqualTo(9));
             Assert.That(lines.Count, Is.EqualTo(0));
         }
         finally

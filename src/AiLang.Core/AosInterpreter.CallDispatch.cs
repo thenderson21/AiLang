@@ -54,7 +54,15 @@ public sealed partial class AosInterpreter
         }
 
         var args = node.Children.Select(child => EvalNode(child, runtime, env)).ToList();
-        result = EvalFunctionCall(functionValue.AsFunction(), args, runtime);
+        runtime.CallStack.Push(target);
+        try
+        {
+            result = EvalFunctionCall(functionValue.AsFunction(), args, runtime);
+        }
+        finally
+        {
+            runtime.CallStack.Pop();
+        }
         return true;
     }
 }

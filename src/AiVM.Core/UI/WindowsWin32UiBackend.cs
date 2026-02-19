@@ -335,7 +335,7 @@ public partial class DefaultSyscallHost
                 }
 
                 DestroyWindow(state.Hwnd);
-                state.Events.Enqueue(new VmUiEvent("closed", string.Empty, 0, 0));
+                state.Events.Enqueue(new VmUiEvent("closed", string.Empty, 0, 0, string.Empty, string.Empty, string.Empty, false));
             }
 
             return true;

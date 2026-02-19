@@ -173,7 +173,7 @@ Canonical sample projects live in `samples/`:
 - `samples/weather-site`: lifecycle HTTP app serving `/` HTML using shared weather data logic.
 - `samples/cli-fetch`: CLI-style app that formats and prints weather output.
 
-Note: weather samples now call a live upstream weather endpoint via `sys.http_get`, so runtime internet access is required.
+Note: weather samples now call a live upstream weather endpoint via `httpRequest` from `src/std/http.aos`, so runtime internet access is required.
 
 Run samples:
 

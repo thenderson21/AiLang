@@ -1,5 +1,5 @@
 Program#ws_p1 {
-  Import#ws_i0(path="../../../src/std/http.aos")
+  Import#ws_im0(path="../../../src/std/http.aos")
 
   Let#ws_l0(name=sampleHomeHtml) {
     Lit#ws_i0(value="<html><body><h1>AiLang Weather Site</h1><p>This page fetches live weather from the same upstream provider used by weather-api.</p><p>Try the API at <code>/weather?city=Fort%20Worth</code> on the weather-api sample.</p><p>Fort Worth</p><pre>Fort Worth: +22C</pre></body></html>")
@@ -15,13 +15,21 @@ Program#ws_p1 {
     Fn#ws_f2(params=city) {
       Block#ws_b2 {
         Return#ws_r2 {
-          Call#ws_c1(target=sys.http_get) {
+          Call#ws_c100(target=httpRequestAwait) {
+            Call#ws_c1(target=httpRequest) {
+            Lit#ws_i200(value="GET")
+            Lit#ws_i201(value="wttr.in")
+            Lit#ws_i202(value=443)
             StrConcat#ws_s1 {
-              Lit#ws_i2(value="https://wttr.in/")
+              Lit#ws_i203(value="/")
               StrConcat#ws_s2 {
                 Var#ws_v1(name=city)
-                Lit#ws_i3(value="?format=3")
+                Lit#ws_i204(value="?format=3")
               }
+            }
+            Lit#ws_i205(value="")
+            Lit#ws_i206(value="")
+            Lit#ws_i207(value=16384)
             }
           }
         }

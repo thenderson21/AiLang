@@ -1,22 +1,105 @@
 Program#cf_p1 {
+  Import#cf_im0(path="../../../src/std/http.aos")
+
   Export#cf_e1(name=start)
   Export#cf_e2(name=formatWeather)
   Export#cf_e4(name=getWeatherText)
 
-  Let#cf_l0(name=sampleCliText) { Lit#cf_i0(value="Weather for Fort Worth: Fort Worth: +22C") }
+  Let#cf_l0(name=sampleCliText) { Lit#cf_i00(value="Weather for London: London: +22C") }
   Export#cf_e3(name=sampleCliText)
+
+  Let#cf_u_l1(name=textLen) {
+    Fn#cf_u_f1(params=text) {
+      Block#cf_u_b1 {
+        If#cf_u_if1 {
+          Eq#cf_u_eq1 { Var#cf_u_v1(name=text) Lit#cf_u_i1(value="") }
+          Block#cf_u_b2 { Return#cf_u_r1 { Lit#cf_u_i2(value=0) } }
+          Block#cf_u_b3 {
+            Return#cf_u_r2 {
+              Add#cf_u_add1 {
+                Lit#cf_u_i3(value=1)
+                Call#cf_u_c1(target=textLen) {
+                  Call#cf_u_c2(target=sys.str_substring) {
+                    Var#cf_u_v2(name=text)
+                    Lit#cf_u_i4(value=1)
+                    Lit#cf_u_i5(value=2147483647)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cf_u_l2(name=findSpace) {
+    Fn#cf_u_f2(params=text,index) {
+      Block#cf_u_b4 {
+        If#cf_u_if2 {
+          Eq#cf_u_eq2 { Var#cf_u_v4(name=index) Call#cf_u_c4(target=textLen) { Var#cf_u_v5(name=text) } }
+          Block#cf_u_b5 { Return#cf_u_r3 { Lit#cf_u_i6(value=-1) } }
+          Block#cf_u_b6 {
+            If#cf_u_if3 {
+              Eq#cf_u_eq3 { Call#cf_u_c5(target=sys.str_substring) { Var#cf_u_v6(name=text) Var#cf_u_v7(name=index) Lit#cf_u_i7(value=1) } Lit#cf_u_i8(value=" ") }
+              Block#cf_u_b7 { Return#cf_u_r4 { Var#cf_u_v8(name=index) } }
+              Block#cf_u_b8 { Return#cf_u_r5 { Call#cf_u_c6(target=findSpace) { Var#cf_u_v9(name=text) Add#cf_u_add3 { Var#cf_u_v10(name=index) Lit#cf_u_i9(value=1) } } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cf_u_l3(name=replaceSpaces) {
+    Fn#cf_u_f3(params=text) {
+      Block#cf_u_b9 {
+        Let#cf_u_l4(name=spacePos) { Call#cf_u_c7(target=findSpace) { Var#cf_u_v11(name=text) Lit#cf_u_i10(value=0) } }
+        If#cf_u_if4 {
+          Eq#cf_u_eq4 { Var#cf_u_v12(name=spacePos) Lit#cf_u_i11(value=-1) }
+          Block#cf_u_b10 { Return#cf_u_r6 { Var#cf_u_v13(name=text) } }
+          Block#cf_u_b11 {
+            Let#cf_u_l5(name=prefix) { Call#cf_u_c8(target=sys.str_substring) { Var#cf_u_v14(name=text) Lit#cf_u_i12(value=0) Var#cf_u_v15(name=spacePos) } }
+            Let#cf_u_l6(name=suffixStart) { Add#cf_u_add4 { Var#cf_u_v16(name=spacePos) Lit#cf_u_i13(value=1) } }
+            Let#cf_u_l7(name=suffixLen) { Lit#cf_u_i15(value=2147483647) }
+            Let#cf_u_l8(name=suffix) { Call#cf_u_c11(target=sys.str_substring) { Var#cf_u_v19(name=text) Var#cf_u_v20(name=suffixStart) Var#cf_u_v21(name=suffixLen) } }
+            Return#cf_u_r7 {
+              Call#cf_u_c12(target=replaceSpaces) {
+                StrConcat#cf_u_s1 {
+                  Var#cf_u_v22(name=prefix)
+                  StrConcat#cf_u_s2 {
+                    Lit#cf_u_i14(value="+")
+                    Var#cf_u_v23(name=suffix)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
 
   Let#cf_l1(name=getWeatherText) {
     Fn#cf_f0(params=city) {
       Block#cf_b0 {
+        Let#cf_u_l9(name=cityEncoded) { Call#cf_u_c13(target=replaceSpaces) { Var#cf_u_v24(name=city) } }
         Return#cf_r0 {
-          Call#cf_c0(target=sys.http_get) {
-            StrConcat#cf_s0 {
-              Lit#cf_i20(value="https://wttr.in/")
-              StrConcat#cf_s00 {
-                Var#cf_v0(name=city)
-                Lit#cf_i21(value="?format=3")
+          Call#cf_c900(target=httpRequestAwait) {
+            Call#cf_c0(target=httpRequest) {
+              Lit#cf_i20(value="GET")
+              Lit#cf_i21(value="wttr.in")
+              Lit#cf_i22(value=443)
+              StrConcat#cf_s0 {
+                Lit#cf_i23(value="/")
+                StrConcat#cf_s00 {
+                  Var#cf_v0(name=cityEncoded)
+                  Lit#cf_i24(value="?format=3")
+                }
               }
+              Lit#cf_i25(value="")
+              Lit#cf_i26(value="")
+              Lit#cf_i27(value=16384)
             }
           }
         }
@@ -50,11 +133,11 @@ Program#cf_p1 {
         Let#cf_l4(name=city) {
           If#cf_if1 {
             Eq#cf_eq1 { ChildCount#cf_cc1 { Var#cf_v4(name=args) } Lit#cf_i4(value=0) }
-            Block#cf_b3 { Lit#cf_i5(value="Fort Worth") }
+            Block#cf_b3 { Lit#cf_i5(value="London") }
             Block#cf_b4 { AttrValueString#cf_a1 { ChildAt#cf_ca1 { Var#cf_v5(name=args) Lit#cf_i6(value=0) } Lit#cf_i7(value=0) } }
           }
         }
-        Call#cf_c2(target=io.print) { Call#cf_c3(target=formatWeather) { Var#cf_v6(name=city) } }
+        Call#cf_c2(target=sys.stdout_writeLine) { Call#cf_c3(target=formatWeather) { Var#cf_v6(name=city) } }
         Return#cf_r2 { Lit#cf_i8(value=0) }
       }
     }

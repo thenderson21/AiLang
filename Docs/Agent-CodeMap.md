@@ -34,6 +34,24 @@
 - Golden fixtures: `examples/golden/**/*.in.aos`, `.out.aos`, `.err`
 - Golden runner: `./scripts/test.sh`
 
+## Debug Playbook
+
+- Fast local signal:
+  - `./scripts/test.sh`
+  - expected success tail: `Ok#ok1(type=int value=0)`
+- Focused guard tests:
+  - `dotnet test tests/AiLang.Tests/AiLang.Tests.csproj -c Release --no-restore --filter "Validator_UpdateContext_RejectsBlockingCalls|VmRunBytecode_UpdateContext_RejectsBlockingCall_Transitively|AstRuntime_UpdateContext_RejectsBlockingCall_Transitively"`
+- Blocking-guard signatures:
+  - validation-time: `VAL340` (`Blocking call '...' is not allowed in update context.`)
+  - runtime/VM-time: `RUN031` (`Blocking call '...' is not allowed during update.`)
+- Golden harness caveat:
+  - Goldens in `AosInterpreter.Golden` spawn the host binary via `Environment.ProcessPath`.
+  - Running the harness through `dotnet .../airun.dll` can produce false failures because subprocesses resolve to `dotnet`.
+  - Prefer native host invocation for golden runs:
+    - `./tools/airun run --vm=ast src/compiler/aic.aos test examples/golden`
+  - If `./tools/airun` path behaves unexpectedly in your environment, run the published artifact directly:
+    - `./.artifacts/airun-osx-arm64/airun run --vm=ast src/compiler/aic.aos test examples/golden`
+
 ## Refactor Guardrails
 
 - Do not change semantics without updating:

@@ -68,6 +68,13 @@ This file is normative for `aic run` evaluation behavior.
 - On first branch failure in a structured async scope, unresolved sibling branches are deterministically canceled.
 - Cancellation and failure propagation always resolve to deterministic `Err` values with stable `code/message/nodeId`.
 - Async execution may overlap in host scheduling, but language-visible state transitions must remain deterministic.
+- Effectful operations should be modeled as non-blocking start/poll/result state transitions.
+- Host may complete effectful work asynchronously, but language-visible state mutations occur only inside the deterministic evaluator/event loop step.
+
+## Update-Path Blocking Guard
+
+- During lifecycle `update` execution, blocking call targets are runtime errors (`RUN031`).
+- This includes direct and transitive calls made while `update` is active on the call stack.
 
 ## Async Non-Goals
 

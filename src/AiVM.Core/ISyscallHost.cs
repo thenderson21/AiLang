@@ -43,6 +43,17 @@ public interface ISyscallHost
     int NetTcpListen(VmNetworkState state, string host, int port);
     int NetTcpListenTls(VmNetworkState state, string host, int port, string certPath, string keyPath);
     int NetTcpConnect(VmNetworkState state, string host, int port);
+    int NetTcpConnectTls(VmNetworkState state, string host, int port);
+    int NetTcpConnectStart(VmNetworkState state, string host, int port);
+    int NetTcpConnectTlsStart(VmNetworkState state, string host, int port);
+    int NetTcpReadStart(VmNetworkState state, int connectionHandle, int maxBytes);
+    int NetTcpWriteStart(VmNetworkState state, int connectionHandle, string data);
+    int NetAsyncPoll(VmNetworkState state, int operationHandle);
+    int NetAsyncAwait(VmNetworkState state, int operationHandle);
+    bool NetAsyncCancel(VmNetworkState state, int operationHandle);
+    int NetAsyncResultInt(VmNetworkState state, int operationHandle);
+    string NetAsyncResultString(VmNetworkState state, int operationHandle);
+    string NetAsyncError(VmNetworkState state, int operationHandle);
     int NetTcpAccept(VmNetworkState state, int listenerHandle);
     string NetTcpRead(VmNetworkState state, int connectionHandle, int maxBytes);
     int NetTcpWrite(VmNetworkState state, int connectionHandle, string data);

@@ -64,6 +64,27 @@ This file is normative for semantic validation used by `aic check` (default path
 - `Await` child must resolve to async task node (modeled as node-typed value in validator) (`VAL167`).
 - `Par` branch validation runs in compute-only mode by default.
 - `sys.*` calls are rejected in compute-only `Par` branches (`VAL169`).
+- Blocking calls are rejected in lifecycle `update` context (`VAL340`).
+- Current blocking target set includes:
+- `sys.net_asyncAwait`
+- `sys.net_accept`
+- `sys.net_readHeaders`
+- `sys.net_tcpAccept`
+- `sys.net_tcpConnect`
+- `sys.net_tcpConnectTls`
+- `sys.net_tcpRead`
+- `sys.net_tcpWrite`
+- `sys.net_udpRecv`
+- `sys.time_sleepMs`
+- `sys.fs_readFile`
+- `sys.fs_readDir`
+- `sys.fs_stat`
+- `sys.console_readLine`
+- `sys.console_readAllStdin`
+- `io.readLine`
+- `io.readAllStdin`
+- `io.readFile`
+- `httpRequestAwait`
 - Async diagnostics remain deterministic (stable code/message/nodeId).
 
 ## Contracts for `aic check`

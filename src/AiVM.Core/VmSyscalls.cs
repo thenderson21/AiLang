@@ -238,6 +238,21 @@ public static class VmSyscalls
         return Host.NetTcpConnect(state, host, port);
     }
 
+    public static int NetTcpConnectTls(VmNetworkState state, string host, int port)
+    {
+        return Host.NetTcpConnectTls(state, host, port);
+    }
+
+    public static int NetTcpConnectStart(VmNetworkState state, string host, int port)
+    {
+        return Host.NetTcpConnectStart(state, host, port);
+    }
+
+    public static int NetTcpConnectTlsStart(VmNetworkState state, string host, int port)
+    {
+        return Host.NetTcpConnectTlsStart(state, host, port);
+    }
+
     public static int NetTcpAccept(VmNetworkState state, int listenerHandle)
     {
         return Host.NetTcpAccept(state, listenerHandle);
@@ -251,6 +266,46 @@ public static class VmSyscalls
     public static int NetTcpWrite(VmNetworkState state, int connectionHandle, string data)
     {
         return Host.NetTcpWrite(state, connectionHandle, data);
+    }
+
+    public static int NetTcpReadStart(VmNetworkState state, int connectionHandle, int maxBytes)
+    {
+        return Host.NetTcpReadStart(state, connectionHandle, maxBytes);
+    }
+
+    public static int NetTcpWriteStart(VmNetworkState state, int connectionHandle, string data)
+    {
+        return Host.NetTcpWriteStart(state, connectionHandle, data);
+    }
+
+    public static int NetAsyncPoll(VmNetworkState state, int operationHandle)
+    {
+        return Host.NetAsyncPoll(state, operationHandle);
+    }
+
+    public static int NetAsyncAwait(VmNetworkState state, int operationHandle)
+    {
+        return Host.NetAsyncAwait(state, operationHandle);
+    }
+
+    public static bool NetAsyncCancel(VmNetworkState state, int operationHandle)
+    {
+        return Host.NetAsyncCancel(state, operationHandle);
+    }
+
+    public static int NetAsyncResultInt(VmNetworkState state, int operationHandle)
+    {
+        return Host.NetAsyncResultInt(state, operationHandle);
+    }
+
+    public static string NetAsyncResultString(VmNetworkState state, int operationHandle)
+    {
+        return Host.NetAsyncResultString(state, operationHandle);
+    }
+
+    public static string NetAsyncError(VmNetworkState state, int operationHandle)
+    {
+        return Host.NetAsyncError(state, operationHandle);
     }
 
     public static int NetUdpBind(VmNetworkState state, string host, int port)

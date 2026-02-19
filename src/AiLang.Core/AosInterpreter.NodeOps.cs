@@ -162,6 +162,26 @@ public sealed partial class AosInterpreter
         return AosValue.FromNode(result);
     }
 
+    private AosValue EvalMakeLitInt(AosNode node, AosRuntime runtime, Dictionary<string, AosValue> env)
+    {
+        if (node.Children.Count != 2)
+        {
+            return AosValue.Unknown;
+        }
+        var idValue = EvalNode(node.Children[0], runtime, env);
+        var intValue = EvalNode(node.Children[1], runtime, env);
+        if (idValue.Kind != AosValueKind.String || intValue.Kind != AosValueKind.Int)
+        {
+            return AosValue.Unknown;
+        }
+        var attrs = new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+        {
+            ["value"] = new AosAttrValue(AosAttrKind.Int, intValue.AsInt())
+        };
+        var result = new AosNode("Lit", idValue.AsString(), attrs, new List<AosNode>(), node.Span);
+        return AosValue.FromNode(result);
+    }
+
     private AosValue EvalNodeKind(AosNode node, AosRuntime runtime, Dictionary<string, AosValue> env)
     {
         if (node.Children.Count != 1)

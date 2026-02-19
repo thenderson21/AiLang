@@ -116,6 +116,48 @@ public static class SyscallContracts
                     addDiagnostic);
                 returnKind = VmValueKind.Int;
                 return true;
+            case "sys.net_tcpConnectTls":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.String, "VAL308", "sys.net_tcpConnectTls arg 1 must be string."),
+                        (VmValueKind.Int, "VAL309", "sys.net_tcpConnectTls arg 2 must be int.")
+                    },
+                    "VAL310",
+                    "sys.net_tcpConnectTls expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
+            case "sys.net_tcpConnectStart":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.String, "VAL311", "sys.net_tcpConnectStart arg 1 must be string."),
+                        (VmValueKind.Int, "VAL312", "sys.net_tcpConnectStart arg 2 must be int.")
+                    },
+                    "VAL313",
+                    "sys.net_tcpConnectStart expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
+            case "sys.net_tcpConnectTlsStart":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.String, "VAL314", "sys.net_tcpConnectTlsStart arg 1 must be string."),
+                        (VmValueKind.Int, "VAL315", "sys.net_tcpConnectTlsStart arg 2 must be int.")
+                    },
+                    "VAL316",
+                    "sys.net_tcpConnectTlsStart expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
             case "sys.net_tcpRead":
                 ValidateArityAndTypes(
                     argKinds,
@@ -130,6 +172,20 @@ public static class SyscallContracts
                     addDiagnostic);
                 returnKind = VmValueKind.String;
                 return true;
+            case "sys.net_tcpReadStart":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.Int, "VAL317", "sys.net_tcpReadStart arg 1 must be int."),
+                        (VmValueKind.Int, "VAL318", "sys.net_tcpReadStart arg 2 must be int.")
+                    },
+                    "VAL319",
+                    "sys.net_tcpReadStart expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
             case "sys.net_tcpWrite":
                 ValidateArityAndTypes(
                     argKinds,
@@ -143,6 +199,44 @@ public static class SyscallContracts
                     "sys.net_tcpWrite expects 2 arguments.",
                     addDiagnostic);
                 returnKind = VmValueKind.Int;
+                return true;
+            case "sys.net_tcpWriteStart":
+                ValidateArityAndTypes(
+                    argKinds,
+                    2,
+                    new[]
+                    {
+                        (VmValueKind.Int, "VAL320", "sys.net_tcpWriteStart arg 1 must be int."),
+                        (VmValueKind.String, "VAL321", "sys.net_tcpWriteStart arg 2 must be string.")
+                    },
+                    "VAL322",
+                    "sys.net_tcpWriteStart expects 2 arguments.",
+                    addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
+            case "sys.net_asyncPoll":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL323", "sys.net_asyncPoll expects 1 argument.", "VAL324", "sys.net_asyncPoll arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
+            case "sys.net_asyncAwait":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL325", "sys.net_asyncAwait expects 1 argument.", "VAL326", "sys.net_asyncAwait arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
+            case "sys.net_asyncCancel":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL327", "sys.net_asyncCancel expects 1 argument.", "VAL328", "sys.net_asyncCancel arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.Bool;
+                return true;
+            case "sys.net_asyncResultInt":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL329", "sys.net_asyncResultInt expects 1 argument.", "VAL330", "sys.net_asyncResultInt arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.Int;
+                return true;
+            case "sys.net_asyncResultString":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL331", "sys.net_asyncResultString expects 1 argument.", "VAL332", "sys.net_asyncResultString arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.String;
+                return true;
+            case "sys.net_asyncError":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL333", "sys.net_asyncError expects 1 argument.", "VAL334", "sys.net_asyncError arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.String;
                 return true;
             case "sys.net_udpBind":
                 ValidateArityAndTypes(
