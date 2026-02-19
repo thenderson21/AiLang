@@ -142,6 +142,7 @@ Required minimal primitives:
 - `sys.ui_drawText(windowHandle:int, x:int, y:int, text:string, color:string, size:int) -> void`
 - `sys.ui_endFrame(windowHandle:int) -> void`
 - `sys.ui_pollEvent(windowHandle:int) -> node` (AOS event node)
+- `sys.ui_waitFrame(windowHandle:int) -> void` (host frame/tick pacing primitive)
 - `sys.ui_getWindowSize(windowHandle:int) -> node` (AOS node with width/height)
 - `sys.ui_present(windowHandle:int) -> void`
 - `sys.ui_closeWindow(windowHandle:int) -> void`
@@ -149,6 +150,7 @@ Required minimal primitives:
 Notes:
 
 - Keep retained UI semantics and app event handling in AiLang code, not host.
+- Prefer `sys.ui_waitFrame` over `sys.time_sleepMs` for UI frame pacing when available.
 
 ## Determinism and Host Constraints
 

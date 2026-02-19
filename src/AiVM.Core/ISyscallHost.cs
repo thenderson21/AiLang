@@ -70,6 +70,7 @@ public interface ISyscallHost
     void UiDrawImage(int windowHandle, int x, int y, int width, int height, string rgbaBase64);
     void UiEndFrame(int windowHandle);
     VmUiEvent UiPollEvent(int windowHandle);
+    void UiWaitFrame(int windowHandle);
     VmUiWindowSize UiGetWindowSize(int windowHandle);
     void UiPresent(int windowHandle);
     void UiCloseWindow(int windowHandle);

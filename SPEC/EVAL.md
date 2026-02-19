@@ -56,6 +56,7 @@ This file is normative for `aic run` evaluation behavior.
 - `sys.ui_drawPolygon`
 - `sys.ui_endFrame`
 - `sys.ui_pollEvent`
+- `sys.ui_waitFrame`
 - `sys.ui_present`
 - `sys.ui_closeWindow`
 - `sys.ui_getWindowSize`
@@ -141,6 +142,7 @@ This file is normative for `aic run` evaluation behavior.
 - For non-`none` events, evaluator performs one deterministic state transition and one full declarative tree recompute before presenting the frame.
 - Recompute order is deterministic and matches canonical child order.
 - Idle behavior (`type=none`) performs no implicit state mutation.
+- For UI-driven loops, `sys.ui_waitFrame(windowHandle)` is the preferred host pacing primitive over `sys.time_sleepMs`, when host support is available.
 - Host scheduling/timing may vary, but language-visible state transitions and presented outputs must be identical for identical input event sequences.
 
 ## Host Normalization vs Library Semantics

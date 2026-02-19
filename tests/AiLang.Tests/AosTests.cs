@@ -112,6 +112,7 @@ public class AosTests
         public int UiCreateWindowResult { get; set; } = -1;
         public int LastUiPollHandle { get; private set; } = -1;
         public VmUiEvent UiPollEventResult { get; set; }
+        public int LastUiWaitFrameHandle { get; private set; } = -1;
         public int LastUiGetWindowSizeHandle { get; private set; } = -1;
         public VmUiWindowSize UiGetWindowSizeResult { get; set; }
         public int LastUiLineHandle { get; private set; } = -1;
@@ -432,6 +433,11 @@ public class AosTests
         {
             LastUiPollHandle = windowHandle;
             return UiPollEventResult;
+        }
+
+        public override void UiWaitFrame(int windowHandle)
+        {
+            LastUiWaitFrameHandle = windowHandle;
         }
 
         public override VmUiWindowSize UiGetWindowSize(int windowHandle)
@@ -1273,6 +1279,23 @@ public class AosTests
     }
 
     [Test]
+    public void VmSyscalls_UiWaitFrame_UsesConfiguredHost()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            VmSyscalls.UiWaitFrame(22);
+            Assert.That(host.LastUiWaitFrameHandle, Is.EqualTo(22));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
     public void SyscallDispatch_TimeSleepMs_ReturnsVoid()
     {
         var parse = Parse("Program#p1 { Call#c1(target=sys.time_sleepMs) { Lit#ms1(value=15) } }");
@@ -1476,6 +1499,8 @@ public class AosTests
         Assert.That(pathId, Is.EqualTo(SyscallId.UiDrawPath));
         Assert.That(SyscallRegistry.TryResolve("sys.ui_drawImage", out var imageId), Is.True);
         Assert.That(imageId, Is.EqualTo(SyscallId.UiDrawImage));
+        Assert.That(SyscallRegistry.TryResolve("sys.ui_waitFrame", out var waitFrameId), Is.True);
+        Assert.That(waitFrameId, Is.EqualTo(SyscallId.UiWaitFrame));
     }
 
     [Test]
@@ -1801,6 +1826,30 @@ public class AosTests
             Assert.That(size.Attrs["width"].AsInt(), Is.EqualTo(1024));
             Assert.That(size.Attrs["height"].AsInt(), Is.EqualTo(768));
             Assert.That(host.LastUiGetWindowSizeHandle, Is.EqualTo(9));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void SyscallDispatch_UiWaitFrame_ReturnsVoid()
+    {
+        var parse = Parse("Program#p1 { Call#c1(target=sys.ui_waitFrame) { Lit#h1(value=9) } }");
+        Assert.That(parse.Diagnostics, Is.Empty);
+
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var runtime = new AosRuntime();
+            runtime.Permissions.Add("ui");
+            var interpreter = new AosInterpreter();
+            var value = interpreter.EvaluateProgram(parse.Root!, runtime);
+            Assert.That(value.Kind, Is.EqualTo(AosValueKind.Void));
+            Assert.That(host.LastUiWaitFrameHandle, Is.EqualTo(9));
         }
         finally
         {
@@ -2174,6 +2223,29 @@ public class AosTests
             Assert.That(invoked, Is.True);
             Assert.That(result.Kind, Is.EqualTo(VmValueKind.Unknown));
             Assert.That(host.LastUiPollHandle, Is.EqualTo(9));
+        }
+        finally
+        {
+            VmSyscalls.Host = previous;
+        }
+    }
+
+    [Test]
+    public void VmSyscallDispatcher_UiWaitFrame_IsWired()
+    {
+        var previous = VmSyscalls.Host;
+        var host = new RecordingSyscallHost();
+        try
+        {
+            VmSyscalls.Host = host;
+            var invoked = VmSyscallDispatcher.TryInvoke(
+                SyscallId.UiWaitFrame,
+                new[] { SysValue.Int(9) }.AsSpan(),
+                new VmNetworkState(),
+                out var result);
+            Assert.That(invoked, Is.True);
+            Assert.That(result.Kind, Is.EqualTo(VmValueKind.Void));
+            Assert.That(host.LastUiWaitFrameHandle, Is.EqualTo(9));
         }
         finally
         {
@@ -3974,6 +4046,40 @@ public class AosTests
     {
         var message = CliHelpText.BuildUnknownCommand("oops");
         Assert.That(message, Is.EqualTo("Unknown command: oops. See airun --help."));
+    }
+
+    [Test]
+    public void CliHttpServe_TryParseServeOptions_ParsesPortTlsAndAppArgs()
+    {
+        var method = typeof(CliHelpText).Assembly
+            .GetType("CliHttpServe", throwOnError: true)!
+            .GetMethod("TryParseServeOptions", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!;
+        var invokeArgs = new object[] { new[] { "--port", "9443", "--tls-cert", "cert.pem", "--tls-key", "key.pem", "--flag", "value" }, 0, string.Empty, string.Empty, Array.Empty<string>() };
+        var ok = (bool)method.Invoke(null, invokeArgs)!;
+        var port = (int)invokeArgs[1];
+        var tlsCertPath = (string)invokeArgs[2];
+        var tlsKeyPath = (string)invokeArgs[3];
+        var appArgs = (string[])invokeArgs[4];
+
+        Assert.That(ok, Is.True);
+        Assert.That(port, Is.EqualTo(9443));
+        Assert.That(tlsCertPath, Is.EqualTo("cert.pem"));
+        Assert.That(tlsKeyPath, Is.EqualTo("key.pem"));
+        Assert.That(appArgs, Is.EqualTo(new[] { "--flag", "value" }));
+    }
+
+    [Test]
+    public void CliHttpServe_TryParseServeOptions_InvalidPort_ReturnsFalse()
+    {
+        var method = typeof(CliHelpText).Assembly
+            .GetType("CliHttpServe", throwOnError: true)!
+            .GetMethod("TryParseServeOptions", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!;
+        var invokeArgs = new object[] { new[] { "--port", "70000" }, 0, string.Empty, string.Empty, Array.Empty<string>() };
+        var ok = (bool)method.Invoke(null, invokeArgs)!;
+        var appArgs = (string[])invokeArgs[4];
+
+        Assert.That(ok, Is.False);
+        Assert.That(appArgs, Is.Empty);
     }
 
     [Test]

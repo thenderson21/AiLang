@@ -416,6 +416,10 @@ public static class SyscallContracts
                 ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL270", "sys.ui_pollEvent expects 1 argument.", "VAL271", "sys.ui_pollEvent arg must be int.", addDiagnostic);
                 returnKind = VmValueKind.Node;
                 return true;
+            case "sys.ui_waitFrame":
+                ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL335", "sys.ui_waitFrame expects 1 argument.", "VAL336", "sys.ui_waitFrame arg must be int.", addDiagnostic);
+                returnKind = VmValueKind.Void;
+                return true;
             case "sys.ui_present":
                 ValidateArityAndType(argKinds, 1, VmValueKind.Int, "VAL272", "sys.ui_present expects 1 argument.", "VAL273", "sys.ui_present arg must be int.", addDiagnostic);
                 returnKind = VmValueKind.Void;

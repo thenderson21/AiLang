@@ -73,5 +73,6 @@ public enum SyscallId : ushort
     NetAsyncCancel = 68,
     NetAsyncResultInt = 69,
     NetAsyncResultString = 70,
-    NetAsyncError = 71
+    NetAsyncError = 71,
+    UiWaitFrame = 72
 }

@@ -702,6 +702,16 @@ public partial class DefaultSyscallHost : ISyscallHost
         return new VmUiEvent("closed", string.Empty, -1, -1, string.Empty, string.Empty, string.Empty, false);
     }
 
+    public virtual void UiWaitFrame(int windowHandle)
+    {
+        if (!_openWindows.Contains(windowHandle))
+        {
+            return;
+        }
+
+        Thread.Sleep(16);
+    }
+
     public virtual VmUiWindowSize UiGetWindowSize(int windowHandle)
     {
         if (_linuxUi is not null && _linuxUi.TryGetWindowSize(windowHandle, out var linuxWidth, out var linuxHeight))

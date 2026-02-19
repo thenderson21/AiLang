@@ -49,6 +49,11 @@ This file is normative for semantic validation used by `aic check` (default path
 - return value is a `UiWindowSize` node as defined by `SPEC/IL.md`.
 - `width` and `height` must be integers; `-1` is reserved for unavailable/invalid handles.
 
+- `sys.ui_waitFrame` contract is deterministic:
+- arguments are `(int windowHandle)`.
+- return value is `void`; host may block until next frame/tick opportunity.
+- UI libraries should prefer `sys.ui_waitFrame` to `sys.time_sleepMs` for frame pacing when host support exists.
+
 - `sys.ui_drawImage` contract is deterministic:
 - arguments are `(int windowHandle, int x, int y, int width, int height, string rgbaBase64)`.
 - payload is raw RGBA8 bytes encoded as base64; semantic interpretation stays in libraries.

@@ -42,6 +42,7 @@ public static class VmSyscallDispatcher
             SyscallId.UiDrawImage => 6,
             SyscallId.UiEndFrame => 1,
             SyscallId.UiPollEvent => 1,
+            SyscallId.UiWaitFrame => 1,
             SyscallId.UiPresent => 1,
             SyscallId.UiCloseWindow => 1,
             SyscallId.UiGetWindowSize => 1,
@@ -457,6 +458,15 @@ public static class VmSyscallDispatcher
                 // Node-returning syscalls are materialized by interpreter adapters.
                 _ = VmSyscalls.UiPollEvent(uiPollHandle);
                 result = SysValue.Unknown();
+                return true;
+
+            case SyscallId.UiWaitFrame:
+                if (!TryGetInt(args, 0, 1, out var uiWaitHandle))
+                {
+                    return true;
+                }
+                VmSyscalls.UiWaitFrame(uiWaitHandle);
+                result = SysValue.Void();
                 return true;
 
             case SyscallId.UiGetWindowSize:

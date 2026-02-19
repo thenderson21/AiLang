@@ -373,6 +373,11 @@ public static class VmSyscalls
         return CanonicalizeUiEvent(Host.UiPollEvent(windowHandle));
     }
 
+    public static void UiWaitFrame(int windowHandle)
+    {
+        Host.UiWaitFrame(windowHandle);
+    }
+
     public static VmUiWindowSize UiGetWindowSize(int windowHandle)
     {
         var size = Host.UiGetWindowSize(windowHandle);

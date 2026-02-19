@@ -48,6 +48,7 @@ public static class SyscallRegistry
         ["sys.ui_drawImage"] = SyscallId.UiDrawImage,
         ["sys.ui_endFrame"] = SyscallId.UiEndFrame,
         ["sys.ui_pollEvent"] = SyscallId.UiPollEvent,
+        ["sys.ui_waitFrame"] = SyscallId.UiWaitFrame,
         ["sys.ui_present"] = SyscallId.UiPresent,
         ["sys.ui_closeWindow"] = SyscallId.UiCloseWindow,
         ["sys.ui_getWindowSize"] = SyscallId.UiGetWindowSize,

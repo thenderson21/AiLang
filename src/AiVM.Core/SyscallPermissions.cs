@@ -42,6 +42,7 @@ public static class SyscallPermissions
             SyscallId.UiDrawImage => "ui",
             SyscallId.UiEndFrame => "ui",
             SyscallId.UiPollEvent => "ui",
+            SyscallId.UiWaitFrame => "ui",
             SyscallId.UiPresent => "ui",
             SyscallId.UiCloseWindow => "ui",
             SyscallId.UiGetWindowSize => "ui",

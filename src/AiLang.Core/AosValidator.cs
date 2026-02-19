@@ -1142,7 +1142,6 @@ public sealed class AosValidator
         HashSet<string> loading)
     {
         var visible = new Dictionary<string, AosValueKind>(StringComparer.Ordinal);
-        var exportedNames = new List<string>();
         foreach (var child in program.Children)
         {
             if (child.Kind == "Import" &&
@@ -1199,15 +1198,11 @@ public sealed class AosValidator
                 child.Attrs.TryGetValue("name", out var exportNameAttr) &&
                 exportNameAttr.Kind == AosAttrKind.Identifier)
             {
-                exportedNames.Add(exportNameAttr.AsString());
-            }
-        }
-
-        foreach (var exportName in exportedNames)
-        {
-            if (visible.TryGetValue(exportName, out var exportType))
-            {
-                env[exportName] = exportType;
+                var exportName = exportNameAttr.AsString();
+                if (visible.TryGetValue(exportName, out var exportType))
+                {
+                    env[exportName] = exportType;
+                }
             }
         }
     }
