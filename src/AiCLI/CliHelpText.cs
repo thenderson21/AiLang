@@ -18,18 +18,22 @@ public static class CliHelpText
             "  repl",
             "    Start interactive REPL.",
             "    Example: airun repl",
-            "  run <path.aos> [args...]",
-            "    Execute source file (VM default).",
-            "    Example: airun run examples/hello.aos",
+            "  run [app|project-dir] [-- app-args...]",
+            "    Execute app/project (VM default). If omitted, uses ./project.aiproj.",
+            "    Example (explicit, no --): airun run examples/hello.aos arg1 arg2",
+            "    Example (implicit cwd): airun run -- --flag value",
             "  serve <path.aos> [--port <n>] [--tls-cert <path>] [--tls-key <path>] [--vm=bytecode|ast]",
             "    Start HTTP lifecycle app.",
             "    Example: airun serve examples/golden/http/health_app.aos --port 8080",
             "  bench [--iterations <n>] [--human]",
             "    Run deterministic benchmark suite.",
             "    Example: airun bench --iterations 20 --human",
-            "  debug <path.aos>|scenario <fixture.toml> [options]",
+            "  debug [wrapper-flags] [app|project-dir] [-- app-args...]",
             "    Run app with deterministic debug artifact capture.",
-            "    Example: airun debug examples/debug/apps/debug_minimal.aos --events examples/debug/events/minimal.events.toml",
+            "    Example (explicit, no --): airun debug --events examples/debug/events/minimal.events.toml examples/debug/apps/debug_minimal.aos arg1",
+            "    Example (implicit cwd): airun debug -- --flag value",
+            "  debug scenario <fixture.toml> [--name <scenario>]",
+            "    Run named scenario from fixture.",
             "  --version | version",
             "    Print build/runtime metadata.",
             "    Example: airun --version",
@@ -42,7 +46,9 @@ public static class CliHelpText
             "  --events <fixture.toml>",
             "  --out <dir>",
             "  --compare <golden.out>",
-            "  --name <scenario>");
+            "  --name <scenario>",
+            "Legacy Separator:",
+            "  |  (deprecated; use --)");
     }
 
     public static string BuildUnknownCommand(string command)

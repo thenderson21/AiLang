@@ -145,14 +145,9 @@ internal static class CliDebugCommand
         parseError = string.Empty;
         var vmProvided = false;
         var debugModeProvided = false;
-        if (args.Length == 0)
-        {
-            parseError = "Usage: airun debug <path.aos>|scenario <fixture.toml> [--name <scenario>] [--events <file.toml>] [--out <dir>] [--compare <golden>]";
-            return false;
-        }
 
         var start = 0;
-        if (string.Equals(args[0], "scenario", StringComparison.Ordinal))
+        if (args.Length > 0 && string.Equals(args[0], "scenario", StringComparison.Ordinal))
         {
             if (args.Length < 2)
             {
@@ -165,12 +160,14 @@ internal static class CliDebugCommand
         }
 
         var passthrough = false;
+        var targetTokens = new List<string>();
         for (var i = start; i < args.Length; i++)
         {
             var arg = args[i];
             if (arg == "--")
             {
                 passthrough = true;
+                targetTokens.Add(arg);
                 continue;
             }
 
@@ -212,13 +209,13 @@ internal static class CliDebugCommand
                 continue;
             }
 
-            if (options.AppPath.Length == 0 && string.IsNullOrEmpty(options.FixturePath))
+            if (!passthrough && string.IsNullOrEmpty(options.FixturePath) && arg.StartsWith("--", StringComparison.Ordinal))
             {
-                options.AppPath = arg;
-                continue;
+                parseError = $"Unknown wrapper option '{arg}'.";
+                return false;
             }
 
-            options.AppArgs.Add(arg);
+            targetTokens.Add(arg);
         }
 
         if (!string.IsNullOrEmpty(options.FixturePath))
@@ -254,11 +251,19 @@ internal static class CliDebugCommand
                 options.AppArgs.AddRange(scenario.Args);
             }
         }
-
-        if (string.IsNullOrEmpty(options.AppPath))
+        else
         {
-            parseError = "Missing app path. Usage: airun debug <path.aos> ...";
-            return false;
+            if (!CliInvocationParsing.TryResolveTargetAndArgs(
+                    targetTokens.ToArray(),
+                    Directory.GetCurrentDirectory(),
+                    out var invocation,
+                    out parseError))
+            {
+                return false;
+            }
+
+            options.AppPath = invocation.TargetPath;
+            options.AppArgs.AddRange(invocation.AppArgs);
         }
 
         return true;

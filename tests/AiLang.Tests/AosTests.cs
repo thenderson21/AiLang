@@ -4476,10 +4476,114 @@ public class AosTests
         var help = CliHelpText.Build(devMode: true);
 
         Assert.That(help.Contains("Commands:", StringComparison.Ordinal), Is.True);
-        Assert.That(help.Contains("run <path.aos> [args...]", StringComparison.Ordinal), Is.True);
-        Assert.That(help.Contains("Example: airun run examples/hello.aos", StringComparison.Ordinal), Is.True);
+        Assert.That(help.Contains("run [app|project-dir] [-- app-args...]", StringComparison.Ordinal), Is.True);
+        Assert.That(help.Contains("Example (explicit, no --): airun run examples/hello.aos arg1 arg2", StringComparison.Ordinal), Is.True);
+        Assert.That(help.Contains("Example (implicit cwd): airun run -- --flag value", StringComparison.Ordinal), Is.True);
+        Assert.That(help.Contains("debug [wrapper-flags] [app|project-dir] [-- app-args...]", StringComparison.Ordinal), Is.True);
+        Assert.That(help.Contains("|  (deprecated; use --)", StringComparison.Ordinal), Is.True);
         Assert.That(help.Contains("serve <path.aos>", StringComparison.Ordinal), Is.True);
         Assert.That(help.Contains("--vm=bytecode|ast", StringComparison.Ordinal), Is.True);
+    }
+
+    [Test]
+    public void CliInvocationParsing_ExplicitPath_WithTrailingArgs_NoSeparator()
+    {
+        var ok = CliInvocationParsing.TryResolveTargetAndArgs(
+            new[] { "samples/cli-fetch/src/app.aos", "one", "two" },
+            Directory.GetCurrentDirectory(),
+            out var invocation,
+            out var error);
+
+        Assert.That(ok, Is.True, error);
+        Assert.That(invocation.TargetPath, Is.EqualTo("samples/cli-fetch/src/app.aos"));
+        Assert.That(invocation.AppArgs, Is.EqualTo(new[] { "one", "two" }));
+        Assert.That(invocation.UsedImplicitProject, Is.False);
+    }
+
+    [Test]
+    public void CliInvocationParsing_ExplicitPath_WithDashDash_PassesThroughArgs()
+    {
+        var ok = CliInvocationParsing.TryResolveTargetAndArgs(
+            new[] { "samples/cli-fetch/src/app.aos", "--", "--flag", "value" },
+            Directory.GetCurrentDirectory(),
+            out var invocation,
+            out var error);
+
+        Assert.That(ok, Is.True, error);
+        Assert.That(invocation.TargetPath, Is.EqualTo("samples/cli-fetch/src/app.aos"));
+        Assert.That(invocation.AppArgs, Is.EqualTo(new[] { "--flag", "value" }));
+    }
+
+    [Test]
+    public void CliInvocationParsing_ImplicitCwdProject_WithArgs()
+    {
+        var cwd = Directory.CreateTempSubdirectory("ailang-cli-implicit-");
+        try
+        {
+            File.WriteAllText(Path.Combine(cwd.FullName, "project.aiproj"), "Program#p1 { Project#proj1(name=\"x\" entryFile=\"src/main.aos\" entryExport=\"main\") }");
+            var ok = CliInvocationParsing.TryResolveTargetAndArgs(
+                new[] { "--", "--alpha", "1" },
+                cwd.FullName,
+                out var invocation,
+                out var error);
+
+            Assert.That(ok, Is.True, error);
+            Assert.That(invocation.TargetPath, Is.EqualTo(cwd.FullName));
+            Assert.That(invocation.UsedImplicitProject, Is.True);
+            Assert.That(invocation.AppArgs, Is.EqualTo(new[] { "--alpha", "1" }));
+        }
+        finally
+        {
+            cwd.Delete(true);
+        }
+    }
+
+    [Test]
+    public void CliInvocationParsing_MissingPathAndCwdProject_ReturnsClearError()
+    {
+        var cwd = Directory.CreateTempSubdirectory("ailang-cli-missing-");
+        try
+        {
+            var ok = CliInvocationParsing.TryResolveTargetAndArgs(
+                Array.Empty<string>(),
+                cwd.FullName,
+                out _,
+                out var error);
+
+            Assert.That(ok, Is.False);
+            Assert.That(error, Is.EqualTo("No app path provided and project.aiproj not found in current directory."));
+        }
+        finally
+        {
+            cwd.Delete(true);
+        }
+    }
+
+    [Test]
+    public void CliInvocationParsing_LegacySeparatorStillWorks()
+    {
+        var ok = CliInvocationParsing.TryResolveTargetAndArgs(
+            new[] { "samples/cli-fetch/src/app.aos", "|", "--legacy", "1" },
+            Directory.GetCurrentDirectory(),
+            out var invocation,
+            out var error);
+
+        Assert.That(ok, Is.True, error);
+        Assert.That(invocation.AppArgs, Is.EqualTo(new[] { "--legacy", "1" }));
+        Assert.That(invocation.UsedLegacySeparator, Is.True);
+    }
+
+    [Test]
+    public void CliInvocationParsing_UnknownWrapperOption_FailsFast()
+    {
+        var ok = CliInvocationParsing.TryResolveTargetAndArgs(
+            new[] { "--unknown" },
+            Directory.GetCurrentDirectory(),
+            out _,
+            out var error);
+
+        Assert.That(ok, Is.False);
+        Assert.That(error, Is.EqualTo("Unknown wrapper option '--unknown'."));
     }
 
     [Test]

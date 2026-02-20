@@ -25,6 +25,7 @@ If a doc in `Docs/` conflicts with `SPEC/`, follow `SPEC/`.
 - [Agent Code Map](./Agent-CodeMap.md)
 - [Conventions](./Conventions.md)
 - [Agent Debug Workflow](./Agent-Debug-Workflow.md)
+- [Launch Checklist](./Launch-Checklist.md)
 - [Draft Concurrency Contract](../SPEC/CONCURRENCY.md)
 
 ## Hard Constraints
