@@ -19,4 +19,10 @@ typedef struct {
     };
 } AivmValue;
 
+AivmValue aivm_value_void(void);
+AivmValue aivm_value_int(int64_t value);
+AivmValue aivm_value_bool(int value);
+AivmValue aivm_value_string(const char* value);
+int aivm_value_equals(AivmValue left, AivmValue right);
+
 #endif

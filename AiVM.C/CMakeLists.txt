@@ -6,6 +6,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS OFF)
 
 add_library(aivm_core STATIC
+    src/aivm_types.c
     src/aivm_vm.c
     src/aivm_program.c
     src/aivm_syscall.c
@@ -45,14 +46,22 @@ if (BUILD_TESTING)
     )
     target_link_libraries(aivm_test_vm_core PRIVATE aivm_core)
 
+    add_executable(aivm_test_values
+        tests/test_values.c
+    )
+    target_link_libraries(aivm_test_values PRIVATE aivm_core)
+
     if (MSVC)
         target_compile_options(aivm_test_program_loader PRIVATE /W4)
         target_compile_options(aivm_test_vm_core PRIVATE /W4)
+        target_compile_options(aivm_test_values PRIVATE /W4)
     else()
         target_compile_options(aivm_test_program_loader PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(aivm_test_vm_core PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(aivm_test_values PRIVATE -Wall -Wextra -Wpedantic)
     endif()
 
     add_test(NAME aivm_test_program_loader COMMAND aivm_test_program_loader)
     add_test(NAME aivm_test_vm_core COMMAND aivm_test_vm_core)
+    add_test(NAME aivm_test_values COMMAND aivm_test_values)
 endif()

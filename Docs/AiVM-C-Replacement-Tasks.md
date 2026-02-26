@@ -31,7 +31,7 @@ Status: `pending`
 Output: switch-based deterministic dispatch with parity to current VM.
 
 5. Complete C value model parity.
-Status: `pending`
+Status: `in_progress`
 Output: all runtime value kinds and explicit ownership rules.
 
 6. Port syscall dispatch/contracts in C.
@@ -75,3 +75,4 @@ Output: code cleanup and doc/runbook updates.
 - Task 2 started with deterministic loader scaffolding in `AiVM.C`.
 - Loader validates null/truncated/bad-magic and returns explicit `UNSUPPORTED` for full decode until bytecode phase is implemented.
 - Added `AiVM.C` C-test harness (`ctest`) for program loader and VM core deterministic state transitions.
+- Added initial `AivmValue` helper API (`void/int/bool/string` constructors and equality) with dedicated unit test.
