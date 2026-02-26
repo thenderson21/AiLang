@@ -89,3 +89,4 @@ Output: code cleanup and doc/runbook updates.
 - Added deterministic `scripts/test-aivm-c.sh` test entrypoint for local/CI reuse.
 - Added fixed-capacity section descriptor parsing in AiBC1 loader with section-limit and bounds validation tests.
 - Added deterministic integer arithmetic opcode scaffold (`ADD_INT`) with type-safety error handling and tests.
+- Added deterministic syscall-contract validation scaffold (`target + typed args + return kind`) with unit tests.
