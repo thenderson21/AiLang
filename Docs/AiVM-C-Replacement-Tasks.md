@@ -78,3 +78,4 @@ Output: code cleanup and doc/runbook updates.
 - Added initial `AivmValue` helper API (`void/int/bool/string` constructors and equality) with dedicated unit test.
 - Added deterministic syscall dispatch-table skeleton and syscall unit test (`invoke` + `dispatch` paths).
 - Added deterministic VM error code/message mapping scaffold with unit test coverage.
+- Added deterministic VM stack primitives (push/pop, overflow/underflow errors) with unit test coverage.

@@ -15,7 +15,9 @@ typedef enum {
 
 typedef enum {
     AIVM_VM_ERR_NONE = 0,
-    AIVM_VM_ERR_INVALID_OPCODE = 1
+    AIVM_VM_ERR_INVALID_OPCODE = 1,
+    AIVM_VM_ERR_STACK_OVERFLOW = 2,
+    AIVM_VM_ERR_STACK_UNDERFLOW = 3
 } AivmVmError;
 
 typedef struct {
@@ -48,6 +50,8 @@ typedef struct {
 void aivm_init(AivmVm* vm, const AivmProgram* program);
 void aivm_reset_state(AivmVm* vm);
 void aivm_halt(AivmVm* vm);
+int aivm_stack_push(AivmVm* vm, AivmValue value);
+int aivm_stack_pop(AivmVm* vm, AivmValue* out_value);
 void aivm_step(AivmVm* vm);
 void aivm_run(AivmVm* vm);
 const char* aivm_vm_error_code(AivmVmError error);

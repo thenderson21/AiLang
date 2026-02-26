@@ -34,6 +34,40 @@ void aivm_halt(AivmVm* vm)
     vm->status = AIVM_VM_STATUS_HALTED;
 }
 
+int aivm_stack_push(AivmVm* vm, AivmValue value)
+{
+    if (vm == NULL) {
+        return 0;
+    }
+
+    if (vm->stack_count >= AIVM_VM_STACK_CAPACITY) {
+        vm->error = AIVM_VM_ERR_STACK_OVERFLOW;
+        vm->status = AIVM_VM_STATUS_ERROR;
+        return 0;
+    }
+
+    vm->stack[vm->stack_count] = value;
+    vm->stack_count += 1U;
+    return 1;
+}
+
+int aivm_stack_pop(AivmVm* vm, AivmValue* out_value)
+{
+    if (vm == NULL || out_value == NULL) {
+        return 0;
+    }
+
+    if (vm->stack_count == 0U) {
+        vm->error = AIVM_VM_ERR_STACK_UNDERFLOW;
+        vm->status = AIVM_VM_STATUS_ERROR;
+        return 0;
+    }
+
+    vm->stack_count -= 1U;
+    *out_value = vm->stack[vm->stack_count];
+    return 1;
+}
+
 void aivm_step(AivmVm* vm)
 {
     const AivmInstruction* instruction;
@@ -100,6 +134,10 @@ const char* aivm_vm_error_code(AivmVmError error)
             return "AIVM000";
         case AIVM_VM_ERR_INVALID_OPCODE:
             return "AIVM001";
+        case AIVM_VM_ERR_STACK_OVERFLOW:
+            return "AIVM002";
+        case AIVM_VM_ERR_STACK_UNDERFLOW:
+            return "AIVM003";
         default:
             return "AIVM999";
     }
@@ -112,6 +150,10 @@ const char* aivm_vm_error_message(AivmVmError error)
             return "No error.";
         case AIVM_VM_ERR_INVALID_OPCODE:
             return "Invalid opcode.";
+        case AIVM_VM_ERR_STACK_OVERFLOW:
+            return "Stack overflow.";
+        case AIVM_VM_ERR_STACK_UNDERFLOW:
+            return "Stack underflow.";
         default:
             return "Unknown VM error.";
     }
