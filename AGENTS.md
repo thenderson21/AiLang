@@ -90,3 +90,48 @@ A change is complete only if:
 - `Docs/README.md` and files under `Docs/` are agent-oriented.
 - Agents should prefer `Docs/` + `SPEC/` for operational guidance.
 - This repository should be treated as an AiLang project with manifest `project.aiproj`.
+
+## Concurrency and Event Model (Authoritative)
+
+AiLang defines concurrency semantics. AiVectra does not.
+
+Ownership
+	•	AiLang defines:
+	•	spawn
+	•	message passing
+	•	event handling semantics
+	•	single semantic thread authority
+	•	AiVM implements:
+	•	worker thread pool (mechanical only)
+	•	deterministic event queue primitive
+	•	thread scheduling mechanics
+	•	AiVectra integrates with the AiLang event system but must not define concurrency primitives.
+
+Single Semantic Thread Rule
+
+All language-level state mutation must occur on the single semantic thread.
+
+Worker threads:
+	•	May perform blocking IO or long-running computation.
+	•	Must never mutate semantic state directly.
+	•	Must communicate only through the deterministic event queue.
+
+Event Queue Authority
+
+The core event queue is part of AiVM.
+
+Libraries (including AiVectra):
+	•	May enqueue events.
+	•	Must not implement independent event systems.
+	•	Must not bypass the VM event queue.
+
+UI Independence
+
+AiLang must remain UI-agnostic.
+
+AiLang:
+	•	Must not depend on AiVectra.
+	•	Must not introduce UI semantics into language rules.
+	•	Must not embed rendering logic.
+
+If a feature can logically exist without UI, it belongs in AiLang or AiVM.
