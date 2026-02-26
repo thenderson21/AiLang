@@ -46,3 +46,9 @@ From repository root:
 ```bash
 ./scripts/test-aivm-c.sh
 ```
+
+For normalized output comparison in dual-run workflows:
+
+```bash
+./scripts/aivm-parity-compare.sh <left-output-file> <right-output-file>
+```
