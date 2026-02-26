@@ -193,21 +193,21 @@ static int test_jump_if_false_takes_branch(void)
     AivmVm vm;
     AivmValue out;
     static const AivmInstruction instructions[] = {
-        { .opcode = AIVM_OP_JUMP_IF_FALSE, .operand_int = 2 },
+        { .opcode = AIVM_OP_PUSH_BOOL, .operand_int = 0 },
+        { .opcode = AIVM_OP_JUMP_IF_FALSE, .operand_int = 3 },
         { .opcode = AIVM_OP_PUSH_INT, .operand_int = 111 },
         { .opcode = AIVM_OP_PUSH_INT, .operand_int = 333 },
         { .opcode = AIVM_OP_HALT, .operand_int = 0 }
     };
     static const AivmProgram program = {
         .instructions = instructions,
-        .instruction_count = 4U,
+        .instruction_count = 5U,
         .format_version = 0U,
         .format_flags = 0U,
         .section_count = 0U
     };
 
     aivm_init(&vm, &program);
-    (void)aivm_stack_push(&vm, aivm_value_bool(0));
     aivm_run(&vm);
 
     if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
@@ -229,19 +229,19 @@ static int test_jump_if_false_type_mismatch_sets_error(void)
 {
     AivmVm vm;
     static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 1 },
         { .opcode = AIVM_OP_JUMP_IF_FALSE, .operand_int = 0 }
     };
     static const AivmProgram program = {
         .instructions = instructions,
-        .instruction_count = 1U,
+        .instruction_count = 2U,
         .format_version = 0U,
         .format_flags = 0U,
         .section_count = 0U
     };
 
     aivm_init(&vm, &program);
-    (void)aivm_stack_push(&vm, aivm_value_int(1));
-    aivm_step(&vm);
+    aivm_run(&vm);
     if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
         return 1;
     }
