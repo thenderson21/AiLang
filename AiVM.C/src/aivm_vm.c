@@ -298,6 +298,38 @@ void aivm_step(AivmVm* vm)
             vm->instruction_pointer += 1U;
             break;
 
+        case AIVM_OP_CALL: {
+            size_t target = (size_t)instruction->operand_int;
+            if (target > vm->program->instruction_count) {
+                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!aivm_frame_push(vm, vm->instruction_pointer + 1U, vm->stack_count)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer = target;
+            break;
+        }
+
+        case AIVM_OP_RET: {
+            AivmCallFrame frame;
+            if (!aivm_frame_pop(vm, &frame)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (frame.return_instruction_pointer > vm->program->instruction_count) {
+                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer = frame.return_instruction_pointer;
+            break;
+        }
+
         default:
             vm->error = AIVM_VM_ERR_INVALID_OPCODE;
             vm->status = AIVM_VM_STATUS_ERROR;

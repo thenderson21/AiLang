@@ -15,7 +15,9 @@ typedef enum {
     AIVM_OP_ADD_INT = 7,
     AIVM_OP_JUMP = 8,
     AIVM_OP_JUMP_IF_FALSE = 9,
-    AIVM_OP_PUSH_BOOL = 10
+    AIVM_OP_PUSH_BOOL = 10,
+    AIVM_OP_CALL = 11,
+    AIVM_OP_RET = 12
 } AivmOpcode;
 
 typedef struct {
