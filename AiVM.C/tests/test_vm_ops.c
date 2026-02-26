@@ -22,7 +22,8 @@ static int test_push_store_load_pop(void)
         .instructions = instructions,
         .instruction_count = 6U,
         .format_version = 0U,
-        .format_flags = 0U
+        .format_flags = 0U,
+        .section_count = 0U
     };
 
     aivm_init(&vm, &program);
@@ -66,7 +67,8 @@ static int test_load_local_missing_sets_error(void)
         .instructions = instructions,
         .instruction_count = 1U,
         .format_version = 0U,
-        .format_flags = 0U
+        .format_flags = 0U,
+        .section_count = 0U
     };
 
     aivm_init(&vm, &program);

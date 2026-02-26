@@ -24,6 +24,7 @@ typedef struct {
     size_t instruction_count;
     uint32_t format_version;
     uint32_t format_flags;
+    uint32_t section_count;
 } AivmProgram;
 
 typedef enum {
@@ -31,7 +32,8 @@ typedef enum {
     AIVM_PROGRAM_ERR_NULL = 1,
     AIVM_PROGRAM_ERR_TRUNCATED = 2,
     AIVM_PROGRAM_ERR_BAD_MAGIC = 3,
-    AIVM_PROGRAM_ERR_UNSUPPORTED = 4
+    AIVM_PROGRAM_ERR_UNSUPPORTED = 4,
+    AIVM_PROGRAM_ERR_SECTION_OOB = 5
 } AivmProgramStatus;
 
 typedef struct {

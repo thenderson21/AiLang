@@ -13,7 +13,8 @@ int main(void)
         .instructions = instructions,
         .instruction_count = sizeof(instructions) / sizeof(instructions[0]),
         .format_version = 0U,
-        .format_flags = 0U
+        .format_flags = 0U,
+        .section_count = 0U
     };
     AivmVm vm;
 

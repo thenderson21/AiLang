@@ -17,7 +17,8 @@ static int test_run_nop_halt(void)
         .instructions = instructions,
         .instruction_count = 2U,
         .format_version = 0U,
-        .format_flags = 0U
+        .format_flags = 0U,
+        .section_count = 0U
     };
 
     aivm_init(&vm, &program);
@@ -49,7 +50,8 @@ static int test_invalid_opcode_sets_error(void)
         .instructions = instructions,
         .instruction_count = 1U,
         .format_version = 0U,
-        .format_flags = 0U
+        .format_flags = 0U,
+        .section_count = 0U
     };
 
     aivm_init(&vm, &program);

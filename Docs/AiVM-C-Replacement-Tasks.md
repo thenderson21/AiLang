@@ -83,3 +83,4 @@ Output: code cleanup and doc/runbook updates.
 - Extended AiBC1 loader scaffold to deterministic header parsing (magic/version/flags) with unit tests.
 - Added initial deterministic opcode execution primitives (`PUSH_INT`, `POP`, `STORE_LOCAL`, `LOAD_LOCAL`) with unit tests.
 - Added parity normalization/equality helper module as groundwork for dual-run comparison tooling.
+- Added AiBC1 section-table bounds validation in loader (truncated and out-of-bounds detection) with unit tests.
