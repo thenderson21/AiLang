@@ -1,5 +1,28 @@
 #include "aivm_types.h"
 
+#include <stddef.h>
+
+static int aivm_cstring_equals(const char* left, const char* right)
+{
+    size_t i;
+
+    if (left == right) {
+        return 1;
+    }
+    if (left == NULL || right == NULL) {
+        return 0;
+    }
+
+    i = 0U;
+    while (left[i] != '\0' && right[i] != '\0') {
+        if (left[i] != right[i]) {
+            return 0;
+        }
+        i += 1U;
+    }
+
+    return left[i] == right[i] ? 1 : 0;
+}
 AivmValue aivm_value_void(void)
 {
     AivmValue value;
@@ -49,7 +72,7 @@ int aivm_value_equals(AivmValue left, AivmValue right)
             return left.bool_value == right.bool_value ? 1 : 0;
 
         case AIVM_VAL_STRING:
-            return left.string_value == right.string_value ? 1 : 0;
+            return aivm_cstring_equals(left.string_value, right.string_value);
 
         default:
             return 0;
