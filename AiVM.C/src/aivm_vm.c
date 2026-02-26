@@ -351,6 +351,21 @@ void aivm_step(AivmVm* vm)
             break;
         }
 
+        case AIVM_OP_EQ: {
+            AivmValue right;
+            AivmValue left;
+            if (!aivm_stack_pop(vm, &right) || !aivm_stack_pop(vm, &left)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!aivm_stack_push(vm, aivm_value_bool(aivm_value_equals(left, right)))) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
         default:
             vm->error = AIVM_VM_ERR_INVALID_OPCODE;
             vm->status = AIVM_VM_STATUS_ERROR;
