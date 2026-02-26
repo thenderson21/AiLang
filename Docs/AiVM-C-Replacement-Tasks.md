@@ -47,7 +47,7 @@ Status: `pending`
 Output: C ABI adapter with feature-flagged dual runtime path.
 
 9. Add dual-run parity harness.
-Status: `pending`
+Status: `in_progress`
 Output: C# VM vs C VM output/diagnostic diff checks across goldens.
 
 10. Add syscall-heavy parity suites.
@@ -82,3 +82,4 @@ Output: code cleanup and doc/runbook updates.
 - Added deterministic call-frame and locals primitives with overflow/underflow/bounds tests.
 - Extended AiBC1 loader scaffold to deterministic header parsing (magic/version/flags) with unit tests.
 - Added initial deterministic opcode execution primitives (`PUSH_INT`, `POP`, `STORE_LOCAL`, `LOAD_LOCAL`) with unit tests.
+- Added parity normalization/equality helper module as groundwork for dual-run comparison tooling.
