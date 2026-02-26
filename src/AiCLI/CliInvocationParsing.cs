@@ -47,7 +47,7 @@ public static class CliInvocationParsing
                 if (!passthrough && token.StartsWith("--", StringComparison.Ordinal))
                 {
                     invocation = new CliAppInvocation(string.Empty, Array.Empty<string>(), false, usedLegacySeparator);
-                    error = $"Unknown wrapper option '{token}'.";
+                    error = $"unknown option: {token}";
                     return false;
                 }
 
@@ -65,7 +65,7 @@ public static class CliInvocationParsing
             if (!File.Exists(manifestPath))
             {
                 invocation = new CliAppInvocation(string.Empty, Array.Empty<string>(), false, usedLegacySeparator);
-                error = "No app path provided and project.aiproj not found in current directory.";
+                error = "missing app path (or run from a folder containing project.aiproj)";
                 return false;
             }
 

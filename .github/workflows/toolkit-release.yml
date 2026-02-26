@@ -56,10 +56,85 @@ jobs:
             git push origin "${TAG}"
           fi
 
+  golden-gate:
+    name: golden-gate-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    needs: prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+            frontend: aos_frontend
+            airun: airun
+          - os: macos-14
+            rid: osx-arm64
+            frontend: aos_frontend
+            airun: airun
+          - os: windows-latest
+            rid: win-x64
+            frontend: aos_frontend.exe
+            airun: airun.exe
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore ./src/AiCLI/AiCLI.csproj
+
+      - name: Build airun + frontend for gate (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet publish ./src/AiCLI/AiCLI.csproj \
+            -c Release \
+            -r "${{ matrix.rid }}" \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:PublishTrimmed=false \
+            -o ./dist
+          cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
+          chmod +x "./dist/${{ matrix.airun }}" "./dist/${{ matrix.frontend }}"
+
+      - name: Setup MSVC tools
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build airun + frontend for gate (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          dotnet publish .\src\AiCLI\AiCLI.csproj `
+            -c Release `
+            -r ${{ matrix.rid }} `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:PublishTrimmed=false `
+            -o .\dist
+          cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
+          Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
+
+      - name: Run full golden gate
+        shell: bash
+        env:
+          AIRUN_BIN: ./dist/${{ matrix.airun }}
+          AOS_FRONTEND: ./dist/${{ matrix.frontend }}
+        run: ./scripts/test.sh
+
   package:
     name: package-${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    needs: prepare
+    needs:
+      - prepare
+      - golden-gate
     strategy:
       fail-fast: false
       matrix:

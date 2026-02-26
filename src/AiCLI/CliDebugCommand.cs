@@ -211,7 +211,7 @@ internal static class CliDebugCommand
 
             if (!passthrough && string.IsNullOrEmpty(options.FixturePath) && arg.StartsWith("--", StringComparison.Ordinal))
             {
-                parseError = $"Unknown wrapper option '{arg}'.";
+                parseError = $"unknown option: {arg}";
                 return false;
             }
 

@@ -1,0 +1,199 @@
+name: Main Release Gate
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  build-matrix:
+    name: build-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+            frontend: aos_frontend
+          - os: macos-14
+            rid: osx-arm64
+            frontend: aos_frontend
+          - os: macos-14
+            rid: osx-x64
+            frontend: aos_frontend
+          - os: windows-latest
+            rid: win-x64
+            frontend: aos_frontend.exe
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore ./src/AiCLI/AiCLI.csproj
+
+      - name: Publish airun (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet publish ./src/AiCLI/AiCLI.csproj \
+            -c Release \
+            -r "${{ matrix.rid }}" \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:PublishTrimmed=false \
+            -o ./dist
+
+      - name: Publish airun (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          dotnet publish .\src\AiCLI\AiCLI.csproj `
+            -c Release `
+            -r ${{ matrix.rid }} `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:PublishTrimmed=false `
+            -o .\dist
+
+      - name: Build frontend parser (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
+          chmod +x "./dist/${{ matrix.frontend }}"
+
+      - name: Setup MSVC tools
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build frontend parser (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
+          Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
+
+      - name: Stage compiler assets (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ./dist/compiler
+          cp ./src/compiler/*.aos ./dist/compiler/
+
+      - name: Stage compiler assets (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .\dist\compiler | Out-Null
+          Copy-Item .\src\compiler\*.aos .\dist\compiler\
+
+      - name: Verify toolkit files (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -x ./dist/airun
+          test -x "./dist/${{ matrix.frontend }}"
+          test -f ./dist/compiler/format.aos
+          test -f ./dist/compiler/validate.aos
+          test -f ./dist/compiler/route.aos
+          test -f ./dist/compiler/json.aos
+          test -f ./dist/compiler/http.aos
+          test -f ./dist/compiler/runtime.aos
+
+      - name: Verify toolkit files (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (!(Test-Path .\dist\airun.exe)) { throw "missing airun.exe" }
+          if (!(Test-Path .\dist\${{ matrix.frontend }})) { throw "missing frontend exe" }
+          if (!(Test-Path .\dist\compiler\format.aos)) { throw "missing format.aos" }
+          if (!(Test-Path .\dist\compiler\validate.aos)) { throw "missing validate.aos" }
+          if (!(Test-Path .\dist\compiler\route.aos)) { throw "missing route.aos" }
+          if (!(Test-Path .\dist\compiler\json.aos)) { throw "missing json.aos" }
+          if (!(Test-Path .\dist\compiler\http.aos)) { throw "missing http.aos" }
+          if (!(Test-Path .\dist\compiler\runtime.aos)) { throw "missing runtime.aos" }
+
+  golden-gate:
+    name: golden-gate-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            rid: linux-x64
+            frontend: aos_frontend
+            airun: airun
+          - os: macos-14
+            rid: osx-arm64
+            frontend: aos_frontend
+            airun: airun
+          - os: windows-latest
+            rid: win-x64
+            frontend: aos_frontend.exe
+            airun: airun.exe
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore ./src/AiCLI/AiCLI.csproj
+
+      - name: Build airun + frontend for gate (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          dotnet publish ./src/AiCLI/AiCLI.csproj \
+            -c Release \
+            -r "${{ matrix.rid }}" \
+            --self-contained true \
+            -p:PublishSingleFile=true \
+            -p:PublishTrimmed=false \
+            -o ./dist
+          cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
+          chmod +x "./dist/${{ matrix.airun }}" "./dist/${{ matrix.frontend }}"
+
+      - name: Setup MSVC tools
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build airun + frontend for gate (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          dotnet publish .\src\AiCLI\AiCLI.csproj `
+            -c Release `
+            -r ${{ matrix.rid }} `
+            --self-contained true `
+            -p:PublishSingleFile=true `
+            -p:PublishTrimmed=false `
+            -o .\dist
+          cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
+          Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
+
+      - name: Run full golden gate
+        shell: bash
+        env:
+          AIRUN_BIN: ./dist/${{ matrix.airun }}
+          AOS_FRONTEND: ./dist/${{ matrix.frontend }}
+        run: ./scripts/test.sh

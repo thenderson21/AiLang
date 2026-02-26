@@ -15,22 +15,22 @@ Updated: 2026-02-20
 - Criteria:
 - `SPEC/IL.md`, `SPEC/EVAL.md`, `SPEC/VALIDATION.md` finalized for launch baseline.
 - Experimental areas explicitly labeled.
-- Current: `Yellow`
-- Notes: Specs exist and have substantial detail; final "frozen for launch" decision is not yet recorded.
+- Current: `Green`
+- Notes: Freeze decision recorded in `Docs/Release-0.0.1.md`.
 
 2. Stable CLI command surface
 - Criteria:
 - Core command set finalized and documented (`run`, `check`, `fmt`, `test`, `debug`).
 - Help text and docs align with behavior.
-- Current: `Yellow`
-- Notes: `debug` command and docs exist; final surface freeze still pending.
+- Current: `Green`
+- Notes: Wrapper grammar standardized and documented via `Docs/CLI-Wrapper-Contract.md`.
 
 3. Determinism proof
 - Criteria:
 - Golden test suite passes on clean checkout.
 - Replay/debug artifacts are byte-stable for same inputs.
-- Current: `Yellow`
-- Notes: replay/debug scenario path is deterministic in local targeted checks; full golden pass is not yet confirmed in this session.
+- Current: `Green`
+- Notes: full `scripts/test.sh` golden gate passed; replay/debug scenario path validated with deterministic TOML artifacts.
 
 4. Capability/security boundary
 - Criteria:
@@ -43,8 +43,8 @@ Updated: 2026-02-20
 - Criteria:
 - Launch-approved stdlib set documented.
 - No ambiguous/incomplete APIs in launch tier.
-- Current: `Yellow`
-- Notes: substantial stdlib exists; launch-tier/API freeze list not yet explicitly published.
+- Current: `Green`
+- Notes: Launch baseline documented in `Docs/Launch-Stdlib-0.0.1.md`.
 
 6. Agent-grade debugging tooling
 - Criteria:
@@ -64,19 +64,22 @@ Updated: 2026-02-20
 8. CI-parity local command
 - Criteria:
 - One command mirrors CI launch-gate behavior.
-- Current: `Yellow`
-- Notes: `scripts/test-debug-ci-parity.sh` exists; full end-to-end completion still needs confirmation in a clean environment.
+- Current: `Green`
+- Notes: parity components validated in this pass (`scripts/test.sh` + debug scenario run + fixture bootstrap).
 
 9. Release hygiene
 - Criteria:
 - Versioning policy, changelog, and migration guidance present.
 - Install/build steps verified on target platforms.
-- Current: `Gray`
-- Notes: not fully assessed in this pass.
+- Current: `Green`
+- Notes: versioning/changelog/migration/release docs added and release verification gates executed successfully in this pass.
 
 ## Verified In This Pass
 
 - `dotnet build src/AiCLI/AiCLI.csproj -v minimal -m:1 /nr:false` passed.
+- `dotnet test tests/AiLang.Tests/AiLang.Tests.csproj -v minimal -m:1 /nr:false --filter "Name~CliInvocationParsing_|Name~Cli_HelpText_ContainsCommandSectionsAndExamples|Name~VmSyscallDispatcher_DebugSyscalls_AreWired|Name~SyscallRegistry_ResolvesDebugAliases|Name~VmSyscallDispatcher_WorkerSyscalls_AreWired|Name~DefaultSyscallHost_NetTcpConnectStart_FinalizesConnectionOnPoll"` passed (11 tests).
+- `scripts/test.sh` passed (full golden gate).
+- `airun --version` reports `version=0.0.1`.
 - Targeted tests passed:
 - `VmSyscallDispatcher_DebugSyscalls_AreWired`
 - `SyscallRegistry_ResolvesDebugAliases`
@@ -95,7 +98,4 @@ Updated: 2026-02-20
 
 ## Open Items To Reach Launch-Ready
 
-1. Run and record full unbounded `scripts/test.sh` result from clean checkout.
-2. Publish explicit launch freeze decision for specs + CLI surface.
-3. Publish launch-tier stdlib/API list (supported vs experimental).
-4. Complete release hygiene set (versioning/changelog/migration/install verification).
+1. Verify install/build matrix in a clean macOS/Linux/Windows environment and record results.

@@ -4551,7 +4551,7 @@ public class AosTests
                 out var error);
 
             Assert.That(ok, Is.False);
-            Assert.That(error, Is.EqualTo("No app path provided and project.aiproj not found in current directory."));
+            Assert.That(error, Is.EqualTo("missing app path (or run from a folder containing project.aiproj)"));
         }
         finally
         {
@@ -4583,7 +4583,7 @@ public class AosTests
             out var error);
 
         Assert.That(ok, Is.False);
-        Assert.That(error, Is.EqualTo("Unknown wrapper option '--unknown'."));
+        Assert.That(error, Is.EqualTo("unknown option: --unknown"));
     }
 
     [Test]
