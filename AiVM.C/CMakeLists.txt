@@ -51,17 +51,25 @@ if (BUILD_TESTING)
     )
     target_link_libraries(aivm_test_values PRIVATE aivm_core)
 
+    add_executable(aivm_test_syscall
+        tests/test_syscall.c
+    )
+    target_link_libraries(aivm_test_syscall PRIVATE aivm_core)
+
     if (MSVC)
         target_compile_options(aivm_test_program_loader PRIVATE /W4)
         target_compile_options(aivm_test_vm_core PRIVATE /W4)
         target_compile_options(aivm_test_values PRIVATE /W4)
+        target_compile_options(aivm_test_syscall PRIVATE /W4)
     else()
         target_compile_options(aivm_test_program_loader PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(aivm_test_vm_core PRIVATE -Wall -Wextra -Wpedantic)
         target_compile_options(aivm_test_values PRIVATE -Wall -Wextra -Wpedantic)
+        target_compile_options(aivm_test_syscall PRIVATE -Wall -Wextra -Wpedantic)
     endif()
 
     add_test(NAME aivm_test_program_loader COMMAND aivm_test_program_loader)
     add_test(NAME aivm_test_vm_core COMMAND aivm_test_vm_core)
     add_test(NAME aivm_test_values COMMAND aivm_test_values)
+    add_test(NAME aivm_test_syscall COMMAND aivm_test_syscall)
 endif()
