@@ -1,5 +1,15 @@
 #include "aivm_vm.h"
 
+static void set_vm_error(AivmVm* vm, AivmVmError error, const char* detail)
+{
+    if (vm == NULL) {
+        return;
+    }
+    vm->error = error;
+    vm->status = AIVM_VM_STATUS_ERROR;
+    vm->error_detail = detail;
+}
+
 static int operand_to_index(AivmVm* vm, int64_t operand, size_t* out_index)
 {
     if (vm == NULL || out_index == NULL) {
@@ -7,8 +17,7 @@ static int operand_to_index(AivmVm* vm, int64_t operand, size_t* out_index)
     }
 
     if (operand < 0) {
-        vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-        vm->status = AIVM_VM_STATUS_ERROR;
+        set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Negative operand is invalid.");
         return 0;
     }
 
@@ -23,8 +32,7 @@ static char* arena_alloc(AivmVm* vm, size_t size)
         return NULL;
     }
     if (vm->string_arena_used + size > AIVM_VM_STRING_ARENA_CAPACITY) {
-        vm->error = AIVM_VM_ERR_STRING_OVERFLOW;
-        vm->status = AIVM_VM_STATUS_ERROR;
+        set_vm_error(vm, AIVM_VM_ERR_STRING_OVERFLOW, "VM string arena overflow.");
         return NULL;
     }
 
@@ -287,8 +295,7 @@ static int call_sys_with_arity(AivmVm* vm, size_t arg_count, AivmValue* out_resu
         return 0;
     }
     if (arg_count > AIVM_VM_MAX_SYSCALL_ARGS) {
-        vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-        vm->status = AIVM_VM_STATUS_ERROR;
+        set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Invalid call argument count.");
         return 0;
     }
 
@@ -301,8 +308,7 @@ static int call_sys_with_arity(AivmVm* vm, size_t arg_count, AivmValue* out_resu
         return 0;
     }
     if (target_value.type != AIVM_VAL_STRING || target_value.string_value == NULL) {
-        vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-        vm->status = AIVM_VM_STATUS_ERROR;
+        set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "CALL_SYS target must be string.");
         return 0;
     }
 
@@ -314,8 +320,7 @@ static int call_sys_with_arity(AivmVm* vm, size_t arg_count, AivmValue* out_resu
         arg_count,
         out_result);
     if (syscall_status != AIVM_SYSCALL_OK) {
-        vm->error = AIVM_VM_ERR_SYSCALL;
-        vm->status = AIVM_VM_STATUS_ERROR;
+        set_vm_error(vm, AIVM_VM_ERR_SYSCALL, "Syscall dispatch failed.");
         return 0;
     }
 
@@ -329,8 +334,7 @@ static int push_completed_task(AivmVm* vm, AivmValue result)
         return 0;
     }
     if (vm->completed_task_count >= AIVM_VM_TASK_CAPACITY) {
-        vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-        vm->status = AIVM_VM_STATUS_ERROR;
+        set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Task table capacity exceeded.");
         return 0;
     }
 
@@ -448,6 +452,7 @@ void aivm_reset_state(AivmVm* vm)
     vm->instruction_pointer = 0U;
     vm->status = AIVM_VM_STATUS_READY;
     vm->error = AIVM_VM_ERR_NONE;
+    vm->error_detail = NULL;
     vm->stack_count = 0U;
     vm->call_frame_count = 0U;
     vm->locals_count = 0U;
@@ -507,8 +512,7 @@ int aivm_stack_push(AivmVm* vm, AivmValue value)
     }
 
     if (vm->stack_count >= AIVM_VM_STACK_CAPACITY) {
-        vm->error = AIVM_VM_ERR_STACK_OVERFLOW;
-        vm->status = AIVM_VM_STATUS_ERROR;
+        set_vm_error(vm, AIVM_VM_ERR_STACK_OVERFLOW, "Stack overflow.");
         return 0;
     }
 
@@ -524,8 +528,7 @@ int aivm_stack_pop(AivmVm* vm, AivmValue* out_value)
     }
 
     if (vm->stack_count == 0U) {
-        vm->error = AIVM_VM_ERR_STACK_UNDERFLOW;
-        vm->status = AIVM_VM_STATUS_ERROR;
+        set_vm_error(vm, AIVM_VM_ERR_STACK_UNDERFLOW, "Stack underflow.");
         return 0;
     }
 
@@ -541,8 +544,7 @@ int aivm_frame_push(AivmVm* vm, size_t return_instruction_pointer, size_t frame_
     }
 
     if (vm->call_frame_count >= AIVM_VM_CALLFRAME_CAPACITY) {
-        vm->error = AIVM_VM_ERR_FRAME_OVERFLOW;
-        vm->status = AIVM_VM_STATUS_ERROR;
+        set_vm_error(vm, AIVM_VM_ERR_FRAME_OVERFLOW, "Call-frame overflow.");
         return 0;
     }
 
@@ -559,8 +561,7 @@ int aivm_frame_pop(AivmVm* vm, AivmCallFrame* out_frame)
     }
 
     if (vm->call_frame_count == 0U) {
-        vm->error = AIVM_VM_ERR_FRAME_UNDERFLOW;
-        vm->status = AIVM_VM_STATUS_ERROR;
+        set_vm_error(vm, AIVM_VM_ERR_FRAME_UNDERFLOW, "Call-frame underflow.");
         return 0;
     }
 
@@ -576,8 +577,7 @@ int aivm_local_set(AivmVm* vm, size_t index, AivmValue value)
     }
 
     if (index >= AIVM_VM_LOCALS_CAPACITY) {
-        vm->error = AIVM_VM_ERR_LOCAL_OUT_OF_RANGE;
-        vm->status = AIVM_VM_STATUS_ERROR;
+        set_vm_error(vm, AIVM_VM_ERR_LOCAL_OUT_OF_RANGE, "Local slot out of range.");
         return 0;
     }
 
@@ -631,6 +631,7 @@ void aivm_step(AivmVm* vm)
     }
 
     vm->status = AIVM_VM_STATUS_RUNNING;
+    vm->error_detail = NULL;
     instruction = &vm->program->instructions[vm->instruction_pointer];
 
     switch (instruction->opcode) {
@@ -1122,8 +1123,7 @@ void aivm_step(AivmVm* vm)
         }
 
         case AIVM_OP_ASYNC_CALL:
-            vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-            vm->status = AIVM_VM_STATUS_ERROR;
+            set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "ASYNC_CALL is not implemented in C VM.");
             vm->instruction_pointer = vm->program->instruction_count;
             break;
 
@@ -1725,8 +1725,7 @@ void aivm_step(AivmVm* vm)
         }
 
         default:
-            vm->error = AIVM_VM_ERR_INVALID_OPCODE;
-            vm->status = AIVM_VM_STATUS_ERROR;
+            set_vm_error(vm, AIVM_VM_ERR_INVALID_OPCODE, "Invalid opcode.");
             vm->instruction_pointer = vm->program->instruction_count;
             break;
     }
@@ -1813,4 +1812,12 @@ const char* aivm_vm_error_message(AivmVmError error)
         default:
             return "Unknown VM error.";
     }
+}
+
+const char* aivm_vm_error_detail(const AivmVm* vm)
+{
+    if (vm == NULL || vm->error_detail == NULL) {
+        return "";
+    }
+    return vm->error_detail;
 }

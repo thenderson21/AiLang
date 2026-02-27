@@ -24,6 +24,7 @@ Status keys:
 | VM state container (stack/frames/locals/ip) | implemented | Explicit mutable state, no globals, no hidden effects. |
 | Deterministic step/run loop | implemented | Switch-based dispatch, no reflection/computed goto. |
 | VM diagnostics mapping | implemented | Stable deterministic code/message mapping in C layer. |
+| VM error detail strings | in_progress | Deterministic detail channel added (`aivm_vm_error_detail`) for central failure paths; opcode-by-opcode parity wording still being expanded. |
 | Runtime bridge API | implemented | `aivm_execute_program*` and C ABI adapters present. |
 
 ## Opcode Surface

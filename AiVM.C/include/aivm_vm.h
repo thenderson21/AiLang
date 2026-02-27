@@ -88,6 +88,7 @@ typedef struct {
     size_t instruction_pointer;
     AivmVmStatus status;
     AivmVmError error;
+    const char* error_detail;
 
     AivmValue stack[AIVM_VM_STACK_CAPACITY];
     size_t stack_count;
@@ -134,5 +135,6 @@ void aivm_step(AivmVm* vm);
 void aivm_run(AivmVm* vm);
 const char* aivm_vm_error_code(AivmVmError error);
 const char* aivm_vm_error_message(AivmVmError error);
+const char* aivm_vm_error_detail(const AivmVm* vm);
 
 #endif

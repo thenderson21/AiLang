@@ -1,5 +1,6 @@
 #include <string.h>
 
+#include "aivm_program.h"
 #include "aivm_vm.h"
 
 static int expect(int condition)
@@ -9,6 +10,12 @@ static int expect(int condition)
 
 int main(void)
 {
+    AivmVm vm;
+    static const AivmInstruction async_call_instructions[] = {
+        { .opcode = AIVM_OP_ASYNC_CALL, .operand_int = 0 }
+    };
+    AivmProgram async_call_program;
+
     if (expect(strcmp(aivm_vm_error_code(AIVM_VM_ERR_NONE), "AIVM000") == 0) != 0) {
         return 1;
     }
@@ -54,6 +61,16 @@ int main(void)
         return 1;
     }
     if (expect(strcmp(aivm_vm_error_message(AIVM_VM_ERR_SYSCALL), "Syscall dispatch failed.") == 0) != 0) {
+        return 1;
+    }
+
+    aivm_program_init(&async_call_program, async_call_instructions, 1U);
+    aivm_init(&vm, &async_call_program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "ASYNC_CALL is not implemented in C VM.") == 0) != 0) {
         return 1;
     }
 
