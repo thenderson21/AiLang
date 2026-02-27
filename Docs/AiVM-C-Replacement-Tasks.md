@@ -107,3 +107,4 @@ Output: code cleanup and doc/runbook updates.
 - Updated `aivm-c-ci` workflow with `workflow_dispatch` and parity-report artifact upload for deterministic parity debugging in CI.
 - Added deterministic `STR_CONCAT` opcode support with fixed-capacity VM string arena (no heap allocation), plus opcode and diagnostics tests.
 - Added deterministic `TO_STRING` opcode support for int/bool/string/null-like values using VM string arena storage, with VM opcode tests.
+- Added contract-checked syscall dispatch path (`aivm_syscall_dispatch_checked`) enforcing deterministic arg/return type checks at runtime.
