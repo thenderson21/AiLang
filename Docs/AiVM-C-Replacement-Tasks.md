@@ -97,3 +97,5 @@ Output: code cleanup and doc/runbook updates.
 - Added command-driven dual-run parity harness script (`scripts/aivm-dualrun-parity.sh`) for left/right command output comparison.
 - Added deterministic call/return opcode scaffolding (`CALL`, `RET`) with frame-stack validation tests.
 - Added deterministic integer equality opcode (`EQ_INT`) with type-safety tests.
+- Added deterministic generic equality opcode (`EQ`) with value-equality and underflow tests.
+- Fixed generic value equality string semantics to compare deterministic string content (not pointer identity), with VM/value tests.
