@@ -15,7 +15,7 @@ Replace the C# VM execution path with `AiVM.C` while preserving deterministic se
 ## Task List
 
 1. Freeze VM contract and conformance checklist.
-Status: `pending`
+Status: `completed`
 Output: explicit opcode/runtime/syscall parity matrix anchored to `SPEC/`.
 
 2. Define C bytecode/program model (`AiBC1`) and deterministic loader.
@@ -128,3 +128,4 @@ Output: code cleanup and doc/runbook updates.
 - Added syscall-heavy VM opcode coverage for `CALL_SYS` across `sys.str_substring`, `sys.str_remove`, and `sys.str_utf8ByteCount`, including contract type-mismatch failure behavior.
 - Enforced warning-clean C builds by applying strict warning flags as errors (`-Wall -Wextra -Wpedantic -Werror` and `/W4 /WX`) across core, examples, and C tests.
 - Added deterministic replay-stability test (`aivm_test_vm_determinism`) that re-executes mixed opcode+syscall programs over 128 iterations and asserts identical VM outcomes.
+- Added `Docs/AiVM-C-Conformance-Matrix.md` to freeze the runtime/opcode/syscall parity checklist anchored to `SPEC/*` contracts.
