@@ -1,2 +1,4 @@
 # name|left_command|right_command
 parity_same_file|cat AiVM.C/tests/parity_left.txt|cat AiVM.C/tests/parity_left.txt
+parity_crlf_vs_lf|printf $'line1\r\nline2\r\n'|printf $'line1\nline2\n'
+parity_trailing_newline|printf $'alpha\nbeta\n'|printf $'alpha\nbeta'
