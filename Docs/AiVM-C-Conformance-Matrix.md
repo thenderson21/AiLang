@@ -70,4 +70,4 @@ Status keys:
 | Dual-run parity compare utility | implemented | Normalized compare CLI + scripts wired in test flow. |
 | Manifest parity runner | implemented | Per-case artifacts + exit-status parity checks. |
 | Multi-platform CI (macOS/Linux/Windows) | implemented | `aivm-c-ci` workflow builds/tests across matrix OSes. |
-| Syscall-heavy golden parity suites | in_progress | Core `CALL_SYS` syscall-heavy C tests added; golden manifest expansion continues. |
+| Syscall-heavy golden parity suites | in_progress | Core `CALL_SYS` syscall-heavy C tests added; manifest now covers string + UI draw + UI lifecycle/window validation paths; expansion continues. |

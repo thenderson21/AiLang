@@ -149,3 +149,4 @@ Output: code cleanup and doc/runbook updates.
 - Expanded syscall-heavy parity suites with deterministic REPL UI validation-error fixtures (`sys.ui_drawLine` type mismatch, `sys.ui_drawPath` arity mismatch).
 - Expanded C UI syscall contract coverage for lifecycle/window calls (`sys.ui_createWindow`, `sys.ui_beginFrame`, `sys.ui_endFrame`, `sys.ui_pollEvent`, `sys.ui_present`, `sys.ui_closeWindow`, `sys.ui_waitFrame`) and aligned `sys.ui_getWindowSize` to C# signature (`1 int -> node`) with runtime/ABI tests.
 - Improved VM syscall diagnostics detail: `CALL_SYS` failure paths now emit deterministic `AIVMS*`-scoped detail strings (`not found`, `contract`, `return type`, etc.) and added assertions in VM opcode tests.
+- Expanded syscall-heavy parity manifest with REPL UI lifecycle/window validation-error fixtures for `sys.ui_getWindowSize` (type mismatch) and `sys.ui_createWindow` (arity mismatch).
