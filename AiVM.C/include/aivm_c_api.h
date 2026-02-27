@@ -2,6 +2,7 @@
 #define AIVM_C_API_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 #include "aivm_program.h"
 #include "aivm_vm.h"
@@ -12,11 +13,15 @@ extern "C" {
 
 typedef struct {
     int ok;
+    int loaded;
     AivmVmStatus status;
     AivmVmError error;
+    AivmProgramStatus load_status;
+    size_t load_error_offset;
 } AivmCResult;
 
 AivmCResult aivm_c_execute_instructions(const AivmInstruction* instructions, size_t instruction_count);
+AivmCResult aivm_c_execute_aibc1(const uint8_t* bytes, size_t byte_count);
 
 #ifdef __cplusplus
 }
