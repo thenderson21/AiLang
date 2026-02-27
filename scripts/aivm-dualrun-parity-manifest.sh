@@ -22,6 +22,10 @@ mkdir -p "${TMP_DIR}"
 case_count=0
 
 while IFS='|' read -r name left_cmd right_cmd; do
+  case_slug=""
+  left_out=""
+  right_out=""
+
   if [[ -z "${name}" ]]; then
     continue
   fi
@@ -35,19 +39,20 @@ while IFS='|' read -r name left_cmd right_cmd; do
   fi
 
   case_count=$((case_count + 1))
+  case_slug="$(printf "%s" "${name}" | tr -c 'A-Za-z0-9._-' '_')"
+  left_out="${TMP_DIR}/${case_slug}.left.out"
+  right_out="${TMP_DIR}/${case_slug}.right.out"
 
-  echo "case=${name}" >> "${REPORT}"
-  echo "left=${left_cmd}" >> "${REPORT}"
-  echo "right=${right_cmd}" >> "${REPORT}"
+  /bin/zsh -lc "${left_cmd}" >"${left_out}" 2>&1
+  /bin/zsh -lc "${right_cmd}" >"${right_out}" 2>&1
 
-  if "${ROOT_DIR}/scripts/aivm-dualrun-parity.sh" "${left_cmd}" "${right_cmd}" >/dev/null; then
-    echo "result=equal" >> "${REPORT}"
+  if "${ROOT_DIR}/scripts/aivm-parity-compare.sh" "${left_out}" "${right_out}" >/dev/null; then
+    echo "case=${name}|status=equal|left_file=${left_out}|right_file=${right_out}" >> "${REPORT}"
   else
-    echo "result=diff" >> "${REPORT}"
+    echo "case=${name}|status=diff|left_file=${left_out}|right_file=${right_out}" >> "${REPORT}"
     echo "parity mismatch for case '${name}'" >&2
     exit 1
   fi
-  echo "---" >> "${REPORT}"
 done < "${MANIFEST}"
 
 if [[ ${case_count} -eq 0 ]]; then
