@@ -982,6 +982,18 @@ void aivm_step(AivmVm* vm)
             break;
         }
 
+        case AIVM_OP_ASYNC_CALL:
+        case AIVM_OP_ASYNC_CALL_SYS:
+        case AIVM_OP_AWAIT:
+        case AIVM_OP_PAR_BEGIN:
+        case AIVM_OP_PAR_FORK:
+        case AIVM_OP_PAR_JOIN:
+        case AIVM_OP_PAR_CANCEL:
+            vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+            vm->status = AIVM_VM_STATUS_ERROR;
+            vm->instruction_pointer = vm->program->instruction_count;
+            break;
+
         default:
             vm->error = AIVM_VM_ERR_INVALID_OPCODE;
             vm->status = AIVM_VM_STATUS_ERROR;

@@ -29,7 +29,14 @@ typedef enum {
     AIVM_OP_RETURN = 19,
     AIVM_OP_STR_SUBSTRING = 20,
     AIVM_OP_STR_REMOVE = 21,
-    AIVM_OP_CALL_SYS = 22
+    AIVM_OP_CALL_SYS = 22,
+    AIVM_OP_ASYNC_CALL = 23,
+    AIVM_OP_ASYNC_CALL_SYS = 24,
+    AIVM_OP_AWAIT = 25,
+    AIVM_OP_PAR_BEGIN = 26,
+    AIVM_OP_PAR_FORK = 27,
+    AIVM_OP_PAR_JOIN = 28,
+    AIVM_OP_PAR_CANCEL = 29
 } AivmOpcode;
 
 typedef struct {

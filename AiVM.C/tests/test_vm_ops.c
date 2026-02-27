@@ -1240,6 +1240,36 @@ static int test_call_sys_failure_sets_vm_error(void)
     return 0;
 }
 
+static int test_async_and_parallel_opcodes_fail_deterministically(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_ASYNC_CALL, .operand_int = 0 },
+        { .opcode = AIVM_OP_ASYNC_CALL_SYS, .operand_int = 0 },
+        { .opcode = AIVM_OP_AWAIT, .operand_int = 0 },
+        { .opcode = AIVM_OP_PAR_BEGIN, .operand_int = 0 },
+        { .opcode = AIVM_OP_PAR_FORK, .operand_int = 0 },
+        { .opcode = AIVM_OP_PAR_JOIN, .operand_int = 0 },
+        { .opcode = AIVM_OP_PAR_CANCEL, .operand_int = 0 }
+    };
+    size_t i;
+
+    for (i = 0U; i < sizeof(instructions) / sizeof(instructions[0]); i += 1U) {
+        AivmProgram program;
+        aivm_program_init(&program, &instructions[i], 1U);
+        aivm_init(&vm, &program);
+        aivm_run(&vm);
+        if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+            return 1;
+        }
+        if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 int main(void)
 {
     if (test_push_store_load_pop() != 0) {
@@ -1327,6 +1357,9 @@ int main(void)
         return 1;
     }
     if (test_call_sys_failure_sets_vm_error() != 0) {
+        return 1;
+    }
+    if (test_async_and_parallel_opcodes_fail_deterministically() != 0) {
         return 1;
     }
 
