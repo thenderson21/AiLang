@@ -2,6 +2,7 @@
 #define AIVM_SYSCALL_CONTRACTS_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 #include "aivm_types.h"
 
@@ -9,10 +10,12 @@ typedef enum {
     AIVM_CONTRACT_OK = 0,
     AIVM_CONTRACT_ERR_UNKNOWN_TARGET = 1,
     AIVM_CONTRACT_ERR_ARG_COUNT = 2,
-    AIVM_CONTRACT_ERR_ARG_TYPE = 3
+    AIVM_CONTRACT_ERR_ARG_TYPE = 3,
+    AIVM_CONTRACT_ERR_UNKNOWN_ID = 4
 } AivmContractStatus;
 
 typedef struct {
+    uint32_t id;
     const char* target;
     size_t arg_count;
     AivmValueType arg_types[4];
@@ -25,5 +28,15 @@ AivmContractStatus aivm_syscall_contract_validate(
     size_t arg_count,
     AivmValueType* out_return_type
 );
+
+AivmContractStatus aivm_syscall_contract_validate_id(
+    uint32_t id,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValueType* out_return_type
+);
+
+const AivmSyscallContract* aivm_syscall_contract_find_by_target(const char* target);
+const AivmSyscallContract* aivm_syscall_contract_find_by_id(uint32_t id);
 
 #endif

@@ -100,3 +100,4 @@ Output: code cleanup and doc/runbook updates.
 - Fixed generic value equality string semantics to compare deterministic string content (not pointer identity), with VM/value tests.
 - Hardened deterministic call-frame transitions: `RET` now restores frame base with single-value return semantics and rejects invalid negative control-flow/local operands.
 - Added deterministic constant-pool loading (int/bool/string/void) in AiBC1 binary sections plus `CONST` opcode execution and tests.
+- Expanded syscall contract handling with stable numeric IDs, deterministic target/id lookup, and typed validation tests.
