@@ -36,6 +36,57 @@ static int host_ui_draw_rect(
     return AIVM_SYSCALL_OK;
 }
 
+static int host_str_substring(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (arg_count != 3U) {
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (args[0].type != AIVM_VAL_STRING || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT) {
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_string("sub_ok");
+    return AIVM_SYSCALL_OK;
+}
+
+static int host_str_remove(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (arg_count != 3U) {
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (args[0].type != AIVM_VAL_STRING || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT) {
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_string("rem_ok");
+    return AIVM_SYSCALL_OK;
+}
+
+static int host_str_utf8_byte_count(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (arg_count != 1U) {
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (args[0].type != AIVM_VAL_STRING) {
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_int(7);
+    return AIVM_SYSCALL_OK;
+}
+
 static int test_push_store_load_pop(void)
 {
     AivmVm vm;
@@ -1240,6 +1291,120 @@ static int test_call_sys_failure_sets_vm_error(void)
     return 0;
 }
 
+static int test_call_sys_string_contracts_success(void)
+{
+    AivmVm vm;
+    AivmValue out;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_CONST, .operand_int = 0 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 1 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 2 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 3 },
+        { .opcode = AIVM_OP_CALL_SYS, .operand_int = 3 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 4 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 5 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 2 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 3 },
+        { .opcode = AIVM_OP_CALL_SYS, .operand_int = 3 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 6 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 7 },
+        { .opcode = AIVM_OP_CALL_SYS, .operand_int = 1 },
+        { .opcode = AIVM_OP_HALT, .operand_int = 0 }
+    };
+    static const AivmValue constants[] = {
+        { .type = AIVM_VAL_STRING, .string_value = "sys.str_substring" },
+        { .type = AIVM_VAL_STRING, .string_value = "abcde" },
+        { .type = AIVM_VAL_INT, .int_value = 1 },
+        { .type = AIVM_VAL_INT, .int_value = 2 },
+        { .type = AIVM_VAL_STRING, .string_value = "sys.str_remove" },
+        { .type = AIVM_VAL_STRING, .string_value = "vwxyz" },
+        { .type = AIVM_VAL_STRING, .string_value = "sys.str_utf8ByteCount" },
+        { .type = AIVM_VAL_STRING, .string_value = "a😀bc" }
+    };
+    static const AivmSyscallBinding bindings[] = {
+        { "sys.str_substring", host_str_substring },
+        { "sys.str_remove", host_str_remove },
+        { "sys.str_utf8ByteCount", host_str_utf8_byte_count }
+    };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 14U,
+        .constants = constants,
+        .constant_count = 8U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init_with_syscalls(&vm, &program, bindings, 3U);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+    if (expect(vm.stack_count == 3U) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0) {
+        return 1;
+    }
+    if (expect(out.type == AIVM_VAL_INT && out.int_value == 7) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0) {
+        return 1;
+    }
+    if (expect(aivm_value_equals(out, aivm_value_string("rem_ok")) == 1) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0) {
+        return 1;
+    }
+    if (expect(aivm_value_equals(out, aivm_value_string("sub_ok")) == 1) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int test_call_sys_string_contract_type_mismatch_sets_error(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_CONST, .operand_int = 0 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 1 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 2 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 3 },
+        { .opcode = AIVM_OP_CALL_SYS, .operand_int = 3 }
+    };
+    static const AivmValue constants[] = {
+        { .type = AIVM_VAL_STRING, .string_value = "sys.str_substring" },
+        { .type = AIVM_VAL_STRING, .string_value = "abcde" },
+        { .type = AIVM_VAL_STRING, .string_value = "bad_start_type" },
+        { .type = AIVM_VAL_INT, .int_value = 2 }
+    };
+    static const AivmSyscallBinding bindings[] = {
+        { "sys.str_substring", host_str_substring }
+    };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 5U,
+        .constants = constants,
+        .constant_count = 4U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init_with_syscalls(&vm, &program, bindings, 1U);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_SYSCALL) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
 static int test_async_and_parallel_opcodes_fail_deterministically(void)
 {
     AivmVm vm;
@@ -1463,6 +1628,12 @@ int main(void)
         return 1;
     }
     if (test_call_sys_failure_sets_vm_error() != 0) {
+        return 1;
+    }
+    if (test_call_sys_string_contracts_success() != 0) {
+        return 1;
+    }
+    if (test_call_sys_string_contract_type_mismatch_sets_error() != 0) {
         return 1;
     }
     if (test_async_and_parallel_opcodes_fail_deterministically() != 0) {
