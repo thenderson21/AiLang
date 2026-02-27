@@ -10,6 +10,7 @@ on:
       - 'scripts/aivm-dualrun-parity.sh'
       - 'scripts/aivm-dualrun-parity-manifest.sh'
       - 'AiVM.C/tests/parity_commands.txt'
+      - 'AiVM.C/tests/parity_commands_portable.txt'
       - '.github/workflows/aivm-c-ci.yml'
   push:
     branches:
@@ -22,6 +23,7 @@ on:
       - 'scripts/aivm-dualrun-parity.sh'
       - 'scripts/aivm-dualrun-parity-manifest.sh'
       - 'AiVM.C/tests/parity_commands.txt'
+      - 'AiVM.C/tests/parity_commands_portable.txt'
       - '.github/workflows/aivm-c-ci.yml'
 
 jobs:
@@ -48,6 +50,12 @@ jobs:
           cmake -S AiVM.C -B .tmp/aivm-c-build
           cmake --build .tmp/aivm-c-build
           ctest --test-dir .tmp/aivm-c-build --output-on-failure
+
+      - name: Run parity manifest (Windows portable set)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          ./scripts/aivm-dualrun-parity-manifest.sh AiVM.C/tests/parity_commands_portable.txt .tmp/aivm-dualrun-manifest/report.txt
 
       - name: Upload parity report
         if: always()

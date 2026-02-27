@@ -131,3 +131,4 @@ Output: code cleanup and doc/runbook updates.
 - Added `Docs/AiVM-C-Conformance-Matrix.md` to freeze the runtime/opcode/syscall parity checklist anchored to `SPEC/*` contracts.
 - Expanded parity manifest coverage with syscall-focused deterministic error fixtures for `sys.str_utf8ByteCount`, `sys.str_substring`, and `sys.str_remove` (non-zero status + exact output matching).
 - Made dual-run parity scripts shell-configurable (`AIVM_PARITY_SHELL`, default `bash`) to remove `/bin/zsh` coupling and improve cross-platform CI execution reliability.
+- Added Windows-friendly portable parity manifest (`parity_commands_portable.txt`) and CI execution step so parity report artifacts are generated across all workflow OS targets.
