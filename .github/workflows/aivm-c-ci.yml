@@ -53,6 +53,9 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: aivm-parity-report-${{ matrix.os }}
-          path: .tmp/aivm-dualrun-manifest/report.txt
+          name: aivm-parity-artifacts-${{ matrix.os }}
+          path: |
+            .tmp/aivm-dualrun-manifest/report.txt
+            .tmp/aivm-dualrun-manifest/*.left.out
+            .tmp/aivm-dualrun-manifest/*.right.out
           if-no-files-found: ignore
