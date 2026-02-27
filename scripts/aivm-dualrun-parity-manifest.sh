@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP_DIR="${ROOT_DIR}/.tmp/aivm-dualrun-manifest"
 MANIFEST="${1:-}"
 REPORT="${2:-${TMP_DIR}/report.txt}"
+PARITY_SHELL="${AIVM_PARITY_SHELL:-bash}"
 
 if [[ -z "${MANIFEST}" ]]; then
   echo "usage: $0 <manifest-file> [report-file]" >&2
@@ -18,6 +19,11 @@ fi
 
 mkdir -p "${TMP_DIR}"
 : > "${REPORT}"
+
+if ! command -v "${PARITY_SHELL}" >/dev/null 2>&1; then
+  echo "parity shell not found: ${PARITY_SHELL}" >&2
+  exit 2
+fi
 
 case_count=0
 
@@ -55,9 +61,9 @@ while IFS='|' read -r name left_cmd right_cmd expected_status; do
   right_out="${TMP_DIR}/${case_slug}.right.out"
 
   set +e
-  /bin/zsh -lc "${left_cmd}" >"${left_out}" 2>&1
+  "${PARITY_SHELL}" -lc "${left_cmd}" >"${left_out}" 2>&1
   left_status=$?
-  /bin/zsh -lc "${right_cmd}" >"${right_out}" 2>&1
+  "${PARITY_SHELL}" -lc "${right_cmd}" >"${right_out}" 2>&1
   right_status=$?
   set -e
 
