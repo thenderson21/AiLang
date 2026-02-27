@@ -118,3 +118,4 @@ Output: code cleanup and doc/runbook updates.
 - Added rune-aware deterministic `STR_SUBSTRING` / `STR_REMOVE` VM opcodes (UTF-8 code-point clamped semantics) with unit tests.
 - Added deterministic `CALL_SYS` opcode path with contract-checked host binding dispatch and explicit VM syscall failure diagnostic (`AIVM010`).
 - Added explicit async/parallel opcode IDs (`ASYNC_CALL*`, `AWAIT`, `PAR_*`) with deterministic unsupported-op failure semantics in C core.
+- Added `STR_UTF8_BYTE_COUNT` opcode support with type validation and UTF-8 byte-count test coverage.

@@ -994,6 +994,30 @@ void aivm_step(AivmVm* vm)
             vm->instruction_pointer = vm->program->instruction_count;
             break;
 
+        case AIVM_OP_STR_UTF8_BYTE_COUNT: {
+            AivmValue value;
+            int64_t count = 0;
+            if (!aivm_stack_pop(vm, &value)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (value.type != AIVM_VAL_STRING || value.string_value == NULL) {
+                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            while (value.string_value[count] != '\0') {
+                count += 1;
+            }
+            if (!aivm_stack_push(vm, aivm_value_int(count))) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
         default:
             vm->error = AIVM_VM_ERR_INVALID_OPCODE;
             vm->status = AIVM_VM_STATUS_ERROR;

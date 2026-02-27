@@ -36,7 +36,8 @@ typedef enum {
     AIVM_OP_PAR_BEGIN = 26,
     AIVM_OP_PAR_FORK = 27,
     AIVM_OP_PAR_JOIN = 28,
-    AIVM_OP_PAR_CANCEL = 29
+    AIVM_OP_PAR_CANCEL = 29,
+    AIVM_OP_STR_UTF8_BYTE_COUNT = 30
 } AivmOpcode;
 
 typedef struct {
