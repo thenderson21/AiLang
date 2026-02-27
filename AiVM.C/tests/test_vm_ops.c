@@ -867,6 +867,93 @@ static int test_str_escape_requires_string(void)
     return 0;
 }
 
+static int test_string_arena_overflow_sets_error(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions_concat[] = {
+        { .opcode = AIVM_OP_CONST, .operand_int = 0 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 1 },
+        { .opcode = AIVM_OP_STR_CONCAT, .operand_int = 0 }
+    };
+    static const AivmInstruction instructions_to_string[] = {
+        { .opcode = AIVM_OP_CONST, .operand_int = 0 },
+        { .opcode = AIVM_OP_TO_STRING, .operand_int = 0 }
+    };
+    static const AivmInstruction instructions_escape[] = {
+        { .opcode = AIVM_OP_CONST, .operand_int = 0 },
+        { .opcode = AIVM_OP_STR_ESCAPE, .operand_int = 0 }
+    };
+    static const AivmValue constants_concat[] = {
+        { .type = AIVM_VAL_STRING, .string_value = "a" },
+        { .type = AIVM_VAL_STRING, .string_value = "b" }
+    };
+    static const AivmValue constants_to_string[] = {
+        { .type = AIVM_VAL_INT, .int_value = 1 }
+    };
+    static const AivmValue constants_escape[] = {
+        { .type = AIVM_VAL_STRING, .string_value = "x" }
+    };
+    static const AivmProgram program_concat = {
+        .instructions = instructions_concat,
+        .instruction_count = 3U,
+        .constants = constants_concat,
+        .constant_count = 2U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+    static const AivmProgram program_to_string = {
+        .instructions = instructions_to_string,
+        .instruction_count = 2U,
+        .constants = constants_to_string,
+        .constant_count = 1U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+    static const AivmProgram program_escape = {
+        .instructions = instructions_escape,
+        .instruction_count = 2U,
+        .constants = constants_escape,
+        .constant_count = 1U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init(&vm, &program_concat);
+    vm.string_arena_used = AIVM_VM_STRING_ARENA_CAPACITY;
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_STRING_OVERFLOW) != 0) {
+        return 1;
+    }
+
+    aivm_init(&vm, &program_to_string);
+    vm.string_arena_used = AIVM_VM_STRING_ARENA_CAPACITY;
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_STRING_OVERFLOW) != 0) {
+        return 1;
+    }
+
+    aivm_init(&vm, &program_escape);
+    vm.string_arena_used = AIVM_VM_STRING_ARENA_CAPACITY;
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_STRING_OVERFLOW) != 0) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int main(void)
 {
     if (test_push_store_load_pop() != 0) {
@@ -936,6 +1023,9 @@ int main(void)
         return 1;
     }
     if (test_str_escape_requires_string() != 0) {
+        return 1;
+    }
+    if (test_string_arena_overflow_sets_error() != 0) {
         return 1;
     }
 
