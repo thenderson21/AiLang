@@ -68,6 +68,32 @@ int main(void)
         99, 0, 0, 0,  /* invalid opcode */
         0, 0, 0, 0
     };
+    static const uint8_t constants_section_valid[53] = {
+        'A', 'I', 'B', 'C',
+        1, 0, 0, 0,
+        0, 0, 0, 0,
+        1, 0, 0, 0,
+        2, 0, 0, 0,   /* section type: constants */
+        23, 0, 0, 0,  /* section size */
+        3, 0, 0, 0,   /* constant_count */
+        1,            /* int */
+        7, 0, 0, 0, 0, 0, 0, 0,
+        2,            /* bool */
+        1,
+        3,            /* string */
+        3, 0, 0, 0,
+        'f', 'o', 'o'
+    };
+    static const uint8_t constants_section_invalid_kind[29] = {
+        'A', 'I', 'B', 'C',
+        1, 0, 0, 0,
+        0, 0, 0, 0,
+        1, 0, 0, 0,
+        2, 0, 0, 0,
+        5, 0, 0, 0,
+        1, 0, 0, 0,
+        9
+    };
     static const uint8_t section_limit_exceeded[16] = {
         'A', 'I', 'B', 'C',
         1, 0, 0, 0,
@@ -181,6 +207,12 @@ int main(void)
     if (expect(program.instruction_count == 0U) != 0) {
         return 1;
     }
+    if (expect(program.constants == NULL) != 0) {
+        return 1;
+    }
+    if (expect(program.constant_count == 0U) != 0) {
+        return 1;
+    }
 
     result = aivm_program_load_aibc1(instruction_section_valid, 56U, &program);
     if (expect(result.status == AIVM_PROGRAM_OK) != 0) {
@@ -209,6 +241,40 @@ int main(void)
 
     result = aivm_program_load_aibc1(instruction_section_invalid_opcode, 44U, &program);
     if (expect(result.status == AIVM_PROGRAM_ERR_INVALID_OPCODE) != 0) {
+        return 1;
+    }
+
+    result = aivm_program_load_aibc1(constants_section_valid, 53U, &program);
+    if (expect(result.status == AIVM_PROGRAM_OK) != 0) {
+        return 1;
+    }
+    if (expect(program.constants != NULL) != 0) {
+        return 1;
+    }
+    if (expect(program.constant_count == 3U) != 0) {
+        return 1;
+    }
+    if (expect(program.constants[0].type == AIVM_VAL_INT) != 0) {
+        return 1;
+    }
+    if (expect(program.constants[0].int_value == 7) != 0) {
+        return 1;
+    }
+    if (expect(program.constants[1].type == AIVM_VAL_BOOL) != 0) {
+        return 1;
+    }
+    if (expect(program.constants[1].bool_value == 1) != 0) {
+        return 1;
+    }
+    if (expect(program.constants[2].type == AIVM_VAL_STRING) != 0) {
+        return 1;
+    }
+    if (expect(aivm_value_equals(program.constants[2], aivm_value_string("foo")) == 1) != 0) {
+        return 1;
+    }
+
+    result = aivm_program_load_aibc1(constants_section_invalid_kind, 29U, &program);
+    if (expect(result.status == AIVM_PROGRAM_ERR_INVALID_CONSTANT) != 0) {
         return 1;
     }
 

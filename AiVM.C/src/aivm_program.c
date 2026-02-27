@@ -16,6 +16,24 @@ static int64_t read_i64_le(const uint8_t* bytes, size_t offset)
     return (int64_t)combined;
 }
 
+static void write_string_constant(
+    AivmProgram* program,
+    uint32_t constant_index,
+    const uint8_t* bytes,
+    size_t length)
+{
+    size_t base_offset = program->string_storage_used;
+    size_t i;
+
+    for (i = 0U; i < length; i += 1U) {
+        program->string_storage[base_offset + i] = (char)bytes[i];
+    }
+    program->string_storage[base_offset + length] = '\0';
+    program->string_storage_used += (length + 1U);
+    program->constant_storage[constant_index] =
+        aivm_value_string(&program->string_storage[base_offset]);
+}
+
 void aivm_program_clear(AivmProgram* program)
 {
     size_t index;
@@ -25,12 +43,21 @@ void aivm_program_clear(AivmProgram* program)
 
     program->instructions = NULL;
     program->instruction_count = 0U;
+    program->constants = NULL;
+    program->constant_count = 0U;
     program->format_version = 0U;
     program->format_flags = 0U;
     program->section_count = 0U;
+    program->string_storage_used = 0U;
     for (index = 0U; index < AIVM_PROGRAM_MAX_INSTRUCTIONS; index += 1U) {
         program->instruction_storage[index].opcode = AIVM_OP_NOP;
         program->instruction_storage[index].operand_int = 0;
+    }
+    for (index = 0U; index < AIVM_PROGRAM_MAX_CONSTANTS; index += 1U) {
+        program->constant_storage[index] = aivm_value_void();
+    }
+    for (index = 0U; index < AIVM_PROGRAM_MAX_STRING_BYTES; index += 1U) {
+        program->string_storage[index] = '\0';
     }
     for (index = 0U; index < AIVM_PROGRAM_MAX_SECTIONS; index += 1U) {
         program->sections[index].section_type = 0U;
@@ -56,6 +83,7 @@ AivmProgramLoadResult aivm_program_load_aibc1(const uint8_t* bytes, size_t byte_
     size_t cursor;
     uint32_t section_index;
     int has_instruction_section = 0;
+    int has_constants_section = 0;
 
     if (out_program != NULL) {
         aivm_program_clear(out_program);
@@ -173,6 +201,105 @@ AivmProgramLoadResult aivm_program_load_aibc1(const uint8_t* bytes, size_t byte_
 
             out_program->instructions = out_program->instruction_storage;
             out_program->instruction_count = (size_t)instruction_count;
+        } else if (section_type == AIVM_PROGRAM_SECTION_CONSTANTS) {
+            uint32_t constant_count;
+            uint32_t constant_index;
+            size_t constant_cursor;
+
+            if (has_constants_section != 0) {
+                result.status = AIVM_PROGRAM_ERR_INVALID_SECTION;
+                result.error_offset = section_payload_start;
+                return result;
+            }
+            has_constants_section = 1;
+
+            if (section_size < 4U) {
+                result.status = AIVM_PROGRAM_ERR_INVALID_SECTION;
+                result.error_offset = section_payload_start;
+                return result;
+            }
+
+            constant_count = read_u32_le(bytes, section_payload_start);
+            if (constant_count > AIVM_PROGRAM_MAX_CONSTANTS) {
+                result.status = AIVM_PROGRAM_ERR_CONSTANT_LIMIT;
+                result.error_offset = section_payload_start;
+                return result;
+            }
+
+            constant_cursor = section_payload_start + 4U;
+            for (constant_index = 0U; constant_index < constant_count; constant_index += 1U) {
+                uint8_t kind;
+                if (constant_cursor >= section_payload_start + section_size) {
+                    result.status = AIVM_PROGRAM_ERR_INVALID_SECTION;
+                    result.error_offset = constant_cursor;
+                    return result;
+                }
+
+                kind = bytes[constant_cursor];
+                constant_cursor += 1U;
+
+                if (kind == 1U) {
+                    if (constant_cursor + 8U > section_payload_start + section_size) {
+                        result.status = AIVM_PROGRAM_ERR_INVALID_SECTION;
+                        result.error_offset = constant_cursor;
+                        return result;
+                    }
+                    out_program->constant_storage[constant_index] =
+                        aivm_value_int(read_i64_le(bytes, constant_cursor));
+                    constant_cursor += 8U;
+                } else if (kind == 2U) {
+                    if (constant_cursor + 1U > section_payload_start + section_size) {
+                        result.status = AIVM_PROGRAM_ERR_INVALID_SECTION;
+                        result.error_offset = constant_cursor;
+                        return result;
+                    }
+                    out_program->constant_storage[constant_index] =
+                        aivm_value_bool(bytes[constant_cursor] != 0U ? 1 : 0);
+                    constant_cursor += 1U;
+                } else if (kind == 3U) {
+                    uint32_t string_length;
+                    if (constant_cursor + 4U > section_payload_start + section_size) {
+                        result.status = AIVM_PROGRAM_ERR_INVALID_SECTION;
+                        result.error_offset = constant_cursor;
+                        return result;
+                    }
+                    string_length = read_u32_le(bytes, constant_cursor);
+                    constant_cursor += 4U;
+
+                    if (constant_cursor + (size_t)string_length > section_payload_start + section_size) {
+                        result.status = AIVM_PROGRAM_ERR_INVALID_SECTION;
+                        result.error_offset = constant_cursor;
+                        return result;
+                    }
+                    if (out_program->string_storage_used + (size_t)string_length + 1U > AIVM_PROGRAM_MAX_STRING_BYTES) {
+                        result.status = AIVM_PROGRAM_ERR_STRING_LIMIT;
+                        result.error_offset = constant_cursor;
+                        return result;
+                    }
+
+                    write_string_constant(
+                        out_program,
+                        constant_index,
+                        &bytes[constant_cursor],
+                        (size_t)string_length);
+                    constant_cursor += (size_t)string_length;
+                } else if (kind == 4U) {
+                    out_program->constant_storage[constant_index] = aivm_value_void();
+                } else {
+                    result.status = AIVM_PROGRAM_ERR_INVALID_CONSTANT;
+                    result.error_offset = constant_cursor - 1U;
+                    return result;
+                }
+            }
+
+            if (constant_cursor != section_payload_start + section_size) {
+                result.status = AIVM_PROGRAM_ERR_INVALID_SECTION;
+                result.error_offset = constant_cursor;
+                return result;
+            }
+
+            out_program->constants = out_program->constant_storage;
+            out_program->constant_count = (size_t)constant_count;
         }
 
         cursor += (size_t)section_size;

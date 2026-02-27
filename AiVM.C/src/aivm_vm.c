@@ -421,6 +421,26 @@ void aivm_step(AivmVm* vm)
             break;
         }
 
+        case AIVM_OP_CONST: {
+            size_t constant_index;
+            if (!operand_to_index(vm, instruction->operand_int, &constant_index)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (vm->program->constants == NULL || constant_index >= vm->program->constant_count) {
+                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+                vm->status = AIVM_VM_STATUS_ERROR;
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!aivm_stack_push(vm, vm->program->constants[constant_index])) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->instruction_pointer += 1U;
+            break;
+        }
+
         default:
             vm->error = AIVM_VM_ERR_INVALID_OPCODE;
             vm->status = AIVM_VM_STATUS_ERROR;
