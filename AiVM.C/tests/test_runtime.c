@@ -6,6 +6,21 @@ static int expect(int condition)
     return condition ? 0 : 1;
 }
 
+static int host_ui_get_window_size(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    (void)args;
+    if (arg_count != 0U) {
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_string("320x200");
+    return AIVM_SYSCALL_OK;
+}
+
 int main(void)
 {
     AivmVm vm;
@@ -30,6 +45,26 @@ int main(void)
         .format_flags = 0U,
         .section_count = 0U
     };
+    static const AivmInstruction instructions_sys[] = {
+        { .opcode = AIVM_OP_CONST, .operand_int = 0 },
+        { .opcode = AIVM_OP_CALL_SYS, .operand_int = 0 },
+        { .opcode = AIVM_OP_HALT, .operand_int = 0 }
+    };
+    static const AivmValue constants_sys[] = {
+        { .type = AIVM_VAL_STRING, .string_value = "sys.ui_getWindowSize" }
+    };
+    static const AivmSyscallBinding bindings[] = {
+        { "sys.ui_getWindowSize", host_ui_get_window_size }
+    };
+    static const AivmProgram program_sys = {
+        .instructions = instructions_sys,
+        .instruction_count = 3U,
+        .constants = constants_sys,
+        .constant_count = 1U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
 
     if (expect(aivm_execute_program(&program_ok, &vm) == 1) != 0) {
         return 1;
@@ -46,6 +81,13 @@ int main(void)
     }
 
     if (expect(aivm_execute_program(NULL, &vm) == 0) != 0) {
+        return 1;
+    }
+
+    if (expect(aivm_execute_program_with_syscalls(&program_sys, bindings, 1U, &vm) == 1) != 0) {
+        return 1;
+    }
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
         return 1;
     }
 

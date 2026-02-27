@@ -16,6 +16,19 @@ static AivmCResult result_defaults(void)
 
 AivmCResult aivm_c_execute_instructions(const AivmInstruction* instructions, size_t instruction_count)
 {
+    return aivm_c_execute_instructions_with_syscalls(
+        instructions,
+        instruction_count,
+        NULL,
+        0U);
+}
+
+AivmCResult aivm_c_execute_instructions_with_syscalls(
+    const AivmInstruction* instructions,
+    size_t instruction_count,
+    const AivmSyscallBinding* bindings,
+    size_t binding_count)
+{
     AivmProgram program;
     AivmVm vm;
     AivmCResult result = result_defaults();
@@ -25,7 +38,36 @@ AivmCResult aivm_c_execute_instructions(const AivmInstruction* instructions, siz
     result.load_status = AIVM_PROGRAM_OK;
     result.load_error_offset = 0U;
 
-    result.ok = aivm_execute_program(&program, &vm);
+    result.ok = aivm_execute_program_with_syscalls(
+        &program,
+        bindings,
+        binding_count,
+        &vm);
+    result.status = vm.status;
+    result.error = vm.error;
+    return result;
+}
+
+AivmCResult aivm_c_execute_program_with_syscalls(
+    const AivmProgram* program,
+    const AivmSyscallBinding* bindings,
+    size_t binding_count)
+{
+    AivmVm vm;
+    AivmCResult result = result_defaults();
+
+    if (program == NULL) {
+        result.load_status = AIVM_PROGRAM_ERR_NULL;
+        result.load_error_offset = 0U;
+        result.status = AIVM_VM_STATUS_ERROR;
+        result.error = AIVM_VM_ERR_INVALID_PROGRAM;
+        return result;
+    }
+
+    result.loaded = 1;
+    result.load_status = AIVM_PROGRAM_OK;
+    result.load_error_offset = 0U;
+    result.ok = aivm_execute_program_with_syscalls(program, bindings, binding_count, &vm);
     result.status = vm.status;
     result.error = vm.error;
     return result;

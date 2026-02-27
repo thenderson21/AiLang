@@ -5,6 +5,21 @@ static int expect(int condition)
     return condition ? 0 : 1;
 }
 
+static int host_ui_get_window_size(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    (void)args;
+    if (arg_count != 0U) {
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_string("111x222");
+    return AIVM_SYSCALL_OK;
+}
+
 int main(void)
 {
     AivmCResult result;
@@ -14,6 +29,9 @@ int main(void)
     };
     static const AivmInstruction bad_opcode[] = {
         { .opcode = (AivmOpcode)99, .operand_int = 0 }
+    };
+    static const AivmSyscallBinding bindings[] = {
+        { "sys.ui_getWindowSize", host_ui_get_window_size }
     };
     static const uint8_t bad_magic_program[16] = {
         'X', 'I', 'B', 'C',
@@ -33,6 +51,23 @@ int main(void)
         5, 0, 0, 0, 0, 0, 0, 0,
         1, 0, 0, 0,   /* HALT */
         0, 0, 0, 0, 0, 0, 0, 0
+    };
+    static const AivmInstruction call_sys_instructions[] = {
+        { .opcode = AIVM_OP_CONST, .operand_int = 0 },
+        { .opcode = AIVM_OP_CALL_SYS, .operand_int = 0 },
+        { .opcode = AIVM_OP_HALT, .operand_int = 0 }
+    };
+    static const AivmValue call_sys_constants[] = {
+        { .type = AIVM_VAL_STRING, .string_value = "sys.ui_getWindowSize" }
+    };
+    static const AivmProgram call_sys_program = {
+        .instructions = call_sys_instructions,
+        .instruction_count = 3U,
+        .constants = call_sys_constants,
+        .constant_count = 1U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
     };
 
     result = aivm_c_execute_instructions(ok_instructions, 2U);
@@ -70,6 +105,14 @@ int main(void)
         return 1;
     }
     if (expect(result.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
+        return 1;
+    }
+
+    result = aivm_c_execute_program_with_syscalls(&call_sys_program, bindings, 1U);
+    if (expect(result.ok == 1) != 0) {
+        return 1;
+    }
+    if (expect(result.status == AIVM_VM_STATUS_HALTED) != 0) {
         return 1;
     }
 
