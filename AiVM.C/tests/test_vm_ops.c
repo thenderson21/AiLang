@@ -434,6 +434,62 @@ static int test_eq_value_across_types(void)
     return 0;
 }
 
+static int test_eq_string_content_and_null_handling(void)
+{
+    AivmVm vm;
+    AivmValue out;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_EQ, .operand_int = 0 },
+        { .opcode = AIVM_OP_HALT, .operand_int = 0 }
+    };
+    static const char left_hello[] = { 'h', 'e', 'l', 'l', 'o', 0 };
+    static const char right_hello[] = { 'h', 'e', 'l', 'l', 'o', 0 };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 2U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init(&vm, &program);
+    (void)aivm_stack_push(&vm, aivm_value_string(left_hello));
+    (void)aivm_stack_push(&vm, aivm_value_string(right_hello));
+    aivm_run(&vm);
+
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+    if (expect(vm.stack_count == 1U) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0) {
+        return 1;
+    }
+    if (expect(out.type == AIVM_VAL_BOOL && out.bool_value == 1) != 0) {
+        return 1;
+    }
+
+    aivm_init(&vm, &program);
+    (void)aivm_stack_push(&vm, aivm_value_string((const char*)0));
+    (void)aivm_stack_push(&vm, aivm_value_string((const char*)0));
+    aivm_run(&vm);
+
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+    if (expect(vm.stack_count == 1U) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0) {
+        return 1;
+    }
+    if (expect(out.type == AIVM_VAL_BOOL && out.bool_value == 1) != 0) {
+        return 1;
+    }
+
+    return 0;
+}
 static int test_eq_stack_underflow_sets_error(void)
 {
     AivmVm vm;
@@ -459,43 +515,6 @@ static int test_eq_stack_underflow_sets_error(void)
     }
     return 0;
 }
-
-static int test_eq_string_content_match(void)
-{
-    AivmVm vm;
-    AivmValue out;
-    const char left_text[] = { 'a', 'l', 'p', 'h', 'a', '\0' };
-    const char right_text[] = { 'a', 'l', 'p', 'h', 'a', '\0' };
-    static const AivmInstruction instructions[] = {
-        { .opcode = AIVM_OP_EQ, .operand_int = 0 },
-        { .opcode = AIVM_OP_HALT, .operand_int = 0 }
-    };
-    static const AivmProgram program = {
-        .instructions = instructions,
-        .instruction_count = 2U,
-        .format_version = 0U,
-        .format_flags = 0U,
-        .section_count = 0U
-    };
-
-    aivm_init(&vm, &program);
-    (void)aivm_stack_push(&vm, aivm_value_string(left_text));
-    (void)aivm_stack_push(&vm, aivm_value_string(right_text));
-    aivm_run(&vm);
-
-    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
-        return 1;
-    }
-    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0) {
-        return 1;
-    }
-    if (expect(out.type == AIVM_VAL_BOOL && out.bool_value == 1) != 0) {
-        return 1;
-    }
-
-    return 0;
-}
-
 int main(void)
 {
     if (test_push_store_load_pop() != 0) {
@@ -534,10 +553,10 @@ int main(void)
     if (test_eq_value_across_types() != 0) {
         return 1;
     }
-    if (test_eq_stack_underflow_sets_error() != 0) {
+    if (test_eq_string_content_and_null_handling() != 0) {
         return 1;
     }
-    if (test_eq_string_content_match() != 0) {
+    if (test_eq_stack_underflow_sets_error() != 0) {
         return 1;
     }
 
