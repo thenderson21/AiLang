@@ -122,3 +122,4 @@ Output: code cleanup and doc/runbook updates.
 - Extended runtime/C-API bridge with syscall-injected execution entrypoints (`aivm_execute_program_with_syscalls`, `aivm_c_execute_program_with_syscalls`) and tests.
 - Added explicit node/attribute/child/make opcode IDs with deterministic placeholder failure semantics to align C decode/dispatch surface with C# VM opcode families.
 - Updated CI parity artifacts to upload per-case left/right output files alongside parity reports for failure triage.
+- Expanded syscall contract parity for `sys.str_utf8ByteCount` with typed argument/return validation and stable ID coverage.

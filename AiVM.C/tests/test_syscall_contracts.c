@@ -12,6 +12,7 @@ int main(void)
     AivmValue draw_rect_args[4];
     AivmValue draw_text_args[3];
     AivmValue str_args[3];
+    AivmValue utf8_count_args[1];
 
     draw_rect_args[0] = aivm_value_int(0);
     draw_rect_args[1] = aivm_value_int(0);
@@ -57,6 +58,17 @@ int main(void)
     }
 
     if (expect(aivm_syscall_contract_validate("sys.unknown", draw_text_args, 3U, &return_type) == AIVM_CONTRACT_ERR_UNKNOWN_TARGET) != 0) {
+        return 1;
+    }
+
+    utf8_count_args[0] = aivm_value_string("abc");
+    if (expect(aivm_syscall_contract_validate("sys.str_utf8ByteCount", utf8_count_args, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(return_type == AIVM_VAL_INT) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(1100U, utf8_count_args, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
         return 1;
     }
 
