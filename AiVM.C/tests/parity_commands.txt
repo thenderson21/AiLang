@@ -6,3 +6,5 @@ parity_nonzero_exit|printf 'fail-path\n'; exit 7|printf 'fail-path\n'; exit 7|7
 parity_sys_utf8_bad_type|./tools/airun run AiVM.C/tests/parity_cases/sys_utf8_bad_type.aos|cat AiVM.C/tests/parity_cases/sys_utf8_bad_type.out; exit 2|2
 parity_sys_substring_bad_arity|./tools/airun run AiVM.C/tests/parity_cases/sys_substring_bad_arity.aos|cat AiVM.C/tests/parity_cases/sys_substring_bad_arity.out; exit 2|2
 parity_sys_remove_bad_type|./tools/airun run AiVM.C/tests/parity_cases/sys_remove_bad_type.aos|cat AiVM.C/tests/parity_cases/sys_remove_bad_type.out; exit 2|2
+parity_repl_sys_success|./tools/airun repl < AiVM.C/tests/parity_cases/repl_sys_success.in|cat AiVM.C/tests/parity_cases/repl_sys_success.out
+parity_repl_sys_error|./tools/airun repl < AiVM.C/tests/parity_cases/repl_sys_error.in|cat AiVM.C/tests/parity_cases/repl_sys_error.out
