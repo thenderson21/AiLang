@@ -148,3 +148,4 @@ Output: code cleanup and doc/runbook updates.
 - Expanded C syscall-contract surface to match C# UI draw syscall signatures for `sys.ui_drawRect`, `sys.ui_drawText`, `sys.ui_drawLine`, `sys.ui_drawEllipse`, `sys.ui_drawPath`, and `sys.ui_drawImage`, with updated contract+dispatch tests.
 - Expanded syscall-heavy parity suites with deterministic REPL UI validation-error fixtures (`sys.ui_drawLine` type mismatch, `sys.ui_drawPath` arity mismatch).
 - Expanded C UI syscall contract coverage for lifecycle/window calls (`sys.ui_createWindow`, `sys.ui_beginFrame`, `sys.ui_endFrame`, `sys.ui_pollEvent`, `sys.ui_present`, `sys.ui_closeWindow`, `sys.ui_waitFrame`) and aligned `sys.ui_getWindowSize` to C# signature (`1 int -> node`) with runtime/ABI tests.
+- Improved VM syscall diagnostics detail: `CALL_SYS` failure paths now emit deterministic `AIVMS*`-scoped detail strings (`not found`, `contract`, `return type`, etc.) and added assertions in VM opcode tests.

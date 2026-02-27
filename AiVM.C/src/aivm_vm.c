@@ -10,6 +10,8 @@ static void set_vm_error(AivmVm* vm, AivmVmError error, const char* detail)
     vm->error_detail = detail;
 }
 
+static const char* syscall_failure_detail(AivmSyscallStatus status);
+
 static int operand_to_index(AivmVm* vm, int64_t operand, size_t* out_index)
 {
     if (vm == NULL || out_index == NULL) {
@@ -320,11 +322,31 @@ static int call_sys_with_arity(AivmVm* vm, size_t arg_count, AivmValue* out_resu
         arg_count,
         out_result);
     if (syscall_status != AIVM_SYSCALL_OK) {
-        set_vm_error(vm, AIVM_VM_ERR_SYSCALL, "Syscall dispatch failed.");
+        set_vm_error(vm, AIVM_VM_ERR_SYSCALL, syscall_failure_detail(syscall_status));
         return 0;
     }
 
     return 1;
+}
+
+static const char* syscall_failure_detail(AivmSyscallStatus status)
+{
+    switch (status) {
+        case AIVM_SYSCALL_ERR_INVALID:
+            return "AIVMS001: Syscall dispatch input was invalid.";
+        case AIVM_SYSCALL_ERR_NULL_RESULT:
+            return "AIVMS002: Syscall dispatch result pointer was null.";
+        case AIVM_SYSCALL_ERR_NOT_FOUND:
+            return "AIVMS003: Syscall target was not found.";
+        case AIVM_SYSCALL_ERR_CONTRACT:
+            return "AIVMS004: Syscall arguments violated contract.";
+        case AIVM_SYSCALL_ERR_RETURN_TYPE:
+            return "AIVMS005: Syscall return type violated contract.";
+        case AIVM_SYSCALL_OK:
+            return "AIVMS000: Syscall dispatch succeeded.";
+        default:
+            return "AIVMS999: Unknown syscall dispatch status.";
+    }
 }
 
 static int push_completed_task(AivmVm* vm, AivmValue result)

@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "aivm_program.h"
 #include "aivm_vm.h"
 
@@ -1297,6 +1299,9 @@ static int test_call_sys_failure_sets_vm_error(void)
     if (expect(vm.error == AIVM_VM_ERR_SYSCALL) != 0) {
         return 1;
     }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "AIVMS004: Syscall arguments violated contract.") == 0) != 0) {
+        return 1;
+    }
     return 0;
 }
 
@@ -1409,6 +1414,51 @@ static int test_call_sys_string_contract_type_mismatch_sets_error(void)
         return 1;
     }
     if (expect(vm.error == AIVM_VM_ERR_SYSCALL) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "AIVMS004: Syscall arguments violated contract.") == 0) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int test_call_sys_missing_binding_sets_not_found_error(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_CONST, .operand_int = 0 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 1 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 2 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 2 },
+        { .opcode = AIVM_OP_CALL_SYS, .operand_int = 3 }
+    };
+    static const AivmValue constants[] = {
+        { .type = AIVM_VAL_STRING, .string_value = "sys.str_substring" },
+        { .type = AIVM_VAL_STRING, .string_value = "abcde" },
+        { .type = AIVM_VAL_INT, .int_value = 1 }
+    };
+    static const AivmSyscallBinding bindings[] = {
+        { "sys.str_remove", host_str_remove }
+    };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 5U,
+        .constants = constants,
+        .constant_count = 3U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init_with_syscalls(&vm, &program, bindings, 1U);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_SYSCALL) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "AIVMS003: Syscall target was not found.") == 0) != 0) {
         return 1;
     }
     return 0;
@@ -1948,6 +1998,9 @@ int main(void)
         return 1;
     }
     if (test_call_sys_string_contract_type_mismatch_sets_error() != 0) {
+        return 1;
+    }
+    if (test_call_sys_missing_binding_sets_not_found_error() != 0) {
         return 1;
     }
     if (test_async_call_and_await_roundtrip() != 0) {
