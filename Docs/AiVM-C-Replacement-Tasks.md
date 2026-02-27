@@ -120,3 +120,4 @@ Output: code cleanup and doc/runbook updates.
 - Added explicit async/parallel opcode IDs (`ASYNC_CALL*`, `AWAIT`, `PAR_*`) with deterministic unsupported-op failure semantics in C core.
 - Added `STR_UTF8_BYTE_COUNT` opcode support with type validation and UTF-8 byte-count test coverage.
 - Extended runtime/C-API bridge with syscall-injected execution entrypoints (`aivm_execute_program_with_syscalls`, `aivm_c_execute_program_with_syscalls`) and tests.
+- Added explicit node/attribute/child/make opcode IDs with deterministic placeholder failure semantics to align C decode/dispatch surface with C# VM opcode families.

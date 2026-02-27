@@ -1018,6 +1018,27 @@ void aivm_step(AivmVm* vm)
             break;
         }
 
+        case AIVM_OP_NODE_KIND:
+        case AIVM_OP_NODE_ID:
+        case AIVM_OP_ATTR_COUNT:
+        case AIVM_OP_ATTR_KEY:
+        case AIVM_OP_ATTR_VALUE_KIND:
+        case AIVM_OP_ATTR_VALUE_STRING:
+        case AIVM_OP_ATTR_VALUE_INT:
+        case AIVM_OP_ATTR_VALUE_BOOL:
+        case AIVM_OP_CHILD_COUNT:
+        case AIVM_OP_CHILD_AT:
+        case AIVM_OP_MAKE_BLOCK:
+        case AIVM_OP_APPEND_CHILD:
+        case AIVM_OP_MAKE_ERR:
+        case AIVM_OP_MAKE_LIT_STRING:
+        case AIVM_OP_MAKE_LIT_INT:
+        case AIVM_OP_MAKE_NODE:
+            vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
+            vm->status = AIVM_VM_STATUS_ERROR;
+            vm->instruction_pointer = vm->program->instruction_count;
+            break;
+
         default:
             vm->error = AIVM_VM_ERR_INVALID_OPCODE;
             vm->status = AIVM_VM_STATUS_ERROR;
