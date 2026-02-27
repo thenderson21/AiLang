@@ -35,6 +35,12 @@ static int RunCli(string[] args)
     }
     host.SetDebugMode(debugMode);
 
+    if (!IsValidVmMode(vmMode))
+    {
+        Console.WriteLine($"Err#err0(code=DEV008 message=\"Unsupported vm mode: {vmMode}.\" nodeId=vmMode)");
+        return 1;
+    }
+
     var filteredArgs = filtered.ToArray();
     if (!InAosDevMode() && string.Equals(vmMode, "ast", StringComparison.Ordinal))
     {
@@ -152,4 +158,11 @@ static bool InAosDevMode()
 #else
     return false;
 #endif
+}
+
+static bool IsValidVmMode(string vmMode)
+{
+    return string.Equals(vmMode, "bytecode", StringComparison.Ordinal) ||
+           string.Equals(vmMode, "ast", StringComparison.Ordinal) ||
+           string.Equals(vmMode, "c", StringComparison.Ordinal);
 }

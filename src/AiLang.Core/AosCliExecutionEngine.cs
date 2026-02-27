@@ -28,7 +28,13 @@ public static class AosCliExecutionEngine
     {
         try
         {
-            var evaluateProgram = !string.Equals(vmMode, "bytecode", StringComparison.Ordinal);
+            if (IsCAivmMode(vmMode))
+            {
+                writeLine(FormatErr("err1", "DEV008", "C VM backend is not linked in this runtime build.", "vmMode"));
+                return 1;
+            }
+
+            var evaluateProgram = !IsBytecodeFamilyVmMode(vmMode);
             if (!TryLoadProgramForExecution(path, traceEnabled, argv, evaluateProgram, vmMode, out var program, out var runtime, out var errCode, out var errMessage, out var errNodeId))
             {
                 ActiveDebugRecorder?.RecordDiagnostic(errCode, errMessage, errNodeId);
@@ -90,6 +96,12 @@ public static class AosCliExecutionEngine
     {
         try
         {
+            if (IsCAivmMode(vmMode))
+            {
+                writeLine(FormatErr("err1", "DEV008", "C VM backend is not linked in this runtime build.", "vmMode"));
+                return 1;
+            }
+
             if (!TryLoadProgramForExecution(path, traceEnabled, argv, evaluateProgram: true, vmMode, out _, out var runtime, out var errCode, out var errMessage, out var errNodeId))
             {
                 ActiveDebugRecorder?.RecordDiagnostic(errCode, errMessage, errNodeId);
@@ -135,6 +147,12 @@ public static class AosCliExecutionEngine
     {
         try
         {
+            if (IsCAivmMode(vmMode))
+            {
+                writeLine(FormatErr("err1", "DEV008", "C VM backend is not linked in this runtime build.", "vmMode"));
+                return 1;
+            }
+
             if (string.Equals(vmMode, "bytecode", StringComparison.Ordinal))
             {
                 writeLine(FormatErr("err1", "VM001", "Embedded AST bundle requires --vm=ast.", "bundle"));
@@ -866,6 +884,17 @@ public static class AosCliExecutionEngine
         }
         errNode = node;
         return true;
+    }
+
+    private static bool IsCAivmMode(string vmMode)
+    {
+        return string.Equals(vmMode, "c", StringComparison.Ordinal);
+    }
+
+    private static bool IsBytecodeFamilyVmMode(string vmMode)
+    {
+        return string.Equals(vmMode, "bytecode", StringComparison.Ordinal) ||
+               IsCAivmMode(vmMode);
     }
 
     private static string FormatOk(string id, AosValue value)

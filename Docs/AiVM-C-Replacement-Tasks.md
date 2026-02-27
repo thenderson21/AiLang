@@ -139,3 +139,4 @@ Output: code cleanup and doc/runbook updates.
 - Added deterministic `MAKE_NODE` scaffold semantics in C VM (template + argument children from stack) with tests; exact bytecode operand-shape parity remains a tracked follow-up.
 - Extended C value model with explicit `AIVM_VAL_UNKNOWN` kind to align with C# `VmValueKind.Unknown` surface.
 - Added deterministic VM error-detail channel (`aivm_vm_error_detail`) with stable messages for central failure paths (operand/stack/frame/local/syscall/unsupported opcode) and diagnostics test coverage.
+- Added CLI/runtime mode plumbing for `--vm=c` with deterministic `DEV008` backend gate, creating an explicit feature-flagged bridge point for future C backend activation without changing default VM behavior.
