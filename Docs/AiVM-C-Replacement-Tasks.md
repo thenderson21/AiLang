@@ -55,11 +55,11 @@ Status: `in_progress`
 Output: lifecycle/http/publish/syscall scenarios parity gates.
 
 11. Determinism + perf guardrails.
-Status: `in_progress`
+Status: `completed`
 Output: replay-stability checks and non-regressive perf smoke baselines.
 
 12. CI integration (multi-platform C build + parity jobs).
-Status: `in_progress`
+Status: `completed`
 Output: required checks on macOS/Linux/Windows.
 
 13. Cutover to C VM default.
