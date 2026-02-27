@@ -434,8 +434,6 @@ static int test_eq_value_across_types(void)
     return 0;
 }
 
-
-
 static int test_eq_string_content_and_null_handling(void)
 {
     AivmVm vm;
