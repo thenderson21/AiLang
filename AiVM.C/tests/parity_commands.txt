@@ -3,3 +3,6 @@ parity_same_file|cat AiVM.C/tests/parity_left.txt|cat AiVM.C/tests/parity_left.t
 parity_crlf_vs_lf|printf $'line1\r\nline2\r\n'|printf $'line1\nline2\n'
 parity_trailing_newline|printf $'alpha\nbeta\n'|printf $'alpha\nbeta'
 parity_nonzero_exit|printf 'fail-path\n'; exit 7|printf 'fail-path\n'; exit 7|7
+parity_sys_utf8_bad_type|./tools/airun run AiVM.C/tests/parity_cases/sys_utf8_bad_type.aos|cat AiVM.C/tests/parity_cases/sys_utf8_bad_type.out; exit 2|2
+parity_sys_substring_bad_arity|./tools/airun run AiVM.C/tests/parity_cases/sys_substring_bad_arity.aos|cat AiVM.C/tests/parity_cases/sys_substring_bad_arity.out; exit 2|2
+parity_sys_remove_bad_type|./tools/airun run AiVM.C/tests/parity_cases/sys_remove_bad_type.aos|cat AiVM.C/tests/parity_cases/sys_remove_bad_type.out; exit 2|2

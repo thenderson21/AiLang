@@ -51,7 +51,7 @@ Status: `in_progress`
 Output: C# VM vs C VM output/diagnostic diff checks across goldens.
 
 10. Add syscall-heavy parity suites.
-Status: `pending`
+Status: `in_progress`
 Output: lifecycle/http/publish/syscall scenarios parity gates.
 
 11. Determinism + perf guardrails.
@@ -129,3 +129,4 @@ Output: code cleanup and doc/runbook updates.
 - Enforced warning-clean C builds by applying strict warning flags as errors (`-Wall -Wextra -Wpedantic -Werror` and `/W4 /WX`) across core, examples, and C tests.
 - Added deterministic replay-stability test (`aivm_test_vm_determinism`) that re-executes mixed opcode+syscall programs over 128 iterations and asserts identical VM outcomes.
 - Added `Docs/AiVM-C-Conformance-Matrix.md` to freeze the runtime/opcode/syscall parity checklist anchored to `SPEC/*` contracts.
+- Expanded parity manifest coverage with syscall-focused deterministic error fixtures for `sys.str_utf8ByteCount`, `sys.str_substring`, and `sys.str_remove` (non-zero status + exact output matching).
