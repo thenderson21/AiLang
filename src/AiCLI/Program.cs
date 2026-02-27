@@ -11,6 +11,8 @@ static int RunCli(string[] args)
     VmSyscalls.Host = host;
 
     var traceEnabled = args.Contains("--trace", StringComparer.Ordinal);
+    var firstCommand = args.FirstOrDefault(arg => !arg.StartsWith("--", StringComparison.Ordinal));
+    var preserveDebugModeArg = string.Equals(firstCommand, "debug", StringComparison.Ordinal);
     string vmMode = "bytecode";
     string debugMode = "off";
     var filtered = new List<string>();
@@ -28,6 +30,10 @@ static int RunCli(string[] args)
         if (arg.StartsWith("--debug-mode=", StringComparison.Ordinal))
         {
             debugMode = arg["--debug-mode=".Length..];
+            if (preserveDebugModeArg)
+            {
+                filtered.Add(arg);
+            }
             continue;
         }
 

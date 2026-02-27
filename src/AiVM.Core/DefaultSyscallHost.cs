@@ -445,6 +445,16 @@ public partial class DefaultSyscallHost : ISyscallHost
         op.Task.Wait();
         lock (state.NetAsyncLock)
         {
+            if (op.Status == 1 && !op.Finalized)
+            {
+                FinalizeCompletedNetOperation(state, op);
+            }
+            else if (op.Status == -2 && !op.Finalized)
+            {
+                DisposePendingNetResources(op);
+                op.Finalized = true;
+            }
+
             return op.Status;
         }
     }
@@ -1123,7 +1133,20 @@ public partial class DefaultSyscallHost : ISyscallHost
 
         op.Task = Task.Run(() =>
         {
-            var (intResult, stringResult, error) = run();
+            int intResult;
+            string stringResult;
+            string error;
+            try
+            {
+                (intResult, stringResult, error) = run();
+            }
+            catch
+            {
+                intResult = -1;
+                stringResult = string.Empty;
+                error = "async_operation_failed";
+            }
+
             lock (state.NetAsyncLock)
             {
                 if (!state.NetAsyncOperations.TryGetValue(handle, out var current) || current.Status == -2)

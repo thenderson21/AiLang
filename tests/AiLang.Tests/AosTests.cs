@@ -4628,6 +4628,40 @@ public class AosTests
     }
 
     [Test]
+    public void CliToml_ParseArrayOfTables_PreservesEscapedBackslashesBeforeControlChars()
+    {
+        var fixtureDir = Directory.CreateTempSubdirectory("ailang-cli-toml-");
+        try
+        {
+            var fixturePath = Path.Combine(fixtureDir.FullName, "fixture.toml");
+            File.WriteAllText(
+                fixturePath,
+                "[[scenario]]\n" +
+                "app_path = \"C:\\\\new\\\\file\"\n" +
+                "events_path = \"\\\\n\"\n");
+
+            var cliAssembly = typeof(CliHelpText).Assembly;
+            var cliTomlType = cliAssembly.GetType("AiCLI.CliToml", throwOnError: true)!;
+            var parseMethod = cliTomlType.GetMethod("ParseArrayOfTables", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!;
+            var getStringMethod = cliTomlType.GetMethod("GetString", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)!;
+
+            var rows = (System.Collections.IList)parseMethod.Invoke(null, new object[] { fixturePath, "scenario" })!;
+            Assert.That(rows.Count, Is.EqualTo(1));
+
+            var row = rows[0]!;
+            var appPath = (string)getStringMethod.Invoke(null, new[] { row, "app_path", string.Empty })!;
+            var eventsPath = (string)getStringMethod.Invoke(null, new[] { row, "events_path", string.Empty })!;
+
+            Assert.That(appPath, Is.EqualTo(@"C:\new\file"));
+            Assert.That(eventsPath, Is.EqualTo(@"\n"));
+        }
+        finally
+        {
+            fixtureDir.Delete(true);
+        }
+    }
+
+    [Test]
     public void Parsing_AssignsDeterministicIds_WhenSourceOmitsIds()
     {
         var parse = AosParsing.Parse("Program { Let(name=x) { Lit(value=1) } }");
@@ -4682,6 +4716,73 @@ public class AosTests
         {
             listener.Stop();
         }
+    }
+
+    [Test]
+    public void DefaultSyscallHost_NetTcpConnectStart_FinalizesConnectionOnAwait()
+    {
+        var host = new DefaultSyscallHost();
+        var state = new VmNetworkState();
+        var listener = new TcpListener(IPAddress.Loopback, 0);
+        listener.Start();
+        try
+        {
+            var port = ((IPEndPoint)listener.LocalEndpoint).Port;
+            var acceptTask = Task.Run(() =>
+            {
+                using var accepted = listener.AcceptTcpClient();
+                Thread.Sleep(100);
+            });
+
+            var operationHandle = host.NetTcpConnectStart(state, "127.0.0.1", port);
+            Assert.That(operationHandle, Is.GreaterThan(0));
+            Assert.That(state.NetConnections.Count, Is.EqualTo(0));
+
+            var status = host.NetAsyncAwait(state, operationHandle);
+            Assert.That(status, Is.EqualTo(1));
+
+            var connectionHandle = host.NetAsyncResultInt(state, operationHandle);
+            Assert.That(connectionHandle, Is.GreaterThan(0));
+            Assert.That(state.NetConnections.ContainsKey(connectionHandle), Is.True);
+            host.NetClose(state, connectionHandle);
+            _ = acceptTask.Wait(2000);
+        }
+        finally
+        {
+            listener.Stop();
+        }
+    }
+
+    [Test]
+    public void DefaultSyscallHost_StartNetAsyncOperation_ExceptionsBecomeFailedOperation()
+    {
+        var host = new DefaultSyscallHost();
+        var state = new VmNetworkState();
+        var connectionHandle = state.NextNetHandle++;
+        state.NetConnections[connectionHandle] = new TcpClient();
+
+        var operationHandle = host.NetTcpWriteStart(state, connectionHandle, "payload");
+        Assert.That(operationHandle, Is.GreaterThan(0));
+
+        var status = 0;
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+        while (DateTime.UtcNow < deadline)
+        {
+            status = host.NetAsyncPoll(state, operationHandle);
+            if (status != 0)
+            {
+                break;
+            }
+
+            Thread.Sleep(10);
+        }
+
+        Assert.That(status, Is.EqualTo(-1));
+        Assert.That(host.NetAsyncAwait(state, operationHandle), Is.EqualTo(-1));
+        Assert.That(host.NetAsyncError(state, operationHandle), Is.EqualTo("async_operation_failed"));
+        Assert.That(host.NetAsyncResultInt(state, operationHandle), Is.EqualTo(-1));
+
+        host.NetClose(state, connectionHandle);
     }
 
     private static AosParseResult Parse(string source)

@@ -253,11 +253,47 @@ internal static class CliToml
 
     private static string Unescape(string text)
     {
-        return text
-            .Replace("\\n", "\n", StringComparison.Ordinal)
-            .Replace("\\r", "\r", StringComparison.Ordinal)
-            .Replace("\\t", "\t", StringComparison.Ordinal)
-            .Replace("\\\"", "\"", StringComparison.Ordinal)
-            .Replace("\\\\", "\\", StringComparison.Ordinal);
+        if (text.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var sb = new StringBuilder(text.Length);
+        for (var i = 0; i < text.Length; i++)
+        {
+            var ch = text[i];
+            if (ch != '\\' || i + 1 >= text.Length)
+            {
+                sb.Append(ch);
+                continue;
+            }
+
+            i++;
+            var next = text[i];
+            switch (next)
+            {
+                case 'n':
+                    sb.Append('\n');
+                    break;
+                case 'r':
+                    sb.Append('\r');
+                    break;
+                case 't':
+                    sb.Append('\t');
+                    break;
+                case '"':
+                    sb.Append('"');
+                    break;
+                case '\\':
+                    sb.Append('\\');
+                    break;
+                default:
+                    sb.Append('\\');
+                    sb.Append(next);
+                    break;
+            }
+        }
+
+        return sb.ToString();
     }
 }
