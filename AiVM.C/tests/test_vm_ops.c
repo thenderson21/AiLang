@@ -13,11 +13,10 @@ static int host_ui_get_window_size(
     AivmValue* result)
 {
     (void)target;
-    (void)args;
-    if (arg_count != 0U) {
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
         return AIVM_SYSCALL_ERR_INVALID;
     }
-    *result = aivm_value_string("640x480");
+    *result = aivm_value_node(640480);
     return AIVM_SYSCALL_OK;
 }
 
@@ -1212,7 +1211,8 @@ static int test_call_sys_success_and_void_result(void)
     AivmValue out;
     static const AivmInstruction instructions[] = {
         { .opcode = AIVM_OP_CONST, .operand_int = 0 },
-        { .opcode = AIVM_OP_CALL_SYS, .operand_int = 0 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 2 },
+        { .opcode = AIVM_OP_CALL_SYS, .operand_int = 1 },
         { .opcode = AIVM_OP_CONST, .operand_int = 1 },
         { .opcode = AIVM_OP_CONST, .operand_int = 2 },
         { .opcode = AIVM_OP_CONST, .operand_int = 2 },
@@ -1235,7 +1235,7 @@ static int test_call_sys_success_and_void_result(void)
     };
     static const AivmProgram program = {
         .instructions = instructions,
-        .instruction_count = 11U,
+        .instruction_count = 12U,
         .constants = constants,
         .constant_count = 4U,
         .format_version = 0U,
@@ -1260,7 +1260,10 @@ static int test_call_sys_success_and_void_result(void)
     if (expect(aivm_stack_pop(&vm, &out) == 1) != 0) {
         return 1;
     }
-    if (expect(aivm_value_equals(out, aivm_value_string("640x480")) == 1) != 0) {
+    if (expect(out.type == AIVM_VAL_NODE) != 0) {
+        return 1;
+    }
+    if (expect(out.node_handle == 640480) != 0) {
         return 1;
     }
     return 0;

@@ -12,6 +12,8 @@ int main(void)
     AivmValue draw_rect_args[6];
     AivmValue draw_text_args[6];
     AivmValue draw_line_args[7];
+    AivmValue ui_window_args[3];
+    AivmValue ui_window_id_arg[1];
     AivmValue str_args[3];
     AivmValue utf8_count_args[1];
 
@@ -36,6 +38,52 @@ int main(void)
         return 1;
     }
     if (expect(contract->id == 48U) != 0) {
+        return 1;
+    }
+
+    ui_window_args[0] = aivm_value_string("Hello");
+    ui_window_args[1] = aivm_value_int(800);
+    ui_window_args[2] = aivm_value_int(600);
+    if (expect(aivm_syscall_contract_validate("sys.ui_createWindow", ui_window_args, 3U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(return_type == AIVM_VAL_INT) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.ui_createWindow", ui_window_args, 2U, &return_type) == AIVM_CONTRACT_ERR_ARG_COUNT) != 0) {
+        return 1;
+    }
+
+    ui_window_id_arg[0] = aivm_value_int(123);
+    if (expect(aivm_syscall_contract_validate("sys.ui_beginFrame", ui_window_id_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.ui_waitFrame", ui_window_id_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.ui_endFrame", ui_window_id_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.ui_present", ui_window_id_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.ui_closeWindow", ui_window_id_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+
+    if (expect(aivm_syscall_contract_validate("sys.ui_pollEvent", ui_window_id_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(return_type == AIVM_VAL_NODE) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(51U, ui_window_id_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.ui_getWindowSize", ui_window_id_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(return_type == AIVM_VAL_NODE) != 0) {
         return 1;
     }
 
@@ -106,6 +154,9 @@ int main(void)
     if (expect(return_type == AIVM_VAL_STRING) != 0) {
         return 1;
     }
+    if (expect(aivm_syscall_contract_validate_id(59U, str_args, 3U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
     if (expect(aivm_syscall_contract_validate_id(60U, str_args, 3U, &return_type) == AIVM_CONTRACT_OK) != 0) {
         return 1;
     }
@@ -125,6 +176,12 @@ int main(void)
         return 1;
     }
     if (expect(aivm_value_equals(aivm_value_string(contract->target), aivm_value_string("sys.ui_getWindowSize")) == 1) != 0) {
+        return 1;
+    }
+    if (expect(contract->arg_count == 1U) != 0) {
+        return 1;
+    }
+    if (expect(contract->return_type == AIVM_VAL_NODE) != 0) {
         return 1;
     }
     if (expect(aivm_syscall_contract_validate_id(9999U, draw_text_args, 3U, &return_type) == AIVM_CONTRACT_ERR_UNKNOWN_ID) != 0) {

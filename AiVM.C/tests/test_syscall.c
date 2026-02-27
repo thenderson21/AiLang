@@ -46,9 +46,8 @@ static int handler_window_size(
     AivmValue* result)
 {
     (void)target;
-    (void)args;
-    if (arg_count == 0U) {
-        *result = aivm_value_string("800x600");
+    if (args != NULL && arg_count == 1U && args[0].type == AIVM_VAL_INT) {
+        *result = aivm_value_node(1);
         return AIVM_SYSCALL_OK;
     }
     *result = aivm_value_void();
@@ -64,7 +63,7 @@ static int handler_window_size_wrong_type(
     (void)target;
     (void)args;
     (void)arg_count;
-    *result = aivm_value_int(1);
+    *result = aivm_value_string("wrong");
     return AIVM_SYSCALL_OK;
 }
 
@@ -72,6 +71,7 @@ int main(void)
 {
     AivmValue result;
     AivmValue arg;
+    AivmValue window_arg;
     AivmValue rect_args[6];
     AivmSyscallStatus status;
     static const AivmSyscallBinding bindings[] = {
@@ -134,15 +134,16 @@ int main(void)
         return 1;
     }
 
-    status = aivm_syscall_dispatch_checked(ui_bindings, 2U, "sys.ui_getWindowSize", NULL, 0U, &result);
+    window_arg = aivm_value_int(1);
+    status = aivm_syscall_dispatch_checked(ui_bindings, 2U, "sys.ui_getWindowSize", &window_arg, 1U, &result);
     if (expect(status == AIVM_SYSCALL_OK) != 0) {
         return 1;
     }
-    if (expect(result.type == AIVM_VAL_STRING) != 0) {
+    if (expect(result.type == AIVM_VAL_NODE) != 0) {
         return 1;
     }
 
-    status = aivm_syscall_dispatch_checked(ui_bad_return_bindings, 1U, "sys.ui_getWindowSize", NULL, 0U, &result);
+    status = aivm_syscall_dispatch_checked(ui_bad_return_bindings, 1U, "sys.ui_getWindowSize", &window_arg, 1U, &result);
     if (expect(status == AIVM_SYSCALL_ERR_RETURN_TYPE) != 0) {
         return 1;
     }

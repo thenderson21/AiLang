@@ -12,11 +12,10 @@ static int host_ui_get_window_size(
     AivmValue* result)
 {
     (void)target;
-    (void)args;
-    if (arg_count != 0U) {
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
         return AIVM_SYSCALL_ERR_INVALID;
     }
-    *result = aivm_value_string("111x222");
+    *result = aivm_value_node(111222);
     return AIVM_SYSCALL_OK;
 }
 
@@ -54,17 +53,19 @@ int main(void)
     };
     static const AivmInstruction call_sys_instructions[] = {
         { .opcode = AIVM_OP_CONST, .operand_int = 0 },
-        { .opcode = AIVM_OP_CALL_SYS, .operand_int = 0 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 1 },
+        { .opcode = AIVM_OP_CALL_SYS, .operand_int = 1 },
         { .opcode = AIVM_OP_HALT, .operand_int = 0 }
     };
     static const AivmValue call_sys_constants[] = {
-        { .type = AIVM_VAL_STRING, .string_value = "sys.ui_getWindowSize" }
+        { .type = AIVM_VAL_STRING, .string_value = "sys.ui_getWindowSize" },
+        { .type = AIVM_VAL_INT, .int_value = 1 }
     };
     static const AivmProgram call_sys_program = {
         .instructions = call_sys_instructions,
-        .instruction_count = 3U,
+        .instruction_count = 4U,
         .constants = call_sys_constants,
-        .constant_count = 1U,
+        .constant_count = 2U,
         .format_version = 0U,
         .format_flags = 0U,
         .section_count = 0U
