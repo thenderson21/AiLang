@@ -124,3 +124,4 @@ Output: code cleanup and doc/runbook updates.
 - Updated CI parity artifacts to upload per-case left/right output files alongside parity reports for failure triage.
 - Expanded syscall contract parity for `sys.str_utf8ByteCount` with typed argument/return validation and stable ID coverage.
 - Added deterministic parity diff-location helpers and CLI reporting (`index`, `line`, `col`, normalized lengths) for faster C-vs-C# mismatch triage.
+- Enhanced manifest-driven parity harness with deterministic exit-status parity checks (including expected non-zero cases) and status fields in report entries.
