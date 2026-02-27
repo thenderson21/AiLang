@@ -8,5 +8,7 @@ parity_sys_substring_bad_arity|./tools/airun run AiVM.C/tests/parity_cases/sys_s
 parity_sys_remove_bad_type|./tools/airun run AiVM.C/tests/parity_cases/sys_remove_bad_type.aos|cat AiVM.C/tests/parity_cases/sys_remove_bad_type.out; exit 2|2
 parity_repl_sys_success|./tools/airun repl < AiVM.C/tests/parity_cases/repl_sys_success.in|cat AiVM.C/tests/parity_cases/repl_sys_success.out
 parity_repl_sys_error|./tools/airun repl < AiVM.C/tests/parity_cases/repl_sys_error.in|cat AiVM.C/tests/parity_cases/repl_sys_error.out
+parity_repl_ui_drawline_error|./tools/airun repl < AiVM.C/tests/parity_cases/repl_ui_drawline_error.in|cat AiVM.C/tests/parity_cases/repl_ui_drawline_error.out
+parity_repl_ui_drawpath_arity_error|./tools/airun repl < AiVM.C/tests/parity_cases/repl_ui_drawpath_arity_error.in|cat AiVM.C/tests/parity_cases/repl_ui_drawpath_arity_error.out
 parity_vm_default_is_canonical|./tools/airun run examples/golden/vm_default_is_canonical.in.aos|cat examples/golden/vm_default_is_canonical.out.aos; exit 3|3
 parity_vm_unsupported_construct|./tools/airun run examples/golden/vm_unsupported_construct.in.aos|cat examples/golden/vm_unsupported_construct.err; exit 3|3

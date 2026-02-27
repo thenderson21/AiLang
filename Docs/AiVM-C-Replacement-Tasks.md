@@ -146,3 +146,4 @@ Output: code cleanup and doc/runbook updates.
 - Aligned C syscall-contract IDs to canonical C# `SyscallId` numeric values for covered syscalls (`sys.str_*`, `sys.ui_*` subset), reducing ABI/id drift risk.
 - Wired Linux CI perf-smoke execution (`AIVM_PERF_SMOKE=1`) into `aivm-c-ci` so baseline guardrails run in automation.
 - Expanded C syscall-contract surface to match C# UI draw syscall signatures for `sys.ui_drawRect`, `sys.ui_drawText`, `sys.ui_drawLine`, `sys.ui_drawEllipse`, `sys.ui_drawPath`, and `sys.ui_drawImage`, with updated contract+dispatch tests.
+- Expanded syscall-heavy parity suites with deterministic REPL UI validation-error fixtures (`sys.ui_drawLine` type mismatch, `sys.ui_drawPath` arity mismatch).
