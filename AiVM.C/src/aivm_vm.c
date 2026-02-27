@@ -346,6 +346,60 @@ static int push_completed_task(AivmVm* vm, AivmValue result)
     return aivm_stack_push(vm, aivm_value_int(handle));
 }
 
+static int execute_call_subroutine_sync(AivmVm* vm, size_t target, AivmValue* out_result)
+{
+    size_t baseline_frame_count;
+    size_t frame_base;
+    size_t return_ip;
+    AivmValue result = aivm_value_void();
+
+    if (vm == NULL || out_result == NULL) {
+        return 0;
+    }
+    if (target > vm->program->instruction_count) {
+        set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Invalid function target.");
+        return 0;
+    }
+
+    baseline_frame_count = vm->call_frame_count;
+    frame_base = vm->stack_count;
+    return_ip = vm->instruction_pointer + 1U;
+
+    if (!aivm_frame_push(vm, return_ip, frame_base)) {
+        return 0;
+    }
+    vm->instruction_pointer = target;
+
+    while (vm->status != AIVM_VM_STATUS_ERROR) {
+        if (vm->call_frame_count == baseline_frame_count &&
+            vm->instruction_pointer == return_ip) {
+            break;
+        }
+
+        if (vm->instruction_pointer >= vm->program->instruction_count) {
+            set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Subroutine terminated without RET.");
+            return 0;
+        }
+
+        aivm_step(vm);
+        if (vm->status == AIVM_VM_STATUS_HALTED) {
+            set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "HALT is invalid inside ASYNC_CALL.");
+            return 0;
+        }
+    }
+
+    if (vm->status == AIVM_VM_STATUS_ERROR) {
+        return 0;
+    }
+
+    if (vm->stack_count > frame_base) {
+        result = vm->stack[vm->stack_count - 1U];
+        vm->stack_count = frame_base;
+    }
+    *out_result = result;
+    return 1;
+}
+
 static int find_completed_task(const AivmVm* vm, int64_t handle, AivmValue* out_result)
 {
     size_t i;
@@ -1122,10 +1176,23 @@ void aivm_step(AivmVm* vm)
             break;
         }
 
-        case AIVM_OP_ASYNC_CALL:
-            set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "ASYNC_CALL is not implemented in C VM.");
-            vm->instruction_pointer = vm->program->instruction_count;
+        case AIVM_OP_ASYNC_CALL: {
+            size_t target;
+            AivmValue result;
+            if (!operand_to_index(vm, instruction->operand_int, &target)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!execute_call_subroutine_sync(vm, target, &result)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            if (!push_completed_task(vm, result)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
             break;
+        }
 
         case AIVM_OP_ASYNC_CALL_SYS: {
             size_t arg_count;

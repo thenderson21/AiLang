@@ -1405,11 +1405,39 @@ static int test_call_sys_string_contract_type_mismatch_sets_error(void)
     return 0;
 }
 
-static int test_async_call_opcode_is_still_rejected(void)
+static int test_async_call_and_await_roundtrip(void)
+{
+    AivmVm vm;
+    AivmValue out;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_ASYNC_CALL, .operand_int = 4 },
+        { .opcode = AIVM_OP_AWAIT, .operand_int = 0 },
+        { .opcode = AIVM_OP_HALT, .operand_int = 0 },
+        { .opcode = AIVM_OP_NOP, .operand_int = 0 },
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 9 },
+        { .opcode = AIVM_OP_RET, .operand_int = 0 }
+    };
+    AivmProgram program;
+    aivm_program_init(&program, &instructions[0], 6U);
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0) {
+        return 1;
+    }
+    if (expect(out.type == AIVM_VAL_INT && out.int_value == 9) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int test_async_call_invalid_target_sets_error(void)
 {
     AivmVm vm;
     static const AivmInstruction instructions[] = {
-        { .opcode = AIVM_OP_ASYNC_CALL, .operand_int = 0 }
+        { .opcode = AIVM_OP_ASYNC_CALL, .operand_int = 999 }
     };
     AivmProgram program;
     aivm_program_init(&program, &instructions[0], 1U);
@@ -1913,7 +1941,10 @@ int main(void)
     if (test_call_sys_string_contract_type_mismatch_sets_error() != 0) {
         return 1;
     }
-    if (test_async_call_opcode_is_still_rejected() != 0) {
+    if (test_async_call_and_await_roundtrip() != 0) {
+        return 1;
+    }
+    if (test_async_call_invalid_target_sets_error() != 0) {
         return 1;
     }
     if (test_async_call_sys_and_await_roundtrip() != 0) {

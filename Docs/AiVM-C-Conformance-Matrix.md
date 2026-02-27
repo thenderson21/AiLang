@@ -38,7 +38,7 @@ Status keys:
 | `STR_CONCAT`, `TO_STRING`, `STR_ESCAPE` | implemented | Uses fixed-capacity VM string arena (no heap). |
 | `STR_SUBSTRING`, `STR_REMOVE`, `STR_UTF8_BYTE_COUNT` | implemented | Rune-aware/clamped semantics in VM tests. |
 | `CALL_SYS` | implemented | Contract-checked dispatch via typed syscall bindings. |
-| `ASYNC_CALL*`, `AWAIT`, `PAR_*` | in_progress | `ASYNC_CALL_SYS`, `AWAIT`, `PAR_BEGIN/FORK/JOIN/CANCEL` now deterministic; `ASYNC_CALL` remains explicit unsupported. |
+| `ASYNC_CALL*`, `AWAIT`, `PAR_*` | in_progress | Deterministic scaffold semantics now implemented for `ASYNC_CALL`, `ASYNC_CALL_SYS`, `AWAIT`, and `PAR_BEGIN/FORK/JOIN/CANCEL`; bytecode/function-index parity details remain in-progress. |
 | `NODE_*`, `ATTR_*`, `CHILD_*`, `MAKE_*` | in_progress | Implemented deterministic `NODE_*`, `ATTR_*`, `CHILD_*`, `MAKE_BLOCK`, `APPEND_CHILD`, `MAKE_ERR`, `MAKE_LIT_*`, and a deterministic stack-template `MAKE_NODE` scaffold; bytecode operand-shape parity for `MAKE_NODE` remains pending. |
 
 ## Syscall ABI

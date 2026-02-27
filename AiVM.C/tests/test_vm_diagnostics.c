@@ -12,7 +12,7 @@ int main(void)
 {
     AivmVm vm;
     static const AivmInstruction async_call_instructions[] = {
-        { .opcode = AIVM_OP_ASYNC_CALL, .operand_int = 0 }
+        { .opcode = AIVM_OP_ASYNC_CALL, .operand_int = -1 }
     };
     AivmProgram async_call_program;
 
@@ -70,7 +70,7 @@ int main(void)
     if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
         return 1;
     }
-    if (expect(strcmp(aivm_vm_error_detail(&vm), "ASYNC_CALL is not implemented in C VM.") == 0) != 0) {
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "Negative operand is invalid.") == 0) != 0) {
         return 1;
     }
 
