@@ -9,6 +9,7 @@
 #endif
 
 typedef AivmCResult (*AivmExecInstructionsFn)(const AivmInstruction* instructions, size_t instruction_count);
+typedef uint32_t (*AivmAbiVersionFn)(void);
 
 static int expect(int condition)
 {
@@ -19,6 +20,7 @@ int main(void)
 {
     AivmInstruction instructions[2];
     AivmExecInstructionsFn exec_fn;
+    AivmAbiVersionFn abi_fn;
     AivmCResult result;
 
 #if defined(_WIN32)
@@ -28,6 +30,11 @@ int main(void)
     }
     exec_fn = (AivmExecInstructionsFn)GetProcAddress(lib, "aivm_c_execute_instructions");
     if (expect(exec_fn != NULL) != 0) {
+        FreeLibrary(lib);
+        return 1;
+    }
+    abi_fn = (AivmAbiVersionFn)GetProcAddress(lib, \"aivm_c_abi_version\");
+    if (expect(abi_fn != NULL) != 0) {
         FreeLibrary(lib);
         return 1;
     }
@@ -45,6 +52,11 @@ int main(void)
         dlclose(lib);
         return 1;
     }
+    abi_fn = (AivmAbiVersionFn)dlsym(lib, "aivm_c_abi_version");
+    if (expect(abi_fn != NULL) != 0) {
+        dlclose(lib);
+        return 1;
+    }
 #endif
 
     instructions[0].opcode = AIVM_OP_NOP;
@@ -53,6 +65,14 @@ int main(void)
     instructions[1].operand_int = 0;
 
     result = exec_fn(instructions, 2U);
+    if (expect(abi_fn() == 1U) != 0) {
+#if defined(_WIN32)
+        FreeLibrary(lib);
+#else
+        dlclose(lib);
+#endif
+        return 1;
+    }
     if (expect(result.ok == 1) != 0) {
 #if defined(_WIN32)
         FreeLibrary(lib);

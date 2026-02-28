@@ -22,6 +22,7 @@ static int host_ui_get_window_size(
 int main(void)
 {
     AivmCResult result;
+    uint32_t abi_version;
     static const AivmInstruction ok_instructions[] = {
         { .opcode = AIVM_OP_NOP, .operand_int = 0 },
         { .opcode = AIVM_OP_HALT, .operand_int = 0 }
@@ -70,6 +71,11 @@ int main(void)
         .format_flags = 0U,
         .section_count = 0U
     };
+
+    abi_version = aivm_c_abi_version();
+    if (expect(abi_version == 1U) != 0) {
+        return 1;
+    }
 
     result = aivm_c_execute_instructions(ok_instructions, 2U);
     if (expect(result.ok == 1) != 0) {

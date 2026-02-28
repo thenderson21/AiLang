@@ -96,3 +96,8 @@ AivmCResult aivm_c_execute_aibc1(const uint8_t* bytes, size_t byte_count)
     result.error = vm.error;
     return result;
 }
+
+uint32_t aivm_c_abi_version(void)
+{
+    return 1U;
+}

@@ -168,3 +168,4 @@ Output: code cleanup and doc/runbook updates.
 - Added shared-bridge loader test (`AiVM.C/tests/test_shared_bridge_loader.c`) that dynamically loads `aivm_core_shared` and executes `aivm_c_execute_instructions`, validating runtime symbol wiring.
 - Added `scripts/test-aivm-c-bridge.sh` smoke command to run shared-build + dynamic loader test as a single bridge-readiness check.
 - Added `AiLang.Core` bridge loader scaffold (`AivmCBridge`) with opt-in probe hooks (`AIVM_C_BRIDGE_PROBE`, `AIVM_C_BRIDGE_LIB`) while preserving current `DEV008` gate behavior.
+- Added explicit native bridge ABI marker (`aivm_c_abi_version` = `1`) with static/dynamic loader tests to support host compatibility checks during cutover.
