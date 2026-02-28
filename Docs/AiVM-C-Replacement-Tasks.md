@@ -158,3 +158,4 @@ Output: code cleanup and doc/runbook updates.
 - Expanded C syscall contract coverage for process/runtime metadata calls (`sys.process_cwd`, `sys.process_envGet`, `sys.process_argv`, `sys.platform`, `sys.arch`, `sys.os_version`, `sys.runtime`) with ID+return-kind tests and dispatch checks.
 - Expanded C syscall contracts for `sys.time_*`, `sys.proc_exit`, and `sys.fs_*` (canonical IDs/signatures) with unit coverage for contract validation and representative dispatch return typing.
 - Expanded C syscall contracts for `sys.crypto_*` (`base64*`, `sha*`, `hmac`, `randomBytes`) with canonical IDs and contract/dispatch validation coverage.
+- Expanded C syscall contract table for network surface parity (`sys.net_*`, `sys.net_tcp*`, `sys.net_udp*`, `sys.net_async*`) with typed validation coverage in unit tests.

@@ -18,6 +18,12 @@ int main(void)
     AivmValue int_arg[1];
     AivmValue fs_write_args[2];
     AivmValue crypto_hmac_args[2];
+    AivmValue net_int_string_args[2];
+    AivmValue net_string_int_args[2];
+    AivmValue net_int_int_args[2];
+    AivmValue net_listen_tls_args[3];
+    AivmValue net_tcp_listen_tls_args[4];
+    AivmValue net_udp_send_args[4];
     AivmValue str_args[3];
     AivmValue utf8_count_args[1];
 
@@ -256,6 +262,110 @@ int main(void)
         return 1;
     }
     if (expect(return_type == AIVM_VAL_STRING) != 0) {
+        return 1;
+    }
+    net_string_int_args[0] = aivm_value_string("127.0.0.1");
+    net_string_int_args[1] = aivm_value_int(8080);
+    net_int_string_args[0] = aivm_value_int(1);
+    net_int_string_args[1] = aivm_value_string("data");
+    net_int_int_args[0] = aivm_value_int(1);
+    net_int_int_args[1] = aivm_value_int(1024);
+    net_listen_tls_args[0] = aivm_value_int(443);
+    net_listen_tls_args[1] = aivm_value_string("cert");
+    net_listen_tls_args[2] = aivm_value_string("key");
+    net_tcp_listen_tls_args[0] = aivm_value_string("0.0.0.0");
+    net_tcp_listen_tls_args[1] = aivm_value_int(443);
+    net_tcp_listen_tls_args[2] = aivm_value_string("cert");
+    net_tcp_listen_tls_args[3] = aivm_value_string("key");
+    net_udp_send_args[0] = aivm_value_int(1);
+    net_udp_send_args[1] = aivm_value_string("127.0.0.1");
+    net_udp_send_args[2] = aivm_value_int(8080);
+    net_udp_send_args[3] = aivm_value_string("msg");
+    if (expect(aivm_syscall_contract_validate("sys.net_listen", int_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(0U, int_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_listen_tls", net_listen_tls_args, 3U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(1U, net_listen_tls_args, 3U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_accept", int_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_readHeaders", int_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_write", net_int_string_args, 2U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_close", int_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_tcpConnect", net_string_int_args, 2U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(27U, net_string_int_args, 2U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_tcpListen", net_string_int_args, 2U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_tcpListenTls", net_tcp_listen_tls_args, 4U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_tcpAccept", int_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_tcpRead", net_int_int_args, 2U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_tcpWrite", net_int_string_args, 2U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_tcpConnectTls", net_string_int_args, 2U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_tcpConnectStart", net_string_int_args, 2U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_tcpConnectTlsStart", net_string_int_args, 2U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_tcpReadStart", net_int_int_args, 2U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_tcpWriteStart", net_int_string_args, 2U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_asyncPoll", int_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_asyncAwait", int_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_asyncCancel", int_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_asyncResultInt", int_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_asyncResultString", int_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_asyncError", int_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_udpBind", net_string_int_args, 2U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_udpRecv", net_int_int_args, 2U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.net_udpSend", net_udp_send_args, 4U, &return_type) == AIVM_CONTRACT_OK) != 0) {
         return 1;
     }
 

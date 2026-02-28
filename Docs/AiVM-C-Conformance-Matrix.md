@@ -54,6 +54,7 @@ Status keys:
 | Process/runtime metadata syscall contracts | in_progress | Added `sys.process_cwd/sys.process_envGet/sys.process_argv/sys.platform/sys.arch/sys.os_version/sys.runtime` with canonical IDs and return-kind coverage. |
 | Time/filesystem syscall contracts | in_progress | Added `sys.time_nowUnixMs/sys.time_monotonicMs/sys.time_sleepMs/sys.proc_exit` and `sys.fs_*` contracts with canonical IDs plus representative typed dispatch tests. |
 | Crypto syscall contracts | in_progress | Added `sys.crypto_base64Encode/sys.crypto_base64Decode/sys.crypto_sha1/sys.crypto_sha256/sys.crypto_hmacSha256/sys.crypto_randomBytes` with canonical IDs and typed coverage. |
+| Network syscall contracts | in_progress | Added `sys.net_*` legacy + `sys.net_tcp*` + `sys.net_udp*` + `sys.net_async*` contract entries with canonical IDs and typed validation coverage. |
 | UI syscall contracts (initial set) | implemented | Contract scaffold supports UI targets used by VM tests. |
 | Host mechanical boundary | implemented | VM does not call OS APIs directly. |
 
