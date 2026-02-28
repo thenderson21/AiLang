@@ -47,6 +47,7 @@ Status keys:
 |---|---|---|
 | Typed syscall handler ABI | implemented | `AivmSyscallHandler` with target/typed args/result. |
 | Contract table + type validation | implemented | Name/id lookup and deterministic arg/return checks. |
+| Canonical syscall ID coverage | implemented | C contract table now covers full `SyscallId` range (`0..89`) without missing/duplicate IDs. |
 | UI draw syscall contract parity | in_progress | C contracts aligned for `ui_drawRect/ui_drawText/ui_drawLine/ui_drawEllipse/ui_drawPath/ui_drawImage` arities/types and canonical IDs. |
 | UI lifecycle/window syscall parity | in_progress | Added C contracts for `ui_createWindow/ui_beginFrame/ui_endFrame/ui_pollEvent/ui_present/ui_closeWindow/ui_waitFrame`; `ui_getWindowSize` now matches C# shape (`1 int -> node`) and runtime dispatch tests enforce node returns for `ui_pollEvent/ui_getWindowSize`. |
 | String syscall contracts (`sys.str_*`) | implemented | `utf8ByteCount`, `substring`, `remove` in C contract table and tests. |

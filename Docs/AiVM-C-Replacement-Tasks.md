@@ -35,7 +35,7 @@ Status: `completed`
 Output: all runtime value kinds and explicit ownership rules.
 
 6. Port syscall dispatch/contracts in C.
-Status: `in_progress`
+Status: `completed`
 Output: typed target/arg validation, stable IDs, deterministic diagnostics.
 
 7. Runtime error and diagnostics parity.
@@ -160,3 +160,4 @@ Output: code cleanup and doc/runbook updates.
 - Expanded C syscall contracts for `sys.crypto_*` (`base64*`, `sha*`, `hmac`, `randomBytes`) with canonical IDs and contract/dispatch validation coverage.
 - Expanded C syscall contract table for network surface parity (`sys.net_*`, `sys.net_tcp*`, `sys.net_udp*`, `sys.net_async*`) with typed validation coverage in unit tests.
 - Expanded C syscall contract table for worker/debug syscall surface (`sys.worker_*`, `sys.debug_*`) with canonical IDs and typed validation coverage.
+- Completed canonical syscall ID coverage in C contract table for `SyscallId` `0..89` with no missing or duplicate IDs.
