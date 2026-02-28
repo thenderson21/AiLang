@@ -76,6 +76,6 @@ Status keys:
 |---|---|---|
 | Dual-run parity compare utility | implemented | Normalized compare CLI + scripts wired in test flow. |
 | Manifest parity runner | implemented | Per-case artifacts + exit-status parity checks, including optional asymmetric expected left/right status support. |
-| `--vm=c` bridge gate parity | in_progress | Manifest includes deterministic `DEV008` gate case while runtime bridge remains backend-unlinked. |
+| `--vm=c` bridge gate parity | in_progress | Manifest includes deterministic `DEV008` gate case while runtime bridge remains backend-unlinked; embedded-bytecode path now routes through the same `--vm=c` gate/probe behavior. |
 | Multi-platform CI (macOS/Linux/Windows) | implemented | `aivm-c-ci` workflow builds/tests across matrix OSes. |
 | Syscall-heavy golden parity suites | implemented | Core `CALL_SYS` syscall-heavy C tests added; manifest covers string/UI/net/crypto/worker validation paths with deterministic expected output/status checks. |
