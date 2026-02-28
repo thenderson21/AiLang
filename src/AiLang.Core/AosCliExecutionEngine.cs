@@ -30,6 +30,7 @@ public static class AosCliExecutionEngine
         {
             if (IsCAivmMode(vmMode))
             {
+                AivmCBridge.TryProbeFromEnvironment();
                 writeLine(FormatErr("err1", "DEV008", "C VM backend is not linked in this runtime build.", "vmMode"));
                 return 1;
             }
@@ -98,6 +99,7 @@ public static class AosCliExecutionEngine
         {
             if (IsCAivmMode(vmMode))
             {
+                AivmCBridge.TryProbeFromEnvironment();
                 writeLine(FormatErr("err1", "DEV008", "C VM backend is not linked in this runtime build.", "vmMode"));
                 return 1;
             }
@@ -149,6 +151,7 @@ public static class AosCliExecutionEngine
         {
             if (IsCAivmMode(vmMode))
             {
+                AivmCBridge.TryProbeFromEnvironment();
                 writeLine(FormatErr("err1", "DEV008", "C VM backend is not linked in this runtime build.", "vmMode"));
                 return 1;
             }

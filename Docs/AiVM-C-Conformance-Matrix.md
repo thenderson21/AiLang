@@ -25,7 +25,7 @@ Status keys:
 | Deterministic step/run loop | implemented | Switch-based dispatch, no reflection/computed goto. |
 | VM diagnostics mapping | implemented | Stable deterministic code/message mapping in C layer. |
 | VM error detail strings | in_progress | Deterministic detail channel added (`aivm_vm_error_detail`) for central failure paths, including contract-subcoded syscall details from `CALL_SYS` (`AIVMS004/AIVMC*`); opcode-by-opcode parity wording still being expanded. |
-| Runtime bridge API | implemented | `aivm_execute_program*` and C ABI adapters present; optional shared-library build path available via `AIVM_BUILD_SHARED=1` for host-loading experiments. |
+| Runtime bridge API | implemented | `aivm_execute_program*` and C ABI adapters present; optional shared-library build path (`AIVM_BUILD_SHARED=1`) plus `AiLang.Core` opt-in native loader probe scaffold for host-loading experiments. |
 
 ## Opcode Surface
 

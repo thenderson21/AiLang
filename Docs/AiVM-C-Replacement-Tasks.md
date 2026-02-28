@@ -167,3 +167,4 @@ Output: code cleanup and doc/runbook updates.
 - Added explicit C API export/import macros (`AIVM_API`) and shared-target compile definitions for Windows-compatible symbol export in host bridge scenarios.
 - Added shared-bridge loader test (`AiVM.C/tests/test_shared_bridge_loader.c`) that dynamically loads `aivm_core_shared` and executes `aivm_c_execute_instructions`, validating runtime symbol wiring.
 - Added `scripts/test-aivm-c-bridge.sh` smoke command to run shared-build + dynamic loader test as a single bridge-readiness check.
+- Added `AiLang.Core` bridge loader scaffold (`AivmCBridge`) with opt-in probe hooks (`AIVM_C_BRIDGE_PROBE`, `AIVM_C_BRIDGE_LIB`) while preserving current `DEV008` gate behavior.
