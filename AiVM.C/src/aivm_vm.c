@@ -1575,8 +1575,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (id_value.type != AIVM_VAL_STRING || id_value.string_value == NULL) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "MAKE_LIT_* id must be string.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1710,16 +1709,14 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (id_value.type != AIVM_VAL_STRING || id_value.string_value == NULL) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "MAKE_LIT_* id must be string.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
             attr.key = "value";
             if (instruction->opcode == AIVM_OP_MAKE_LIT_STRING) {
                 if (value.type != AIVM_VAL_STRING || value.string_value == NULL) {
-                    vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                    vm->status = AIVM_VM_STATUS_ERROR;
+                    set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "MAKE_LIT_STRING value must be string.");
                     vm->instruction_pointer = vm->program->instruction_count;
                     break;
                 }
@@ -1727,8 +1724,7 @@ void aivm_step(AivmVm* vm)
                 attr.string_value = value.string_value;
             } else {
                 if (value.type != AIVM_VAL_INT) {
-                    vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                    vm->status = AIVM_VM_STATUS_ERROR;
+                    set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "MAKE_LIT_INT value must be int.");
                     vm->instruction_pointer = vm->program->instruction_count;
                     break;
                 }
@@ -1767,8 +1763,7 @@ void aivm_step(AivmVm* vm)
                 argc_value.int_value < 0 ||
                 template_value.type != AIVM_VAL_NODE ||
                 !lookup_node(vm, template_value.node_handle, &template_node)) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "MAKE_NODE requires (node,int>=0).");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1777,8 +1772,7 @@ void aivm_step(AivmVm* vm)
             if (argc > AIVM_VM_NODE_CHILD_CAPACITY ||
                 template_node->attr_count > AIVM_VM_NODE_ATTR_CAPACITY ||
                 vm->stack_count < argc) {
-                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "MAKE_NODE arguments exceeded VM limits.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1793,8 +1787,7 @@ void aivm_step(AivmVm* vm)
                     break;
                 }
                 if (child_value.type != AIVM_VAL_NODE) {
-                    vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                    vm->status = AIVM_VM_STATUS_ERROR;
+                    set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "MAKE_NODE child must be node.");
                     vm->instruction_pointer = vm->program->instruction_count;
                     break;
                 }
