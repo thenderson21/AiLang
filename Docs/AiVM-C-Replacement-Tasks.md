@@ -171,3 +171,5 @@ Output: code cleanup and doc/runbook updates.
 - Added explicit native bridge ABI marker (`aivm_c_abi_version` = `1`) with static/dynamic loader tests to support host compatibility checks during cutover.
 - Extended `AiLang.Core` bridge probe to resolve and validate `aivm_c_abi_version` (default expected ABI `1`, overridable via `AIVM_C_BRIDGE_ABI`) while keeping probe path opt-in.
 - Expanded deterministic VM error-detail coverage for core execution faults (`null instruction buffer`, `LOAD_LOCAL`, `ADD_INT`, `JUMP/JUMP_IF_FALSE`, `CALL`, `RET`) and added assertion coverage in VM core/opcode tests.
+- Expanded deterministic VM error-detail coverage further across comparison/string/async/parallel/node opcode paths; unit tests now assert additional detail strings and non-empty detail behavior for error cases.
+- Routed embedded-bytecode execution through VM mode selection so `--vm=c` now consistently hits the C-bridge `DEV008` gate/probe path (matching source/bundle runtime behavior) while backend linking remains in-progress.
