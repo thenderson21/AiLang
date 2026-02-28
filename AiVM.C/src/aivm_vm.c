@@ -933,8 +933,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (left.type != AIVM_VAL_INT || right.type != AIVM_VAL_INT) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "EQ_INT requires int operands.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -968,8 +967,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (vm->program->constants == NULL || constant_index >= vm->program->constant_count) {
-                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "CONST index out of range.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -997,8 +995,7 @@ void aivm_step(AivmVm* vm)
                 right.type != AIVM_VAL_STRING ||
                 left.string_value == NULL ||
                 right.string_value == NULL) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "STR_CONCAT requires non-null string operands.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1047,8 +1044,7 @@ void aivm_step(AivmVm* vm)
 
             if (value.type == AIVM_VAL_STRING) {
                 if (value.string_value == NULL || !push_string_copy(vm, value.string_value)) {
-                    vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                    vm->status = AIVM_VM_STATUS_ERROR;
+                    set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "TO_STRING input string must be non-null.");
                     vm->instruction_pointer = vm->program->instruction_count;
                     break;
                 }
@@ -1112,8 +1108,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
 
-            vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-            vm->status = AIVM_VM_STATUS_ERROR;
+            set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "TO_STRING unsupported value kind.");
             vm->instruction_pointer = vm->program->instruction_count;
             break;
         }
@@ -1125,8 +1120,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (value.type != AIVM_VAL_STRING || value.string_value == NULL) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "STR_ESCAPE requires non-null string.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1151,8 +1145,7 @@ void aivm_step(AivmVm* vm)
             if (text_value.type != AIVM_VAL_STRING ||
                 start_value.type != AIVM_VAL_INT ||
                 length_value.type != AIVM_VAL_INT) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "STR_SUBSTRING requires (string,int,int).");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1177,8 +1170,7 @@ void aivm_step(AivmVm* vm)
             if (text_value.type != AIVM_VAL_STRING ||
                 start_value.type != AIVM_VAL_INT ||
                 length_value.type != AIVM_VAL_INT) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "STR_REMOVE requires (string,int,int).");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }

@@ -589,6 +589,9 @@ static int test_eq_int_type_mismatch_sets_error(void)
     if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
         return 1;
     }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "EQ_INT requires int operands.") == 0) != 0) {
+        return 1;
+    }
     return 0;
 }
 
@@ -827,6 +830,9 @@ static int test_str_concat_type_mismatch_sets_error(void)
     if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
         return 1;
     }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "STR_CONCAT requires non-null string operands.") == 0) != 0) {
+        return 1;
+    }
     return 0;
 }
 
@@ -922,6 +928,9 @@ static int test_to_string_null_string_sets_error(void)
     if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
         return 1;
     }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "TO_STRING input string must be non-null.") == 0) != 0) {
+        return 1;
+    }
     return 0;
 }
 
@@ -988,6 +997,9 @@ static int test_str_escape_requires_string(void)
         return 1;
     }
     if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "STR_ESCAPE requires non-null string.") == 0) != 0) {
         return 1;
     }
     return 0;
@@ -1211,6 +1223,9 @@ static int test_str_substring_and_remove_type_mismatch(void)
         return 1;
     }
     if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "STR_SUBSTRING requires (string,int,int).") == 0) != 0) {
         return 1;
     }
     return 0;
