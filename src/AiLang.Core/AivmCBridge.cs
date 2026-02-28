@@ -17,6 +17,8 @@ internal static class AivmCBridge
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     internal delegate NativeResult ExecuteAibc1Delegate(IntPtr bytes, nuint byteCount);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    internal delegate uint AbiVersionDelegate();
 
     internal static void TryProbeFromEnvironment()
     {
@@ -29,7 +31,25 @@ internal static class AivmCBridge
             }
 
             var overridePath = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB");
-            _ = TryResolveExecuteAibc1(overridePath, out _, out _, out _);
+            if (!TryResolveApi(overridePath, out var libraryHandle, out _, out var abiVersion, out _))
+            {
+                return;
+            }
+
+            var expected = 1U;
+            var expectedRaw = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_ABI");
+            if (!string.IsNullOrWhiteSpace(expectedRaw) && uint.TryParse(expectedRaw, out var parsed))
+            {
+                expected = parsed;
+            }
+
+            if (abiVersion != expected)
+            {
+                NativeLibrary.Free(libraryHandle);
+                return;
+            }
+
+            NativeLibrary.Free(libraryHandle);
         }
         catch
         {
@@ -37,14 +57,16 @@ internal static class AivmCBridge
         }
     }
 
-    internal static bool TryResolveExecuteAibc1(
+    internal static bool TryResolveApi(
         string? libraryPath,
         out nint libraryHandle,
         out ExecuteAibc1Delegate? executeAibc1,
+        out uint abiVersion,
         out string error)
     {
         libraryHandle = 0;
         executeAibc1 = null;
+        abiVersion = 0U;
         error = string.Empty;
 
         if (!TryLoadLibrary(libraryPath, out libraryHandle, out error))
@@ -61,6 +83,16 @@ internal static class AivmCBridge
         }
 
         executeAibc1 = Marshal.GetDelegateForFunctionPointer<ExecuteAibc1Delegate>(symbol);
+        if (!NativeLibrary.TryGetExport(libraryHandle, "aivm_c_abi_version", out symbol))
+        {
+            error = "aivm_c_abi_version export was not found.";
+            NativeLibrary.Free(libraryHandle);
+            libraryHandle = 0;
+            executeAibc1 = null;
+            return false;
+        }
+
+        abiVersion = Marshal.GetDelegateForFunctionPointer<AbiVersionDelegate>(symbol)();
         return true;
     }
 
