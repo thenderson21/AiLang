@@ -1248,8 +1248,7 @@ void aivm_step(AivmVm* vm)
             }
             if (handle_value.type != AIVM_VAL_INT ||
                 !find_completed_task(vm, handle_value.int_value, &completed)) {
-                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "AWAIT requires completed task handle.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1268,8 +1267,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (vm->par_context_count >= AIVM_VM_PAR_CONTEXT_CAPACITY) {
-                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "PAR_BEGIN exceeded context capacity.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1283,14 +1281,12 @@ void aivm_step(AivmVm* vm)
         case AIVM_OP_PAR_FORK: {
             AivmValue value;
             if (vm->par_context_count == 0U) {
-                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "PAR_FORK requires active PAR_BEGIN context.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
             if (vm->par_value_count >= AIVM_VM_PAR_VALUE_CAPACITY) {
-                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "PAR_FORK exceeded value capacity.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1312,8 +1308,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (vm->par_context_count == 0U) {
-                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "PAR_JOIN requires active PAR_BEGIN context.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1321,8 +1316,7 @@ void aivm_step(AivmVm* vm)
             if (context.expected_count != join_count ||
                 vm->par_value_count < context.start_index ||
                 (vm->par_value_count - context.start_index) != join_count) {
-                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "PAR_JOIN count mismatch for active context.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1348,8 +1342,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (value.type != AIVM_VAL_STRING || value.string_value == NULL) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "STR_UTF8_BYTE_COUNT requires non-null string.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1372,8 +1365,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (node_value.type != AIVM_VAL_NODE || !lookup_node(vm, node_value.node_handle, &node)) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "NODE_KIND requires node operand.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1393,8 +1385,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (node_value.type != AIVM_VAL_NODE || !lookup_node(vm, node_value.node_handle, &node)) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "NODE_ID requires node operand.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1414,8 +1405,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (node_value.type != AIVM_VAL_NODE || !lookup_node(vm, node_value.node_handle, &node)) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "ATTR_COUNT requires node operand.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1442,8 +1432,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (node_value.type != AIVM_VAL_NODE || index_value.type != AIVM_VAL_INT || !lookup_node(vm, node_value.node_handle, &node)) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "ATTR_* requires (node,int).");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1516,8 +1505,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (node_value.type != AIVM_VAL_NODE || !lookup_node(vm, node_value.node_handle, &node)) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "CHILD_COUNT requires node operand.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1539,14 +1527,12 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (node_value.type != AIVM_VAL_NODE || index_value.type != AIVM_VAL_INT || !lookup_node(vm, node_value.node_handle, &node)) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "CHILD_AT requires (node,int).");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
             if (index_value.int_value < 0 || (size_t)index_value.int_value >= node->child_count) {
-                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "CHILD_AT index out of range.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1567,7 +1553,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (id_value.type != AIVM_VAL_STRING || id_value.string_value == NULL) {
-                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "MAKE_LIT_* id must be string.");
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "MAKE_BLOCK id must be string.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1599,23 +1585,20 @@ void aivm_step(AivmVm* vm)
             }
             if (node_value.type != AIVM_VAL_NODE || child_value.type != AIVM_VAL_NODE ||
                 !lookup_node(vm, node_value.node_handle, &base_node)) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "APPEND_CHILD requires (node,node).");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
             child_handle = child_value.node_handle;
             if (!lookup_node(vm, child_handle, &child_node)) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "APPEND_CHILD child node handle was invalid.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
             (void)child_node;
             if (base_node->attr_count > AIVM_VM_NODE_ATTR_CAPACITY ||
                 base_node->child_count + 1U > AIVM_VM_NODE_CHILD_CAPACITY) {
-                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "APPEND_CHILD exceeded VM node capacity.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1664,8 +1647,7 @@ void aivm_step(AivmVm* vm)
                 message_value.type != AIVM_VAL_STRING || message_value.string_value == NULL ||
                 code_value.type != AIVM_VAL_STRING || code_value.string_value == NULL ||
                 id_value.type != AIVM_VAL_STRING || id_value.string_value == NULL) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "MAKE_ERR requires four non-null string operands.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
