@@ -493,8 +493,7 @@ static int create_node_record(
     if (vm->node_count >= AIVM_VM_NODE_CAPACITY ||
         vm->node_attr_count + attr_count > AIVM_VM_NODE_ATTR_CAPACITY ||
         vm->node_child_count + child_count > AIVM_VM_NODE_CHILD_CAPACITY) {
-        vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-        vm->status = AIVM_VM_STATUS_ERROR;
+        set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Node arena capacity exceeded.");
         return 0;
     }
 
