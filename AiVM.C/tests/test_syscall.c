@@ -126,6 +126,38 @@ static int handler_console_read_line(
     return AIVM_SYSCALL_ERR_INVALID;
 }
 
+static int handler_process_cwd(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    (void)args;
+    if (arg_count == 0U) {
+        *result = aivm_value_string("/tmp");
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_ERR_INVALID;
+}
+
+static int handler_process_argv(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    (void)args;
+    if (arg_count == 0U) {
+        *result = aivm_value_node(7);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_ERR_INVALID;
+}
+
 int main(void)
 {
     AivmValue result;
@@ -149,6 +181,10 @@ int main(void)
     static const AivmSyscallBinding console_bindings[] = {
         { "sys.console_write", handler_console_write },
         { "sys.console_readLine", handler_console_read_line }
+    };
+    static const AivmSyscallBinding process_bindings[] = {
+        { "sys.process_cwd", handler_process_cwd },
+        { "sys.process_argv", handler_process_argv }
     };
 
     status = aivm_syscall_invoke(NULL, "sys.echo", NULL, 0U, &result);
@@ -257,6 +293,20 @@ int main(void)
         return 1;
     }
     if (expect(result.type == AIVM_VAL_STRING) != 0) {
+        return 1;
+    }
+    status = aivm_syscall_dispatch_checked(process_bindings, 2U, "sys.process_cwd", NULL, 0U, &result);
+    if (expect(status == AIVM_SYSCALL_OK) != 0) {
+        return 1;
+    }
+    if (expect(result.type == AIVM_VAL_STRING) != 0) {
+        return 1;
+    }
+    status = aivm_syscall_dispatch_checked(process_bindings, 2U, "sys.process_argv", NULL, 0U, &result);
+    if (expect(status == AIVM_SYSCALL_OK) != 0) {
+        return 1;
+    }
+    if (expect(result.type == AIVM_VAL_NODE) != 0) {
         return 1;
     }
     if (expect(strcmp(aivm_syscall_status_code((AivmSyscallStatus)-999), "AIVMS999") == 0) != 0) {

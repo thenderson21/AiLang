@@ -51,6 +51,7 @@ Status keys:
 | UI lifecycle/window syscall parity | in_progress | Added C contracts for `ui_createWindow/ui_beginFrame/ui_endFrame/ui_pollEvent/ui_present/ui_closeWindow/ui_waitFrame`; `ui_getWindowSize` now matches C# shape (`1 int -> node`) and runtime dispatch tests enforce node returns for `ui_pollEvent/ui_getWindowSize`. |
 | String syscall contracts (`sys.str_*`) | implemented | `utf8ByteCount`, `substring`, `remove` in C contract table and tests. |
 | Console syscall contracts (`sys.console_*`, `sys.stdout_*`) | in_progress | Added core write/read/writeErr/stdout contracts with canonical IDs and typed dispatch coverage. |
+| Process/runtime metadata syscall contracts | in_progress | Added `sys.process_cwd/sys.process_envGet/sys.process_argv/sys.platform/sys.arch/sys.os_version/sys.runtime` with canonical IDs and return-kind coverage. |
 | UI syscall contracts (initial set) | implemented | Contract scaffold supports UI targets used by VM tests. |
 | Host mechanical boundary | implemented | VM does not call OS APIs directly. |
 

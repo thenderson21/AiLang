@@ -85,6 +85,51 @@ int main(void)
     if (expect(return_type == AIVM_VAL_STRING) != 0) {
         return 1;
     }
+    if (expect(aivm_syscall_contract_validate("sys.process_cwd", NULL, 0U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(11U, NULL, 0U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.process_envGet", console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(12U, console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.platform", NULL, 0U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(28U, NULL, 0U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.arch", NULL, 0U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(29U, NULL, 0U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.os_version", NULL, 0U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(30U, NULL, 0U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.runtime", NULL, 0U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(31U, NULL, 0U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.process_argv", NULL, 0U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(18U, NULL, 0U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(return_type == AIVM_VAL_NODE) != 0) {
+        return 1;
+    }
 
     ui_window_args[0] = aivm_value_string("Hello");
     ui_window_args[1] = aivm_value_int(800);
