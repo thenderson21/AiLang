@@ -18,6 +18,12 @@ internal static class AivmCBridge
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     internal delegate NativeResult ExecuteAibc1Delegate(IntPtr bytes, nuint byteCount);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
+    internal delegate NativeResult ExecuteInstructionsWithConstantsDelegate(
+        IntPtr instructions,
+        nuint instructionCount,
+        IntPtr constants,
+        nuint constantCount);
+    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     internal delegate uint AbiVersionDelegate();
 
     internal static void TryProbeFromEnvironment()
@@ -83,6 +89,16 @@ internal static class AivmCBridge
         }
 
         executeAibc1 = Marshal.GetDelegateForFunctionPointer<ExecuteAibc1Delegate>(symbol);
+        if (!NativeLibrary.TryGetExport(libraryHandle, "aivm_c_execute_instructions_with_constants", out symbol))
+        {
+            error = "aivm_c_execute_instructions_with_constants export was not found.";
+            NativeLibrary.Free(libraryHandle);
+            libraryHandle = 0;
+            executeAibc1 = null;
+            return false;
+        }
+
+        _ = Marshal.GetDelegateForFunctionPointer<ExecuteInstructionsWithConstantsDelegate>(symbol);
         if (!NativeLibrary.TryGetExport(libraryHandle, "aivm_c_abi_version", out symbol))
         {
             error = "aivm_c_abi_version export was not found.";

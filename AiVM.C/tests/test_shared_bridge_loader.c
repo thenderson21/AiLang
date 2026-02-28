@@ -9,6 +9,11 @@
 #endif
 
 typedef AivmCResult (*AivmExecInstructionsFn)(const AivmInstruction* instructions, size_t instruction_count);
+typedef AivmCResult (*AivmExecInstructionsWithConstantsFn)(
+    const AivmInstruction* instructions,
+    size_t instruction_count,
+    const AivmValue* constants,
+    size_t constant_count);
 typedef uint32_t (*AivmAbiVersionFn)(void);
 
 static int expect(int condition)
@@ -20,6 +25,7 @@ int main(void)
 {
     AivmInstruction instructions[2];
     AivmExecInstructionsFn exec_fn;
+    AivmExecInstructionsWithConstantsFn exec_with_constants_fn;
     AivmAbiVersionFn abi_fn;
     AivmCResult result;
 
@@ -30,6 +36,11 @@ int main(void)
     }
     exec_fn = (AivmExecInstructionsFn)GetProcAddress(lib, "aivm_c_execute_instructions");
     if (expect(exec_fn != NULL) != 0) {
+        FreeLibrary(lib);
+        return 1;
+    }
+    exec_with_constants_fn = (AivmExecInstructionsWithConstantsFn)GetProcAddress(lib, "aivm_c_execute_instructions_with_constants");
+    if (expect(exec_with_constants_fn != NULL) != 0) {
         FreeLibrary(lib);
         return 1;
     }
@@ -49,6 +60,11 @@ int main(void)
     }
     exec_fn = (AivmExecInstructionsFn)dlsym(lib, "aivm_c_execute_instructions");
     if (expect(exec_fn != NULL) != 0) {
+        dlclose(lib);
+        return 1;
+    }
+    exec_with_constants_fn = (AivmExecInstructionsWithConstantsFn)dlsym(lib, "aivm_c_execute_instructions_with_constants");
+    if (expect(exec_with_constants_fn != NULL) != 0) {
         dlclose(lib);
         return 1;
     }
