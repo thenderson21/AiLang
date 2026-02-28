@@ -1,5 +1,6 @@
-# name|left_command|right_command|expected_status(optional, default 0)
+# name|left_command|right_command|expected_status(optional, default 0)|expected_left_status(optional)|expected_right_status(optional)
 parity_same_file|cat AiVM.C/tests/parity_left.txt|cat AiVM.C/tests/parity_left.txt
 parity_crlf_vs_lf|printf $'line1\r\nline2\r\n'|printf $'line1\nline2\n'
 parity_trailing_newline|printf $'alpha\nbeta\n'|printf $'alpha\nbeta'
 parity_nonzero_exit|printf 'fail-path\n'; exit 7|printf 'fail-path\n'; exit 7|7
+parity_asymmetric_status|printf 'same-status-text\n'; exit 1|printf 'same-status-text\n'; exit 2||1|2

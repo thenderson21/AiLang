@@ -153,3 +153,4 @@ Output: code cleanup and doc/runbook updates.
 - Expanded C syscall-contract/dispatch unit coverage for UI lifecycle IDs (`46/47/50/52/53/58/72`) and node-return enforcement for `sys.ui_pollEvent`/`sys.ui_getWindowSize`.
 - Added parity-manifest coverage for CLI `--vm=c` deterministic bridge gate (`DEV008`) so current C-backend-not-linked behavior is regression-checked while Task 8 continues.
 - Refined VM syscall diagnostics for contract failures to include deterministic contract subcodes in detail (`AIVMS004/AIVMC001..003`) via a contract-aware checked-dispatch path, with unit coverage.
+- Enhanced manifest-driven dual-run parity harness to support asymmetric expected left/right exit codes, enabling bridge-phase parity checks where status codes intentionally differ while output must remain normalized-equal.
