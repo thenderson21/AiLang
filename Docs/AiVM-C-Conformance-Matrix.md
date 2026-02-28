@@ -52,6 +52,7 @@ Status keys:
 | String syscall contracts (`sys.str_*`) | implemented | `utf8ByteCount`, `substring`, `remove` in C contract table and tests. |
 | Console syscall contracts (`sys.console_*`, `sys.stdout_*`) | in_progress | Added core write/read/writeErr/stdout contracts with canonical IDs and typed dispatch coverage. |
 | Process/runtime metadata syscall contracts | in_progress | Added `sys.process_cwd/sys.process_envGet/sys.process_argv/sys.platform/sys.arch/sys.os_version/sys.runtime` with canonical IDs and return-kind coverage. |
+| Time/filesystem syscall contracts | in_progress | Added `sys.time_nowUnixMs/sys.time_monotonicMs/sys.time_sleepMs/sys.proc_exit` and `sys.fs_*` contracts with canonical IDs plus representative typed dispatch tests. |
 | UI syscall contracts (initial set) | implemented | Contract scaffold supports UI targets used by VM tests. |
 | Host mechanical boundary | implemented | VM does not call OS APIs directly. |
 

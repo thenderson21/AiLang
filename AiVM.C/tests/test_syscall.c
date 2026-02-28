@@ -158,6 +158,37 @@ static int handler_process_argv(
     return AIVM_SYSCALL_ERR_INVALID;
 }
 
+static int handler_time_now(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    (void)args;
+    if (arg_count == 0U) {
+        *result = aivm_value_int(1234);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_ERR_INVALID;
+}
+
+static int handler_fs_read_file(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (args != NULL && arg_count == 1U && args[0].type == AIVM_VAL_STRING) {
+        *result = aivm_value_string("data");
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_ERR_INVALID;
+}
+
 int main(void)
 {
     AivmValue result;
@@ -185,6 +216,10 @@ int main(void)
     static const AivmSyscallBinding process_bindings[] = {
         { "sys.process_cwd", handler_process_cwd },
         { "sys.process_argv", handler_process_argv }
+    };
+    static const AivmSyscallBinding system_bindings[] = {
+        { "sys.time_nowUnixMs", handler_time_now },
+        { "sys.fs_readFile", handler_fs_read_file }
     };
 
     status = aivm_syscall_invoke(NULL, "sys.echo", NULL, 0U, &result);
@@ -307,6 +342,21 @@ int main(void)
         return 1;
     }
     if (expect(result.type == AIVM_VAL_NODE) != 0) {
+        return 1;
+    }
+    status = aivm_syscall_dispatch_checked(system_bindings, 2U, "sys.time_nowUnixMs", NULL, 0U, &result);
+    if (expect(status == AIVM_SYSCALL_OK) != 0) {
+        return 1;
+    }
+    if (expect(result.type == AIVM_VAL_INT) != 0) {
+        return 1;
+    }
+    arg = aivm_value_string("x");
+    status = aivm_syscall_dispatch_checked(system_bindings, 2U, "sys.fs_readFile", &arg, 1U, &result);
+    if (expect(status == AIVM_SYSCALL_OK) != 0) {
+        return 1;
+    }
+    if (expect(result.type == AIVM_VAL_STRING) != 0) {
         return 1;
     }
     if (expect(strcmp(aivm_syscall_status_code((AivmSyscallStatus)-999), "AIVMS999") == 0) != 0) {

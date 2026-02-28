@@ -15,6 +15,8 @@ int main(void)
     AivmValue ui_window_args[3];
     AivmValue ui_window_id_arg[1];
     AivmValue console_write_arg[1];
+    AivmValue int_arg[1];
+    AivmValue fs_write_args[2];
     AivmValue str_args[3];
     AivmValue utf8_count_args[1];
 
@@ -128,6 +130,90 @@ int main(void)
         return 1;
     }
     if (expect(return_type == AIVM_VAL_NODE) != 0) {
+        return 1;
+    }
+    int_arg[0] = aivm_value_int(1);
+    if (expect(aivm_syscall_contract_validate("sys.time_nowUnixMs", NULL, 0U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(13U, NULL, 0U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.time_monotonicMs", NULL, 0U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(14U, NULL, 0U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(return_type == AIVM_VAL_INT) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.time_sleepMs", int_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(15U, int_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.proc_exit", int_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(17U, int_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(return_type == AIVM_VAL_VOID) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.fs_readFile", console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(19U, console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.fs_fileExists", console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(20U, console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(return_type == AIVM_VAL_BOOL) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.fs_readDir", console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(21U, console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.fs_stat", console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(22U, console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(return_type == AIVM_VAL_NODE) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.fs_pathExists", console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(23U, console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(return_type == AIVM_VAL_BOOL) != 0) {
+        return 1;
+    }
+    fs_write_args[0] = aivm_value_string("p");
+    fs_write_args[1] = aivm_value_string("v");
+    if (expect(aivm_syscall_contract_validate("sys.fs_writeFile", fs_write_args, 2U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(24U, fs_write_args, 2U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate("sys.fs_makeDir", console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
+        return 1;
+    }
+    if (expect(aivm_syscall_contract_validate_id(25U, console_write_arg, 1U, &return_type) == AIVM_CONTRACT_OK) != 0) {
         return 1;
     }
 
