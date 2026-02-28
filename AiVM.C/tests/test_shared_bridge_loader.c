@@ -1,0 +1,79 @@
+#include <stddef.h>
+
+#include "aivm_c_api.h"
+
+#if defined(_WIN32)
+#include <windows.h>
+#else
+#include <dlfcn.h>
+#endif
+
+typedef AivmCResult (*AivmExecInstructionsFn)(const AivmInstruction* instructions, size_t instruction_count);
+
+static int expect(int condition)
+{
+    return condition ? 0 : 1;
+}
+
+int main(void)
+{
+    AivmInstruction instructions[2];
+    AivmExecInstructionsFn exec_fn;
+    AivmCResult result;
+
+#if defined(_WIN32)
+    HMODULE lib = LoadLibraryA("aivm_core_shared.dll");
+    if (expect(lib != NULL) != 0) {
+        return 1;
+    }
+    exec_fn = (AivmExecInstructionsFn)GetProcAddress(lib, "aivm_c_execute_instructions");
+    if (expect(exec_fn != NULL) != 0) {
+        FreeLibrary(lib);
+        return 1;
+    }
+#else
+#if defined(__APPLE__)
+    void* lib = dlopen("./libaivm_core_shared.dylib", RTLD_NOW);
+#else
+    void* lib = dlopen("./libaivm_core_shared.so", RTLD_NOW);
+#endif
+    if (expect(lib != NULL) != 0) {
+        return 1;
+    }
+    exec_fn = (AivmExecInstructionsFn)dlsym(lib, "aivm_c_execute_instructions");
+    if (expect(exec_fn != NULL) != 0) {
+        dlclose(lib);
+        return 1;
+    }
+#endif
+
+    instructions[0].opcode = AIVM_OP_NOP;
+    instructions[0].operand_int = 0;
+    instructions[1].opcode = AIVM_OP_HALT;
+    instructions[1].operand_int = 0;
+
+    result = exec_fn(instructions, 2U);
+    if (expect(result.ok == 1) != 0) {
+#if defined(_WIN32)
+        FreeLibrary(lib);
+#else
+        dlclose(lib);
+#endif
+        return 1;
+    }
+    if (expect(result.status == AIVM_VM_STATUS_HALTED) != 0) {
+#if defined(_WIN32)
+        FreeLibrary(lib);
+#else
+        dlclose(lib);
+#endif
+        return 1;
+    }
+
+#if defined(_WIN32)
+    FreeLibrary(lib);
+#else
+    dlclose(lib);
+#endif
+    return 0;
+}

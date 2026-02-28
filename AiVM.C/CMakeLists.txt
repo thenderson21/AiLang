@@ -133,6 +133,21 @@ if (BUILD_TESTING)
     )
     target_link_libraries(aivm_test_c_api PRIVATE aivm_core)
 
+    if (AIVM_BUILD_SHARED)
+        add_executable(aivm_test_shared_bridge_loader
+            tests/test_shared_bridge_loader.c
+        )
+        target_include_directories(aivm_test_shared_bridge_loader PRIVATE
+            ${CMAKE_CURRENT_SOURCE_DIR}/include
+        )
+        if (MSVC)
+            target_compile_options(aivm_test_shared_bridge_loader PRIVATE /W4 /WX)
+        else()
+            target_compile_options(aivm_test_shared_bridge_loader PRIVATE -Wall -Wextra -Wpedantic -Werror)
+        endif()
+        add_test(NAME aivm_test_shared_bridge_loader COMMAND aivm_test_shared_bridge_loader)
+    endif()
+
     if (MSVC)
         target_compile_options(aivm_test_program_loader PRIVATE /W4 /WX)
         target_compile_options(aivm_test_vm_core PRIVATE /W4 /WX)
