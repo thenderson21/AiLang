@@ -268,10 +268,17 @@ public static class AosCliExecutionEngine
         }
     }
 
-    public static int RunEmbeddedBytecode(string bytecodeText, string[] cliArgs, bool traceEnabled, Action<string> writeLine)
+    public static int RunEmbeddedBytecode(string bytecodeText, string[] cliArgs, bool traceEnabled, string vmMode, Action<string> writeLine)
     {
         try
         {
+            if (IsCAivmMode(vmMode))
+            {
+                AivmCBridge.TryProbeFromEnvironment();
+                writeLine(FormatErr("err1", "DEV008", "C VM backend is not linked in this runtime build.", "vmMode"));
+                return 1;
+            }
+
             var parse = Parse(bytecodeText);
             if (parse.Root is null || parse.Diagnostics.Count > 0)
             {

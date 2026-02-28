@@ -65,7 +65,7 @@ static int RunCli(string[] args)
         }
 
         return embedded.IsBytecode
-            ? AosCliExecutionEngine.RunEmbeddedBytecode(embedded.Text, filteredArgs, traceEnabled, Console.WriteLine)
+            ? AosCliExecutionEngine.RunEmbeddedBytecode(embedded.Text, filteredArgs, traceEnabled, vmMode, Console.WriteLine)
             : AosCliExecutionEngine.RunEmbeddedBundle(embedded.Text, filteredArgs, traceEnabled, vmMode, Console.WriteLine);
     }
 
