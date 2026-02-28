@@ -1,3 +1,5 @@
+#include <string.h>
+
 #include "aivm_program.h"
 #include "aivm_vm.h"
 
@@ -102,6 +104,36 @@ static int test_empty_program_halts(void)
     return 0;
 }
 
+static int test_missing_instruction_buffer_sets_error_detail(void)
+{
+    AivmVm vm;
+    static const AivmProgram program = {
+        .instructions = NULL,
+        .instruction_count = 1U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
+        return 1;
+    }
+    if (expect(vm.instruction_pointer == 1U) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "Program instruction buffer is null.") == 0) != 0) {
+        return 1;
+    }
+
+    return 0;
+}
+
 int main(void)
 {
     if (test_run_nop_halt() != 0) {
@@ -114,6 +146,9 @@ int main(void)
         return 1;
     }
     if (test_empty_program_halts() != 0) {
+        return 1;
+    }
+    if (test_missing_instruction_buffer_sets_error_detail() != 0) {
         return 1;
     }
 

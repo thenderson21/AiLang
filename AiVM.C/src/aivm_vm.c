@@ -712,8 +712,7 @@ void aivm_step(AivmVm* vm)
             vm->status = AIVM_VM_STATUS_HALTED;
             return;
         }
-        vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-        vm->status = AIVM_VM_STATUS_ERROR;
+        set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Program instruction buffer is null.");
         vm->instruction_pointer = vm->program->instruction_count;
         return;
     }
@@ -789,8 +788,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (!aivm_local_get(vm, local_index, &local_value)) {
-                vm->error = AIVM_VM_ERR_LOCAL_OUT_OF_RANGE;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_LOCAL_OUT_OF_RANGE, "Local slot out of range.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -810,8 +808,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (left.type != AIVM_VAL_INT || right.type != AIVM_VAL_INT) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "ADD_INT requires int operands.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -830,8 +827,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (target > vm->program->instruction_count) {
-                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Jump target out of range.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -851,15 +847,13 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (condition.type != AIVM_VAL_BOOL) {
-                vm->error = AIVM_VM_ERR_TYPE_MISMATCH;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "JUMP_IF_FALSE requires bool condition.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
             if (condition.bool_value == 0) {
                 if (target > vm->program->instruction_count) {
-                    vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-                    vm->status = AIVM_VM_STATUS_ERROR;
+                    set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Jump target out of range.");
                     vm->instruction_pointer = vm->program->instruction_count;
                     break;
                 }
@@ -885,8 +879,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (target > vm->program->instruction_count) {
-                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Call target out of range.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -908,14 +901,12 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (frame.return_instruction_pointer > vm->program->instruction_count) {
-                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Return instruction pointer out of range.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
             if (vm->stack_count < frame.frame_base) {
-                vm->error = AIVM_VM_ERR_INVALID_PROGRAM;
-                vm->status = AIVM_VM_STATUS_ERROR;
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Call frame base exceeds stack depth.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }

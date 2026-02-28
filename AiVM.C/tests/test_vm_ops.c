@@ -165,6 +165,9 @@ static int test_load_local_missing_sets_error(void)
     if (expect(vm.error == AIVM_VM_ERR_LOCAL_OUT_OF_RANGE) != 0) {
         return 1;
     }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "Local slot out of range.") == 0) != 0) {
+        return 1;
+    }
 
     return 0;
 }
@@ -231,6 +234,9 @@ static int test_add_int_type_mismatch_sets_error(void)
         return 1;
     }
     if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "ADD_INT requires int operands.") == 0) != 0) {
         return 1;
     }
 
@@ -331,6 +337,9 @@ static int test_jump_if_false_type_mismatch_sets_error(void)
         return 1;
     }
     if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "JUMP_IF_FALSE requires bool condition.") == 0) != 0) {
         return 1;
     }
     return 0;
