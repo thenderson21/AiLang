@@ -155,7 +155,7 @@ internal static class AivmCBridge
                 out var libraryHandle,
                 out _,
                 out var executeInstructionsWithConstants,
-                out _,
+                out var abiVersion,
                 out var loadError))
         {
             failureMessage = loadError;
@@ -164,6 +164,13 @@ internal static class AivmCBridge
 
         try
         {
+            var expectedAbi = GetExpectedAbiVersion();
+            if (abiVersion != expectedAbi)
+            {
+                failureMessage = $"Bridge ABI mismatch: expected {expectedAbi}, got {abiVersion}.";
+                return false;
+            }
+
             var nativeInstructions = instructions
                 .Select(inst => new NativeInstruction { Opcode = inst.opcode, OperandInt = inst.operand })
                 .ToArray();
@@ -242,12 +249,7 @@ internal static class AivmCBridge
                 return;
             }
 
-            var expected = 1U;
-            var expectedRaw = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_ABI");
-            if (!string.IsNullOrWhiteSpace(expectedRaw) && uint.TryParse(expectedRaw, out var parsed))
-            {
-                expected = parsed;
-            }
+            var expected = GetExpectedAbiVersion();
 
             if (abiVersion != expected)
             {
@@ -336,6 +338,18 @@ internal static class AivmCBridge
         {
             handle.Free();
         }
+    }
+
+    private static uint GetExpectedAbiVersion()
+    {
+        var expected = 1U;
+        var expectedRaw = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_ABI");
+        if (!string.IsNullOrWhiteSpace(expectedRaw) && uint.TryParse(expectedRaw, out var parsed))
+        {
+            expected = parsed;
+        }
+
+        return expected;
     }
 
     private static bool TryLowerMainFunction(

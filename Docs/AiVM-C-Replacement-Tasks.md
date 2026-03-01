@@ -187,3 +187,4 @@ Output: code cleanup and doc/runbook updates.
 - Added `AiLang.Tests` coverage for execute-enabled compatibility diagnostics when embedded bytecode lacks a `main` entry function.
 - Expanded bridge opcode lowering map to accept both `RETURN` and `RET` mnemonics in execute-enabled embedded-bytecode compatibility checks.
 - Improved bridge execute compatibility diagnostics to include VM code + node ID from bytecode-lowering failures, with test coverage for unsupported node constants.
+- Enforced `AIVM_C_BRIDGE_ABI` compatibility in execute-enabled bridge path (matching probe behavior) so native execution refuses mismatched bridge ABIs deterministically.
