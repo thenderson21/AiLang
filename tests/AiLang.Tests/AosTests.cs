@@ -4274,6 +4274,24 @@ public class AosTests
     }
 
     [Test]
+    public void RunEmbeddedBytecode_CVmMode_ReturnsDev008Gate()
+    {
+        const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0)";
+        var lines = new List<string>();
+
+        var exitCode = AosCliExecutionEngine.RunEmbeddedBytecode(
+            bytecodeText,
+            Array.Empty<string>(),
+            traceEnabled: false,
+            vmMode: "c",
+            lines.Add);
+
+        Assert.That(exitCode, Is.EqualTo(1));
+        Assert.That(lines.Count, Is.EqualTo(1));
+        Assert.That(lines[0], Is.EqualTo("Err#err1(code=DEV008 message=\"C VM backend is not linked in this runtime build.\" nodeId=vmMode)"));
+    }
+
+    [Test]
     public void Serve_HealthEndpoint_ReturnsOk()
     {
         var appPath = FindRepoFile("examples/golden/http/health_app.aos");
