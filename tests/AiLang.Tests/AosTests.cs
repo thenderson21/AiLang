@@ -4310,6 +4310,43 @@ public class AosTests
     }
 
     [Test]
+    public void RunSource_CVmMode_ReturnsDev008Gate()
+    {
+        var lines = new List<string>();
+
+        var exitCode = AosCliExecutionEngine.RunSource(
+            path: "does/not/matter.aos",
+            argv: Array.Empty<string>(),
+            traceEnabled: false,
+            vmMode: "c",
+            writeLine: lines.Add);
+
+        Assert.That(exitCode, Is.EqualTo(1));
+        Assert.That(lines.Count, Is.EqualTo(1));
+        Assert.That(lines[0], Is.EqualTo("Err#err1(code=DEV008 message=\"C VM backend is not linked in this runtime build.\" nodeId=vmMode)"));
+    }
+
+    [Test]
+    public void RunServe_CVmMode_ReturnsDev008Gate()
+    {
+        var lines = new List<string>();
+
+        var exitCode = AosCliExecutionEngine.RunServe(
+            path: "does/not/matter.aos",
+            argv: Array.Empty<string>(),
+            port: 8080,
+            tlsCertPath: string.Empty,
+            tlsKeyPath: string.Empty,
+            traceEnabled: false,
+            vmMode: "c",
+            writeLine: lines.Add);
+
+        Assert.That(exitCode, Is.EqualTo(1));
+        Assert.That(lines.Count, Is.EqualTo(1));
+        Assert.That(lines[0], Is.EqualTo("Err#err1(code=DEV008 message=\"C VM backend is not linked in this runtime build.\" nodeId=vmMode)"));
+    }
+
+    [Test]
     public void Serve_HealthEndpoint_ReturnsOk()
     {
         var appPath = FindRepoFile("examples/golden/http/health_app.aos");
