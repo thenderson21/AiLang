@@ -184,3 +184,4 @@ Output: code cleanup and doc/runbook updates.
 - Aligned C VM top-level `RET`/`RETURN` behavior with entry-function semantics by halting (instead of frame-underflow error) when no call frame exists, with updated opcode tests.
 - Updated `aivm-c-ci` workflow path filters to include bridge loader changes in `src/AiLang.Core/AivmCBridge.cs` so Task 8 bridge increments always trigger CI.
 - Bridge execute path now performs deterministic bytecode compatibility lowering before native library resolution, enabling actionable unsupported-op diagnostics (`DEV008`) even when no shared bridge library is present.
+- Added `AiLang.Tests` coverage for execute-enabled compatibility diagnostics when embedded bytecode lacks a `main` entry function.
