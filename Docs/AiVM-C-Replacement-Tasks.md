@@ -182,3 +182,4 @@ Output: code cleanup and doc/runbook updates.
 - Expanded shared-library bridge loader test to validate `has_exit_code`/`exit_code` behavior over dynamic loading, improving bridge ABI/result contract coverage.
 - Added opt-in `AIVM_C_BRIDGE_EXECUTE=1` embedded-bytecode runtime path for `--vm=c` that lowers a compatibility-safe `main` instruction subset to native C API execution and falls back deterministically with `DEV008` when bridge execution is unavailable.
 - Aligned C VM top-level `RET`/`RETURN` behavior with entry-function semantics by halting (instead of frame-underflow error) when no call frame exists, with updated opcode tests.
+- Updated `aivm-c-ci` workflow path filters to include bridge loader changes in `src/AiLang.Core/AivmCBridge.cs` so Task 8 bridge increments always trigger CI.
