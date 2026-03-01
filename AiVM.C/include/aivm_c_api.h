@@ -25,6 +25,8 @@ extern "C" {
 typedef struct {
     int ok;
     int loaded;
+    int has_exit_code;
+    int exit_code;
     AivmVmStatus status;
     AivmVmError error;
     AivmProgramStatus load_status;

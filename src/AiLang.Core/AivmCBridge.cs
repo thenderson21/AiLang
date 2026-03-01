@@ -9,6 +9,8 @@ internal static class AivmCBridge
     {
         public int Ok;
         public int Loaded;
+        public int HasExitCode;
+        public int ExitCode;
         public int Status;
         public int Error;
         public uint LoadStatus;

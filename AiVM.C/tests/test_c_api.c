@@ -90,6 +90,9 @@ int main(void)
     if (expect(result.status == AIVM_VM_STATUS_HALTED) != 0) {
         return 1;
     }
+    if (expect(result.has_exit_code == 0) != 0) {
+        return 1;
+    }
 
     result = aivm_c_execute_instructions(bad_opcode, 1U);
     if (expect(result.ok == 0) != 0) {
@@ -104,6 +107,9 @@ int main(void)
         return 1;
     }
     if (expect(result.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+    if (expect(result.has_exit_code == 0) != 0) {
         return 1;
     }
 
@@ -160,6 +166,12 @@ int main(void)
         return 1;
     }
     if (expect(result.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+    if (expect(result.has_exit_code == 1) != 0) {
+        return 1;
+    }
+    if (expect(result.exit_code == 5) != 0) {
         return 1;
     }
 

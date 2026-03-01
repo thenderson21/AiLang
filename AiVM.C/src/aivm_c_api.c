@@ -7,11 +7,32 @@ static AivmCResult result_defaults(void)
     AivmCResult result;
     result.ok = 0;
     result.loaded = 0;
+    result.has_exit_code = 0;
+    result.exit_code = 0;
     result.status = AIVM_VM_STATUS_READY;
     result.error = AIVM_VM_ERR_NONE;
     result.load_status = AIVM_PROGRAM_ERR_NULL;
     result.load_error_offset = 0U;
     return result;
+}
+
+static void capture_exit_code(AivmCResult* result, const AivmVm* vm)
+{
+    const AivmValue* top;
+    if (result == NULL || vm == NULL) {
+        return;
+    }
+    if (vm->status != AIVM_VM_STATUS_HALTED || vm->stack_count == 0U) {
+        return;
+    }
+
+    top = &vm->stack[vm->stack_count - 1U];
+    if (top->type != AIVM_VAL_INT) {
+        return;
+    }
+
+    result->has_exit_code = 1;
+    result->exit_code = (int)top->int_value;
 }
 
 AivmCResult aivm_c_execute_instructions(const AivmInstruction* instructions, size_t instruction_count)
@@ -66,6 +87,7 @@ AivmCResult aivm_c_execute_instructions_with_syscalls(
         &vm);
     result.status = vm.status;
     result.error = vm.error;
+    capture_exit_code(&result, &vm);
     return result;
 }
 
@@ -91,6 +113,7 @@ AivmCResult aivm_c_execute_program_with_syscalls(
     result.ok = aivm_execute_program_with_syscalls(program, bindings, binding_count, &vm);
     result.status = vm.status;
     result.error = vm.error;
+    capture_exit_code(&result, &vm);
     return result;
 }
 
@@ -115,6 +138,7 @@ AivmCResult aivm_c_execute_aibc1(const uint8_t* bytes, size_t byte_count)
     result.ok = aivm_execute_program(&program, &vm);
     result.status = vm.status;
     result.error = vm.error;
+    capture_exit_code(&result, &vm);
     return result;
 }
 
