@@ -54,6 +54,10 @@ jobs:
         if: runner.os != 'Windows'
         run: ./scripts/test-aivm-c.sh
 
+      - name: Bridge smoke (Unix)
+        if: runner.os != 'Windows'
+        run: ./scripts/test-aivm-c-bridge.sh
+
       - name: Perf smoke (Linux)
         if: runner.os == 'Linux'
         run: AIVM_PERF_SMOKE=1 AIVM_PERF_RUNS=10 ./scripts/test-aivm-c.sh
