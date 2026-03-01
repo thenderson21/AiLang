@@ -190,3 +190,4 @@ Output: code cleanup and doc/runbook updates.
 - Enforced `AIVM_C_BRIDGE_ABI` compatibility in execute-enabled bridge path (matching probe behavior) so native execution refuses mismatched bridge ABIs deterministically.
 - Added deterministic execute-mode compatibility guard for `main` function parameters (not yet supported by native bridge execution path), with `AiLang.Tests` coverage.
 - Tightened execute-mode safety by explicitly rejecting `MAKE_NODE` in bridge bytecode compatibility lowering (current C VM shape differs from C# operand semantics), with regression coverage in `AiLang.Tests`.
+- Tightened execute-mode safety by explicitly rejecting `CALL_SYS`/`ASYNC_CALL_SYS` in bridge compatibility lowering until syscall host-binding bridge is implemented, with regression coverage.

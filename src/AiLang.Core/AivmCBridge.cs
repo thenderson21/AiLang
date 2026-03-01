@@ -394,36 +394,17 @@ internal static class AivmCBridge
         indexMap[main.Instructions.Count] = nextIndex;
 
         constants.AddRange(program.Constants);
-        var extraStringConstantIndex = new Dictionary<string, int>(StringComparer.Ordinal);
         for (var i = 0; i < main.Instructions.Count; i++)
         {
             var inst = main.Instructions[i];
             if (string.Equals(inst.Op, "CALL", StringComparison.Ordinal) ||
                 string.Equals(inst.Op, "ASYNC_CALL", StringComparison.Ordinal) ||
+                string.Equals(inst.Op, "CALL_SYS", StringComparison.Ordinal) ||
+                string.Equals(inst.Op, "ASYNC_CALL_SYS", StringComparison.Ordinal) ||
                 string.Equals(inst.Op, "MAKE_NODE", StringComparison.Ordinal))
             {
                 error = $"Opcode '{inst.Op}' is not yet supported by C bridge execute path.";
                 return false;
-            }
-
-            if (string.Equals(inst.Op, "CALL_SYS", StringComparison.Ordinal))
-            {
-                if (string.IsNullOrWhiteSpace(inst.S))
-                {
-                    error = "CALL_SYS target was empty.";
-                    return false;
-                }
-
-                if (!extraStringConstantIndex.TryGetValue(inst.S, out var targetConstant))
-                {
-                    targetConstant = constants.Count;
-                    extraStringConstantIndex[inst.S] = targetConstant;
-                    constants.Add(AosValue.FromString(inst.S));
-                }
-
-                instructions.Add((OpcodeMap["CONST"], targetConstant));
-                instructions.Add((OpcodeMap["CALL_SYS"], inst.A));
-                continue;
             }
 
             if (!OpcodeMap.TryGetValue(inst.Op, out var opcode))
