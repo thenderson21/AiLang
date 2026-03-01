@@ -149,6 +149,11 @@ internal static class AivmCBridge
             return false;
         }
 
+        if (!TryGetExpectedAbiVersionForExecute(out var expectedAbi, out failureMessage))
+        {
+            return false;
+        }
+
         if (!TryResolveApi(
                 Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB"),
                 out var libraryHandle,
@@ -163,7 +168,6 @@ internal static class AivmCBridge
 
         try
         {
-            var expectedAbi = GetExpectedAbiVersion();
             if (abiVersion != expectedAbi)
             {
                 failureMessage = $"Bridge ABI mismatch: expected {expectedAbi}, got {abiVersion}.";
@@ -349,6 +353,26 @@ internal static class AivmCBridge
         }
 
         return expected;
+    }
+
+    private static bool TryGetExpectedAbiVersionForExecute(out uint expected, out string error)
+    {
+        expected = 1U;
+        error = string.Empty;
+
+        var expectedRaw = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_ABI");
+        if (string.IsNullOrWhiteSpace(expectedRaw))
+        {
+            return true;
+        }
+
+        if (!uint.TryParse(expectedRaw, out expected))
+        {
+            error = $"Invalid AIVM_C_BRIDGE_ABI value: '{expectedRaw}'.";
+            return false;
+        }
+
+        return true;
     }
 
     private static bool TryLowerMainFunction(

@@ -192,3 +192,4 @@ Output: code cleanup and doc/runbook updates.
 - Tightened execute-mode safety by explicitly rejecting `MAKE_NODE` in bridge bytecode compatibility lowering (current C VM shape differs from C# operand semantics), with regression coverage in `AiLang.Tests`.
 - Tightened execute-mode safety by explicitly rejecting `CALL_SYS`/`ASYNC_CALL_SYS` in bridge compatibility lowering until syscall host-binding bridge is implemented, with regression coverage.
 - Fixed C VM call-frame locals scoping parity by snapshotting/restoring `locals_count` on `CALL`/`RET`, with new opcode test coverage to prevent caller-local leakage across function calls.
+- Added strict execute-mode validation for malformed `AIVM_C_BRIDGE_ABI` values so bridge execution fails fast with deterministic diagnostics before native library loading.
