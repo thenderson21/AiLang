@@ -186,3 +186,4 @@ Output: code cleanup and doc/runbook updates.
 - Bridge execute path now performs deterministic bytecode compatibility lowering before native library resolution, enabling actionable unsupported-op diagnostics (`DEV008`) even when no shared bridge library is present.
 - Added `AiLang.Tests` coverage for execute-enabled compatibility diagnostics when embedded bytecode lacks a `main` entry function.
 - Expanded bridge opcode lowering map to accept both `RETURN` and `RET` mnemonics in execute-enabled embedded-bytecode compatibility checks.
+- Improved bridge execute compatibility diagnostics to include VM code + node ID from bytecode-lowering failures, with test coverage for unsupported node constants.

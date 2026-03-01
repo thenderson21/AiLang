@@ -355,7 +355,7 @@ internal static class AivmCBridge
         }
         catch (VmRuntimeException ex)
         {
-            error = ex.Message;
+            error = $"{ex.Code}: {ex.Message} (nodeId={ex.NodeId})";
             return false;
         }
 
