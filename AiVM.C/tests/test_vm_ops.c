@@ -520,6 +520,52 @@ static int test_return_alias_roundtrip(void)
     return 0;
 }
 
+static int test_call_ret_restores_caller_locals_scope(void)
+{
+    AivmVm vm;
+    AivmValue out;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 1 },
+        { .opcode = AIVM_OP_STORE_LOCAL, .operand_int = 0 },
+        { .opcode = AIVM_OP_CALL, .operand_int = 7 },
+        { .opcode = AIVM_OP_LOAD_LOCAL, .operand_int = 0 },
+        { .opcode = AIVM_OP_HALT, .operand_int = 0 },
+        { .opcode = AIVM_OP_NOP, .operand_int = 0 },
+        { .opcode = AIVM_OP_NOP, .operand_int = 0 },
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 99 },
+        { .opcode = AIVM_OP_STORE_LOCAL, .operand_int = 1 },
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 5 },
+        { .opcode = AIVM_OP_RET, .operand_int = 0 }
+    };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 11U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+    if (expect(vm.locals_count == 1U) != 0) {
+        return 1;
+    }
+    if (expect(aivm_local_get(&vm, 1U, &out) == 0) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0) {
+        return 1;
+    }
+    if (expect(out.type == AIVM_VAL_INT && out.int_value == 1) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
 static int test_negative_jump_operand_sets_error(void)
 {
     AivmVm vm;
@@ -2288,6 +2334,9 @@ int main(void)
         return 1;
     }
     if (test_return_alias_roundtrip() != 0) {
+        return 1;
+    }
+    if (test_call_ret_restores_caller_locals_scope() != 0) {
         return 1;
     }
     if (test_negative_jump_operand_sets_error() != 0) {

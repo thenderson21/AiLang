@@ -646,6 +646,7 @@ int aivm_frame_push(AivmVm* vm, size_t return_instruction_pointer, size_t frame_
 
     vm->call_frames[vm->call_frame_count].return_instruction_pointer = return_instruction_pointer;
     vm->call_frames[vm->call_frame_count].frame_base = frame_base;
+    vm->call_frames[vm->call_frame_count].locals_base = vm->locals_count;
     vm->call_frame_count += 1U;
     return 1;
 }
@@ -918,6 +919,7 @@ void aivm_step(AivmVm* vm)
                 has_return_value = 1;
             }
             vm->stack_count = frame.frame_base;
+            vm->locals_count = frame.locals_base;
             if (has_return_value != 0) {
                 if (!aivm_stack_push(vm, return_value)) {
                     vm->instruction_pointer = vm->program->instruction_count;

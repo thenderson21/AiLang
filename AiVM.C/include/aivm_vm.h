@@ -31,6 +31,7 @@ typedef enum {
 typedef struct {
     size_t return_instruction_pointer;
     size_t frame_base;
+    size_t locals_base;
 } AivmCallFrame;
 
 typedef enum {

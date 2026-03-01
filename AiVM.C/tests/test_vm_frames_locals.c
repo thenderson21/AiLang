@@ -31,6 +31,9 @@ int main(void)
     if (expect(frame.frame_base == 3U) != 0) {
         return 1;
     }
+    if (expect(frame.locals_base == 0U) != 0) {
+        return 1;
+    }
 
     if (expect(aivm_frame_pop(&vm, &frame) == 0) != 0) {
         return 1;
