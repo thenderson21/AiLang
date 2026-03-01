@@ -24,6 +24,7 @@ static int expect(int condition)
 int main(void)
 {
     AivmInstruction instructions[2];
+    AivmInstruction exit_code_instructions[2];
     AivmExecInstructionsFn exec_fn;
     AivmExecInstructionsWithConstantsFn exec_with_constants_fn;
     AivmAbiVersionFn abi_fn;
@@ -98,6 +99,45 @@ int main(void)
         return 1;
     }
     if (expect(result.status == AIVM_VM_STATUS_HALTED) != 0) {
+#if defined(_WIN32)
+        FreeLibrary(lib);
+#else
+        dlclose(lib);
+#endif
+        return 1;
+    }
+    if (expect(result.has_exit_code == 0) != 0) {
+#if defined(_WIN32)
+        FreeLibrary(lib);
+#else
+        dlclose(lib);
+#endif
+        return 1;
+    }
+
+    exit_code_instructions[0].opcode = AIVM_OP_PUSH_INT;
+    exit_code_instructions[0].operand_int = 9;
+    exit_code_instructions[1].opcode = AIVM_OP_HALT;
+    exit_code_instructions[1].operand_int = 0;
+
+    result = exec_fn(exit_code_instructions, 2U);
+    if (expect(result.ok == 1) != 0) {
+#if defined(_WIN32)
+        FreeLibrary(lib);
+#else
+        dlclose(lib);
+#endif
+        return 1;
+    }
+    if (expect(result.has_exit_code == 1) != 0) {
+#if defined(_WIN32)
+        FreeLibrary(lib);
+#else
+        dlclose(lib);
+#endif
+        return 1;
+    }
+    if (expect(result.exit_code == 9) != 0) {
 #if defined(_WIN32)
         FreeLibrary(lib);
 #else

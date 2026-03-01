@@ -179,3 +179,4 @@ Output: code cleanup and doc/runbook updates.
 - Extended C API execution result contract with deterministic `has_exit_code`/`exit_code` extraction from halted VM top-of-stack `int` values, with unit coverage and bridge-struct alignment in `AiLang.Core`.
 - Hardened `AivmCBridge` probe to execute a deterministic native smoke instruction (`HALT`) after export/ABI validation, proving live call-path readiness in addition to symbol presence.
 - Fixed parallel test script collisions by isolating bridge parity report outputs and ensuring parity-report directories are created before manifest execution.
+- Expanded shared-library bridge loader test to validate `has_exit_code`/`exit_code` behavior over dynamic loading, improving bridge ABI/result contract coverage.
