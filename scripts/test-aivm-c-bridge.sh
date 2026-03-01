@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${AIVM_C_BRIDGE_BUILD_DIR:-${ROOT_DIR}/.tmp/aivm-c-build-bridge}"
-PARITY_REPORT="${AIVM_C_BRIDGE_PARITY_REPORT:-${ROOT_DIR}/.tmp/aivm-dualrun-manifest/report-bridge.txt}"
+PARITY_REPORT="${AIVM_C_BRIDGE_PARITY_REPORT:-${ROOT_DIR}/.tmp/aivm-dualrun-manifest-bridge/report.txt}"
 
 AIVM_BUILD_SHARED=1 \
   AIVM_C_BUILD_DIR="${BUILD_DIR}" \

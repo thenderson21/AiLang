@@ -12,6 +12,7 @@ fi
 cmake -S "${ROOT_DIR}/AiVM.C" -B "${BUILD_DIR}" "${SHARED_FLAG}"
 cmake --build "${BUILD_DIR}"
 ctest --test-dir "${BUILD_DIR}" --output-on-failure
+mkdir -p "$(dirname "${PARITY_REPORT}")"
 "${ROOT_DIR}/scripts/aivm-dualrun-parity-manifest.sh" "${ROOT_DIR}/AiVM.C/tests/parity_commands.txt" "${PARITY_REPORT}"
 
 if [[ "${AIVM_PERF_SMOKE:-0}" == "1" ]]; then
