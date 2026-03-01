@@ -64,13 +64,25 @@ int main(void)
         return 1;
     }
 
+    if (expect(strcmp(aivm_vm_error_detail(NULL), "") == 0) != 0) {
+        return 1;
+    }
+
     aivm_program_init(&async_call_program, async_call_instructions, 1U);
     aivm_init(&vm, &async_call_program);
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "") == 0) != 0) {
+        return 1;
+    }
     aivm_run(&vm);
     if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
         return 1;
     }
     if (expect(strcmp(aivm_vm_error_detail(&vm), "Negative operand is invalid.") == 0) != 0) {
+        return 1;
+    }
+
+    aivm_init(&vm, &async_call_program);
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "") == 0) != 0) {
         return 1;
     }
 
