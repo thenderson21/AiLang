@@ -1992,6 +1992,104 @@ static int test_make_lit_string_requires_string_id(void)
     return 0;
 }
 
+static int test_make_block_requires_string_id(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 1 },
+        { .opcode = AIVM_OP_MAKE_BLOCK, .operand_int = 0 }
+    };
+    AivmProgram program;
+
+    aivm_program_init(&program, instructions, 2U);
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "MAKE_BLOCK id must be string.") == 0) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int test_child_at_out_of_range_sets_error_detail(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_CONST, .operand_int = 0 },
+        { .opcode = AIVM_OP_MAKE_BLOCK, .operand_int = 0 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 1 },
+        { .opcode = AIVM_OP_CHILD_AT, .operand_int = 0 }
+    };
+    static const AivmValue constants[] = {
+        { .type = AIVM_VAL_STRING, .string_value = "n1" },
+        { .type = AIVM_VAL_INT, .int_value = 0 }
+    };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 4U,
+        .constants = constants,
+        .constant_count = 2U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "CHILD_AT index out of range.") == 0) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int test_append_child_requires_node_operands(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_CONST, .operand_int = 0 },
+        { .opcode = AIVM_OP_MAKE_BLOCK, .operand_int = 0 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 1 },
+        { .opcode = AIVM_OP_APPEND_CHILD, .operand_int = 0 }
+    };
+    static const AivmValue constants[] = {
+        { .type = AIVM_VAL_STRING, .string_value = "n1" },
+        { .type = AIVM_VAL_STRING, .string_value = "not_a_node" }
+    };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 4U,
+        .constants = constants,
+        .constant_count = 2U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "APPEND_CHILD requires (node,node).") == 0) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
 int main(void)
 {
     if (test_push_store_load_pop() != 0) {
@@ -2124,6 +2222,15 @@ int main(void)
         return 1;
     }
     if (test_make_lit_string_requires_string_id() != 0) {
+        return 1;
+    }
+    if (test_make_block_requires_string_id() != 0) {
+        return 1;
+    }
+    if (test_child_at_out_of_range_sets_error_detail() != 0) {
+        return 1;
+    }
+    if (test_append_child_requires_node_operands() != 0) {
         return 1;
     }
 
