@@ -2090,6 +2090,95 @@ static int test_append_child_requires_node_operands(void)
     return 0;
 }
 
+static int test_node_kind_requires_node_operand(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 9 },
+        { .opcode = AIVM_OP_NODE_KIND, .operand_int = 0 }
+    };
+    AivmProgram program;
+
+    aivm_program_init(&program, instructions, 2U);
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "NODE_KIND requires node operand.") == 0) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int test_attr_key_requires_node_and_index(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 1 },
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 0 },
+        { .opcode = AIVM_OP_ATTR_KEY, .operand_int = 0 }
+    };
+    AivmProgram program;
+
+    aivm_program_init(&program, instructions, 3U);
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "ATTR_* requires (node,int).") == 0) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int test_make_err_requires_string_operands(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_CONST, .operand_int = 0 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 1 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 2 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 3 },
+        { .opcode = AIVM_OP_MAKE_ERR, .operand_int = 0 }
+    };
+    static const AivmValue constants[] = {
+        { .type = AIVM_VAL_STRING, .string_value = "err1" },
+        { .type = AIVM_VAL_STRING, .string_value = "VM001" },
+        { .type = AIVM_VAL_INT, .int_value = 42 },
+        { .type = AIVM_VAL_STRING, .string_value = "node0" }
+    };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 5U,
+        .constants = constants,
+        .constant_count = 4U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "MAKE_ERR requires four non-null string operands.") == 0) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
 int main(void)
 {
     if (test_push_store_load_pop() != 0) {
@@ -2231,6 +2320,15 @@ int main(void)
         return 1;
     }
     if (test_append_child_requires_node_operands() != 0) {
+        return 1;
+    }
+    if (test_node_kind_requires_node_operand() != 0) {
+        return 1;
+    }
+    if (test_attr_key_requires_node_and_index() != 0) {
+        return 1;
+    }
+    if (test_make_err_requires_string_operands() != 0) {
         return 1;
     }
 
