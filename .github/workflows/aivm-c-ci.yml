@@ -6,9 +6,13 @@ on:
     paths:
       - 'AiVM.C/**'
       - 'scripts/test-aivm-c.sh'
+      - 'scripts/test-aivm-c-bridge.sh'
       - 'scripts/aivm-parity-compare.sh'
       - 'scripts/aivm-dualrun-parity.sh'
       - 'scripts/aivm-dualrun-parity-manifest.sh'
+      - 'src/AiLang.Core/AosCliExecutionEngine.cs'
+      - 'src/AiCLI/Program.cs'
+      - 'tests/AiLang.Tests/AosTests.cs'
       - 'AiVM.C/tests/parity_commands.txt'
       - 'AiVM.C/tests/parity_commands_portable.txt'
       - '.github/workflows/aivm-c-ci.yml'
@@ -19,9 +23,13 @@ on:
     paths:
       - 'AiVM.C/**'
       - 'scripts/test-aivm-c.sh'
+      - 'scripts/test-aivm-c-bridge.sh'
       - 'scripts/aivm-parity-compare.sh'
       - 'scripts/aivm-dualrun-parity.sh'
       - 'scripts/aivm-dualrun-parity-manifest.sh'
+      - 'src/AiLang.Core/AosCliExecutionEngine.cs'
+      - 'src/AiCLI/Program.cs'
+      - 'tests/AiLang.Tests/AosTests.cs'
       - 'AiVM.C/tests/parity_commands.txt'
       - 'AiVM.C/tests/parity_commands_portable.txt'
       - '.github/workflows/aivm-c-ci.yml'
@@ -38,6 +46,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Verify vm=c gate entrypoint unit tests
+        run: dotnet test tests/AiLang.Tests/AiLang.Tests.csproj --filter "Name~CVmMode_ReturnsDev008Gate"
 
       - name: Configure + build + test (Unix)
         if: runner.os != 'Windows'
