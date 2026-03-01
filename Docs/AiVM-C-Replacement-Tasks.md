@@ -173,3 +173,5 @@ Output: code cleanup and doc/runbook updates.
 - Expanded deterministic VM error-detail coverage for core execution faults (`null instruction buffer`, `LOAD_LOCAL`, `ADD_INT`, `JUMP/JUMP_IF_FALSE`, `CALL`, `RET`) and added assertion coverage in VM core/opcode tests.
 - Expanded deterministic VM error-detail coverage further across comparison/string/async/parallel/node opcode paths; unit tests now assert additional detail strings and non-empty detail behavior for error cases.
 - Routed embedded-bytecode execution through VM mode selection so `--vm=c` now consistently hits the C-bridge `DEV008` gate/probe path (matching source/bundle runtime behavior) while backend linking remains in-progress.
+- Added `AiLang.Tests` coverage for embedded bytecode and embedded bundle `vmMode="c"` paths to assert deterministic `DEV008` bridge-gate behavior in CLI execution engine entrypoints.
+- Hardened `scripts/test-aivm-c*.sh` for parallel safety by allowing isolated build/parity-report paths (`AIVM_C_BUILD_DIR`, `AIVM_PARITY_REPORT`) and defaulting bridge smoke to its own build/report outputs.
