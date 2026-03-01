@@ -177,3 +177,4 @@ Output: code cleanup and doc/runbook updates.
 - Added `AiLang.Tests` coverage for source/serve `vmMode="c"` paths so all major CLI execution entrypoints (`run source`, `run embedded bytecode`, `run embedded bundle`, `serve`) now assert deterministic `DEV008` gate behavior while native backend linking remains pending.
 - Hardened `scripts/test-aivm-c*.sh` for parallel safety by allowing isolated build/parity-report paths (`AIVM_C_BUILD_DIR`, `AIVM_PARITY_REPORT`) and defaulting bridge smoke to its own build/report outputs.
 - Extended C API execution result contract with deterministic `has_exit_code`/`exit_code` extraction from halted VM top-of-stack `int` values, with unit coverage and bridge-struct alignment in `AiLang.Core`.
+- Hardened `AivmCBridge` probe to execute a deterministic native smoke instruction (`HALT`) after export/ABI validation, proving live call-path readiness in addition to symbol presence.

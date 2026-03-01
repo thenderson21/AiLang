@@ -5,6 +5,13 @@ namespace AiLang.Core;
 internal static class AivmCBridge
 {
     [StructLayout(LayoutKind.Sequential)]
+    private struct NativeInstruction
+    {
+        public int Opcode;
+        public long OperandInt;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
     internal struct NativeResult
     {
         public int Ok;
@@ -39,7 +46,7 @@ internal static class AivmCBridge
             }
 
             var overridePath = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB");
-            if (!TryResolveApi(overridePath, out var libraryHandle, out _, out var abiVersion, out _))
+            if (!TryResolveApi(overridePath, out var libraryHandle, out _, out var executeInstructionsWithConstants, out var abiVersion, out _))
             {
                 return;
             }
@@ -57,6 +64,12 @@ internal static class AivmCBridge
                 return;
             }
 
+            if (!TryRunSmokeExecute(executeInstructionsWithConstants!))
+            {
+                NativeLibrary.Free(libraryHandle);
+                return;
+            }
+
             NativeLibrary.Free(libraryHandle);
         }
         catch
@@ -69,11 +82,13 @@ internal static class AivmCBridge
         string? libraryPath,
         out nint libraryHandle,
         out ExecuteAibc1Delegate? executeAibc1,
+        out ExecuteInstructionsWithConstantsDelegate? executeInstructionsWithConstants,
         out uint abiVersion,
         out string error)
     {
         libraryHandle = 0;
         executeAibc1 = null;
+        executeInstructionsWithConstants = null;
         abiVersion = 0U;
         error = string.Empty;
 
@@ -100,18 +115,36 @@ internal static class AivmCBridge
             return false;
         }
 
-        _ = Marshal.GetDelegateForFunctionPointer<ExecuteInstructionsWithConstantsDelegate>(symbol);
+        executeInstructionsWithConstants = Marshal.GetDelegateForFunctionPointer<ExecuteInstructionsWithConstantsDelegate>(symbol);
         if (!NativeLibrary.TryGetExport(libraryHandle, "aivm_c_abi_version", out symbol))
         {
             error = "aivm_c_abi_version export was not found.";
             NativeLibrary.Free(libraryHandle);
             libraryHandle = 0;
             executeAibc1 = null;
+            executeInstructionsWithConstants = null;
             return false;
         }
 
         abiVersion = Marshal.GetDelegateForFunctionPointer<AbiVersionDelegate>(symbol)();
         return true;
+    }
+
+    private static bool TryRunSmokeExecute(ExecuteInstructionsWithConstantsDelegate executeInstructionsWithConstants)
+    {
+        var instructions = new[] { new NativeInstruction { Opcode = 1, OperandInt = 0 } };
+        var handle = GCHandle.Alloc(instructions, GCHandleType.Pinned);
+        try
+        {
+            var result = executeInstructionsWithConstants(handle.AddrOfPinnedObject(), (nuint)instructions.Length, IntPtr.Zero, 0U);
+            return result.Ok == 1 &&
+                   result.Status == 2 &&
+                   result.Error == 0;
+        }
+        finally
+        {
+            handle.Free();
+        }
     }
 
     private static bool TryLoadLibrary(string? libraryPath, out nint libraryHandle, out string error)
