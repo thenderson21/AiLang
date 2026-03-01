@@ -193,3 +193,4 @@ Output: code cleanup and doc/runbook updates.
 - Tightened execute-mode safety by explicitly rejecting `CALL_SYS`/`ASYNC_CALL_SYS` in bridge compatibility lowering until syscall host-binding bridge is implemented, with regression coverage.
 - Fixed C VM call-frame locals scoping parity by snapshotting/restoring `locals_count` on `CALL`/`RET`, with new opcode test coverage to prevent caller-local leakage across function calls.
 - Added strict execute-mode validation for malformed `AIVM_C_BRIDGE_ABI` values so bridge execution fails fast with deterministic diagnostics before native library loading.
+- Added execute-mode compatibility guard for non-zero secondary `b` operands on lowered bytecode instructions, preventing silent loss of semantics when mapping C# `a/b/s` instructions into C single-operand opcodes.
