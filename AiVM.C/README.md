@@ -48,6 +48,18 @@ From repository root:
 ./scripts/test-aivm-c.sh
 ```
 
+Optional environment variables:
+
+- `AIVM_C_BUILD_DIR`: override CMake build directory (default `.tmp/aivm-c-build`)
+- `AIVM_PARITY_REPORT`: override parity manifest report path
+- `AIVM_BUILD_SHARED=1`: enable shared-library build in the test flow
+
+Bridge smoke (shared loader path):
+
+```bash
+./scripts/test-aivm-c-bridge.sh
+```
+
 For normalized output comparison in dual-run workflows:
 
 ```bash
