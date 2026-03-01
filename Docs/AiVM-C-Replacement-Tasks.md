@@ -189,3 +189,4 @@ Output: code cleanup and doc/runbook updates.
 - Improved bridge execute compatibility diagnostics to include VM code + node ID from bytecode-lowering failures, with test coverage for unsupported node constants.
 - Enforced `AIVM_C_BRIDGE_ABI` compatibility in execute-enabled bridge path (matching probe behavior) so native execution refuses mismatched bridge ABIs deterministically.
 - Added deterministic execute-mode compatibility guard for `main` function parameters (not yet supported by native bridge execution path), with `AiLang.Tests` coverage.
+- Tightened execute-mode safety by explicitly rejecting `MAKE_NODE` in bridge bytecode compatibility lowering (current C VM shape differs from C# operand semantics), with regression coverage in `AiLang.Tests`.

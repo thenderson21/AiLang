@@ -57,7 +57,6 @@ internal static class AivmCBridge
         ["MAKE_ERR"] = 43,
         ["MAKE_LIT_STRING"] = 44,
         ["MAKE_LIT_INT"] = 45,
-        ["MAKE_NODE"] = 46,
         ["RET"] = 12
     };
 
@@ -400,7 +399,8 @@ internal static class AivmCBridge
         {
             var inst = main.Instructions[i];
             if (string.Equals(inst.Op, "CALL", StringComparison.Ordinal) ||
-                string.Equals(inst.Op, "ASYNC_CALL", StringComparison.Ordinal))
+                string.Equals(inst.Op, "ASYNC_CALL", StringComparison.Ordinal) ||
+                string.Equals(inst.Op, "MAKE_NODE", StringComparison.Ordinal))
             {
                 error = $"Opcode '{inst.Op}' is not yet supported by C bridge execute path.";
                 return false;
