@@ -380,6 +380,11 @@ internal static class AivmCBridge
         }
 
         var main = program.Functions[mainIndex];
+        if (main.Params.Count != 0)
+        {
+            error = $"Entry function 'main' with params is not yet supported by C bridge execute path (count={main.Params.Count}).";
+            return false;
+        }
         var indexMap = new int[main.Instructions.Count + 1];
         var nextIndex = 0;
         for (var i = 0; i < main.Instructions.Count; i++)
