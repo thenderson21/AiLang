@@ -895,6 +895,10 @@ void aivm_step(AivmVm* vm)
             AivmCallFrame frame;
             AivmValue return_value;
             int has_return_value = 0;
+            if (vm->call_frame_count == 0U) {
+                aivm_halt(vm);
+                break;
+            }
             if (!aivm_frame_pop(vm, &frame)) {
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;

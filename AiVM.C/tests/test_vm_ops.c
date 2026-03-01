@@ -435,7 +435,7 @@ static int test_call_ret_collapses_callee_stack_to_single_return(void)
     return 0;
 }
 
-static int test_ret_underflow_sets_error(void)
+static int test_top_level_ret_halts(void)
 {
     AivmVm vm;
     static const AivmInstruction instructions[] = {
@@ -452,13 +452,39 @@ static int test_ret_underflow_sets_error(void)
     aivm_init(&vm, &program);
     aivm_step(&vm);
 
-    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
         return 1;
     }
-    if (expect(vm.error == AIVM_VM_ERR_FRAME_UNDERFLOW) != 0) {
+    if (expect(vm.error == AIVM_VM_ERR_NONE) != 0) {
         return 1;
     }
 
+    return 0;
+}
+
+static int test_top_level_return_alias_halts(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_RETURN, .operand_int = 0 }
+    };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 1U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init(&vm, &program);
+    aivm_step(&vm);
+
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_NONE) != 0) {
+        return 1;
+    }
     return 0;
 }
 
@@ -2255,7 +2281,10 @@ int main(void)
     if (test_call_ret_collapses_callee_stack_to_single_return() != 0) {
         return 1;
     }
-    if (test_ret_underflow_sets_error() != 0) {
+    if (test_top_level_ret_halts() != 0) {
+        return 1;
+    }
+    if (test_top_level_return_alias_halts() != 0) {
         return 1;
     }
     if (test_return_alias_roundtrip() != 0) {
