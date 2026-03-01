@@ -275,8 +275,11 @@ public static class AosCliExecutionEngine
             if (IsCAivmMode(vmMode))
             {
                 AivmCBridge.TryProbeFromEnvironment();
-                writeLine(FormatErr("err1", "DEV008", "C VM backend is not linked in this runtime build.", "vmMode"));
-                return 1;
+                if (!AivmCBridge.IsExecutionEnabledFromEnvironment())
+                {
+                    writeLine(FormatErr("err1", "DEV008", "C VM backend is not linked in this runtime build.", "vmMode"));
+                    return 1;
+                }
             }
 
             var parse = Parse(bytecodeText);
@@ -291,6 +294,17 @@ public static class AosCliExecutionEngine
             {
                 writeLine(FormatErr("err1", "BND005", "Embedded payload is not Bytecode.", parse.Root.Id));
                 return 3;
+            }
+
+            if (IsCAivmMode(vmMode))
+            {
+                if (!AivmCBridge.TryExecuteEmbeddedBytecode(parse.Root, out var nativeExitCode, out var bridgeFailure))
+                {
+                    writeLine(FormatErr("err1", "DEV008", $"C VM bridge execute path is unavailable: {bridgeFailure}", "vmMode"));
+                    return 1;
+                }
+
+                return nativeExitCode;
             }
 
             var runtime = CreateRuntime();

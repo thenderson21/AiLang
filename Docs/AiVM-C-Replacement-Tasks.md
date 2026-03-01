@@ -180,3 +180,4 @@ Output: code cleanup and doc/runbook updates.
 - Hardened `AivmCBridge` probe to execute a deterministic native smoke instruction (`HALT`) after export/ABI validation, proving live call-path readiness in addition to symbol presence.
 - Fixed parallel test script collisions by isolating bridge parity report outputs and ensuring parity-report directories are created before manifest execution.
 - Expanded shared-library bridge loader test to validate `has_exit_code`/`exit_code` behavior over dynamic loading, improving bridge ABI/result contract coverage.
+- Added opt-in `AIVM_C_BRIDGE_EXECUTE=1` embedded-bytecode runtime path for `--vm=c` that lowers a compatibility-safe `main` instruction subset to native C API execution and falls back deterministically with `DEV008` when bridge execution is unavailable.

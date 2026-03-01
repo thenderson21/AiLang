@@ -1,14 +1,79 @@
+using AiVM.Core;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace AiLang.Core;
 
 internal static class AivmCBridge
 {
+    private const int NativeValueTypeVoid = 0;
+    private const int NativeValueTypeInt = 1;
+    private const int NativeValueTypeBool = 2;
+    private const int NativeValueTypeString = 3;
+    private const int NativeValueTypeUnknown = 5;
+
+    private static readonly Dictionary<string, int> OpcodeMap = new(StringComparer.Ordinal)
+    {
+        ["NOP"] = 0,
+        ["HALT"] = 1,
+        ["STUB"] = 2,
+        ["PUSH_INT"] = 3,
+        ["POP"] = 4,
+        ["STORE_LOCAL"] = 5,
+        ["LOAD_LOCAL"] = 6,
+        ["ADD_INT"] = 7,
+        ["JUMP"] = 8,
+        ["JUMP_IF_FALSE"] = 9,
+        ["PUSH_BOOL"] = 10,
+        ["EQ_INT"] = 13,
+        ["EQ"] = 14,
+        ["CONST"] = 15,
+        ["STR_CONCAT"] = 16,
+        ["TO_STRING"] = 17,
+        ["STR_ESCAPE"] = 18,
+        ["RETURN"] = 19,
+        ["STR_SUBSTRING"] = 20,
+        ["STR_REMOVE"] = 21,
+        ["CALL_SYS"] = 22,
+        ["ASYNC_CALL_SYS"] = 24,
+        ["AWAIT"] = 25,
+        ["PAR_BEGIN"] = 26,
+        ["PAR_FORK"] = 27,
+        ["PAR_JOIN"] = 28,
+        ["PAR_CANCEL"] = 29,
+        ["STR_UTF8_BYTE_COUNT"] = 30,
+        ["NODE_KIND"] = 31,
+        ["NODE_ID"] = 32,
+        ["ATTR_COUNT"] = 33,
+        ["ATTR_KEY"] = 34,
+        ["ATTR_VALUE_KIND"] = 35,
+        ["ATTR_VALUE_STRING"] = 36,
+        ["ATTR_VALUE_INT"] = 37,
+        ["ATTR_VALUE_BOOL"] = 38,
+        ["CHILD_COUNT"] = 39,
+        ["CHILD_AT"] = 40,
+        ["MAKE_BLOCK"] = 41,
+        ["APPEND_CHILD"] = 42,
+        ["MAKE_ERR"] = 43,
+        ["MAKE_LIT_STRING"] = 44,
+        ["MAKE_LIT_INT"] = 45,
+        ["MAKE_NODE"] = 46
+    };
+
     [StructLayout(LayoutKind.Sequential)]
     private struct NativeInstruction
     {
         public int Opcode;
         public long OperandInt;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    private struct NativeValue
+    {
+        [FieldOffset(0)] public int Type;
+        [FieldOffset(8)] public long IntValue;
+        [FieldOffset(8)] public int BoolValue;
+        [FieldOffset(8)] public IntPtr StringValue;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -34,6 +99,131 @@ internal static class AivmCBridge
         nuint constantCount);
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     internal delegate uint AbiVersionDelegate();
+
+    private sealed class BridgeBytecodeAdapter : IVmBytecodeAdapter<AosNode, AosValue>
+    {
+        public string GetNodeKind(AosNode node) => node.Kind;
+        public string GetNodeId(AosNode node) => node.Id;
+        public IEnumerable<AosNode> GetChildren(AosNode node) => node.Children;
+
+        public VmAttr GetAttr(AosNode node, string key)
+        {
+            if (!node.Attrs.TryGetValue(key, out var attr))
+            {
+                return VmAttr.Missing();
+            }
+
+            return attr.Kind switch
+            {
+                AosAttrKind.Identifier => VmAttr.Identifier(attr.AsString()),
+                AosAttrKind.String => VmAttr.String(attr.AsString()),
+                AosAttrKind.Int => VmAttr.Int(attr.AsInt()),
+                AosAttrKind.Bool => VmAttr.Bool(attr.AsBool()),
+                _ => VmAttr.Missing()
+            };
+        }
+
+        public AosValue FromString(string value) => AosValue.FromString(value);
+        public AosValue FromInt(int value) => AosValue.FromInt(value);
+        public AosValue FromBool(bool value) => AosValue.FromBool(value);
+        public AosValue FromNull() => AosValue.Unknown;
+        public AosValue FromEncodedNodeConstant(string encodedNode, string nodeId)
+        {
+            throw new VmRuntimeException("VM001", "Node constants are not supported by C bridge execute path.", nodeId);
+        }
+    }
+
+    internal static bool IsExecutionEnabledFromEnvironment()
+    {
+        var execute = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE");
+        return string.Equals(execute, "1", StringComparison.Ordinal);
+    }
+
+    internal static bool TryExecuteEmbeddedBytecode(AosNode bytecodeRoot, out int exitCode, out string failureMessage)
+    {
+        exitCode = 1;
+        failureMessage = string.Empty;
+
+        if (!TryResolveApi(
+                Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB"),
+                out var libraryHandle,
+                out _,
+                out var executeInstructionsWithConstants,
+                out _,
+                out var loadError))
+        {
+            failureMessage = loadError;
+            return false;
+        }
+
+        try
+        {
+            if (!TryLowerMainFunction(bytecodeRoot, out var instructions, out var constants, out failureMessage))
+            {
+                return false;
+            }
+
+            var nativeInstructions = instructions
+                .Select(inst => new NativeInstruction { Opcode = inst.opcode, OperandInt = inst.operand })
+                .ToArray();
+
+            var nativeConstants = new NativeValue[constants.Count];
+            var allocatedStrings = new List<IntPtr>();
+            for (var i = 0; i < constants.Count; i++)
+            {
+                if (!TryEncodeNativeConstant(constants[i], out nativeConstants[i], allocatedStrings, out failureMessage))
+                {
+                    foreach (var ptr in allocatedStrings)
+                    {
+                        Marshal.FreeHGlobal(ptr);
+                    }
+                    return false;
+                }
+            }
+
+            var instructionHandle = GCHandle.Alloc(nativeInstructions, GCHandleType.Pinned);
+            GCHandle constantHandle = default;
+            try
+            {
+                IntPtr constantsPtr = IntPtr.Zero;
+                if (nativeConstants.Length > 0)
+                {
+                    constantHandle = GCHandle.Alloc(nativeConstants, GCHandleType.Pinned);
+                    constantsPtr = constantHandle.AddrOfPinnedObject();
+                }
+
+                var result = executeInstructionsWithConstants!(
+                    instructionHandle.AddrOfPinnedObject(),
+                    (nuint)nativeInstructions.Length,
+                    constantsPtr,
+                    (nuint)nativeConstants.Length);
+                if (result.Ok != 1 || result.Status != 2)
+                {
+                    failureMessage = $"Native execute failed (ok={result.Ok} status={result.Status} error={result.Error}).";
+                    return false;
+                }
+
+                exitCode = result.HasExitCode == 1 ? result.ExitCode : 0;
+                return true;
+            }
+            finally
+            {
+                if (constantHandle.IsAllocated)
+                {
+                    constantHandle.Free();
+                }
+                instructionHandle.Free();
+                foreach (var ptr in allocatedStrings)
+                {
+                    Marshal.FreeHGlobal(ptr);
+                }
+            }
+        }
+        finally
+        {
+            NativeLibrary.Free(libraryHandle);
+        }
+    }
 
     internal static void TryProbeFromEnvironment()
     {
@@ -144,6 +334,142 @@ internal static class AivmCBridge
         finally
         {
             handle.Free();
+        }
+    }
+
+    private static bool TryLowerMainFunction(
+        AosNode bytecodeRoot,
+        out List<(int opcode, long operand)> instructions,
+        out List<AosValue> constants,
+        out string error)
+    {
+        instructions = new List<(int opcode, long operand)>();
+        constants = new List<AosValue>();
+        error = string.Empty;
+
+        VmProgram<AosValue> program;
+        try
+        {
+            program = VmProgramLoader.Load(bytecodeRoot, new BridgeBytecodeAdapter());
+        }
+        catch (VmRuntimeException ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+
+        if (!program.FunctionIndexByName.TryGetValue("main", out var mainIndex))
+        {
+            error = "Entry function 'main' was not found.";
+            return false;
+        }
+
+        var main = program.Functions[mainIndex];
+        var indexMap = new int[main.Instructions.Count + 1];
+        var nextIndex = 0;
+        for (var i = 0; i < main.Instructions.Count; i++)
+        {
+            indexMap[i] = nextIndex;
+            nextIndex += string.Equals(main.Instructions[i].Op, "CALL_SYS", StringComparison.Ordinal) ? 2 : 1;
+        }
+        indexMap[main.Instructions.Count] = nextIndex;
+
+        constants.AddRange(program.Constants);
+        var extraStringConstantIndex = new Dictionary<string, int>(StringComparer.Ordinal);
+        for (var i = 0; i < main.Instructions.Count; i++)
+        {
+            var inst = main.Instructions[i];
+            if (string.Equals(inst.Op, "CALL", StringComparison.Ordinal) ||
+                string.Equals(inst.Op, "ASYNC_CALL", StringComparison.Ordinal))
+            {
+                error = $"Opcode '{inst.Op}' is not yet supported by C bridge execute path.";
+                return false;
+            }
+
+            if (string.Equals(inst.Op, "CALL_SYS", StringComparison.Ordinal))
+            {
+                if (string.IsNullOrWhiteSpace(inst.S))
+                {
+                    error = "CALL_SYS target was empty.";
+                    return false;
+                }
+
+                if (!extraStringConstantIndex.TryGetValue(inst.S, out var targetConstant))
+                {
+                    targetConstant = constants.Count;
+                    extraStringConstantIndex[inst.S] = targetConstant;
+                    constants.Add(AosValue.FromString(inst.S));
+                }
+
+                instructions.Add((OpcodeMap["CONST"], targetConstant));
+                instructions.Add((OpcodeMap["CALL_SYS"], inst.A));
+                continue;
+            }
+
+            if (!OpcodeMap.TryGetValue(inst.Op, out var opcode))
+            {
+                error = $"Opcode '{inst.Op}' is not mapped for native C bridge execute path.";
+                return false;
+            }
+
+            long operand = inst.A;
+            if (string.Equals(inst.Op, "JUMP", StringComparison.Ordinal) ||
+                string.Equals(inst.Op, "JUMP_IF_FALSE", StringComparison.Ordinal))
+            {
+                if (inst.A < 0 || inst.A > main.Instructions.Count)
+                {
+                    error = $"Jump target out of range: {inst.A}.";
+                    return false;
+                }
+                operand = indexMap[inst.A];
+            }
+
+            instructions.Add((opcode, operand));
+        }
+
+        return true;
+    }
+
+    private static bool TryEncodeNativeConstant(
+        AosValue value,
+        out NativeValue native,
+        List<IntPtr> allocatedStrings,
+        out string error)
+    {
+        native = default;
+        error = string.Empty;
+
+        switch (value.Kind)
+        {
+            case AosValueKind.Void:
+                native.Type = NativeValueTypeVoid;
+                return true;
+            case AosValueKind.Unknown:
+                native.Type = NativeValueTypeUnknown;
+                return true;
+            case AosValueKind.Int:
+                native.Type = NativeValueTypeInt;
+                native.IntValue = value.AsInt();
+                return true;
+            case AosValueKind.Bool:
+                native.Type = NativeValueTypeBool;
+                native.BoolValue = value.AsBool() ? 1 : 0;
+                return true;
+            case AosValueKind.String:
+            {
+                native.Type = NativeValueTypeString;
+                var text = value.AsString() ?? string.Empty;
+                var bytes = Encoding.UTF8.GetBytes(text);
+                var ptr = Marshal.AllocHGlobal(bytes.Length + 1);
+                Marshal.Copy(bytes, 0, ptr, bytes.Length);
+                Marshal.WriteByte(ptr, bytes.Length, 0);
+                native.StringValue = ptr;
+                allocatedStrings.Add(ptr);
+                return true;
+            }
+            default:
+                error = $"Unsupported constant kind for C bridge execute path: {value.Kind}.";
+                return false;
         }
     }
 
