@@ -1677,6 +1677,53 @@ static int test_parallel_join_mismatch_sets_error(void)
     return 0;
 }
 
+static int test_parallel_fork_requires_context(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 10 },
+        { .opcode = AIVM_OP_PAR_FORK, .operand_int = 0 }
+    };
+    AivmProgram program;
+
+    aivm_program_init(&program, instructions, 2U);
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "PAR_FORK requires active PAR_BEGIN context.") == 0) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int test_parallel_join_requires_context(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_PAR_JOIN, .operand_int = 0 }
+    };
+    AivmProgram program;
+
+    aivm_program_init(&program, instructions, 1U);
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "PAR_JOIN requires active PAR_BEGIN context.") == 0) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
 static int test_str_utf8_byte_count(void)
 {
     AivmVm vm;
@@ -2293,6 +2340,12 @@ int main(void)
         return 1;
     }
     if (test_parallel_join_mismatch_sets_error() != 0) {
+        return 1;
+    }
+    if (test_parallel_fork_requires_context() != 0) {
+        return 1;
+    }
+    if (test_parallel_join_requires_context() != 0) {
         return 1;
     }
     if (test_str_utf8_byte_count() != 0) {
