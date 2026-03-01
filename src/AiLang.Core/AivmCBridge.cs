@@ -57,7 +57,8 @@ internal static class AivmCBridge
         ["MAKE_ERR"] = 43,
         ["MAKE_LIT_STRING"] = 44,
         ["MAKE_LIT_INT"] = 45,
-        ["MAKE_NODE"] = 46
+        ["MAKE_NODE"] = 46,
+        ["RET"] = 12
     };
 
     [StructLayout(LayoutKind.Sequential)]

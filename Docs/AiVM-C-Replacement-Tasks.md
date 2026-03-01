@@ -185,3 +185,4 @@ Output: code cleanup and doc/runbook updates.
 - Updated `aivm-c-ci` workflow path filters to include bridge loader changes in `src/AiLang.Core/AivmCBridge.cs` so Task 8 bridge increments always trigger CI.
 - Bridge execute path now performs deterministic bytecode compatibility lowering before native library resolution, enabling actionable unsupported-op diagnostics (`DEV008`) even when no shared bridge library is present.
 - Added `AiLang.Tests` coverage for execute-enabled compatibility diagnostics when embedded bytecode lacks a `main` entry function.
+- Expanded bridge opcode lowering map to accept both `RETURN` and `RET` mnemonics in execute-enabled embedded-bytecode compatibility checks.
