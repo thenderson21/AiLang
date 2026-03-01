@@ -144,6 +144,11 @@ internal static class AivmCBridge
         exitCode = 1;
         failureMessage = string.Empty;
 
+        if (!TryLowerMainFunction(bytecodeRoot, out var instructions, out var constants, out failureMessage))
+        {
+            return false;
+        }
+
         if (!TryResolveApi(
                 Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB"),
                 out var libraryHandle,
@@ -158,11 +163,6 @@ internal static class AivmCBridge
 
         try
         {
-            if (!TryLowerMainFunction(bytecodeRoot, out var instructions, out var constants, out failureMessage))
-            {
-                return false;
-            }
-
             var nativeInstructions = instructions
                 .Select(inst => new NativeInstruction { Opcode = inst.opcode, OperandInt = inst.operand })
                 .ToArray();
