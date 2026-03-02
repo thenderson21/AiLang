@@ -4,19 +4,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PREFERRED_C_SOURCE_DIR="${ROOT_DIR}/src/AiVM.Core/native"
 AIVM_C_SOURCE_DIR="${AIVM_C_SOURCE_DIR:-${PREFERRED_C_SOURCE_DIR}}"
-if [[ ! -f "${AIVM_C_SOURCE_DIR}/CMakeLists.txt" ]]; then
-  AIVM_C_SOURCE_DIR="${ROOT_DIR}/AiVM.C"
-fi
-BUILD_SUFFIX="legacy"
-if [[ "${AIVM_C_SOURCE_DIR}" == "${PREFERRED_C_SOURCE_DIR}" ]]; then
-  BUILD_SUFFIX="native"
-fi
+BUILD_SUFFIX="native"
 BUILD_DIR="${ROOT_DIR}/.tmp/aivm-c-build-${BUILD_SUFFIX}"
-BUILD_OUTPUT_DIR="${BUILD_DIR}"
-if [[ "${BUILD_SUFFIX}" == "native" ]]; then
-  BUILD_OUTPUT_DIR="${BUILD_DIR}/aivm_legacy"
-fi
-AIVM_C_TESTS_DIR="${AIVM_C_TESTS_DIR:-${ROOT_DIR}/AiVM.C/tests}"
+AIVM_C_TESTS_DIR="${AIVM_C_TESTS_DIR:-${AIVM_C_SOURCE_DIR}/tests}"
 BASELINE_FILE="${AIVM_C_TESTS_DIR}/perf_baseline.env"
 RUNS="${1:-20}"
 
@@ -41,7 +31,7 @@ fi
 cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" >/dev/null
 cmake --build "${BUILD_DIR}" --target aivm_test_vm_ops >/dev/null
 
-python3 - "${BUILD_OUTPUT_DIR}/aivm_test_vm_ops" "${RUNS}" "${AIVM_TEST_VM_OPS_MEDIAN_MS_MAX}" <<'PY'
+python3 - "${BUILD_DIR}/aivm_test_vm_ops" "${RUNS}" "${AIVM_TEST_VM_OPS_MEDIAN_MS_MAX}" <<'PY'
 import statistics
 import subprocess
 import sys

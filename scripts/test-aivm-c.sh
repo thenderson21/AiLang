@@ -4,20 +4,10 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PREFERRED_C_SOURCE_DIR="${ROOT_DIR}/src/AiVM.Core/native"
 AIVM_C_SOURCE_DIR="${AIVM_C_SOURCE_DIR:-${PREFERRED_C_SOURCE_DIR}}"
-if [[ ! -f "${AIVM_C_SOURCE_DIR}/CMakeLists.txt" ]]; then
-  AIVM_C_SOURCE_DIR="${ROOT_DIR}/AiVM.C"
-fi
-BUILD_SUFFIX="legacy"
-if [[ "${AIVM_C_SOURCE_DIR}" == "${PREFERRED_C_SOURCE_DIR}" ]]; then
-  BUILD_SUFFIX="native"
-fi
+BUILD_SUFFIX="native"
 BUILD_DIR="${AIVM_C_BUILD_DIR:-${ROOT_DIR}/.tmp/aivm-c-build-${BUILD_SUFFIX}}"
-BUILD_OUTPUT_DIR="${BUILD_DIR}"
-if [[ "${BUILD_SUFFIX}" == "native" ]]; then
-  BUILD_OUTPUT_DIR="${BUILD_DIR}/aivm_legacy"
-fi
 PARITY_REPORT="${AIVM_PARITY_REPORT:-${ROOT_DIR}/.tmp/aivm-dualrun-manifest/report.txt}"
-PARITY_MANIFEST="${AIVM_PARITY_MANIFEST:-${ROOT_DIR}/AiVM.C/tests/parity_commands_ci.txt}"
+PARITY_MANIFEST="${AIVM_PARITY_MANIFEST:-${AIVM_C_SOURCE_DIR}/tests/parity_commands_ci.txt}"
 SHARED_FLAG="-DAIVM_BUILD_SHARED=OFF"
 if [[ "${AIVM_BUILD_SHARED:-0}" == "1" ]]; then
   SHARED_FLAG="-DAIVM_BUILD_SHARED=ON"
@@ -25,11 +15,7 @@ fi
 
 cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" "${SHARED_FLAG}"
 cmake --build "${BUILD_DIR}"
-if [[ "${BUILD_SUFFIX}" == "native" ]]; then
-  ctest --test-dir "${BUILD_OUTPUT_DIR}" --output-on-failure
-else
-  ctest --test-dir "${BUILD_DIR}" --output-on-failure
-fi
+ctest --test-dir "${BUILD_DIR}" --output-on-failure
 mkdir -p "$(dirname "${PARITY_REPORT}")"
 "${ROOT_DIR}/scripts/aivm-dualrun-parity-manifest.sh" "${PARITY_MANIFEST}" "${PARITY_REPORT}"
 

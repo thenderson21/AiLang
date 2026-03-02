@@ -4,40 +4,30 @@ on:
   workflow_dispatch:
   pull_request:
     paths:
-      - 'AiVM.C/**'
       - 'src/AiVM.Core/native/**'
       - 'scripts/test-aivm-c.sh'
       - 'scripts/test-aivm-c-bridge.sh'
       - 'scripts/aivm-parity-compare.sh'
       - 'scripts/aivm-dualrun-parity.sh'
       - 'scripts/aivm-dualrun-parity-manifest.sh'
-      - 'src/AiLang.Core/AosCliExecutionEngine.cs'
-      - 'src/AiLang.Core/AivmCBridge.cs'
-      - 'src/AiCLI/Program.cs'
-      - 'tests/AiLang.Tests/AosTests.cs'
-      - 'AiVM.C/tests/parity_commands.txt'
-      - 'AiVM.C/tests/parity_commands_portable.txt'
-      - 'AiVM.C/tests/parity_commands_ci.txt'
+      - 'src/AiVM.Core/native/tests/parity_commands.txt'
+      - 'src/AiVM.Core/native/tests/parity_commands_portable.txt'
+      - 'src/AiVM.Core/native/tests/parity_commands_ci.txt'
       - '.github/workflows/aivm-c-ci.yml'
   push:
     branches:
       - develop
       - main
     paths:
-      - 'AiVM.C/**'
       - 'src/AiVM.Core/native/**'
       - 'scripts/test-aivm-c.sh'
       - 'scripts/test-aivm-c-bridge.sh'
       - 'scripts/aivm-parity-compare.sh'
       - 'scripts/aivm-dualrun-parity.sh'
       - 'scripts/aivm-dualrun-parity-manifest.sh'
-      - 'src/AiLang.Core/AosCliExecutionEngine.cs'
-      - 'src/AiLang.Core/AivmCBridge.cs'
-      - 'src/AiCLI/Program.cs'
-      - 'tests/AiLang.Tests/AosTests.cs'
-      - 'AiVM.C/tests/parity_commands.txt'
-      - 'AiVM.C/tests/parity_commands_portable.txt'
-      - 'AiVM.C/tests/parity_commands_ci.txt'
+      - 'src/AiVM.Core/native/tests/parity_commands.txt'
+      - 'src/AiVM.Core/native/tests/parity_commands_portable.txt'
+      - 'src/AiVM.Core/native/tests/parity_commands_ci.txt'
       - '.github/workflows/aivm-c-ci.yml'
 
 jobs:
@@ -71,13 +61,13 @@ jobs:
         run: |
           cmake -S src/AiVM.Core/native -B .tmp/aivm-c-build
           cmake --build .tmp/aivm-c-build
-          ctest --test-dir .tmp/aivm-c-build/aivm_legacy --output-on-failure
+          ctest --test-dir .tmp/aivm-c-build --output-on-failure
 
       - name: Run parity manifest (Windows portable set)
         if: runner.os == 'Windows'
         shell: bash
         run: |
-          ./scripts/aivm-dualrun-parity-manifest.sh AiVM.C/tests/parity_commands_portable.txt .tmp/aivm-dualrun-manifest/report.txt
+          ./scripts/aivm-dualrun-parity-manifest.sh src/AiVM.Core/native/tests/parity_commands_portable.txt .tmp/aivm-dualrun-manifest/report.txt
 
       - name: Upload parity report
         if: always()

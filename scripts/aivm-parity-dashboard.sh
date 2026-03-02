@@ -4,22 +4,13 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PREFERRED_C_SOURCE_DIR="${ROOT_DIR}/src/AiVM.Core/native"
 AIVM_C_SOURCE_DIR="${AIVM_C_SOURCE_DIR:-${PREFERRED_C_SOURCE_DIR}}"
-if [[ ! -f "${AIVM_C_SOURCE_DIR}/CMakeLists.txt" ]]; then
-  AIVM_C_SOURCE_DIR="${ROOT_DIR}/AiVM.C"
-fi
-AIVM_C_TESTS_DIR="${AIVM_C_TESTS_DIR:-${ROOT_DIR}/AiVM.C/tests}"
+AIVM_C_TESTS_DIR="${AIVM_C_TESTS_DIR:-${AIVM_C_SOURCE_DIR}/tests}"
 REPORT_PATH="${1:-${ROOT_DIR}/Docs/AiVM-C-Parity-Status.md}"
 TMP_DIR="${ROOT_DIR}/.tmp/aivm-parity-dashboard"
-BUILD_SUFFIX="legacy"
-if [[ "${AIVM_C_SOURCE_DIR}" == "${PREFERRED_C_SOURCE_DIR}" ]]; then
-  BUILD_SUFFIX="native"
-fi
+BUILD_SUFFIX="native"
 BUILD_DIR="${ROOT_DIR}/.tmp/aivm-c-build-${BUILD_SUFFIX}"
 BUILD_OUTPUT_DIR="${BUILD_DIR}"
-if [[ "${BUILD_SUFFIX}" == "native" ]]; then
-  BUILD_OUTPUT_DIR="${BUILD_DIR}/aivm_legacy"
-fi
-PARITY_CLI="${BUILD_OUTPUT_DIR}/aivm_parity_cli"
+PARITY_CLI="${BUILD_DIR}/aivm_parity_cli"
 MODE="${AIVM_PARITY_DASHBOARD_MODE:-auto}"
 BRIDGE_LIB="${AIVM_C_BRIDGE_LIB:-}"
 BRIDGE_ENABLED=0
@@ -192,7 +183,7 @@ if [[ "${RUN_TESTS}" == "1" ]]; then
   t1=$?
   ./scripts/test.sh > "${TMP_DIR}/test-full.log" 2>&1
   t2=$?
-  ctest --test-dir "${BUILD_OUTPUT_DIR}" -R aivm_test_vm_determinism > "${TMP_DIR}/test-determinism.log" 2>&1
+  ctest --test-dir "${BUILD_DIR}" -R aivm_test_vm_determinism > "${TMP_DIR}/test-determinism.log" 2>&1
   t3=$?
   set -e
   if [[ ${t1} -eq 0 ]]; then TEST_AIVM_C_STATUS="pass"; else TEST_AIVM_C_STATUS="fail"; fi
