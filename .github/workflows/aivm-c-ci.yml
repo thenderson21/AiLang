@@ -50,7 +50,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Verify vm=c gate entrypoint unit tests
-        run: dotnet test tests/AiLang.Tests/AiLang.Tests.csproj --filter "Name~CVmMode_ReturnsDev008Gate|Name~RunSource_CVmMode_ExecuteEnabledBytecodeSource"
+        run: dotnet test tests/AiLang.Tests/AiLang.Tests.csproj --filter "Name~CVmMode_ReturnsDev008Gate|Name~RunSource_CVmMode_ExecuteEnabledBytecodeSource|Name~RunSource_CVmMode_ExecuteEnabledMalformedSource|Name~RunEmbeddedBundle_CVmMode_ExecuteEnabledStillReturnsDev008Gate"
 
       - name: Configure + build + test (Unix)
         if: runner.os != 'Windows'
