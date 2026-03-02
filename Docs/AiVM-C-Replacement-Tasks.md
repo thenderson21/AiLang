@@ -219,3 +219,4 @@ Output: code cleanup and doc/runbook updates.
 - Added execute-enabled source-bytecode parity manifest case for missing `main` compatibility diagnostics and propagated it to portable manifest. Current manifest counts: portable `12`, standard `27`.
 - Added execute-enabled source-bytecode parity manifest case for `main`-with-params compatibility diagnostics and propagated it to portable manifest. Current manifest counts: portable `13`, standard `28`.
 - Added execute-enabled source parse-error parity manifest case confirming malformed source remains on canonical backend gate (no bridge path); propagated to portable manifest. Current manifest counts: portable `14`, standard `29`.
+- Added execute-enabled bundle parity manifest case for current compatibility behavior (`main` params unsupported in bridge execute path) and propagated to portable manifest. Current manifest counts: portable `15`, standard `30`.
