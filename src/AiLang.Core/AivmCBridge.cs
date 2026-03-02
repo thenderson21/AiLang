@@ -383,14 +383,16 @@ internal static class AivmCBridge
 
         if (!program.FunctionIndexByName.TryGetValue("main", out var mainIndex))
         {
-            error = $"VM001: Entry function 'main' was not found. (nodeId={bytecodeRoot.Id})";
+            error = FormatCompatibilityError("Entry function 'main' was not found.", bytecodeRoot.Id);
             return false;
         }
 
         var main = program.Functions[mainIndex];
         if (main.Params.Count != 0)
         {
-            error = $"Entry function 'main' with params is not yet supported by C bridge execute path (count={main.Params.Count}).";
+            error = FormatCompatibilityError(
+                $"Entry function 'main' with params is not yet supported by C bridge execute path (count={main.Params.Count}).",
+                main.Name);
             return false;
         }
 
@@ -399,7 +401,9 @@ internal static class AivmCBridge
             var function = program.Functions[functionIndex];
             if (function.Params.Count != 0)
             {
-                error = $"Function '{function.Name}' with params is not yet supported by C bridge execute path (count={function.Params.Count}).";
+                error = FormatCompatibilityError(
+                    $"Function '{function.Name}' with params is not yet supported by C bridge execute path (count={function.Params.Count}).",
+                    function.Name);
                 return false;
             }
         }
@@ -439,7 +443,9 @@ internal static class AivmCBridge
                 var inst = function.Instructions[i];
                 if (string.Equals(inst.Op, "MAKE_NODE", StringComparison.Ordinal))
                 {
-                    error = $"Opcode '{inst.Op}' is not yet supported by C bridge execute path.";
+                    error = FormatCompatibilityError(
+                        $"Opcode '{inst.Op}' is not yet supported by C bridge execute path.",
+                        function.Name);
                     return false;
                 }
 
@@ -448,12 +454,16 @@ internal static class AivmCBridge
                 {
                     if (inst.B <= 0)
                     {
-                        error = $"Opcode '{inst.Op}' requires a valid syscall slot in b for C bridge execute path.";
+                        error = FormatCompatibilityError(
+                            $"Opcode '{inst.Op}' requires a valid syscall slot in b for C bridge execute path.",
+                            function.Name);
                         return false;
                     }
                     if (string.IsNullOrEmpty(inst.S))
                     {
-                        error = $"Opcode '{inst.Op}' requires non-empty syscall target s in C bridge execute path.";
+                        error = FormatCompatibilityError(
+                            $"Opcode '{inst.Op}' requires non-empty syscall target s in C bridge execute path.",
+                            function.Name);
                         return false;
                     }
                 }
@@ -461,19 +471,25 @@ internal static class AivmCBridge
                 {
                     if (inst.B != 0)
                     {
-                        error = $"Opcode '{inst.Op}' uses unsupported secondary operand b={inst.B} in C bridge execute path.";
+                        error = FormatCompatibilityError(
+                            $"Opcode '{inst.Op}' uses unsupported secondary operand b={inst.B} in C bridge execute path.",
+                            function.Name);
                         return false;
                     }
                     if (!string.IsNullOrEmpty(inst.S))
                     {
-                        error = $"Opcode '{inst.Op}' uses unsupported string operand s in C bridge execute path.";
+                        error = FormatCompatibilityError(
+                            $"Opcode '{inst.Op}' uses unsupported string operand s in C bridge execute path.",
+                            function.Name);
                         return false;
                     }
                 }
 
                 if (!OpcodeMap.TryGetValue(inst.Op, out var opcode))
                 {
-                    error = $"Opcode '{inst.Op}' is not mapped for native C bridge execute path.";
+                    error = FormatCompatibilityError(
+                        $"Opcode '{inst.Op}' is not mapped for native C bridge execute path.",
+                        function.Name);
                     return false;
                 }
 
@@ -483,7 +499,7 @@ internal static class AivmCBridge
                 {
                     if (inst.A < 0 || inst.A > function.Instructions.Count)
                     {
-                        error = $"Jump target out of range: {inst.A}.";
+                        error = FormatCompatibilityError($"Jump target out of range: {inst.A}.", function.Name);
                         return false;
                     }
                     operand = functionIndexMap[inst.A];
@@ -493,7 +509,7 @@ internal static class AivmCBridge
                 {
                     if (inst.A < 0 || inst.A >= program.Functions.Count)
                     {
-                        error = $"Call target out of range: {inst.A}.";
+                        error = FormatCompatibilityError($"Call target out of range: {inst.A}.", function.Name);
                         return false;
                     }
                     operand = functionStarts[inst.A];
@@ -553,9 +569,16 @@ internal static class AivmCBridge
                 return true;
             }
             default:
-                error = $"Unsupported constant kind for C bridge execute path: {value.Kind}.";
+                error = FormatCompatibilityError(
+                    $"Unsupported constant kind for C bridge execute path: {value.Kind}.",
+                    "const");
                 return false;
         }
+    }
+
+    private static string FormatCompatibilityError(string message, string nodeId)
+    {
+        return $"VM001: {message} (nodeId={nodeId})";
     }
 
     private static bool TryLoadLibrary(string? libraryPath, out nint libraryHandle, out string error)

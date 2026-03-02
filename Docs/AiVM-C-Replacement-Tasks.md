@@ -206,3 +206,4 @@ Output: code cleanup and doc/runbook updates.
 - Simplified execute/probe native export requirements in `AivmCBridge` to resolve only the symbols actually used by execute mode (`aivm_c_execute_instructions_with_constants`, `aivm_c_abi_version`), removing unnecessary coupling to unused `aivm_c_execute_aibc1` export presence.
 - Added execute-mode guardrail tests for malformed syscall bytecode lowering (`CALL_SYS`/`ASYNC_CALL_SYS` invalid slot and missing target) to ensure deterministic compatibility failures remain stable.
 - Added execute-mode guardrail tests for invalid internal call targets (`CALL`/`ASYNC_CALL` out-of-range function index) so bridge compatibility failures remain deterministic before native load.
+- Normalized execute-mode bridge compatibility failures to deterministic `VM001: ... (nodeId=...)` envelope for manual lowering checks (function/opcode/operand/target/constant-shape errors), improving diagnostic parity consistency.
