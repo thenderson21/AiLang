@@ -1488,7 +1488,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (value.type != AIVM_VAL_STRING || value.string_value == NULL) {
-                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "STR_UTF8_BYTE_COUNT requires non-null string.");
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "STR_UTF8_BYTE_COUNT requires string operand.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1946,7 +1946,7 @@ void aivm_step(AivmVm* vm)
         }
 
         default:
-            set_vm_error(vm, AIVM_VM_ERR_INVALID_OPCODE, "Invalid opcode.");
+            set_vm_error(vm, AIVM_VM_ERR_INVALID_OPCODE, "Unsupported opcode.");
             vm->instruction_pointer = vm->program->instruction_count;
             break;
     }
@@ -2011,7 +2011,7 @@ const char* aivm_vm_error_message(AivmVmError error)
         case AIVM_VM_ERR_NONE:
             return "No error.";
         case AIVM_VM_ERR_INVALID_OPCODE:
-            return "Invalid opcode.";
+            return "Unsupported opcode.";
         case AIVM_VM_ERR_STACK_OVERFLOW:
             return "Stack overflow.";
         case AIVM_VM_ERR_STACK_UNDERFLOW:

@@ -44,7 +44,7 @@ int main(void)
         return 1;
     }
 
-    if (expect(strcmp(aivm_vm_error_message(AIVM_VM_ERR_INVALID_OPCODE), "Invalid opcode.") == 0) != 0) {
+    if (expect(strcmp(aivm_vm_error_message(AIVM_VM_ERR_INVALID_OPCODE), "Unsupported opcode.") == 0) != 0) {
         return 1;
     }
 

@@ -1993,7 +1993,7 @@ static int test_str_utf8_byte_count_requires_string(void)
     if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
         return 1;
     }
-    if (expect(strcmp(aivm_vm_error_detail(&vm), "STR_UTF8_BYTE_COUNT requires non-null string.") == 0) != 0) {
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "STR_UTF8_BYTE_COUNT requires string operand.") == 0) != 0) {
         return 1;
     }
     return 0;
