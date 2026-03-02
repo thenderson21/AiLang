@@ -1746,6 +1746,11 @@ static int test_parallel_begin_fork_join_and_cancel(void)
 {
     AivmVm vm;
     AivmValue out;
+    const AivmNodeRecord* block_node;
+    const AivmNodeRecord* child0;
+    const AivmNodeRecord* child1;
+    const AivmNodeAttr* child0_attr;
+    const AivmNodeAttr* child1_attr;
     static const AivmInstruction instructions[] = {
         { .opcode = AIVM_OP_PAR_BEGIN, .operand_int = 2 },
         { .opcode = AIVM_OP_PUSH_INT, .operand_int = 41 },
@@ -1767,7 +1772,36 @@ static int test_parallel_begin_fork_join_and_cancel(void)
     if (expect(aivm_stack_pop(&vm, &out) == 1) != 0) {
         return 1;
     }
-    if (expect(out.type == AIVM_VAL_INT && out.int_value == 2) != 0) {
+    if (expect(out.type == AIVM_VAL_NODE) != 0) {
+        return 1;
+    }
+    if (expect(out.node_handle > 0) != 0) {
+        return 1;
+    }
+    block_node = &vm.nodes[(size_t)(out.node_handle - 1)];
+    if (expect(strcmp(block_node->kind, "Block") == 0) != 0) {
+        return 1;
+    }
+    if (expect(strncmp(block_node->id, "par_", 4U) == 0) != 0) {
+        return 1;
+    }
+    if (expect(block_node->child_count == 2U) != 0) {
+        return 1;
+    }
+    child0 = &vm.nodes[(size_t)(vm.node_children[block_node->child_start] - 1)];
+    child1 = &vm.nodes[(size_t)(vm.node_children[block_node->child_start + 1U] - 1)];
+    if (expect(strcmp(child0->kind, "Lit") == 0) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(child1->kind, "Lit") == 0) != 0) {
+        return 1;
+    }
+    child0_attr = &vm.node_attrs[child0->attr_start];
+    child1_attr = &vm.node_attrs[child1->attr_start];
+    if (expect(child0_attr->kind == AIVM_NODE_ATTR_INT && child0_attr->int_value == 41) != 0) {
+        return 1;
+    }
+    if (expect(child1_attr->kind == AIVM_NODE_ATTR_INT && child1_attr->int_value == 1) != 0) {
         return 1;
     }
     return 0;
@@ -1794,6 +1828,54 @@ static int test_parallel_join_mismatch_sets_error(void)
         return 1;
     }
     if (expect(strcmp(aivm_vm_error_detail(&vm), "PAR_JOIN count mismatch for active context.") == 0) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
+static int test_parallel_join_resolves_completed_task_handles(void)
+{
+    AivmVm vm;
+    AivmValue out;
+    const AivmNodeRecord* block_node;
+    const AivmNodeRecord* child;
+    const AivmNodeAttr* child_attr;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_PAR_BEGIN, .operand_int = 1 },
+        { .opcode = AIVM_OP_ASYNC_CALL, .operand_int = 5 },
+        { .opcode = AIVM_OP_PAR_FORK, .operand_int = 0 },
+        { .opcode = AIVM_OP_PAR_JOIN, .operand_int = 1 },
+        { .opcode = AIVM_OP_HALT, .operand_int = 0 },
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 77 },
+        { .opcode = AIVM_OP_RET, .operand_int = 0 }
+    };
+    AivmProgram program;
+
+    aivm_program_init(&program, instructions, 7U);
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0) {
+        return 1;
+    }
+    if (expect(out.type == AIVM_VAL_NODE) != 0) {
+        return 1;
+    }
+    block_node = &vm.nodes[(size_t)(out.node_handle - 1)];
+    if (expect(strcmp(block_node->kind, "Block") == 0) != 0) {
+        return 1;
+    }
+    if (expect(block_node->child_count == 1U) != 0) {
+        return 1;
+    }
+    child = &vm.nodes[(size_t)(vm.node_children[block_node->child_start] - 1)];
+    if (expect(strcmp(child->kind, "Lit") == 0) != 0) {
+        return 1;
+    }
+    child_attr = &vm.node_attrs[child->attr_start];
+    if (expect(child_attr->kind == AIVM_NODE_ATTR_INT && child_attr->int_value == 77) != 0) {
         return 1;
     }
     return 0;
@@ -2474,6 +2556,9 @@ int main(void)
         return 1;
     }
     if (test_parallel_join_mismatch_sets_error() != 0) {
+        return 1;
+    }
+    if (test_parallel_join_resolves_completed_task_handles() != 0) {
         return 1;
     }
     if (test_parallel_fork_requires_context() != 0) {

@@ -539,6 +539,103 @@ static int create_node_record(
     return 1;
 }
 
+static size_t write_u64_decimal(char* output, size_t capacity, uint64_t value)
+{
+    char temp[32];
+    size_t count = 0U;
+    size_t i;
+
+    if (output == NULL || capacity == 0U) {
+        return 0U;
+    }
+
+    do {
+        uint64_t digit = value % 10U;
+        value /= 10U;
+        temp[count] = (char)('0' + (char)digit);
+        count += 1U;
+    } while (value != 0U && count < sizeof(temp));
+
+    if (count + 1U > capacity) {
+        return 0U;
+    }
+
+    for (i = 0U; i < count; i += 1U) {
+        output[i] = temp[count - i - 1U];
+    }
+    output[count] = '\0';
+    return count;
+}
+
+static int create_runtime_node_from_value(AivmVm* vm, AivmValue value, int64_t* out_handle)
+{
+    AivmNodeAttr attrs[3];
+    const char* node_kind;
+    const char* node_id;
+    size_t attr_count;
+    int64_t handle;
+
+    if (vm == NULL || out_handle == NULL) {
+        return 0;
+    }
+
+    if (value.type == AIVM_VAL_NODE) {
+        *out_handle = value.node_handle;
+        return 1;
+    }
+
+    if (value.type == AIVM_VAL_STRING) {
+        if (value.string_value == NULL) {
+            set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "Runtime string value must be non-null.");
+            return 0;
+        }
+        node_kind = "Lit";
+        node_id = "runtime_string";
+        attrs[0].key = "value";
+        attrs[0].kind = AIVM_NODE_ATTR_STRING;
+        attrs[0].string_value = value.string_value;
+        attr_count = 1U;
+    } else if (value.type == AIVM_VAL_INT) {
+        node_kind = "Lit";
+        node_id = "runtime_int";
+        attrs[0].key = "value";
+        attrs[0].kind = AIVM_NODE_ATTR_INT;
+        attrs[0].int_value = value.int_value;
+        attr_count = 1U;
+    } else if (value.type == AIVM_VAL_BOOL) {
+        node_kind = "Lit";
+        node_id = "runtime_bool";
+        attrs[0].key = "value";
+        attrs[0].kind = AIVM_NODE_ATTR_BOOL;
+        attrs[0].bool_value = value.bool_value != 0 ? 1 : 0;
+        attr_count = 1U;
+    } else if (value.type == AIVM_VAL_VOID) {
+        node_kind = "Block";
+        node_id = "void";
+        attr_count = 0U;
+    } else {
+        node_kind = "Err";
+        node_id = "runtime_err";
+        attrs[0].key = "code";
+        attrs[0].kind = AIVM_NODE_ATTR_IDENTIFIER;
+        attrs[0].string_value = "RUN030";
+        attrs[1].key = "message";
+        attrs[1].kind = AIVM_NODE_ATTR_STRING;
+        attrs[1].string_value = "Unsupported runtime value.";
+        attrs[2].key = "nodeId";
+        attrs[2].kind = AIVM_NODE_ATTR_IDENTIFIER;
+        attrs[2].string_value = "runtime";
+        attr_count = 3U;
+    }
+
+    if (!create_node_record(vm, node_kind, node_id, attrs, attr_count, NULL, 0U, &handle)) {
+        return 0;
+    }
+
+    *out_handle = handle;
+    return 1;
+}
+
 void aivm_reset_state(AivmVm* vm)
 {
     if (vm == NULL) {
@@ -558,6 +655,7 @@ void aivm_reset_state(AivmVm* vm)
     vm->next_task_handle = 1;
     vm->par_context_count = 0U;
     vm->par_value_count = 0U;
+    vm->next_par_node_id = 1;
     vm->node_count = 0U;
     vm->node_attr_count = 0U;
     vm->node_child_count = 0U;
@@ -1308,6 +1406,11 @@ void aivm_step(AivmVm* vm)
         case AIVM_OP_PAR_JOIN: {
             AivmParContext context;
             size_t join_count;
+            int64_t child_handles[AIVM_VM_NODE_CHILD_CAPACITY];
+            char id_buffer[32];
+            size_t id_length;
+            size_t i;
+            int64_t block_handle;
             if (!operand_to_index(vm, instruction->operand_int, &join_count)) {
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
@@ -1325,9 +1428,47 @@ void aivm_step(AivmVm* vm)
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
+            if (join_count > AIVM_VM_NODE_CHILD_CAPACITY) {
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "PAR_JOIN exceeded child capacity.");
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            for (i = 0U; i < join_count; i += 1U) {
+                AivmValue value = vm->par_values[context.start_index + i];
+                AivmValue task_result;
+                int64_t child_handle;
+                if (value.type == AIVM_VAL_INT &&
+                    find_completed_task(vm, value.int_value, &task_result)) {
+                    value = task_result;
+                }
+                if (!create_runtime_node_from_value(vm, value, &child_handle)) {
+                    vm->instruction_pointer = vm->program->instruction_count;
+                    break;
+                }
+                child_handles[i] = child_handle;
+            }
+            if (vm->status == AIVM_VM_STATUS_ERROR) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            id_buffer[0] = 'p';
+            id_buffer[1] = 'a';
+            id_buffer[2] = 'r';
+            id_buffer[3] = '_';
+            id_length = write_u64_decimal(&id_buffer[4], sizeof(id_buffer) - 4U, (uint64_t)vm->next_par_node_id);
+            if (id_length == 0U) {
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "PAR_JOIN failed to build block id.");
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
+            vm->next_par_node_id += 1;
+            if (!create_node_record(vm, "Block", id_buffer, NULL, 0U, child_handles, join_count, &block_handle)) {
+                vm->instruction_pointer = vm->program->instruction_count;
+                break;
+            }
             vm->par_context_count -= 1U;
             vm->par_value_count = context.start_index;
-            if (!aivm_stack_push(vm, aivm_value_int((int64_t)join_count))) {
+            if (!aivm_stack_push(vm, aivm_value_node(block_handle))) {
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }

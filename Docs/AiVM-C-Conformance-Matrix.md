@@ -38,7 +38,7 @@ Status keys:
 | `STR_CONCAT`, `TO_STRING`, `STR_ESCAPE` | implemented | Uses fixed-capacity VM string arena (no heap). |
 | `STR_SUBSTRING`, `STR_REMOVE`, `STR_UTF8_BYTE_COUNT` | implemented | Rune-aware/clamped semantics in VM tests. |
 | `CALL_SYS` | implemented | Contract-checked dispatch via typed syscall bindings. |
-| `ASYNC_CALL*`, `AWAIT`, `PAR_*` | in_progress | Deterministic scaffold semantics now implemented for `ASYNC_CALL`, `ASYNC_CALL_SYS`, `AWAIT`, and `PAR_BEGIN/FORK/JOIN/CANCEL`; bytecode/function-index parity details remain in-progress. |
+| `ASYNC_CALL*`, `AWAIT`, `PAR_*` | implemented | Deterministic semantics implemented for `ASYNC_CALL`, `ASYNC_CALL_SYS`, `AWAIT`, and `PAR_BEGIN/FORK/JOIN/CANCEL`; `PAR_JOIN` now materializes a deterministic `Block` node with resolved child values (including completed task-handle resolution) to align runtime behavior with canonical VM structure. |
 | `NODE_*`, `ATTR_*`, `CHILD_*`, `MAKE_*` | in_progress | Implemented deterministic `NODE_*`, `ATTR_*`, `CHILD_*`, `MAKE_BLOCK`, `APPEND_CHILD`, `MAKE_ERR`, `MAKE_LIT_*`, and stack-template `MAKE_NODE`; bridge lowering now expands bytecode-shape `MAKE_NODE (a,b)` into `CONST a` + `PUSH_INT b` + `MAKE_NODE`. Native bridge constant transport for node-template constants remains pending. |
 
 ## Syscall ABI

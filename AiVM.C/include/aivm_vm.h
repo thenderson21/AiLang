@@ -110,6 +110,7 @@ typedef struct {
     size_t par_context_count;
     AivmValue par_values[AIVM_VM_PAR_VALUE_CAPACITY];
     size_t par_value_count;
+    int64_t next_par_node_id;
     AivmNodeRecord nodes[AIVM_VM_NODE_CAPACITY];
     size_t node_count;
     AivmNodeAttr node_attrs[AIVM_VM_NODE_ATTR_CAPACITY];
