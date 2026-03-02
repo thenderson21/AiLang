@@ -234,3 +234,4 @@ Output: code cleanup and doc/runbook updates.
 - Tightened ABI env parsing further to reject whitespace-only `AIVM_C_BRIDGE_ABI` values (instead of silently defaulting) with matching execute-enabled unit/parity coverage. Current manifest counts: portable `29`, standard `44`.
 - Added execute-enabled source-bytecode parity manifest cases for additional call/jump target-shape diagnostics (`JUMP_IF_FALSE` out-of-range and negative `CALL` target). Current manifest counts: portable `31`, standard `46`.
 - Added execute-enabled source-bytecode parity manifest cases for negative target diagnostics across `ASYNC_CALL`, `JUMP`, and `JUMP_IF_FALSE`. Current manifest counts: portable `34`, standard `49`.
+- Added focused `AiLang.Tests` execute-mode regressions for negative-target compatibility diagnostics (`ASYNC_CALL a=-1`, `JUMP a=-1`) to mirror parity-manifest guardrails in managed test coverage.
