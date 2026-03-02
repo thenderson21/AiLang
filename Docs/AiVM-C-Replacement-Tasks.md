@@ -214,3 +214,4 @@ Output: code cleanup and doc/runbook updates.
 - Updated `aivm-c-ci` gate-entrypoint unit-test filter to include execute-enabled source-bytecode routing coverage (`RunSource_CVmMode_ExecuteEnabledBytecodeSource*`) in addition to baseline `CVmMode_ReturnsDev008Gate` tests.
 - Normalized `AosCliExecutionEngine` source reads onto `HostFileSystem.ReadAllText` for execution/load benchmark paths so bridge-related source loading stays on the same host abstraction boundary.
 - Synced Windows-portable parity manifest coverage with new execute-enabled source-bytecode bridge diagnostics, and validated via direct `parity_commands_portable.txt` run (`9` cases) plus standard `test-aivm-c` manifest (`24` cases).
+- Added parity-manifest coverage for execute-enabled source-kind split: Program source remains backend gate while Bytecode source enters bridge execute path and surfaces deterministic load-failure diagnostics. Current manifest counts: portable `11`, standard `26`.
