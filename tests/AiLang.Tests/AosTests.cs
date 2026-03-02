@@ -4483,7 +4483,9 @@ public class AosTests
             Assert.That(exitCode, Is.EqualTo(1));
             Assert.That(lines.Count, Is.EqualTo(1));
             Assert.That(lines[0], Does.Contain("code=DEV008"));
+            Assert.That(lines[0], Does.Contain("VM001:"));
             Assert.That(lines[0], Does.Contain("main' with params is not yet supported"));
+            Assert.That(lines[0], Does.Contain("nodeId=main"));
         }
         finally
         {
@@ -4515,7 +4517,9 @@ public class AosTests
             Assert.That(exitCode, Is.EqualTo(1));
             Assert.That(lines.Count, Is.EqualTo(1));
             Assert.That(lines[0], Does.Contain("code=DEV008"));
+            Assert.That(lines[0], Does.Contain("VM001:"));
             Assert.That(lines[0], Does.Contain("Function 'helper' with params is not yet supported"));
+            Assert.That(lines[0], Does.Contain("nodeId=helper"));
         }
         finally
         {
@@ -4547,7 +4551,9 @@ public class AosTests
             Assert.That(exitCode, Is.EqualTo(1));
             Assert.That(lines.Count, Is.EqualTo(1));
             Assert.That(lines[0], Does.Contain("code=DEV008"));
+            Assert.That(lines[0], Does.Contain("VM001:"));
             Assert.That(lines[0], Does.Contain("Call target out of range"));
+            Assert.That(lines[0], Does.Contain("nodeId=main"));
         }
         finally
         {
@@ -4579,7 +4585,9 @@ public class AosTests
             Assert.That(exitCode, Is.EqualTo(1));
             Assert.That(lines.Count, Is.EqualTo(1));
             Assert.That(lines[0], Does.Contain("code=DEV008"));
+            Assert.That(lines[0], Does.Contain("VM001:"));
             Assert.That(lines[0], Does.Contain("Call target out of range"));
+            Assert.That(lines[0], Does.Contain("nodeId=main"));
         }
         finally
         {
@@ -4611,7 +4619,9 @@ public class AosTests
             Assert.That(exitCode, Is.EqualTo(1));
             Assert.That(lines.Count, Is.EqualTo(1));
             Assert.That(lines[0], Does.Contain("code=DEV008"));
+            Assert.That(lines[0], Does.Contain("VM001:"));
             Assert.That(lines[0], Does.Contain("Opcode 'MAKE_NODE' is not yet supported"));
+            Assert.That(lines[0], Does.Contain("nodeId=main"));
         }
         finally
         {
@@ -4709,7 +4719,9 @@ public class AosTests
             Assert.That(exitCode, Is.EqualTo(1));
             Assert.That(lines.Count, Is.EqualTo(1));
             Assert.That(lines[0], Does.Contain("code=DEV008"));
+            Assert.That(lines[0], Does.Contain("VM001:"));
             Assert.That(lines[0], Does.Contain("requires a valid syscall slot in b"));
+            Assert.That(lines[0], Does.Contain("nodeId=main"));
         }
         finally
         {
@@ -4741,7 +4753,9 @@ public class AosTests
             Assert.That(exitCode, Is.EqualTo(1));
             Assert.That(lines.Count, Is.EqualTo(1));
             Assert.That(lines[0], Does.Contain("code=DEV008"));
+            Assert.That(lines[0], Does.Contain("VM001:"));
             Assert.That(lines[0], Does.Contain("requires non-empty syscall target s"));
+            Assert.That(lines[0], Does.Contain("nodeId=main"));
         }
         finally
         {
@@ -4773,7 +4787,9 @@ public class AosTests
             Assert.That(exitCode, Is.EqualTo(1));
             Assert.That(lines.Count, Is.EqualTo(1));
             Assert.That(lines[0], Does.Contain("code=DEV008"));
+            Assert.That(lines[0], Does.Contain("VM001:"));
             Assert.That(lines[0], Does.Contain("requires a valid syscall slot in b"));
+            Assert.That(lines[0], Does.Contain("nodeId=main"));
         }
         finally
         {
