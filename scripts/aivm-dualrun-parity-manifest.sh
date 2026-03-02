@@ -7,6 +7,12 @@ MANIFEST="${1:-}"
 REPORT="${2:-${TMP_DIR}/report.txt}"
 PARITY_SHELL="${AIVM_PARITY_SHELL:-bash}"
 
+if [[ $# -gt 2 ]]; then
+  echo "usage: $0 <manifest-file> [report-file]" >&2
+  echo "unexpected extra arguments: ${*:3}" >&2
+  exit 2
+fi
+
 if [[ -z "${MANIFEST}" ]]; then
   echo "usage: $0 <manifest-file> [report-file]" >&2
   exit 2
