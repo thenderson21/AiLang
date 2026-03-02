@@ -5017,6 +5017,37 @@ public class AosTests
     }
 
     [Test]
+    public void AivmCBridge_TryLowerMainFunction_MainStartAccountsForExpandedEarlierFunction()
+    {
+        const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=helper params=\"\" locals=\"\") { Inst#i1(op=CALL_SYS a=0 b=1 s=\"sys.console_writeLine\") Inst#i2(op=RET) } Func#f2(name=main params=\"\" locals=\"\") { Inst#i3(op=HALT) } }";
+        var parse = AosParsing.Parse(bytecodeText);
+        Assert.That(parse.Root, Is.Not.Null);
+
+        var bridgeType = Type.GetType("AiLang.Core.AivmCBridge, AiLang.Core");
+        Assert.That(bridgeType, Is.Not.Null);
+
+        var method = bridgeType!.GetMethod("TryLowerMainFunction", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+        Assert.That(method, Is.Not.Null);
+
+        var args = new object?[] { parse.Root!, null, null, null };
+        var ok = (bool)method!.Invoke(null, args)!;
+        Assert.That(ok, Is.True);
+
+        var instructions = (List<(int opcode, long operand)>)args[1]!;
+        var error = (string)args[3]!;
+        Assert.That(error, Is.EqualTo(string.Empty));
+
+        Assert.That(instructions, Has.Count.EqualTo(7));
+        Assert.That(instructions[0], Is.EqualTo((8, 5))); // Entry jump must account for helper CALL_SYS expansion.
+        Assert.That(instructions[1], Is.EqualTo((15, 0))); // helper: injected CONST for CALL_SYS target.
+        Assert.That(instructions[2], Is.EqualTo((22, 0))); // helper: CALL_SYS argc=0.
+        Assert.That(instructions[3], Is.EqualTo((12, 0))); // helper: explicit RET.
+        Assert.That(instructions[4], Is.EqualTo((12, 0))); // helper: sentinel RET.
+        Assert.That(instructions[5], Is.EqualTo((1, 0)));  // main: HALT.
+        Assert.That(instructions[6], Is.EqualTo((12, 0))); // main: sentinel RET.
+    }
+
+    [Test]
     public void RunEmbeddedBundle_CVmMode_ReturnsDev008Gate()
     {
         const string bundleText = "Bundle#b1(entryFile=\"main.aos\" entryExport=\"start\")";
