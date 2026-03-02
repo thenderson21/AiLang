@@ -2170,6 +2170,52 @@ static int test_make_node_from_template_and_children(void)
     return 0;
 }
 
+static int test_make_node_converts_scalar_children_to_runtime_nodes(void)
+{
+    AivmVm vm;
+    AivmValue out;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_CONST, .operand_int = 0 },
+        { .opcode = AIVM_OP_MAKE_BLOCK, .operand_int = 0 },
+        { .opcode = AIVM_OP_STORE_LOCAL, .operand_int = 0 },
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 42 },
+        { .opcode = AIVM_OP_LOAD_LOCAL, .operand_int = 0 },
+        { .opcode = AIVM_OP_PUSH_INT, .operand_int = 1 },
+        { .opcode = AIVM_OP_MAKE_NODE, .operand_int = 0 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 1 },
+        { .opcode = AIVM_OP_CHILD_AT, .operand_int = 0 },
+        { .opcode = AIVM_OP_CONST, .operand_int = 1 },
+        { .opcode = AIVM_OP_ATTR_VALUE_INT, .operand_int = 0 },
+        { .opcode = AIVM_OP_HALT, .operand_int = 0 }
+    };
+    static const AivmValue constants[] = {
+        { .type = AIVM_VAL_STRING, .string_value = "tmpl" },
+        { .type = AIVM_VAL_INT, .int_value = 0 }
+    };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 12U,
+        .constants = constants,
+        .constant_count = 2U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_HALTED) != 0) {
+        return 1;
+    }
+    if (expect(aivm_stack_pop(&vm, &out) == 1) != 0) {
+        return 1;
+    }
+    if (expect(out.type == AIVM_VAL_INT && out.int_value == 42) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
 static int test_make_node_requires_node_args(void)
 {
     AivmVm vm;
@@ -2577,6 +2623,9 @@ int main(void)
         return 1;
     }
     if (test_make_node_from_template_and_children() != 0) {
+        return 1;
+    }
+    if (test_make_node_converts_scalar_children_to_runtime_nodes() != 0) {
         return 1;
     }
     if (test_make_node_requires_node_args() != 0) {

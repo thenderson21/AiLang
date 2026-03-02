@@ -1909,16 +1909,16 @@ void aivm_step(AivmVm* vm)
             }
             for (i = 0U; i < argc; i += 1U) {
                 AivmValue child_value;
+                int64_t child_handle;
                 if (!aivm_stack_pop(vm, &child_value)) {
                     vm->instruction_pointer = vm->program->instruction_count;
                     break;
                 }
-                if (child_value.type != AIVM_VAL_NODE) {
-                    set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "MAKE_NODE child must be node.");
+                if (!create_runtime_node_from_value(vm, child_value, &child_handle)) {
                     vm->instruction_pointer = vm->program->instruction_count;
                     break;
                 }
-                children[argc - i - 1U] = child_value.node_handle;
+                children[argc - i - 1U] = child_handle;
             }
             if (vm->status == AIVM_VM_STATUS_ERROR) {
                 vm->instruction_pointer = vm->program->instruction_count;
