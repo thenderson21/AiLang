@@ -1,15 +1,15 @@
 # AiLang Zero-C# DoD Dashboard
 
-Generated: 2026-03-02 18:17:57 UTC
+Generated: 2026-03-02 19:26:19 UTC
 
-Overall status: **FAIL**
+Overall status: **PASS**
 
 ## Gates
 
 | Gate | Status | Details |
 |---|---|---|
 | Behavioral parity | PASS | 66/66 (100.00%) with mode=execute |
-| Zero-C# | FAIL | tracked_csharp=91, dotnet_refs_in_ci_scripts=15 |
+| Zero-C# | PASS | tracked_csharp=0, dotnet_refs_in_ci_scripts=0 |
 | Test coverage | PASS | test-aivm-c=pass, test.sh=pass, determinism=pass |
 | Benchmark | PASS | bench_run=pass, baseline=present, threshold=within-threshold, regressions=0, missing=0, max_pct=5 |
 | Samples completion | PASS | complete=4/4 (manifest=Docs/Sample-Completion-Manifest.md) |

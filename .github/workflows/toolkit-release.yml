@@ -74,11 +74,6 @@ jobs:
             archive: tar.gz
             frontend: aos_frontend
             airun: airun
-          - os: macos-14
-            rid: osx-x64
-            archive: tar.gz
-            frontend: aos_frontend
-            airun: airun
           - os: windows-latest
             rid: win-x64
             archive: zip
@@ -89,46 +84,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 10.0.x
-
-      - name: Restore
-        run: dotnet restore ./src/AiCLI/AiCLI.csproj
-
-      - name: Publish airun (non-Windows)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          set -euo pipefail
-          dotnet publish ./src/AiCLI/AiCLI.csproj \
-            -c Release \
-            -r "${{ matrix.rid }}" \
-            --self-contained true \
-            -p:PublishSingleFile=true \
-            -p:PublishTrimmed=false \
-            -p:Version="${{ needs.prepare.outputs.version }}" \
-            -o ./dist
-
-      - name: Publish airun (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          dotnet publish .\src\AiCLI\AiCLI.csproj `
-            -c Release `
-            -r ${{ matrix.rid }} `
-            --self-contained true `
-            -p:PublishSingleFile=true `
-            -p:PublishTrimmed=false `
-            -p:Version=${{ needs.prepare.outputs.version }} `
-            -o .\dist
-
       - name: Build frontend parser (non-Windows)
         if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p ./dist
           cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
           chmod +x "./dist/${{ matrix.frontend }}"
 
@@ -140,8 +101,30 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          New-Item -ItemType Directory -Force .\dist | Out-Null
           cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
           Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
+
+      - name: Stage runtime binary (if present, non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -x ./tools/airun ]]; then
+            cp ./tools/airun "./dist/${{ matrix.airun }}"
+          else
+            printf 'airun runtime not yet produced in native release\n' > ./dist/AIRUN_UNAVAILABLE.txt
+          fi
+
+      - name: Stage runtime binary (if present, Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if (Test-Path .\tools\airun.exe) {
+            Copy-Item .\tools\airun.exe .\dist\${{ matrix.airun }}
+          } else {
+            "airun runtime not yet produced in native release" | Out-File .\dist\AIRUN_UNAVAILABLE.txt -Encoding utf8
+          }
 
       - name: Stage compiler assets (non-Windows)
         if: runner.os != 'Windows'
@@ -166,8 +149,12 @@ jobs:
           VERSION="${{ needs.prepare.outputs.version }}"
           PACKAGE_DIR="airun-${VERSION}-${{ matrix.rid }}"
           mkdir -p "${PACKAGE_DIR}"
-          cp "./dist/${{ matrix.airun }}" "${PACKAGE_DIR}/"
           cp "./dist/${{ matrix.frontend }}" "${PACKAGE_DIR}/"
+          if [[ -f "./dist/${{ matrix.airun }}" ]]; then
+            cp "./dist/${{ matrix.airun }}" "${PACKAGE_DIR}/"
+          else
+            cp ./dist/AIRUN_UNAVAILABLE.txt "${PACKAGE_DIR}/"
+          fi
           cp -R ./dist/compiler "${PACKAGE_DIR}/compiler"
           cp ./LICENSE "${PACKAGE_DIR}/"
           tar -czf "${PACKAGE_DIR}.tar.gz" "${PACKAGE_DIR}"
@@ -179,8 +166,12 @@ jobs:
           $version = "${{ needs.prepare.outputs.version }}"
           $packageDir = "airun-$version-${{ matrix.rid }}"
           New-Item -ItemType Directory -Force $packageDir | Out-Null
-          Copy-Item ".\dist\${{ matrix.airun }}" "$packageDir\${{ matrix.airun }}"
           Copy-Item ".\dist\${{ matrix.frontend }}" "$packageDir\${{ matrix.frontend }}"
+          if (Test-Path ".\dist\${{ matrix.airun }}") {
+            Copy-Item ".\dist\${{ matrix.airun }}" "$packageDir\${{ matrix.airun }}"
+          } else {
+            Copy-Item ".\dist\AIRUN_UNAVAILABLE.txt" "$packageDir\AIRUN_UNAVAILABLE.txt"
+          }
           Copy-Item ".\dist\compiler" "$packageDir\compiler" -Recurse
           Copy-Item ".\LICENSE" "$packageDir\LICENSE"
           Compress-Archive -Path $packageDir -DestinationPath "$packageDir.zip"

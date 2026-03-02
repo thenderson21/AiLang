@@ -73,7 +73,7 @@ create_epic \
   "M3 Zero C# repo" \
   "zero-csharp,ci-gate" \
   "Goal:
-Remove all C# code and dotnet dependency from mainline repo workflows.
+Remove all C# code and managed-toolchain dependency from mainline repo workflows.
 
 Scope:
 - Remove tracked .cs/.csproj/.sln/.slnx from mainline
@@ -82,7 +82,7 @@ Scope:
 
 DoD:
 - Zero-C# gate passes
-- CI/scripts no longer rely on dotnet
+- CI/scripts no longer rely on managed C# build tooling
 - Full suite still green"
 
 create_epic \
@@ -138,4 +138,3 @@ DoD:
 - Memory behavior documented"
 
 echo "Zero-C# epics sync complete for ${REPO}"
-

@@ -175,7 +175,7 @@ fi
 
 # Zero-C# gate.
 TRACKED_CS_COUNT="$(git ls-files '*.cs' '*.csproj' '*.sln' '*.slnx' | wc -l | tr -d ' ')"
-DOTNET_REF_COUNT="$(rg -n '\bdotnet\b' .github/workflows scripts 2>/dev/null | wc -l | tr -d ' ')"
+DOTNET_REF_COUNT="$( (rg -n '\bdotnet\b' .github/workflows scripts 2>/dev/null || true) | wc -l | tr -d ' ')"
 ZERO_CSHARP_STATUS="FAIL"
 if [[ "${TRACKED_CS_COUNT}" == "0" && "${DOTNET_REF_COUNT}" == "0" ]]; then
   ZERO_CSHARP_STATUS="PASS"

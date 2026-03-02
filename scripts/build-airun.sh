@@ -6,12 +6,13 @@ OUT_DIR="${ROOT_DIR}/.artifacts/airun-osx-arm64"
 
 "${ROOT_DIR}/scripts/build-frontend.sh"
 
-dotnet publish "${ROOT_DIR}/src/AiCLI/AiCLI.csproj" \
-  -c Release \
-  -r osx-arm64 \
-  -p:PublishAot=true \
-  --self-contained true \
-  -o "${OUT_DIR}"
+mkdir -p "${OUT_DIR}"
 
-cp "${OUT_DIR}/airun" "${ROOT_DIR}/tools/airun"
-chmod +x "${ROOT_DIR}/tools/airun"
+if [[ -x "${ROOT_DIR}/tools/airun" ]]; then
+  cp "${ROOT_DIR}/tools/airun" "${OUT_DIR}/airun"
+  chmod +x "${OUT_DIR}/airun"
+  exit 0
+fi
+
+echo "native airun builder is not implemented yet; expected existing tools/airun" >&2
+exit 1
