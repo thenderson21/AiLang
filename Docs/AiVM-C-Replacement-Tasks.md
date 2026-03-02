@@ -218,3 +218,4 @@ Output: code cleanup and doc/runbook updates.
 - Added `AiLang.Tests` regression coverage that `RunEmbeddedBundle(..., --vm=c)` remains on canonical backend gate even when `AIVM_C_BRIDGE_EXECUTE=1`, preventing accidental bridge-path expansion into bundle flow before planned cutover.
 - Added execute-enabled source-bytecode parity manifest case for missing `main` compatibility diagnostics and propagated it to portable manifest. Current manifest counts: portable `12`, standard `27`.
 - Added execute-enabled source-bytecode parity manifest case for `main`-with-params compatibility diagnostics and propagated it to portable manifest. Current manifest counts: portable `13`, standard `28`.
+- Added execute-enabled source parse-error parity manifest case confirming malformed source remains on canonical backend gate (no bridge path); propagated to portable manifest. Current manifest counts: portable `14`, standard `29`.

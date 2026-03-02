@@ -5249,6 +5249,42 @@ public class AosTests
     }
 
     [Test]
+    public void RunSource_CVmMode_ExecuteEnabledMalformedSource_StillReturnsBackendGate()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"aivm-c-malformed-{Guid.NewGuid():N}.aos");
+        var lines = new List<string>();
+        var previousExecute = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE");
+        var previousLib = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB");
+
+        try
+        {
+            File.WriteAllText(tempPath, "NotAValidAosPayload(");
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", "1");
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", "does-not-matter-for-malformed-source");
+
+            var exitCode = AosCliExecutionEngine.RunSource(
+                path: tempPath,
+                argv: Array.Empty<string>(),
+                traceEnabled: false,
+                vmMode: "c",
+                writeLine: lines.Add);
+
+            Assert.That(exitCode, Is.EqualTo(1));
+            Assert.That(lines.Count, Is.EqualTo(1));
+            Assert.That(lines[0], Is.EqualTo("Err#err1(code=DEV008 message=\"C VM backend is not linked in this runtime build.\" nodeId=vmMode)"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", previousExecute);
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", previousLib);
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+    }
+
+    [Test]
     public void RunServe_CVmMode_ReturnsDev008Gate()
     {
         var lines = new List<string>();
