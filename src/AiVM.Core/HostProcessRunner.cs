@@ -8,7 +8,7 @@ public static class HostProcessRunner
 
     public static ProcessResult? RunWithStdIn(string fileName, string arguments, string stdin)
     {
-        fileName = ResolveExecutablePath(fileName);
+        fileName = ResolveExecutablePath(fileName, null);
         var psi = new ProcessStartInfo
         {
             FileName = fileName,
@@ -42,7 +42,7 @@ public static class HostProcessRunner
         string? workingDirectory = null,
         string? stdin = null)
     {
-        fileName = ResolveExecutablePath(fileName);
+        fileName = ResolveExecutablePath(fileName, workingDirectory);
         var psi = new ProcessStartInfo
         {
             FileName = fileName,
@@ -82,18 +82,54 @@ public static class HostProcessRunner
         return new ProcessResult(process.ExitCode, stdout.ToArray(), stderr);
     }
 
-    private static string ResolveExecutablePath(string fileName)
+    private static string ResolveExecutablePath(string fileName, string? workingDirectory)
     {
         if (!OperatingSystem.IsWindows())
         {
             return fileName;
         }
 
-        if (string.IsNullOrWhiteSpace(fileName) ||
-            Path.HasExtension(fileName) ||
-            File.Exists(fileName))
+        if (string.IsNullOrWhiteSpace(fileName) || Path.HasExtension(fileName))
         {
             return fileName;
+        }
+
+        if (Path.IsPathRooted(fileName))
+        {
+            if (File.Exists(fileName))
+            {
+                return fileName;
+            }
+
+            var rootedExe = fileName + ".exe";
+            return File.Exists(rootedExe) ? rootedExe : fileName;
+        }
+
+        var cwdCandidate = Path.GetFullPath(fileName);
+        if (File.Exists(cwdCandidate))
+        {
+            return cwdCandidate;
+        }
+
+        var cwdExe = cwdCandidate + ".exe";
+        if (File.Exists(cwdExe))
+        {
+            return cwdExe;
+        }
+
+        if (!string.IsNullOrWhiteSpace(workingDirectory))
+        {
+            var wdCandidate = Path.GetFullPath(Path.Combine(workingDirectory, fileName));
+            if (File.Exists(wdCandidate))
+            {
+                return wdCandidate;
+            }
+
+            var wdExe = wdCandidate + ".exe";
+            if (File.Exists(wdExe))
+            {
+                return wdExe;
+            }
         }
 
         var withExe = fileName + ".exe";
