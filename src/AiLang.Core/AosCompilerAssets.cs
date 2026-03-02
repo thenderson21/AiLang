@@ -9,10 +9,10 @@ public static class AosCompilerAssets
         return new[]
         {
             HostFileSystem.Combine(HostEnvironment.BaseDirectory, "src", "compiler"),
-            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "src", "compiler"),
             HostFileSystem.Combine(HostEnvironment.BaseDirectory, "compiler"),
-            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "compiler"),
             HostEnvironment.BaseDirectory,
+            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "src", "compiler"),
+            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "compiler"),
             HostFileSystem.GetCurrentDirectory()
         };
     }

@@ -42,7 +42,7 @@ STDOUT_PATH="${OUT_DIR}/stdout.txt"
 PROFILE_PATH="${OUT_DIR}/profile.txt"
 
 if [[ "${PROFILE_MODE}" == "auto" ]]; then
-  if command -v perf >/dev/null 2>&1; then
+  if command -v perf >/dev/null 2>&1 && perf stat -d -r 1 -- true >/dev/null 2>&1; then
     PROFILE_MODE="perf"
   else
     PROFILE_MODE="time"
