@@ -347,9 +347,14 @@ internal static class AivmCBridge
         error = string.Empty;
 
         var expectedRaw = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_ABI");
-        if (string.IsNullOrWhiteSpace(expectedRaw))
+        if (expectedRaw is null || expectedRaw.Length == 0)
         {
             return true;
+        }
+        if (string.IsNullOrWhiteSpace(expectedRaw))
+        {
+            error = $"Invalid AIVM_C_BRIDGE_ABI value: '{expectedRaw}'.";
+            return false;
         }
 
         for (var i = 0; i < expectedRaw.Length; i++)

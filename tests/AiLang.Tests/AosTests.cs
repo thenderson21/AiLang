@@ -4869,6 +4869,41 @@ public class AosTests
     }
 
     [Test]
+    public void RunEmbeddedBytecode_CVmMode_ExecuteEnabledAbiWhitespaceOnly_ReturnsCompatibilityError()
+    {
+        const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=main params=\"\" locals=\"\") { Inst#i1(op=HALT) } }";
+        var previousExecute = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE");
+        var previousLib = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB");
+        var previousAbi = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_ABI");
+        var lines = new List<string>();
+
+        try
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", "1");
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", "does-not-matter-for-invalid-abi-whitespace-only");
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_ABI", "   ");
+
+            var exitCode = AosCliExecutionEngine.RunEmbeddedBytecode(
+                bytecodeText,
+                Array.Empty<string>(),
+                traceEnabled: false,
+                vmMode: "c",
+                lines.Add);
+
+            Assert.That(exitCode, Is.EqualTo(1));
+            Assert.That(lines.Count, Is.EqualTo(1));
+            Assert.That(lines[0], Does.Contain("code=DEV008"));
+            Assert.That(lines[0], Does.Contain("Invalid AIVM_C_BRIDGE_ABI value"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", previousExecute);
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", previousLib);
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_ABI", previousAbi);
+        }
+    }
+
+    [Test]
     public void RunEmbeddedBytecode_CVmMode_ExecuteEnabledNonZeroBOperand_ReturnsCompatibilityError()
     {
         const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=main params=\"\" locals=\"\") { Inst#i1(op=HALT b=1) } }";
