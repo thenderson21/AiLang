@@ -232,3 +232,4 @@ Output: code cleanup and doc/runbook updates.
 - Hardened `AIVM_C_BRIDGE_ABI` parsing to deterministic digit-only/invariant semantics (rejecting whitespace-padded values) and added matching execute-enabled parity coverage. Current manifest counts: portable `27`, standard `42`.
 - Added parity + `AiLang.Tests` coverage for `AIVM_C_BRIDGE_PROBE=1` with invalid ABI input to assert probe remains non-disruptive and canonical `--vm=c` backend gate output stays stable. Current manifest counts: portable `28`, standard `43`.
 - Tightened ABI env parsing further to reject whitespace-only `AIVM_C_BRIDGE_ABI` values (instead of silently defaulting) with matching execute-enabled unit/parity coverage. Current manifest counts: portable `29`, standard `44`.
+- Added execute-enabled source-bytecode parity manifest cases for additional call/jump target-shape diagnostics (`JUMP_IF_FALSE` out-of-range and negative `CALL` target). Current manifest counts: portable `31`, standard `46`.
