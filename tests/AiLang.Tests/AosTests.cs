@@ -4316,7 +4316,7 @@ public class AosTests
             Assert.That(lines.Count, Is.EqualTo(1));
             Assert.That(lines[0], Does.Contain("code=DEV008"));
             Assert.That(lines[0], Does.Contain("C VM bridge execute path is unavailable"));
-            Assert.That(lines[0], Does.Contain("Failed to load AIVM C bridge library path"));
+            Assert.That(lines[0], Does.Contain("Entry function 'main' with params is not yet supported by C bridge execute path"));
         }
         finally
         {
@@ -4349,7 +4349,7 @@ public class AosTests
             Assert.That(lines.Count, Is.EqualTo(1));
             Assert.That(lines[0], Does.Contain("code=DEV008"));
             Assert.That(lines[0], Does.Contain("C VM bridge execute path is unavailable"));
-            Assert.That(lines[0], Does.Contain("Failed to load AIVM C bridge library path"));
+            Assert.That(lines[0], Does.Contain("Entry function 'main' with params is not yet supported by C bridge execute path"));
             Assert.That(lines[0], Does.Not.Contain("Opcode 'CALL' is not yet supported"));
         }
         finally
@@ -4417,7 +4417,7 @@ public class AosTests
             Assert.That(lines.Count, Is.EqualTo(1));
             Assert.That(lines[0], Does.Contain("code=DEV008"));
             Assert.That(lines[0], Does.Contain("C VM bridge execute path is unavailable"));
-            Assert.That(lines[0], Does.Contain("Failed to load AIVM C bridge library path"));
+            Assert.That(lines[0], Does.Contain("Entry function 'main' with params is not yet supported by C bridge execute path"));
             Assert.That(lines[0], Does.Not.Contain("Opcode 'RET' is not mapped"));
         }
         finally
@@ -5771,7 +5771,7 @@ public class AosTests
     }
 
     [Test]
-    public void RunSource_CVmMode_ExecuteEnabledProgramSource_StillReturnsBackendGate()
+    public void RunSource_CVmMode_ExecuteEnabledProgramSource_UsesBridgeExecutePath()
     {
         var tempPath = Path.Combine(Path.GetTempPath(), $"aivm-c-program-{Guid.NewGuid():N}.aos");
         var lines = new List<string>();
@@ -5795,7 +5795,9 @@ public class AosTests
 
             Assert.That(exitCode, Is.EqualTo(1));
             Assert.That(lines.Count, Is.EqualTo(1));
-            Assert.That(lines[0], Is.EqualTo("Err#err1(code=DEV008 message=\"C VM backend is not linked in this runtime build.\" nodeId=vmMode)"));
+            Assert.That(lines[0], Does.Contain("code=DEV008"));
+            Assert.That(lines[0], Does.Contain("C VM bridge execute path is unavailable"));
+            Assert.That(lines[0], Does.Contain("Entry function 'main' with params is not yet supported by C bridge execute path"));
         }
         finally
         {
@@ -5809,7 +5811,7 @@ public class AosTests
     }
 
     [Test]
-    public void RunSource_CVmMode_ExecuteEnabledMalformedSource_StillReturnsBackendGate()
+    public void RunSource_CVmMode_ExecuteEnabledMalformedSource_ReturnsParseDiagnostic()
     {
         var tempPath = Path.Combine(Path.GetTempPath(), $"aivm-c-malformed-{Guid.NewGuid():N}.aos");
         var lines = new List<string>();
@@ -5829,9 +5831,10 @@ public class AosTests
                 vmMode: "c",
                 writeLine: lines.Add);
 
-            Assert.That(exitCode, Is.EqualTo(1));
+            Assert.That(exitCode, Is.EqualTo(2));
             Assert.That(lines.Count, Is.EqualTo(1));
-            Assert.That(lines[0], Is.EqualTo("Err#err1(code=DEV008 message=\"C VM backend is not linked in this runtime build.\" nodeId=vmMode)"));
+            Assert.That(lines[0], Does.Contain("code=PAR"));
+            Assert.That(lines[0], Does.Contain("after attributes"));
         }
         finally
         {

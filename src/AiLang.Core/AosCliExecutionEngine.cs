@@ -31,16 +31,20 @@ public static class AosCliExecutionEngine
             if (IsCAivmMode(vmMode))
             {
                 AivmCBridge.TryProbeFromEnvironment();
-                if (AivmCBridge.IsExecutionEnabledFromEnvironment() &&
-                    TryReadSource(path, out var sourceText))
+                if (AivmCBridge.IsExecutionEnabledFromEnvironment())
                 {
-                    var parse = Parse(sourceText);
-                    if (parse.Root is not null &&
-                        parse.Diagnostics.Count == 0 &&
-                        string.Equals(parse.Root.Kind, "Bytecode", StringComparison.Ordinal))
+                    if (TryReadSource(path, out var sourceText))
                     {
-                        return RunEmbeddedBytecode(sourceText, argv, traceEnabled, vmMode, writeLine);
+                        var parse = Parse(sourceText);
+                        if (parse.Root is not null &&
+                            parse.Diagnostics.Count == 0 &&
+                            string.Equals(parse.Root.Kind, "Bytecode", StringComparison.Ordinal))
+                        {
+                            return RunEmbeddedBytecode(sourceText, argv, traceEnabled, vmMode, writeLine);
+                        }
                     }
+
+                    return RunProgramSourceWithCBridge(path, argv, vmMode, writeLine);
                 }
                 writeLine(FormatErr("err1", "DEV008", "C VM backend is not linked in this runtime build.", "vmMode"));
                 return 1;
@@ -102,6 +106,30 @@ public static class AosCliExecutionEngine
             writeLine(FormatErr("err1", "RUN001", ex.Message, "unknown"));
             return 3;
         }
+    }
+
+    private static int RunProgramSourceWithCBridge(string path, string[] argv, string vmMode, Action<string> writeLine)
+    {
+        if (!TryLoadProgramForExecution(path, traceEnabled: false, argv, evaluateProgram: false, vmMode, out var program, out var runtime, out var errCode, out var errMessage, out var errNodeId))
+        {
+            ActiveDebugRecorder?.RecordDiagnostic(errCode, errMessage, errNodeId);
+            writeLine(FormatErr("err1", errCode, errMessage, errNodeId));
+            return errCode.StartsWith("PAR", StringComparison.Ordinal) || errCode.StartsWith("VAL", StringComparison.Ordinal) || errCode == "RUN002" ? 2 : 3;
+        }
+
+        if (!TryCompileProgramToBytecode(program!, runtime!, out var bytecodeNode, out var compileFailure))
+        {
+            writeLine(compileFailure);
+            return 3;
+        }
+
+        if (!AivmCBridge.TryExecuteEmbeddedBytecode(bytecodeNode!, out var nativeExitCode, out var bridgeFailure))
+        {
+            writeLine(FormatErr("err1", "DEV008", $"C VM bridge execute path is unavailable: {bridgeFailure}", "vmMode"));
+            return 1;
+        }
+
+        return nativeExitCode;
     }
 
     private static bool TryReadSource(string path, out string sourceText)
@@ -499,6 +527,55 @@ public static class AosCliExecutionEngine
             new Dictionary<string, AosAttrValue>(StringComparer.Ordinal),
             children,
             new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+    }
+
+    private static bool TryCompileProgramToBytecode(
+        AosNode program,
+        AosRuntime runtime,
+        out AosNode? bytecodeNode,
+        out string failureOutput)
+    {
+        bytecodeNode = null;
+        failureOutput = string.Empty;
+
+        runtime.Env["__bridge_program"] = AosValue.FromNode(program);
+        var emitNode = new AosNode(
+            "Call",
+            "bridge_emit",
+            new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+            {
+                ["target"] = new AosAttrValue(AosAttrKind.Identifier, "compiler.emitBytecode")
+            },
+            new List<AosNode>
+            {
+                new(
+                    "Var",
+                    "bridge_program_ref",
+                    new Dictionary<string, AosAttrValue>(StringComparer.Ordinal)
+                    {
+                        ["name"] = new AosAttrValue(AosAttrKind.Identifier, "__bridge_program")
+                    },
+                    new List<AosNode>(),
+                    new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)))
+            },
+            new AosSpan(new AosPosition(0, 0, 0), new AosPosition(0, 0, 0)));
+
+        var interpreter = new AosInterpreter();
+        var emitValue = interpreter.EvaluateExpression(emitNode, runtime);
+        if (IsErrNode(emitValue, out var errNode))
+        {
+            failureOutput = AosFormatter.Format(errNode!);
+            return false;
+        }
+
+        if (emitValue.Kind != AosValueKind.Node || !string.Equals(emitValue.AsNode().Kind, "Bytecode", StringComparison.Ordinal))
+        {
+            failureOutput = FormatErr("err1", "RUN001", "compiler.emitBytecode did not return Bytecode node.", "compiler.emitBytecode");
+            return false;
+        }
+
+        bytecodeNode = emitValue.AsNode();
+        return true;
     }
 
     private static AosNode BuildKernelRunArgs()

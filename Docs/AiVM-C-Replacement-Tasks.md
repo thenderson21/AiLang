@@ -43,7 +43,7 @@ Status: `completed`
 Output: matching codes/messages/node-id behavior.
 
 8. Build C bridge into CLI runtime selection.
-Status: `in_progress`
+Status: `completed`
 Output: C ABI adapter with feature-flagged dual runtime path.
 
 9. Add dual-run parity harness.
@@ -251,3 +251,4 @@ Output: code cleanup and doc/runbook updates.
 - Aligned `MAKE_NODE` child coercion semantics with canonical VM value-to-node behavior: scalar children are now materialized as runtime `Lit` nodes (instead of hard-failing unless already node-typed), with dedicated VM-op coverage.
 - Normalized additional diagnostics text toward canonical wording: `STR_UTF8_BYTE_COUNT requires string operand.` and invalid-opcode reporting now uses `Unsupported opcode.` in both runtime detail and error-message mapping.
 - Expanded VM-op diagnostic regression coverage for opcode-specific attribute access contracts (`ATTR_VALUE_KIND`, `ATTR_VALUE_STRING`, `ATTR_VALUE_INT`, `ATTR_VALUE_BOOL`) to keep per-opcode error wording stable.
+- Extended `--vm=c` source runtime selection to a real feature-flagged dual path: when `AIVM_C_BRIDGE_EXECUTE=1`, Program sources now load/validate, compile through `compiler.emitBytecode`, and execute via native bridge lowering/compatibility checks (instead of unconditional backend gate); malformed source now returns parser diagnostics on the C path, and parity fixtures/manifests were updated accordingly.
