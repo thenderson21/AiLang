@@ -4326,9 +4326,9 @@ public class AosTests
     }
 
     [Test]
-    public void RunEmbeddedBytecode_CVmMode_ExecuteEnabledUnsupportedOpcode_ReturnsDev008CompatibilityError()
+    public void RunEmbeddedBytecode_CVmMode_ExecuteEnabledCallOpcode_PassesCompatibilityAndFailsAtLibraryLoad()
     {
-        const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=main params=\"\" locals=\"\") { Inst#i1(op=CALL a=0 b=0) } }";
+        const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=helper params=\"\" locals=\"\") { Inst#i1(op=RET) } Func#f2(name=main params=\"\" locals=\"\") { Inst#i2(op=CALL a=0 b=0) Inst#i3(op=RET) } }";
         var previousExecute = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE");
         var previousLib = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB");
         var lines = new List<string>();
@@ -4336,7 +4336,7 @@ public class AosTests
         try
         {
             Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", "1");
-            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", "does-not-matter-for-unsupported-opcode");
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", "does-not-exist-aivm-bridge");
 
             var exitCode = AosCliExecutionEngine.RunEmbeddedBytecode(
                 bytecodeText,
@@ -4349,7 +4349,8 @@ public class AosTests
             Assert.That(lines.Count, Is.EqualTo(1));
             Assert.That(lines[0], Does.Contain("code=DEV008"));
             Assert.That(lines[0], Does.Contain("C VM bridge execute path is unavailable"));
-            Assert.That(lines[0], Does.Contain("Opcode 'CALL' is not yet supported"));
+            Assert.That(lines[0], Does.Contain("Failed to load AIVM C bridge library path"));
+            Assert.That(lines[0], Does.Not.Contain("Opcode 'CALL' is not yet supported"));
         }
         finally
         {
@@ -4483,6 +4484,38 @@ public class AosTests
             Assert.That(lines.Count, Is.EqualTo(1));
             Assert.That(lines[0], Does.Contain("code=DEV008"));
             Assert.That(lines[0], Does.Contain("main' with params is not yet supported"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", previousExecute);
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", previousLib);
+        }
+    }
+
+    [Test]
+    public void RunEmbeddedBytecode_CVmMode_ExecuteEnabledCalleeWithParams_ReturnsCompatibilityError()
+    {
+        const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=helper params=\"x\" locals=\"\") { Inst#i1(op=RET) } Func#f2(name=main params=\"\" locals=\"\") { Inst#i2(op=CALL a=0 b=0) Inst#i3(op=RET) } }";
+        var previousExecute = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE");
+        var previousLib = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB");
+        var lines = new List<string>();
+
+        try
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", "1");
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", "does-not-matter-for-callee-params");
+
+            var exitCode = AosCliExecutionEngine.RunEmbeddedBytecode(
+                bytecodeText,
+                Array.Empty<string>(),
+                traceEnabled: false,
+                vmMode: "c",
+                lines.Add);
+
+            Assert.That(exitCode, Is.EqualTo(1));
+            Assert.That(lines.Count, Is.EqualTo(1));
+            Assert.That(lines[0], Does.Contain("code=DEV008"));
+            Assert.That(lines[0], Does.Contain("Function 'helper' with params is not yet supported"));
         }
         finally
         {

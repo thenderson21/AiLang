@@ -25,6 +25,7 @@ internal static class AivmCBridge
         ["JUMP"] = 8,
         ["JUMP_IF_FALSE"] = 9,
         ["PUSH_BOOL"] = 10,
+        ["CALL"] = 11,
         ["EQ_INT"] = 13,
         ["EQ"] = 14,
         ["CONST"] = 15,
@@ -35,6 +36,7 @@ internal static class AivmCBridge
         ["STR_SUBSTRING"] = 20,
         ["STR_REMOVE"] = 21,
         ["CALL_SYS"] = 22,
+        ["ASYNC_CALL"] = 23,
         ["ASYNC_CALL_SYS"] = 24,
         ["AWAIT"] = 25,
         ["PAR_BEGIN"] = 26,
@@ -400,59 +402,92 @@ internal static class AivmCBridge
             error = $"Entry function 'main' with params is not yet supported by C bridge execute path (count={main.Params.Count}).";
             return false;
         }
-        var indexMap = new int[main.Instructions.Count + 1];
-        var nextIndex = 0;
-        for (var i = 0; i < main.Instructions.Count; i++)
+
+        for (var functionIndex = 0; functionIndex < program.Functions.Count; functionIndex++)
         {
-            indexMap[i] = nextIndex;
-            nextIndex += string.Equals(main.Instructions[i].Op, "CALL_SYS", StringComparison.Ordinal) ? 2 : 1;
+            var function = program.Functions[functionIndex];
+            if (function.Params.Count != 0)
+            {
+                error = $"Function '{function.Name}' with params is not yet supported by C bridge execute path (count={function.Params.Count}).";
+                return false;
+            }
         }
-        indexMap[main.Instructions.Count] = nextIndex;
 
         constants.AddRange(program.Constants);
-        for (var i = 0; i < main.Instructions.Count; i++)
+        var functionStarts = new int[program.Functions.Count];
+        var nextFunctionStart = 1; // Entry JUMP is emitted at index 0.
+        for (var functionIndex = 0; functionIndex < program.Functions.Count; functionIndex++)
         {
-            var inst = main.Instructions[i];
-            if (string.Equals(inst.Op, "CALL", StringComparison.Ordinal) ||
-                string.Equals(inst.Op, "ASYNC_CALL", StringComparison.Ordinal) ||
-                string.Equals(inst.Op, "CALL_SYS", StringComparison.Ordinal) ||
+            functionStarts[functionIndex] = nextFunctionStart;
+            nextFunctionStart += program.Functions[functionIndex].Instructions.Count + 1; // Synthetic RET sentinel.
+        }
+
+        instructions.Add((OpcodeMap["JUMP"], functionStarts[mainIndex]));
+
+        for (var functionIndex = 0; functionIndex < program.Functions.Count; functionIndex++)
+        {
+            var function = program.Functions[functionIndex];
+            var functionIndexMap = new int[function.Instructions.Count + 1];
+            for (var i = 0; i < function.Instructions.Count; i++)
+            {
+                functionIndexMap[i] = functionStarts[functionIndex] + i;
+            }
+            functionIndexMap[function.Instructions.Count] = functionStarts[functionIndex] + function.Instructions.Count;
+
+            for (var i = 0; i < function.Instructions.Count; i++)
+            {
+                var inst = function.Instructions[i];
+                if (string.Equals(inst.Op, "CALL_SYS", StringComparison.Ordinal) ||
                 string.Equals(inst.Op, "ASYNC_CALL_SYS", StringComparison.Ordinal) ||
                 string.Equals(inst.Op, "MAKE_NODE", StringComparison.Ordinal))
-            {
-                error = $"Opcode '{inst.Op}' is not yet supported by C bridge execute path.";
-                return false;
-            }
-
-            if (inst.B != 0)
-            {
-                error = $"Opcode '{inst.Op}' uses unsupported secondary operand b={inst.B} in C bridge execute path.";
-                return false;
-            }
-            if (!string.IsNullOrEmpty(inst.S))
-            {
-                error = $"Opcode '{inst.Op}' uses unsupported string operand s in C bridge execute path.";
-                return false;
-            }
-
-            if (!OpcodeMap.TryGetValue(inst.Op, out var opcode))
-            {
-                error = $"Opcode '{inst.Op}' is not mapped for native C bridge execute path.";
-                return false;
-            }
-
-            long operand = inst.A;
-            if (string.Equals(inst.Op, "JUMP", StringComparison.Ordinal) ||
-                string.Equals(inst.Op, "JUMP_IF_FALSE", StringComparison.Ordinal))
-            {
-                if (inst.A < 0 || inst.A > main.Instructions.Count)
                 {
-                    error = $"Jump target out of range: {inst.A}.";
+                    error = $"Opcode '{inst.Op}' is not yet supported by C bridge execute path.";
                     return false;
                 }
-                operand = indexMap[inst.A];
+
+                if (inst.B != 0)
+                {
+                    error = $"Opcode '{inst.Op}' uses unsupported secondary operand b={inst.B} in C bridge execute path.";
+                    return false;
+                }
+                if (!string.IsNullOrEmpty(inst.S))
+                {
+                    error = $"Opcode '{inst.Op}' uses unsupported string operand s in C bridge execute path.";
+                    return false;
+                }
+
+                if (!OpcodeMap.TryGetValue(inst.Op, out var opcode))
+                {
+                    error = $"Opcode '{inst.Op}' is not mapped for native C bridge execute path.";
+                    return false;
+                }
+
+                long operand = inst.A;
+                if (string.Equals(inst.Op, "JUMP", StringComparison.Ordinal) ||
+                    string.Equals(inst.Op, "JUMP_IF_FALSE", StringComparison.Ordinal))
+                {
+                    if (inst.A < 0 || inst.A > function.Instructions.Count)
+                    {
+                        error = $"Jump target out of range: {inst.A}.";
+                        return false;
+                    }
+                    operand = functionIndexMap[inst.A];
+                }
+                else if (string.Equals(inst.Op, "CALL", StringComparison.Ordinal) ||
+                         string.Equals(inst.Op, "ASYNC_CALL", StringComparison.Ordinal))
+                {
+                    if (inst.A < 0 || inst.A >= program.Functions.Count)
+                    {
+                        error = $"Call target out of range: {inst.A}.";
+                        return false;
+                    }
+                    operand = functionStarts[inst.A];
+                }
+
+                instructions.Add((opcode, operand));
             }
 
-            instructions.Add((opcode, operand));
+            instructions.Add((OpcodeMap["RET"], 0));
         }
 
         return true;

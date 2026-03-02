@@ -199,3 +199,4 @@ Output: code cleanup and doc/runbook updates.
 - Normalized missing-entry diagnostics in execute-mode bridge lowering to include `VM001` + explicit `nodeId` envelope for deterministic consistency with other bytecode-lowering failures.
 - Tightened VM call-target boundary semantics by treating `CALL`/`ASYNC_CALL` targets equal to `instruction_count` as invalid (not callable), with dedicated opcode regression tests.
 - Unified probe/execute ABI parsing behavior by reusing strict `AIVM_C_BRIDGE_ABI` parsing in probe mode (invalid values now short-circuit probe instead of silently defaulting).
+- Expanded execute-mode bridge lowering to support zero-parameter `CALL`/`ASYNC_CALL` by flattening function bodies into a single deterministic instruction stream, remapping per-function jump/call targets, and inserting explicit function-end `RET` sentinels; argument-carrying calls and parameterized functions remain explicitly rejected.
