@@ -1578,7 +1578,17 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (node_value.type != AIVM_VAL_NODE || index_value.type != AIVM_VAL_INT || !lookup_node(vm, node_value.node_handle, &node)) {
-                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "ATTR_* requires (node,int).");
+                const char* attr_error = "ATTR_KEY requires (node,int).";
+                if (instruction->opcode == AIVM_OP_ATTR_VALUE_KIND) {
+                    attr_error = "ATTR_VALUE_KIND requires (node,int).";
+                } else if (instruction->opcode == AIVM_OP_ATTR_VALUE_STRING) {
+                    attr_error = "ATTR_VALUE_STRING requires (node,int).";
+                } else if (instruction->opcode == AIVM_OP_ATTR_VALUE_INT) {
+                    attr_error = "ATTR_VALUE_INT requires (node,int).";
+                } else if (instruction->opcode == AIVM_OP_ATTR_VALUE_BOOL) {
+                    attr_error = "ATTR_VALUE_BOOL requires (node,int).";
+                }
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, attr_error);
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1828,23 +1838,20 @@ void aivm_step(AivmVm* vm)
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
-            if (id_value.type != AIVM_VAL_STRING || id_value.string_value == NULL) {
-                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "MAKE_LIT_* id must be string.");
-                vm->instruction_pointer = vm->program->instruction_count;
-                break;
-            }
             attr.key = "value";
             if (instruction->opcode == AIVM_OP_MAKE_LIT_STRING) {
-                if (value.type != AIVM_VAL_STRING || value.string_value == NULL) {
-                    set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "MAKE_LIT_STRING value must be string.");
+                if (id_value.type != AIVM_VAL_STRING || id_value.string_value == NULL ||
+                    value.type != AIVM_VAL_STRING || value.string_value == NULL) {
+                    set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "MAKE_LIT_STRING requires (string,string).");
                     vm->instruction_pointer = vm->program->instruction_count;
                     break;
                 }
                 attr.kind = AIVM_NODE_ATTR_STRING;
                 attr.string_value = value.string_value;
             } else {
-                if (value.type != AIVM_VAL_INT) {
-                    set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "MAKE_LIT_INT value must be int.");
+                if (id_value.type != AIVM_VAL_STRING || id_value.string_value == NULL ||
+                    value.type != AIVM_VAL_INT) {
+                    set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "MAKE_LIT_INT requires (string,int).");
                     vm->instruction_pointer = vm->program->instruction_count;
                     break;
                 }

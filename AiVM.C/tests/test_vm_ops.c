@@ -2237,7 +2237,7 @@ static int test_make_lit_string_requires_string_id(void)
     if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
         return 1;
     }
-    if (expect(strcmp(aivm_vm_error_detail(&vm), "MAKE_LIT_* id must be string.") == 0) != 0) {
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "MAKE_LIT_STRING requires (string,string).") == 0) != 0) {
         return 1;
     }
     return 0;
@@ -2384,7 +2384,7 @@ static int test_attr_key_requires_node_and_index(void)
     if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
         return 1;
     }
-    if (expect(strcmp(aivm_vm_error_detail(&vm), "ATTR_* requires (node,int).") == 0) != 0) {
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "ATTR_KEY requires (node,int).") == 0) != 0) {
         return 1;
     }
     return 0;
