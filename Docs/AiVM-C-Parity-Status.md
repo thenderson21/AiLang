@@ -1,6 +1,6 @@
 # AiLang Zero-C# DoD Dashboard
 
-Generated: 2026-03-02 17:38:18 UTC
+Generated: 2026-03-02 17:56:04 UTC
 
 Overall status: **FAIL**
 
@@ -10,7 +10,7 @@ Overall status: **FAIL**
 |---|---|---|
 | Behavioral parity | FAIL | 66/66 (100.00%) with mode=execute |
 | Zero-C# | FAIL | tracked_csharp=91, dotnet_refs_in_ci_scripts=15 |
-| Test coverage | FAIL | test-aivm-c=fail, test.sh=pass, determinism=pass |
+| Test coverage | PASS | test-aivm-c=pass, test.sh=pass, determinism=pass |
 | Benchmark | FAIL | bench_run=pass, baseline=present, threshold=baseline-not-calibrated |
 | Samples completion | FAIL | complete=0/4 (manifest=Docs/Sample-Completion-Manifest.md) |
 | Memory/GC | FAIL | rc_test=no, cycle_test=no, leak_script=yes, profile_script=yes |

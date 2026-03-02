@@ -1,1 +1,1 @@
-Err#err1(code=DEV008 message="C VM bridge execute path is unavailable: VM001: Function 'helper' with params is not yet supported by C bridge execute path (count=1). (nodeId=helper)" nodeId=vmMode)
+Err#vm_err(code=VM001 message="Unsupported opcode: HALT." nodeId=main)
