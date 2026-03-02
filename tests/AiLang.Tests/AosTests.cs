@@ -5335,6 +5335,39 @@ public class AosTests
     }
 
     [Test]
+    public void RunSource_CVmMode_ProbeWithWhitespaceOnlyAbi_StillReturnsDev008Gate()
+    {
+        var lines = new List<string>();
+        var previousProbe = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_PROBE");
+        var previousAbi = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_ABI");
+        var previousLib = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB");
+
+        try
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_PROBE", "1");
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_ABI", "   ");
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", "does-not-matter-for-probe-whitespace-only");
+
+            var exitCode = AosCliExecutionEngine.RunSource(
+                path: "does/not/matter.aos",
+                argv: Array.Empty<string>(),
+                traceEnabled: false,
+                vmMode: "c",
+                writeLine: lines.Add);
+
+            Assert.That(exitCode, Is.EqualTo(1));
+            Assert.That(lines.Count, Is.EqualTo(1));
+            Assert.That(lines[0], Is.EqualTo("Err#err1(code=DEV008 message=\"C VM backend is not linked in this runtime build.\" nodeId=vmMode)"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_PROBE", previousProbe);
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_ABI", previousAbi);
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", previousLib);
+        }
+    }
+
+    [Test]
     public void RunSource_CVmMode_ExecuteEnabledBytecodeSource_UsesBridgeExecutePath()
     {
         var tempPath = Path.Combine(Path.GetTempPath(), $"aivm-c-bytecode-{Guid.NewGuid():N}.aos");

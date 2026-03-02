@@ -236,3 +236,4 @@ Output: code cleanup and doc/runbook updates.
 - Added execute-enabled source-bytecode parity manifest cases for negative target diagnostics across `ASYNC_CALL`, `JUMP`, and `JUMP_IF_FALSE`. Current manifest counts: portable `34`, standard `49`.
 - Added focused `AiLang.Tests` execute-mode regressions for negative-target compatibility diagnostics (`ASYNC_CALL a=-1`, `JUMP a=-1`) to mirror parity-manifest guardrails in managed test coverage.
 - Added focused `AiLang.Tests` execute-mode regression for `JUMP_IF_FALSE a=-1` compatibility diagnostics to mirror manifest-level negative-target coverage.
+- Added probe-mode parity + `AiLang.Tests` coverage for whitespace-only ABI env (`AIVM_C_BRIDGE_ABI='   '`) to keep probe non-disruptive and backend-gate output stable. Current manifest counts: portable `35`, standard `50`.
