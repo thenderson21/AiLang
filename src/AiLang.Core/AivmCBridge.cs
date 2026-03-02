@@ -1,4 +1,5 @@
 using AiVM.Core;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -351,7 +352,17 @@ internal static class AivmCBridge
             return true;
         }
 
-        if (!uint.TryParse(expectedRaw, out expected))
+        for (var i = 0; i < expectedRaw.Length; i++)
+        {
+            var ch = expectedRaw[i];
+            if (ch < '0' || ch > '9')
+            {
+                error = $"Invalid AIVM_C_BRIDGE_ABI value: '{expectedRaw}'.";
+                return false;
+            }
+        }
+
+        if (!uint.TryParse(expectedRaw, NumberStyles.None, CultureInfo.InvariantCulture, out expected))
         {
             error = $"Invalid AIVM_C_BRIDGE_ABI value: '{expectedRaw}'.";
             return false;
