@@ -62,6 +62,12 @@ internal static class AivmCBridge
         ["RET"] = 12
     };
 
+    private static bool UsesExpandedSyscallLowering(string op)
+    {
+        return string.Equals(op, "CALL_SYS", StringComparison.Ordinal) ||
+               string.Equals(op, "ASYNC_CALL_SYS", StringComparison.Ordinal);
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     private struct NativeInstruction
     {
@@ -418,8 +424,15 @@ internal static class AivmCBridge
         var nextFunctionStart = 1; // Entry JUMP is emitted at index 0.
         for (var functionIndex = 0; functionIndex < program.Functions.Count; functionIndex++)
         {
+            var function = program.Functions[functionIndex];
+            var emittedCount = 0;
+            for (var i = 0; i < function.Instructions.Count; i++)
+            {
+                emittedCount += UsesExpandedSyscallLowering(function.Instructions[i].Op) ? 2 : 1;
+            }
+
             functionStarts[functionIndex] = nextFunctionStart;
-            nextFunctionStart += program.Functions[functionIndex].Instructions.Count + 1; // Synthetic RET sentinel.
+            nextFunctionStart += emittedCount + 1; // Synthetic RET sentinel.
         }
 
         instructions.Add((OpcodeMap["JUMP"], functionStarts[mainIndex]));
@@ -428,32 +441,49 @@ internal static class AivmCBridge
         {
             var function = program.Functions[functionIndex];
             var functionIndexMap = new int[function.Instructions.Count + 1];
+            var emittedOffset = 0;
             for (var i = 0; i < function.Instructions.Count; i++)
             {
-                functionIndexMap[i] = functionStarts[functionIndex] + i;
+                functionIndexMap[i] = functionStarts[functionIndex] + emittedOffset;
+                emittedOffset += UsesExpandedSyscallLowering(function.Instructions[i].Op) ? 2 : 1;
             }
-            functionIndexMap[function.Instructions.Count] = functionStarts[functionIndex] + function.Instructions.Count;
+            functionIndexMap[function.Instructions.Count] = functionStarts[functionIndex] + emittedOffset;
 
             for (var i = 0; i < function.Instructions.Count; i++)
             {
                 var inst = function.Instructions[i];
-                if (string.Equals(inst.Op, "CALL_SYS", StringComparison.Ordinal) ||
-                string.Equals(inst.Op, "ASYNC_CALL_SYS", StringComparison.Ordinal) ||
-                string.Equals(inst.Op, "MAKE_NODE", StringComparison.Ordinal))
+                if (string.Equals(inst.Op, "MAKE_NODE", StringComparison.Ordinal))
                 {
                     error = $"Opcode '{inst.Op}' is not yet supported by C bridge execute path.";
                     return false;
                 }
 
-                if (inst.B != 0)
+                if (string.Equals(inst.Op, "CALL_SYS", StringComparison.Ordinal) ||
+                    string.Equals(inst.Op, "ASYNC_CALL_SYS", StringComparison.Ordinal))
                 {
-                    error = $"Opcode '{inst.Op}' uses unsupported secondary operand b={inst.B} in C bridge execute path.";
-                    return false;
+                    if (inst.B <= 0)
+                    {
+                        error = $"Opcode '{inst.Op}' requires a valid syscall slot in b for C bridge execute path.";
+                        return false;
+                    }
+                    if (string.IsNullOrEmpty(inst.S))
+                    {
+                        error = $"Opcode '{inst.Op}' requires non-empty syscall target s in C bridge execute path.";
+                        return false;
+                    }
                 }
-                if (!string.IsNullOrEmpty(inst.S))
+                else
                 {
-                    error = $"Opcode '{inst.Op}' uses unsupported string operand s in C bridge execute path.";
-                    return false;
+                    if (inst.B != 0)
+                    {
+                        error = $"Opcode '{inst.Op}' uses unsupported secondary operand b={inst.B} in C bridge execute path.";
+                        return false;
+                    }
+                    if (!string.IsNullOrEmpty(inst.S))
+                    {
+                        error = $"Opcode '{inst.Op}' uses unsupported string operand s in C bridge execute path.";
+                        return false;
+                    }
                 }
 
                 if (!OpcodeMap.TryGetValue(inst.Op, out var opcode))
@@ -482,6 +512,13 @@ internal static class AivmCBridge
                         return false;
                     }
                     operand = functionStarts[inst.A];
+                }
+                else if (string.Equals(inst.Op, "CALL_SYS", StringComparison.Ordinal) ||
+                         string.Equals(inst.Op, "ASYNC_CALL_SYS", StringComparison.Ordinal))
+                {
+                    var targetConstantIndex = constants.Count;
+                    constants.Add(AosValue.FromString(inst.S));
+                    instructions.Add((OpcodeMap["CONST"], targetConstantIndex));
                 }
 
                 instructions.Add((opcode, operand));
