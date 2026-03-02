@@ -213,3 +213,4 @@ Output: code cleanup and doc/runbook updates.
 - Expanded `AiVM.C` parity manifest coverage with execute-enabled bytecode-source bridge diagnostics (`CALL` target out-of-range, `CALL_SYS` invalid slot, `CALL_SYS` missing target) so Task 8 compatibility behavior is enforced in dual-run harness checks.
 - Updated `aivm-c-ci` gate-entrypoint unit-test filter to include execute-enabled source-bytecode routing coverage (`RunSource_CVmMode_ExecuteEnabledBytecodeSource*`) in addition to baseline `CVmMode_ReturnsDev008Gate` tests.
 - Normalized `AosCliExecutionEngine` source reads onto `HostFileSystem.ReadAllText` for execution/load benchmark paths so bridge-related source loading stays on the same host abstraction boundary.
+- Synced Windows-portable parity manifest coverage with new execute-enabled source-bytecode bridge diagnostics, and validated via direct `parity_commands_portable.txt` run (`9` cases) plus standard `test-aivm-c` manifest (`24` cases).
