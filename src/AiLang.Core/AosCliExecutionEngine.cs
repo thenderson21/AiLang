@@ -594,7 +594,7 @@ public static class AosCliExecutionEngine
             return false;
         }
 
-        var source = File.ReadAllText(sourcePath);
+        var source = HostFileSystem.ReadAllText(sourcePath);
         var parse = Parse(source);
         if (parse.Root is null || parse.Diagnostics.Count > 0)
         {
@@ -1010,7 +1010,7 @@ public static class AosCliExecutionEngine
             return BuildBenchCaseNode(name, "missing", 0, 0, 0);
         }
 
-        var source = File.ReadAllText(fullPath);
+        var source = HostFileSystem.ReadAllText(fullPath);
         var parse = Parse(source);
         if (parse.Root is null || parse.Diagnostics.Count > 0 || parse.Root.Kind != "Program")
         {
