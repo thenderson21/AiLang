@@ -98,8 +98,6 @@ internal static class AivmCBridge
     }
 
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-    internal delegate NativeResult ExecuteAibc1Delegate(IntPtr bytes, nuint byteCount);
-    [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
     internal delegate NativeResult ExecuteInstructionsWithConstantsDelegate(
         IntPtr instructions,
         nuint instructionCount,
@@ -165,7 +163,6 @@ internal static class AivmCBridge
         if (!TryResolveApi(
                 Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB"),
                 out var libraryHandle,
-                out _,
                 out var executeInstructionsWithConstants,
                 out var abiVersion,
                 out var loadError))
@@ -255,7 +252,7 @@ internal static class AivmCBridge
             }
 
             var overridePath = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB");
-            if (!TryResolveApi(overridePath, out var libraryHandle, out _, out var executeInstructionsWithConstants, out var abiVersion, out _))
+            if (!TryResolveApi(overridePath, out var libraryHandle, out var executeInstructionsWithConstants, out var abiVersion, out _))
             {
                 return;
             }
@@ -289,13 +286,11 @@ internal static class AivmCBridge
     internal static bool TryResolveApi(
         string? libraryPath,
         out nint libraryHandle,
-        out ExecuteAibc1Delegate? executeAibc1,
         out ExecuteInstructionsWithConstantsDelegate? executeInstructionsWithConstants,
         out uint abiVersion,
         out string error)
     {
         libraryHandle = 0;
-        executeAibc1 = null;
         executeInstructionsWithConstants = null;
         abiVersion = 0U;
         error = string.Empty;
@@ -305,21 +300,12 @@ internal static class AivmCBridge
             return false;
         }
 
-        if (!NativeLibrary.TryGetExport(libraryHandle, "aivm_c_execute_aibc1", out var symbol))
-        {
-            error = "aivm_c_execute_aibc1 export was not found.";
-            NativeLibrary.Free(libraryHandle);
-            libraryHandle = 0;
-            return false;
-        }
-
-        executeAibc1 = Marshal.GetDelegateForFunctionPointer<ExecuteAibc1Delegate>(symbol);
+        IntPtr symbol;
         if (!NativeLibrary.TryGetExport(libraryHandle, "aivm_c_execute_instructions_with_constants", out symbol))
         {
             error = "aivm_c_execute_instructions_with_constants export was not found.";
             NativeLibrary.Free(libraryHandle);
             libraryHandle = 0;
-            executeAibc1 = null;
             return false;
         }
 
@@ -329,7 +315,6 @@ internal static class AivmCBridge
             error = "aivm_c_abi_version export was not found.";
             NativeLibrary.Free(libraryHandle);
             libraryHandle = 0;
-            executeAibc1 = null;
             executeInstructionsWithConstants = null;
             return false;
         }
