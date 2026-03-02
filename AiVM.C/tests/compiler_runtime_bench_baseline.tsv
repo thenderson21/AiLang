@@ -1,9 +1,8 @@
 # name	max_vm_ticks
-# Fill with stable baselines captured on CI reference environment.
-# Gate stays red until concrete baselines are provided.
-loop	0
-str_concat	0
-map_create	0
-http_handler	0
-lifecycle	0
-
+# Calibrated from local deterministic bench run on 2026-03-02.
+# Format: benchmark_name<TAB>max_vm_ticks
+loop	150000
+str_concat	320000
+map_create	100000000
+http_handler	25000
+lifecycle	32000

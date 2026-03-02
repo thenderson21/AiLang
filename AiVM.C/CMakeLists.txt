@@ -133,6 +133,16 @@ if (BUILD_TESTING)
     )
     target_link_libraries(aivm_test_c_api PRIVATE aivm_core)
 
+    add_executable(aivm_test_memory_rc
+        tests/test_memory_rc.c
+    )
+    target_link_libraries(aivm_test_memory_rc PRIVATE aivm_core)
+
+    add_executable(aivm_test_memory_cycle
+        tests/test_memory_cycle.c
+    )
+    target_link_libraries(aivm_test_memory_cycle PRIVATE aivm_core)
+
     if (AIVM_BUILD_SHARED)
         add_executable(aivm_test_shared_bridge_loader
             tests/test_shared_bridge_loader.c
@@ -162,6 +172,8 @@ if (BUILD_TESTING)
         target_compile_options(aivm_test_runtime PRIVATE /W4 /WX)
         target_compile_options(aivm_test_syscall_contracts PRIVATE /W4 /WX)
         target_compile_options(aivm_test_c_api PRIVATE /W4 /WX)
+        target_compile_options(aivm_test_memory_rc PRIVATE /W4 /WX)
+        target_compile_options(aivm_test_memory_cycle PRIVATE /W4 /WX)
     else()
         target_compile_options(aivm_test_program_loader PRIVATE -Wall -Wextra -Wpedantic -Werror)
         target_compile_options(aivm_test_vm_core PRIVATE -Wall -Wextra -Wpedantic -Werror)
@@ -176,6 +188,8 @@ if (BUILD_TESTING)
         target_compile_options(aivm_test_runtime PRIVATE -Wall -Wextra -Wpedantic -Werror)
         target_compile_options(aivm_test_syscall_contracts PRIVATE -Wall -Wextra -Wpedantic -Werror)
         target_compile_options(aivm_test_c_api PRIVATE -Wall -Wextra -Wpedantic -Werror)
+        target_compile_options(aivm_test_memory_rc PRIVATE -Wall -Wextra -Wpedantic -Werror)
+        target_compile_options(aivm_test_memory_cycle PRIVATE -Wall -Wextra -Wpedantic -Werror)
     endif()
 
     add_test(NAME aivm_test_program_loader COMMAND aivm_test_program_loader)
@@ -191,6 +205,8 @@ if (BUILD_TESTING)
     add_test(NAME aivm_test_runtime COMMAND aivm_test_runtime)
     add_test(NAME aivm_test_syscall_contracts COMMAND aivm_test_syscall_contracts)
     add_test(NAME aivm_test_c_api COMMAND aivm_test_c_api)
+    add_test(NAME aivm_test_memory_rc COMMAND aivm_test_memory_rc)
+    add_test(NAME aivm_test_memory_cycle COMMAND aivm_test_memory_cycle)
     add_test(
         NAME aivm_test_parity_cli
         COMMAND aivm_parity_cli

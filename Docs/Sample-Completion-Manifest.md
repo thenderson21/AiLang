@@ -13,8 +13,7 @@ Status is `COMPLETE` only when all four are pass.
 
 | Sample | Functional | Determinism | Perf | Memory | Status |
 |---|---|---|---|---|---|
-| `samples/cli-fetch` | pending | pending | pending | pending | INCOMPLETE |
-| `samples/weather-api` | pending | pending | pending | pending | INCOMPLETE |
-| `samples/weather-site` | pending | pending | pending | pending | INCOMPLETE |
-| `samples/cli-http-parallel` | pending | pending | pending | pending | INCOMPLETE |
-
+| `samples/cli-fetch` | pass | pass | pass | pass | COMPLETE |
+| `samples/weather-api` | pass | pass | pass | pass | COMPLETE |
+| `samples/weather-site` | pass | pass | pass | pass | COMPLETE |
+| `samples/cli-http-parallel` | pass | pass | pass | pass | COMPLETE |

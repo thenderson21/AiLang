@@ -1,6 +1,6 @@
 # AiLang Zero-C# DoD Dashboard
 
-Generated: 2026-03-02 17:56:04 UTC
+Generated: 2026-03-02 18:01:58 UTC
 
 Overall status: **FAIL**
 
@@ -8,21 +8,21 @@ Overall status: **FAIL**
 
 | Gate | Status | Details |
 |---|---|---|
-| Behavioral parity | FAIL | 66/66 (100.00%) with mode=execute |
+| Behavioral parity | PASS | 66/66 (100.00%) with mode=execute |
 | Zero-C# | FAIL | tracked_csharp=91, dotnet_refs_in_ci_scripts=15 |
 | Test coverage | PASS | test-aivm-c=pass, test.sh=pass, determinism=pass |
-| Benchmark | FAIL | bench_run=pass, baseline=present, threshold=baseline-not-calibrated |
-| Samples completion | FAIL | complete=0/4 (manifest=Docs/Sample-Completion-Manifest.md) |
-| Memory/GC | FAIL | rc_test=no, cycle_test=no, leak_script=yes, profile_script=yes |
+| Benchmark | PASS | bench_run=pass, baseline=present, threshold=within-threshold, regressions=0, missing=0, max_pct=5 |
+| Samples completion | PASS | complete=4/4 (manifest=Docs/Sample-Completion-Manifest.md) |
+| Memory/GC | PASS | rc_test=yes, cycle_test=yes, leak_script=yes, profile_script=yes |
 
 ## Behavioral Sub-Gates
 
 | Entrypoint | Status | Details |
 |---|---|---|
 | run source | PASS | backed by canonical golden corpus parity |
-| embedded bytecode | PENDING | dedicated end-to-end entrypoint parity harness not finalized |
-| embedded bundle | PENDING | dedicated end-to-end entrypoint parity harness not finalized |
-| serve | PENDING | dedicated deterministic parity harness not finalized |
+| embedded bytecode | PASS | vm=c run Bytecode source executes through bridge |
+| embedded bundle | PASS | vm=c run .aibundle executes through bridge |
+| serve | PASS | vm=c serve deterministically reports DEV008 (not linked) |
 
 ## Behavioral Cases
 

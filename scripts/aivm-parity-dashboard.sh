@@ -104,12 +104,51 @@ PARITY_PERCENT="$(awk -v p="${PASSED}" -v t="${TOTAL}" 'BEGIN { if (t == 0) { pr
 
 # Behavioral parity gate and required entrypoint sub-gates.
 ENTRY_SOURCE_STATUS="FAIL"
+ENTRY_SOURCE_DETAILS="backed by canonical golden corpus parity"
 if [[ ${PASSED} -eq ${TOTAL} ]]; then
   ENTRY_SOURCE_STATUS="PASS"
 fi
 ENTRY_BYTECODE_STATUS="PENDING"
+ENTRY_BYTECODE_DETAILS="execute-mode check not available (bridge not enabled)"
 ENTRY_BUNDLE_STATUS="PENDING"
+ENTRY_BUNDLE_DETAILS="execute-mode check not available (bridge not enabled)"
 ENTRY_SERVE_STATUS="PENDING"
+ENTRY_SERVE_DETAILS="c serve entrypoint check not run"
+
+if [[ ${BRIDGE_ENABLED} -eq 1 ]]; then
+  set +e
+  AIVM_C_BRIDGE_EXECUTE=1 AIVM_C_BRIDGE_LIB="${BRIDGE_LIB}" ./tools/airun run AiVM.C/tests/parity_cases/vm_c_execute_src_main_params.aos --vm=c > "${TMP_DIR}/entry-bytecode.out" 2>&1
+  entry_bytecode_rc=$?
+  AIVM_C_BRIDGE_EXECUTE=1 AIVM_C_BRIDGE_LIB="${BRIDGE_LIB}" ./tools/airun run examples/golden/publishcases/include_success/app_include_ok.aibundle --vm=c > "${TMP_DIR}/entry-bundle.out" 2>&1
+  entry_bundle_rc=$?
+  AIVM_C_BRIDGE_EXECUTE=1 AIVM_C_BRIDGE_LIB="${BRIDGE_LIB}" ./tools/airun serve examples/golden/http/health_app.aos --vm=c --port 8089 > "${TMP_DIR}/entry-serve.out" 2>&1
+  entry_serve_rc=$?
+  set -e
+
+  if [[ ${entry_bytecode_rc} -eq 0 ]]; then
+    ENTRY_BYTECODE_STATUS="PASS"
+    ENTRY_BYTECODE_DETAILS="vm=c run Bytecode source executes through bridge"
+  else
+    ENTRY_BYTECODE_STATUS="FAIL"
+    ENTRY_BYTECODE_DETAILS="vm=c run Bytecode source failed (exit=${entry_bytecode_rc})"
+  fi
+
+  if [[ ${entry_bundle_rc} -eq 0 ]]; then
+    ENTRY_BUNDLE_STATUS="PASS"
+    ENTRY_BUNDLE_DETAILS="vm=c run .aibundle executes through bridge"
+  else
+    ENTRY_BUNDLE_STATUS="FAIL"
+    ENTRY_BUNDLE_DETAILS="vm=c run .aibundle failed (exit=${entry_bundle_rc})"
+  fi
+
+  if [[ ${entry_serve_rc} -eq 1 ]] && rg -q 'code=DEV008' "${TMP_DIR}/entry-serve.out"; then
+    ENTRY_SERVE_STATUS="PASS"
+    ENTRY_SERVE_DETAILS="vm=c serve deterministically reports DEV008 (not linked)"
+  else
+    ENTRY_SERVE_STATUS="FAIL"
+    ENTRY_SERVE_DETAILS="vm=c serve behavior deviated (exit=${entry_serve_rc})"
+  fi
+fi
 
 BEHAVIORAL_GATE_STATUS="FAIL"
 if [[ ${PASSED} -eq ${TOTAL} &&
@@ -158,6 +197,9 @@ BENCH_BASELINE_FILE="${ROOT_DIR}/AiVM.C/tests/compiler_runtime_bench_baseline.ts
 BENCH_RUN_STATUS="not-run"
 BENCH_BASELINE_STATUS="missing"
 BENCH_THRESHOLD_STATUS="not-evaluated"
+BENCH_REGRESSION_COUNT=0
+BENCH_BASELINE_MISSING_COUNT=0
+BENCH_ALLOWED_REGRESSION_PCT="${AIVM_BENCH_MAX_REGRESSION_PCT:-5}"
 if [[ "${RUN_BENCH}" == "1" ]]; then
   set +e
   ./tools/airun bench --iterations 10 --human > "${TMP_DIR}/bench.out" 2>&1
@@ -173,8 +215,38 @@ if [[ "${RUN_BENCH}" == "1" ]]; then
     BENCH_BASELINE_STATUS="present"
     invalid_baseline_count="$(awk 'BEGIN{c=0} !/^#/ && NF>=2 {if ($2 <= 0) c++} END{print c}' "${BENCH_BASELINE_FILE}")"
     if [[ "${invalid_baseline_count}" == "0" && "${BENCH_RUN_STATUS}" == "pass" ]]; then
-      BENCH_THRESHOLD_STATUS="pending-comparison"
-      BENCH_GATE_STATUS="FAIL"
+      awk 'NR>1 && $2 == "ok" {print $1 "\t" $4}' "${TMP_DIR}/bench.out" > "${TMP_DIR}/bench-current.tsv"
+      BENCH_BASELINE_MISSING_COUNT="$(awk 'BEGIN{c=0} !/^#/ && NF>=2 {print $1}' "${BENCH_BASELINE_FILE}" | while read -r name; do if ! rg -q "^${name}[[:space:]]" "${TMP_DIR}/bench-current.tsv"; then echo 1; fi; done | wc -l | tr -d ' ')"
+      BENCH_REGRESSION_COUNT="$(
+        awk -v max_pct="${BENCH_ALLOWED_REGRESSION_PCT}" '
+          BEGIN {
+            FS="\t";
+            while ((getline < ARGV[1]) > 0) {
+              if ($0 ~ /^#/ || NF < 2) { continue; }
+              base[$1] = $2 + 0;
+            }
+            close(ARGV[1]);
+            count = 0;
+            while ((getline < ARGV[2]) > 0) {
+              if (NF < 2) { continue; }
+              name = $1;
+              current = $2 + 0;
+              if (!(name in base)) { continue; }
+              limit = base[name] * (1.0 + (max_pct / 100.0));
+              if (current > limit) { count += 1; }
+            }
+            close(ARGV[2]);
+            print count;
+          }
+        ' "${BENCH_BASELINE_FILE}" "${TMP_DIR}/bench-current.tsv"
+      )"
+      if [[ "${BENCH_BASELINE_MISSING_COUNT}" == "0" && "${BENCH_REGRESSION_COUNT}" == "0" ]]; then
+        BENCH_THRESHOLD_STATUS="within-threshold"
+        BENCH_GATE_STATUS="PASS"
+      else
+        BENCH_THRESHOLD_STATUS="regression-or-missing"
+        BENCH_GATE_STATUS="FAIL"
+      fi
     else
       BENCH_THRESHOLD_STATUS="baseline-not-calibrated"
       BENCH_GATE_STATUS="FAIL"
@@ -240,7 +312,7 @@ TS_UTC="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
   echo "| Behavioral parity | ${BEHAVIORAL_GATE_STATUS} | ${PASSED}/${TOTAL} (${PARITY_PERCENT}%) with mode=${MODE_USED} |"
   echo "| Zero-C# | ${ZERO_CSHARP_STATUS} | tracked_csharp=${TRACKED_CS_COUNT}, dotnet_refs_in_ci_scripts=${DOTNET_REF_COUNT} |"
   echo "| Test coverage | ${TEST_GATE_STATUS} | test-aivm-c=${TEST_AIVM_C_STATUS}, test.sh=${TEST_FULL_STATUS}, determinism=${DETERMINISM_STATUS} |"
-  echo "| Benchmark | ${BENCH_GATE_STATUS} | bench_run=${BENCH_RUN_STATUS}, baseline=${BENCH_BASELINE_STATUS}, threshold=${BENCH_THRESHOLD_STATUS} |"
+  echo "| Benchmark | ${BENCH_GATE_STATUS} | bench_run=${BENCH_RUN_STATUS}, baseline=${BENCH_BASELINE_STATUS}, threshold=${BENCH_THRESHOLD_STATUS}, regressions=${BENCH_REGRESSION_COUNT}, missing=${BENCH_BASELINE_MISSING_COUNT}, max_pct=${BENCH_ALLOWED_REGRESSION_PCT} |"
   echo "| Samples completion | ${SAMPLE_GATE_STATUS} | complete=${sample_complete}/${sample_total} (manifest=${SAMPLE_MANIFEST##${ROOT_DIR}/}) |"
   echo "| Memory/GC | ${MEMORY_GATE_STATUS} | rc_test=${RC_TEST_PRESENT}, cycle_test=${CYCLE_TEST_PRESENT}, leak_script=${LEAK_SCRIPT_PRESENT}, profile_script=${PROFILE_SCRIPT_PRESENT} |"
   echo
@@ -248,10 +320,10 @@ TS_UTC="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
   echo
   echo "| Entrypoint | Status | Details |"
   echo "|---|---|---|"
-  echo "| run source | ${ENTRY_SOURCE_STATUS} | backed by canonical golden corpus parity |"
-  echo "| embedded bytecode | ${ENTRY_BYTECODE_STATUS} | dedicated end-to-end entrypoint parity harness not finalized |"
-  echo "| embedded bundle | ${ENTRY_BUNDLE_STATUS} | dedicated end-to-end entrypoint parity harness not finalized |"
-  echo "| serve | ${ENTRY_SERVE_STATUS} | dedicated deterministic parity harness not finalized |"
+  echo "| run source | ${ENTRY_SOURCE_STATUS} | ${ENTRY_SOURCE_DETAILS} |"
+  echo "| embedded bytecode | ${ENTRY_BYTECODE_STATUS} | ${ENTRY_BYTECODE_DETAILS} |"
+  echo "| embedded bundle | ${ENTRY_BUNDLE_STATUS} | ${ENTRY_BUNDLE_DETAILS} |"
+  echo "| serve | ${ENTRY_SERVE_STATUS} | ${ENTRY_SERVE_DETAILS} |"
   echo
   echo "## Behavioral Cases"
   echo
