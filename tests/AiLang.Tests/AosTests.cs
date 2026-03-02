@@ -4833,6 +4833,62 @@ public class AosTests
     }
 
     [Test]
+    public void AivmCBridge_TryLowerMainFunction_CallRemapsFunctionIndexToInstructionOffset()
+    {
+        const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=helper params=\"\" locals=\"\") { Inst#i1(op=RET) } Func#f2(name=main params=\"\" locals=\"\") { Inst#i2(op=CALL a=0 b=0) Inst#i3(op=RET) } }";
+        var parse = AosParsing.Parse(bytecodeText);
+        Assert.That(parse.Root, Is.Not.Null);
+
+        var bridgeType = Type.GetType("AiLang.Core.AivmCBridge, AiLang.Core");
+        Assert.That(bridgeType, Is.Not.Null);
+
+        var method = bridgeType!.GetMethod("TryLowerMainFunction", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+        Assert.That(method, Is.Not.Null);
+
+        var args = new object?[] { parse.Root!, null, null, null };
+        var ok = (bool)method!.Invoke(null, args)!;
+        Assert.That(ok, Is.True);
+
+        var instructions = (List<(int opcode, long operand)>)args[1]!;
+        var error = (string)args[3]!;
+        Assert.That(error, Is.EqualTo(string.Empty));
+
+        Assert.That(instructions, Has.Count.EqualTo(6));
+        Assert.That(instructions[0], Is.EqualTo((8, 3)));
+        Assert.That(instructions[1], Is.EqualTo((12, 0)));
+        Assert.That(instructions[2], Is.EqualTo((12, 0)));
+        Assert.That(instructions[3], Is.EqualTo((11, 1)));
+        Assert.That(instructions[4], Is.EqualTo((12, 0)));
+        Assert.That(instructions[5], Is.EqualTo((12, 0)));
+    }
+
+    [Test]
+    public void AivmCBridge_TryLowerMainFunction_AsyncCallRemapsFunctionIndexToInstructionOffset()
+    {
+        const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=helper params=\"\" locals=\"\") { Inst#i1(op=RET) } Func#f2(name=main params=\"\" locals=\"\") { Inst#i2(op=ASYNC_CALL a=0 b=0) Inst#i3(op=RET) } }";
+        var parse = AosParsing.Parse(bytecodeText);
+        Assert.That(parse.Root, Is.Not.Null);
+
+        var bridgeType = Type.GetType("AiLang.Core.AivmCBridge, AiLang.Core");
+        Assert.That(bridgeType, Is.Not.Null);
+
+        var method = bridgeType!.GetMethod("TryLowerMainFunction", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+        Assert.That(method, Is.Not.Null);
+
+        var args = new object?[] { parse.Root!, null, null, null };
+        var ok = (bool)method!.Invoke(null, args)!;
+        Assert.That(ok, Is.True);
+
+        var instructions = (List<(int opcode, long operand)>)args[1]!;
+        var error = (string)args[3]!;
+        Assert.That(error, Is.EqualTo(string.Empty));
+
+        Assert.That(instructions, Has.Count.EqualTo(6));
+        Assert.That(instructions[0], Is.EqualTo((8, 3)));
+        Assert.That(instructions[3], Is.EqualTo((23, 1)));
+    }
+
+    [Test]
     public void RunEmbeddedBundle_CVmMode_ReturnsDev008Gate()
     {
         const string bundleText = "Bundle#b1(entryFile=\"main.aos\" entryExport=\"start\")";
