@@ -165,7 +165,7 @@ static int test_load_local_missing_sets_error(void)
     if (expect(vm.error == AIVM_VM_ERR_LOCAL_OUT_OF_RANGE) != 0) {
         return 1;
     }
-    if (expect(strcmp(aivm_vm_error_detail(&vm), "Local slot out of range.") == 0) != 0) {
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "Invalid local slot.") == 0) != 0) {
         return 1;
     }
 
@@ -339,7 +339,7 @@ static int test_jump_if_false_type_mismatch_sets_error(void)
     if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
         return 1;
     }
-    if (expect(strcmp(aivm_vm_error_detail(&vm), "JUMP_IF_FALSE requires bool condition.") == 0) != 0) {
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "JUMP_IF_FALSE requires bool.") == 0) != 0) {
         return 1;
     }
     return 0;
@@ -933,7 +933,7 @@ static int test_str_concat_type_mismatch_sets_error(void)
     if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
         return 1;
     }
-    if (expect(strcmp(aivm_vm_error_detail(&vm), "STR_CONCAT requires non-null string operands.") == 0) != 0) {
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "STR_CONCAT requires string operands.") == 0) != 0) {
         return 1;
     }
     return 0;
@@ -1102,7 +1102,7 @@ static int test_str_escape_requires_string(void)
     if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
         return 1;
     }
-    if (expect(strcmp(aivm_vm_error_detail(&vm), "STR_ESCAPE requires non-null string.") == 0) != 0) {
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "STR_ESCAPE requires string operand.") == 0) != 0) {
         return 1;
     }
     return 0;
@@ -1635,7 +1635,7 @@ static int test_async_call_invalid_target_sets_error(void)
     if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
         return 1;
     }
-    if (expect(strcmp(aivm_vm_error_detail(&vm), "Invalid function target.") == 0) != 0) {
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "Invalid function index.") == 0) != 0) {
         return 1;
     }
     return 0;
@@ -1657,7 +1657,7 @@ static int test_async_call_target_equal_instruction_count_sets_error(void)
     if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
         return 1;
     }
-    if (expect(strcmp(aivm_vm_error_detail(&vm), "Invalid function target.") == 0) != 0) {
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "Invalid function index.") == 0) != 0) {
         return 1;
     }
     return 0;
@@ -1736,7 +1736,7 @@ static int test_await_invalid_handle_sets_error(void)
     if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
         return 1;
     }
-    if (expect(strcmp(aivm_vm_error_detail(&vm), "AWAIT requires completed task handle.") == 0) != 0) {
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "AWAIT requires valid task handle.") == 0) != 0) {
         return 1;
     }
     return 0;
@@ -2261,7 +2261,7 @@ static int test_make_block_requires_string_id(void)
     if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
         return 1;
     }
-    if (expect(strcmp(aivm_vm_error_detail(&vm), "MAKE_BLOCK id must be string.") == 0) != 0) {
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "MAKE_BLOCK requires string id.") == 0) != 0) {
         return 1;
     }
     return 0;
@@ -2424,7 +2424,7 @@ static int test_make_err_requires_string_operands(void)
     if (expect(vm.error == AIVM_VM_ERR_TYPE_MISMATCH) != 0) {
         return 1;
     }
-    if (expect(strcmp(aivm_vm_error_detail(&vm), "MAKE_ERR requires four non-null string operands.") == 0) != 0) {
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "MAKE_ERR requires (string,string,string,string).") == 0) != 0) {
         return 1;
     }
     return 0;

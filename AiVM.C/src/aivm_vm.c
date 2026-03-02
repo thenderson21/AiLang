@@ -400,7 +400,7 @@ static int execute_call_subroutine_sync(AivmVm* vm, size_t target, AivmValue* ou
         return 0;
     }
     if (target >= vm->program->instruction_count) {
-        set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Invalid function target.");
+        set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Invalid function index.");
         return 0;
     }
 
@@ -772,7 +772,7 @@ int aivm_local_set(AivmVm* vm, size_t index, AivmValue value)
     }
 
     if (index >= AIVM_VM_LOCALS_CAPACITY) {
-        set_vm_error(vm, AIVM_VM_ERR_LOCAL_OUT_OF_RANGE, "Local slot out of range.");
+        set_vm_error(vm, AIVM_VM_ERR_LOCAL_OUT_OF_RANGE, "Invalid local slot.");
         return 0;
     }
 
@@ -886,7 +886,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (!aivm_local_get(vm, local_index, &local_value)) {
-                set_vm_error(vm, AIVM_VM_ERR_LOCAL_OUT_OF_RANGE, "Local slot out of range.");
+                set_vm_error(vm, AIVM_VM_ERR_LOCAL_OUT_OF_RANGE, "Invalid local slot.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -945,7 +945,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (condition.type != AIVM_VAL_BOOL) {
-                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "JUMP_IF_FALSE requires bool condition.");
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "JUMP_IF_FALSE requires bool.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1070,7 +1070,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (vm->program->constants == NULL || constant_index >= vm->program->constant_count) {
-                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "CONST index out of range.");
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Invalid CONST index.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1098,7 +1098,7 @@ void aivm_step(AivmVm* vm)
                 right.type != AIVM_VAL_STRING ||
                 left.string_value == NULL ||
                 right.string_value == NULL) {
-                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "STR_CONCAT requires non-null string operands.");
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "STR_CONCAT requires string operands.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1223,7 +1223,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (value.type != AIVM_VAL_STRING || value.string_value == NULL) {
-                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "STR_ESCAPE requires non-null string.");
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "STR_ESCAPE requires string operand.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1351,7 +1351,7 @@ void aivm_step(AivmVm* vm)
             }
             if (handle_value.type != AIVM_VAL_INT ||
                 !find_completed_task(vm, handle_value.int_value, &completed)) {
-                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "AWAIT requires completed task handle.");
+                set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "AWAIT requires valid task handle.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1699,7 +1699,7 @@ void aivm_step(AivmVm* vm)
                 break;
             }
             if (id_value.type != AIVM_VAL_STRING || id_value.string_value == NULL) {
-                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "MAKE_BLOCK id must be string.");
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "MAKE_BLOCK requires string id.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
@@ -1793,7 +1793,7 @@ void aivm_step(AivmVm* vm)
                 message_value.type != AIVM_VAL_STRING || message_value.string_value == NULL ||
                 code_value.type != AIVM_VAL_STRING || code_value.string_value == NULL ||
                 id_value.type != AIVM_VAL_STRING || id_value.string_value == NULL) {
-                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "MAKE_ERR requires four non-null string operands.");
+                set_vm_error(vm, AIVM_VM_ERR_TYPE_MISMATCH, "MAKE_ERR requires (string,string,string,string).");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
