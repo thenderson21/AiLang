@@ -5082,6 +5082,37 @@ public class AosTests
     }
 
     [Test]
+    public void RunEmbeddedBundle_CVmMode_ExecuteEnabledStillReturnsDev008Gate()
+    {
+        const string bundleText = "Bundle#b1(entryFile=\"main.aos\" entryExport=\"start\")";
+        var previousExecute = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE");
+        var previousLib = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB");
+        var lines = new List<string>();
+
+        try
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", "1");
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", "does-not-exist-aivm-bridge");
+
+            var exitCode = AosCliExecutionEngine.RunEmbeddedBundle(
+                bundleText,
+                Array.Empty<string>(),
+                traceEnabled: false,
+                vmMode: "c",
+                lines.Add);
+
+            Assert.That(exitCode, Is.EqualTo(1));
+            Assert.That(lines.Count, Is.EqualTo(1));
+            Assert.That(lines[0], Is.EqualTo("Err#err1(code=DEV008 message=\"C VM backend is not linked in this runtime build.\" nodeId=vmMode)"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", previousExecute);
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", previousLib);
+        }
+    }
+
+    [Test]
     public void RunSource_CVmMode_ReturnsDev008Gate()
     {
         var lines = new List<string>();
