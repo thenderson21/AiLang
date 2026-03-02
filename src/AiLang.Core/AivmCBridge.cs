@@ -436,6 +436,11 @@ internal static class AivmCBridge
                 error = $"Opcode '{inst.Op}' uses unsupported secondary operand b={inst.B} in C bridge execute path.";
                 return false;
             }
+            if (!string.IsNullOrEmpty(inst.S))
+            {
+                error = $"Opcode '{inst.Op}' uses unsupported string operand s in C bridge execute path.";
+                return false;
+            }
 
             if (!OpcodeMap.TryGetValue(inst.Op, out var opcode))
             {

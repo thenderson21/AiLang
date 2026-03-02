@@ -194,3 +194,4 @@ Output: code cleanup and doc/runbook updates.
 - Fixed C VM call-frame locals scoping parity by snapshotting/restoring `locals_count` on `CALL`/`RET`, with new opcode test coverage to prevent caller-local leakage across function calls.
 - Added strict execute-mode validation for malformed `AIVM_C_BRIDGE_ABI` values so bridge execution fails fast with deterministic diagnostics before native library loading.
 - Added execute-mode compatibility guard for non-zero secondary `b` operands on lowered bytecode instructions, preventing silent loss of semantics when mapping C# `a/b/s` instructions into C single-operand opcodes.
+- Added execute-mode compatibility guard for unexpected non-empty string operand `s` on lowered opcodes, preventing silent metadata loss in C bridge execution mode.
