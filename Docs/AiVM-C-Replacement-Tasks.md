@@ -217,3 +217,4 @@ Output: code cleanup and doc/runbook updates.
 - Added parity-manifest coverage for execute-enabled source-kind split: Program source remains backend gate while Bytecode source enters bridge execute path and surfaces deterministic load-failure diagnostics. Current manifest counts: portable `11`, standard `26`.
 - Added `AiLang.Tests` regression coverage that `RunEmbeddedBundle(..., --vm=c)` remains on canonical backend gate even when `AIVM_C_BRIDGE_EXECUTE=1`, preventing accidental bridge-path expansion into bundle flow before planned cutover.
 - Added execute-enabled source-bytecode parity manifest case for missing `main` compatibility diagnostics and propagated it to portable manifest. Current manifest counts: portable `12`, standard `27`.
+- Added execute-enabled source-bytecode parity manifest case for `main`-with-params compatibility diagnostics and propagated it to portable manifest. Current manifest counts: portable `13`, standard `28`.
