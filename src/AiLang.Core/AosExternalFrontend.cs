@@ -51,7 +51,8 @@ public static class AosExternalFrontend
         try
         {
             var reader = new WireReader(data);
-            reader.ExpectLiteral("AOSAST1\n");
+            reader.ExpectLiteral("AOSAST1");
+            reader.ExpectNewLine();
             var root = reader.ReadNode();
             return new AosParseResult(root, new List<AosDiagnostic>());
         }
@@ -94,8 +95,11 @@ public static class AosExternalFrontend
         var candidates = new[]
         {
             HostFileSystem.Combine(HostEnvironment.BaseDirectory, "aos_frontend"),
+            HostFileSystem.Combine(HostEnvironment.BaseDirectory, "aos_frontend.exe"),
             HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "tools", "aos_frontend"),
-            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "aos_frontend")
+            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "tools", "aos_frontend.exe"),
+            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "aos_frontend"),
+            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "aos_frontend.exe")
         };
 
         foreach (var candidate in candidates)
@@ -141,6 +145,23 @@ public static class AosExternalFrontend
             }
         }
 
+        public void ExpectNewLine()
+        {
+            var first = ReadByte();
+            if (first == (byte)'\n')
+            {
+                return;
+            }
+
+            if (first == (byte)'\r')
+            {
+                ExpectByte((byte)'\n');
+                return;
+            }
+
+            throw new InvalidOperationException("Missing wire newline.");
+        }
+
         public AosNode ReadNode()
         {
             ExpectByte((byte)'N');
@@ -152,7 +173,7 @@ public static class AosExternalFrontend
             var attrCount = ReadIntToken();
             ExpectByte((byte)' ');
             var childCount = ReadIntToken();
-            ExpectByte((byte)'\n');
+            ExpectNewLine();
 
             var attrs = new Dictionary<string, AosAttrValue>(StringComparer.Ordinal);
             for (var i = 0; i < attrCount; i++)
@@ -164,7 +185,7 @@ public static class AosExternalFrontend
                 var type = (char)ReadByte();
                 ExpectByte((byte)' ');
                 var value = ReadLenString();
-                ExpectByte((byte)'\n');
+                ExpectNewLine();
 
                 attrs[key] = type switch
                 {
@@ -182,7 +203,7 @@ public static class AosExternalFrontend
             }
 
             ExpectByte((byte)'E');
-            ExpectByte((byte)'\n');
+            ExpectNewLine();
 
             return new AosNode(
                 kind,
