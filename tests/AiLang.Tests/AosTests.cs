@@ -4766,6 +4766,105 @@ public class AosTests
     }
 
     [Test]
+    public void RunEmbeddedBytecode_CVmMode_ExecuteEnabledAwait_PassesCompatibilityAndFailsAtLibraryLoad()
+    {
+        const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=main params=\"\" locals=\"\") { Inst#i1(op=AWAIT a=0 b=0) } }";
+        var previousExecute = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE");
+        var previousLib = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB");
+        var lines = new List<string>();
+
+        try
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", "1");
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", "does-not-exist-aivm-bridge");
+
+            var exitCode = AosCliExecutionEngine.RunEmbeddedBytecode(
+                bytecodeText,
+                Array.Empty<string>(),
+                traceEnabled: false,
+                vmMode: "c",
+                lines.Add);
+
+            Assert.That(exitCode, Is.EqualTo(1));
+            Assert.That(lines.Count, Is.EqualTo(1));
+            Assert.That(lines[0], Does.Contain("code=DEV008"));
+            Assert.That(lines[0], Does.Contain("Failed to load AIVM C bridge library path"));
+            Assert.That(lines[0], Does.Not.Contain("Opcode 'AWAIT' is not yet supported"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", previousExecute);
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", previousLib);
+        }
+    }
+
+    [Test]
+    public void RunEmbeddedBytecode_CVmMode_ExecuteEnabledParBegin_PassesCompatibilityAndFailsAtLibraryLoad()
+    {
+        const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=main params=\"\" locals=\"\") { Inst#i1(op=PAR_BEGIN a=0 b=0) } }";
+        var previousExecute = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE");
+        var previousLib = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB");
+        var lines = new List<string>();
+
+        try
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", "1");
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", "does-not-exist-aivm-bridge");
+
+            var exitCode = AosCliExecutionEngine.RunEmbeddedBytecode(
+                bytecodeText,
+                Array.Empty<string>(),
+                traceEnabled: false,
+                vmMode: "c",
+                lines.Add);
+
+            Assert.That(exitCode, Is.EqualTo(1));
+            Assert.That(lines.Count, Is.EqualTo(1));
+            Assert.That(lines[0], Does.Contain("code=DEV008"));
+            Assert.That(lines[0], Does.Contain("Failed to load AIVM C bridge library path"));
+            Assert.That(lines[0], Does.Not.Contain("Opcode 'PAR_BEGIN' is not yet supported"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", previousExecute);
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", previousLib);
+        }
+    }
+
+    [Test]
+    public void RunEmbeddedBytecode_CVmMode_ExecuteEnabledParJoin_PassesCompatibilityAndFailsAtLibraryLoad()
+    {
+        const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=main params=\"\" locals=\"\") { Inst#i1(op=PAR_JOIN a=0 b=0) } }";
+        var previousExecute = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE");
+        var previousLib = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB");
+        var lines = new List<string>();
+
+        try
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", "1");
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", "does-not-exist-aivm-bridge");
+
+            var exitCode = AosCliExecutionEngine.RunEmbeddedBytecode(
+                bytecodeText,
+                Array.Empty<string>(),
+                traceEnabled: false,
+                vmMode: "c",
+                lines.Add);
+
+            Assert.That(exitCode, Is.EqualTo(1));
+            Assert.That(lines.Count, Is.EqualTo(1));
+            Assert.That(lines[0], Does.Contain("code=DEV008"));
+            Assert.That(lines[0], Does.Contain("Failed to load AIVM C bridge library path"));
+            Assert.That(lines[0], Does.Not.Contain("Opcode 'PAR_JOIN' is not yet supported"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", previousExecute);
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", previousLib);
+        }
+    }
+
+    [Test]
     public void RunEmbeddedBytecode_CVmMode_ExecuteEnabledAsyncCallSys_PassesCompatibilityAndFailsAtLibraryLoad()
     {
         const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=main params=\"\" locals=\"\") { Inst#i1(op=ASYNC_CALL_SYS a=0 b=1 s=\"sys.console_writeLine\") } }";

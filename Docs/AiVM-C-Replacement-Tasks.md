@@ -237,3 +237,4 @@ Output: code cleanup and doc/runbook updates.
 - Added focused `AiLang.Tests` execute-mode regressions for negative-target compatibility diagnostics (`ASYNC_CALL a=-1`, `JUMP a=-1`) to mirror parity-manifest guardrails in managed test coverage.
 - Added focused `AiLang.Tests` execute-mode regression for `JUMP_IF_FALSE a=-1` compatibility diagnostics to mirror manifest-level negative-target coverage.
 - Added probe-mode parity + `AiLang.Tests` coverage for whitespace-only ABI env (`AIVM_C_BRIDGE_ABI='   '`) to keep probe non-disruptive and backend-gate output stable. Current manifest counts: portable `35`, standard `50`.
+- Added execute-mode parity + `AiLang.Tests` coverage for `AWAIT`/`PAR_BEGIN`/`PAR_JOIN` bridge-lowering behavior (currently compatibility-accepted and failing at native library load), preventing accidental regression to unsupported-op compatibility failures. Current manifest counts: portable `38`, standard `53`.
