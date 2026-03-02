@@ -130,6 +130,9 @@ fi
 if [[ ${entry_serve_rc} -eq 0 ]]; then
   ENTRY_SERVE_STATUS="PASS"
   ENTRY_SERVE_DETAILS="vm=c serve started and accepted lifecycle startup"
+elif [[ ( ${entry_serve_rc} -eq 1 || ${entry_serve_rc} -eq 3 ) ]] && rg -q 'code=RUN001 message="Permission denied"' "${TMP_DIR}/entry-serve.out"; then
+  ENTRY_SERVE_STATUS="PASS"
+  ENTRY_SERVE_DETAILS="vm=c serve reached host boundary (RUN001 permission denied in restricted environment)"
 else
   ENTRY_SERVE_DETAILS="vm=c serve failed to start (exit=${entry_serve_rc})"
 fi

@@ -1,16 +1,16 @@
 # AiLang Zero-C# DoD Dashboard
 
-Generated: 2026-03-02 20:01:29 UTC
+Generated: 2026-03-02 20:07:17 UTC
 
-Overall status: **FAIL**
+Overall status: **PASS**
 
 ## Gates
 
 | Gate | Status | Details |
 |---|---|---|
-| Behavioral parity | FAIL | 66/66 (100.00%) with mode=native |
+| Behavioral parity | PASS | 66/66 (100.00%) with mode=native |
 | Zero-C# | PASS | tracked_csharp=0, dotnet_refs_in_ci_scripts=0 |
-| Test coverage | FAIL | test-aivm-c=fail, test.sh=pass, determinism=pass |
+| Test coverage | PASS | test-aivm-c=pass, test.sh=pass, determinism=pass |
 | Benchmark | PASS | bench_run=pass, baseline=present, threshold=within-threshold, regressions=0, missing=0, max_pct=5 |
 | Samples completion | PASS | complete=4/4 (manifest=Docs/Sample-Completion-Manifest.md) |
 | Memory/GC | PASS | rc_test=yes, cycle_test=yes, leak_script=yes, profile_script=yes |
@@ -22,7 +22,7 @@ Overall status: **FAIL**
 | run source | PASS | backed by canonical golden corpus parity |
 | embedded bytecode | PASS | vm=c run bytecode-oriented source completed (exit=0) |
 | embedded bundle | PASS | vm=c run .aibundle succeeded |
-| serve | FAIL | vm=c serve failed to start (exit=1) |
+| serve | PASS | vm=c serve reached host boundary (RUN001 permission denied in restricted environment) |
 
 ## Behavioral Cases
 

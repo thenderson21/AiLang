@@ -79,7 +79,11 @@ int main(int argc, char** argv)
     int filtered_argc;
     int had_vm_c;
     int wants_vm_c_run;
+    int use_filtered_backend_args;
+    int trace_enabled;
     int i;
+
+    trace_enabled = getenv("AICLI_NATIVE_TRACE") != NULL ? 1 : 0;
 
     if (argc <= 0 || argv == NULL) {
         fprintf(stderr, "airun native wrapper: invalid argv\n");
@@ -119,10 +123,20 @@ int main(int argc, char** argv)
         fprintf(stderr, "airun native wrapper: failed to process arguments\n");
         return 2;
     }
+    if (trace_enabled) {
+        fprintf(stderr, "[airun-native] had_vm_c=%d argc=%d filtered_argc=%d cmd=%s\n",
+            had_vm_c,
+            argc,
+            filtered_argc,
+            filtered_argc >= 2 ? filtered_argv[1] : "(none)");
+    }
 
     wants_vm_c_run = 0;
+    use_filtered_backend_args = 0;
     if (had_vm_c && filtered_argc >= 2 && strcmp(filtered_argv[1], "run") == 0) {
         wants_vm_c_run = 1;
+    } else if (had_vm_c) {
+        use_filtered_backend_args = 1;
     }
 
     if (wants_vm_c_run) {
@@ -145,8 +159,19 @@ int main(int argc, char** argv)
         return 2;
     }
 
-    argv[0] = backend_path;
-    execv(backend_path, argv);
+    if (use_filtered_backend_args) {
+        if (trace_enabled) {
+            fprintf(stderr, "[airun-native] exec backend filtered path for vm=c non-run\n");
+        }
+        filtered_argv[0] = backend_path;
+        execv(backend_path, filtered_argv);
+    } else {
+        if (trace_enabled) {
+            fprintf(stderr, "[airun-native] exec backend raw argv path\n");
+        }
+        argv[0] = backend_path;
+        execv(backend_path, argv);
+    }
     fprintf(stderr, "airun native wrapper: failed to exec backend (%s): %s\n", backend_path, strerror(errno));
     free(filtered_argv);
     return 2;
