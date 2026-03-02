@@ -398,7 +398,7 @@ internal static class AivmCBridge
 
         if (!program.FunctionIndexByName.TryGetValue("main", out var mainIndex))
         {
-            error = "Entry function 'main' was not found.";
+            error = $"VM001: Entry function 'main' was not found. (nodeId={bytecodeRoot.Id})";
             return false;
         }
 

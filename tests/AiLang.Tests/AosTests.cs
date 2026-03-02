@@ -4382,7 +4382,8 @@ public class AosTests
             Assert.That(lines.Count, Is.EqualTo(1));
             Assert.That(lines[0], Does.Contain("code=DEV008"));
             Assert.That(lines[0], Does.Contain("C VM bridge execute path is unavailable"));
-            Assert.That(lines[0], Does.Contain("Entry function 'main' was not found."));
+            Assert.That(lines[0], Does.Contain("VM001: Entry function 'main' was not found."));
+            Assert.That(lines[0], Does.Contain("nodeId=bc1"));
         }
         finally
         {
