@@ -4525,6 +4525,70 @@ public class AosTests
     }
 
     [Test]
+    public void RunEmbeddedBytecode_CVmMode_ExecuteEnabledCallOutOfRange_ReturnsCompatibilityError()
+    {
+        const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=main params=\"\" locals=\"\") { Inst#i1(op=CALL a=99 b=0) Inst#i2(op=RET) } }";
+        var previousExecute = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE");
+        var previousLib = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB");
+        var lines = new List<string>();
+
+        try
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", "1");
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", "does-not-matter-for-call-oob");
+
+            var exitCode = AosCliExecutionEngine.RunEmbeddedBytecode(
+                bytecodeText,
+                Array.Empty<string>(),
+                traceEnabled: false,
+                vmMode: "c",
+                lines.Add);
+
+            Assert.That(exitCode, Is.EqualTo(1));
+            Assert.That(lines.Count, Is.EqualTo(1));
+            Assert.That(lines[0], Does.Contain("code=DEV008"));
+            Assert.That(lines[0], Does.Contain("Call target out of range"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", previousExecute);
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", previousLib);
+        }
+    }
+
+    [Test]
+    public void RunEmbeddedBytecode_CVmMode_ExecuteEnabledAsyncCallOutOfRange_ReturnsCompatibilityError()
+    {
+        const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=main params=\"\" locals=\"\") { Inst#i1(op=ASYNC_CALL a=99 b=0) Inst#i2(op=RET) } }";
+        var previousExecute = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE");
+        var previousLib = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB");
+        var lines = new List<string>();
+
+        try
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", "1");
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", "does-not-matter-for-async-call-oob");
+
+            var exitCode = AosCliExecutionEngine.RunEmbeddedBytecode(
+                bytecodeText,
+                Array.Empty<string>(),
+                traceEnabled: false,
+                vmMode: "c",
+                lines.Add);
+
+            Assert.That(exitCode, Is.EqualTo(1));
+            Assert.That(lines.Count, Is.EqualTo(1));
+            Assert.That(lines[0], Does.Contain("code=DEV008"));
+            Assert.That(lines[0], Does.Contain("Call target out of range"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", previousExecute);
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", previousLib);
+        }
+    }
+
+    [Test]
     public void RunEmbeddedBytecode_CVmMode_ExecuteEnabledMakeNode_ReturnsCompatibilityError()
     {
         const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=main params=\"\" locals=\"\") { Inst#i1(op=MAKE_NODE a=0 b=0) } }";
