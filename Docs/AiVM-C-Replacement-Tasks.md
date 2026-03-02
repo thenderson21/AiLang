@@ -195,3 +195,4 @@ Output: code cleanup and doc/runbook updates.
 - Added strict execute-mode validation for malformed `AIVM_C_BRIDGE_ABI` values so bridge execution fails fast with deterministic diagnostics before native library loading.
 - Added execute-mode compatibility guard for non-zero secondary `b` operands on lowered bytecode instructions, preventing silent loss of semantics when mapping C# `a/b/s` instructions into C single-operand opcodes.
 - Added execute-mode compatibility guard for unexpected non-empty string operand `s` on lowered opcodes, preventing silent metadata loss in C bridge execution mode.
+- Improved execute-mode native-failure diagnostics by appending mapped VM error codes (`AIVM*`) and added focused unit coverage for the error-code mapping helper.

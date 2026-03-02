@@ -210,7 +210,7 @@ internal static class AivmCBridge
                     (nuint)nativeConstants.Length);
                 if (result.Ok != 1 || result.Status != 2)
                 {
-                    failureMessage = $"Native execute failed (ok={result.Ok} status={result.Status} error={result.Error}).";
+                    failureMessage = $"Native execute failed (ok={result.Ok} status={result.Status} error={result.Error} code={MapVmErrorCode(result.Error)}).";
                     return false;
                 }
 
@@ -535,6 +535,25 @@ internal static class AivmCBridge
         libraryHandle = 0;
         error = "Unable to load default AIVM C bridge library candidate.";
         return false;
+    }
+
+    private static string MapVmErrorCode(int error)
+    {
+        return error switch
+        {
+            0 => "AIVM000",
+            1 => "AIVM001",
+            2 => "AIVM002",
+            3 => "AIVM003",
+            4 => "AIVM004",
+            5 => "AIVM005",
+            6 => "AIVM006",
+            7 => "AIVM007",
+            8 => "AIVM008",
+            9 => "AIVM009",
+            10 => "AIVM010",
+            _ => "AIVM999"
+        };
     }
 
     private static IEnumerable<string> GetLibraryCandidates()

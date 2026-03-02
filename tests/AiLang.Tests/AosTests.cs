@@ -4686,6 +4686,22 @@ public class AosTests
     }
 
     [Test]
+    public void AivmCBridge_MapVmErrorCode_MapsKnownAndUnknown()
+    {
+        var bridgeType = Type.GetType("AiLang.Core.AivmCBridge, AiLang.Core");
+        Assert.That(bridgeType, Is.Not.Null);
+
+        var method = bridgeType!.GetMethod("MapVmErrorCode", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+        Assert.That(method, Is.Not.Null);
+
+        var known = method!.Invoke(null, new object[] { 8 }) as string;
+        var unknown = method.Invoke(null, new object[] { 999 }) as string;
+
+        Assert.That(known, Is.EqualTo("AIVM008"));
+        Assert.That(unknown, Is.EqualTo("AIVM999"));
+    }
+
+    [Test]
     public void RunEmbeddedBundle_CVmMode_ReturnsDev008Gate()
     {
         const string bundleText = "Bundle#b1(entryFile=\"main.aos\" entryExport=\"start\")";
