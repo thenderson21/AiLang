@@ -198,3 +198,4 @@ Output: code cleanup and doc/runbook updates.
 - Improved execute-mode native-failure diagnostics by appending mapped VM error codes (`AIVM*`) and added focused unit coverage for the error-code mapping helper.
 - Normalized missing-entry diagnostics in execute-mode bridge lowering to include `VM001` + explicit `nodeId` envelope for deterministic consistency with other bytecode-lowering failures.
 - Tightened VM call-target boundary semantics by treating `CALL`/`ASYNC_CALL` targets equal to `instruction_count` as invalid (not callable), with dedicated opcode regression tests.
+- Unified probe/execute ABI parsing behavior by reusing strict `AIVM_C_BRIDGE_ABI` parsing in probe mode (invalid values now short-circuit probe instead of silently defaulting).

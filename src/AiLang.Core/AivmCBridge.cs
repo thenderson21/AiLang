@@ -252,7 +252,11 @@ internal static class AivmCBridge
                 return;
             }
 
-            var expected = GetExpectedAbiVersion();
+            if (!TryGetExpectedAbiVersionForExecute(out var expected, out _))
+            {
+                NativeLibrary.Free(libraryHandle);
+                return;
+            }
 
             if (abiVersion != expected)
             {
@@ -341,18 +345,6 @@ internal static class AivmCBridge
         {
             handle.Free();
         }
-    }
-
-    private static uint GetExpectedAbiVersion()
-    {
-        var expected = 1U;
-        var expectedRaw = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_ABI");
-        if (!string.IsNullOrWhiteSpace(expectedRaw) && uint.TryParse(expectedRaw, out var parsed))
-        {
-            expected = parsed;
-        }
-
-        return expected;
     }
 
     private static bool TryGetExpectedAbiVersionForExecute(out uint expected, out string error)
