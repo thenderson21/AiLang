@@ -1,16 +1,30 @@
-# AiVM-C Parity Status
+# AiLang Zero-C# DoD Dashboard
 
-Generated: 2026-03-02 16:20:19 UTC
+Generated: 2026-03-02 16:45:15 UTC
 
-- Target suite: `examples/golden/*.in.aos`
-- C VM mode: execute
-- C bridge library: `/Users/toddhenderson/.codex/worktrees/ab1f/AiLang/.tmp/aivm-c-build-shared/libaivm_core_shared.dylib`
-- Total targets: 66
-- Passing parity targets: 18
-- Failing parity targets: 48
-- Progress: 27.27%
+Overall status: **FAIL**
 
-## Cases
+## Gates
+
+| Gate | Status | Details |
+|---|---|---|
+| Behavioral parity | FAIL | 18/66 (27.27%) with mode=execute |
+| Zero-C# | FAIL | tracked_csharp=91, dotnet_refs_in_ci_scripts=13 |
+| Test coverage | PASS | test-aivm-c=pass, test.sh=pass, determinism=pass |
+| Benchmark | FAIL | bench_run=pass, baseline=present, threshold=baseline-not-calibrated |
+| Samples completion | FAIL | complete=0/4 (manifest=Docs/Sample-Completion-Manifest.md) |
+| Memory/GC | FAIL | rc_test=no, cycle_test=no, leak_script=yes, profile_script=yes |
+
+## Behavioral Sub-Gates
+
+| Entrypoint | Status | Details |
+|---|---|---|
+| run source | FAIL | backed by canonical golden corpus parity |
+| embedded bytecode | PENDING | dedicated end-to-end entrypoint parity harness not finalized |
+| embedded bundle | PENDING | dedicated end-to-end entrypoint parity harness not finalized |
+| serve | PENDING | dedicated deterministic parity harness not finalized |
+
+## Behavioral Cases
 
 | Result | Case | Canonical Exit | C VM Exit |
 |---|---|---:|---:|

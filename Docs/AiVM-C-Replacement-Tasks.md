@@ -1,254 +1,97 @@
-# AiVM-C Replacement Tasks
+# AiLang Zero-C# Completion Tasks
 
-## Scope
+## Objective
 
-Replace the C# VM execution path with `AiVM.C` while preserving deterministic semantics and the existing high-level typed syscall ABI.
+Finish migration to a full AiLang project without C# in mainline, with behavioral parity at least equal to the former C# baseline and explicit quality gates for tests, benchmarks, samples, and memory/leak behavior.
 
-## Constraints
+## Hard Definition Of Done
 
-- No semantic changes to AiLang spec.
-- No hidden side effects.
-- No JSON in VM internals.
-- No dynamic runtime dependencies.
-- Keep host mechanical and syscall-boundary-only.
+All gates below must be green at the same time:
 
-## Task List
+1. Behavioral parity: `100%` pass on canonical parity corpus.
+2. Zero C#: no tracked `.cs`, `.csproj`, `.sln`, `.slnx` files in mainline.
+3. Test coverage: full required suite passes on macOS/Linux/Windows.
+4. Benchmark: compiler/runtime benchmark gates pass (no regressions > threshold).
+5. Samples: all repo samples marked complete and passing.
+6. Memory: RC invariants, cycle collector tests, and leak checks pass.
 
-1. Freeze VM contract and conformance checklist.
-Status: `completed`
-Output: explicit opcode/runtime/syscall parity matrix anchored to `SPEC/`.
+No partial completion state counts as done.
 
-2. Define C bytecode/program model (`AiBC1`) and deterministic loader.
-Status: `completed`
-Output: `aivm_program_*` API, deterministic load errors, no allocation in core.
+## Scope Decisions
 
-3. Implement full VM runtime state model.
-Status: `completed`
-Output: stack, call frames, locals, constants, explicit halt/error state.
+- No C# scope: repo-wide zero C#.
+- Memory model: deterministic reference counting + deterministic cycle collection passes.
+- Finished program scope: all repo samples.
 
-4. Port opcode execution semantics.
-Status: `completed`
-Output: switch-based deterministic dispatch with parity to current VM.
+## Epic Tracker
 
-5. Complete C value model parity.
-Status: `completed`
-Output: all runtime value kinds and explicit ownership rules.
+1. `EPIC-ZC1` Runtime Behavioral Parity Closure
+Status: `in_progress`
+Goal: 100% parity dashboard across canonical corpus and runtime entrypoints.
+Current: 18/66 pass (`27.27%`) in execute mode.
+Exit: parity dashboard fully green, no known semantic drift.
 
-6. Port syscall dispatch/contracts in C.
-Status: `completed`
-Output: typed target/arg validation, stable IDs, deterministic diagnostics.
+2. `EPIC-ZC2` C Runtime As Sole Engine
+Status: `in_progress`
+Goal: remove remaining bridge-gated transitional runtime behavior and C# runtime fallback semantics.
+Current: C path exists but transitional gate behavior still present in selected entrypoints/diagnostics.
+Exit: runtime-only C path for run-source, embedded-bytecode, embedded-bundle, and serve.
 
-7. Runtime error and diagnostics parity.
-Status: `completed`
-Output: matching codes/messages/node-id behavior.
-
-8. Build C bridge into CLI runtime selection.
-Status: `completed`
-Output: C ABI adapter with feature-flagged dual runtime path.
-
-9. Add dual-run parity harness.
-Status: `completed`
-Output: C# VM vs C VM output/diagnostic diff checks across goldens.
-
-10. Add syscall-heavy parity suites.
-Status: `completed`
-Output: lifecycle/http/publish/syscall scenarios parity gates.
-
-11. Determinism + perf guardrails.
-Status: `completed`
-Output: replay-stability checks and non-regressive perf smoke baselines.
-
-12. CI integration (multi-platform C build + parity jobs).
-Status: `completed`
-Output: required checks on macOS/Linux/Windows.
-
-13. Cutover to C VM default.
+3. `EPIC-ZC3` Repo-wide C# Deletion
 Status: `pending`
-Output: C VM default in CLI, temporary fallback flag for rollback window.
+Goal: remove all C# projects and C# test/tooling dependencies from mainline.
+Exit: no dotnet requirement in mainline build/test workflows.
 
-14. Remove deprecated C# VM path after soak.
+4. `EPIC-ZC4` Compiler Benchmarking + Regression Gates
+Status: `in_progress`
+Goal: benchmark compiler/runtime with frozen baselines and CI regression gates.
+Current: `airun bench` exists; no frozen non-regression gate integrated yet.
+Exit: benchmark suite + baseline + CI threshold enforcement.
+
+5. `EPIC-ZC5` Sample Program Production Completion
+Status: `in_progress`
+Goal: all sample apps reach completion bar (functional + determinism + perf + memory).
+Current: sample inventory exists; completion manifest/gates not all green.
+Exit: all samples marked complete and pass all sample gates.
+
+6. `EPIC-ZC6` Memory Management + Leak Tooling
 Status: `pending`
-Output: code cleanup and doc/runbook updates.
+Goal: deterministic RC + cycle collector + leak/profiling tooling.
+Exit: memory/leak suite integrated and green in CI.
 
-## Current Increment
+## Issue Requirements (Mandatory Fields)
 
-- Added parity progress dashboard tooling: `scripts/aivm-parity-dashboard.sh` now dual-runs all `examples/golden/*.in.aos` against canonical VM vs `--vm=c`, writes `Docs/AiVM-C-Parity-Status.md`, and reports a simple pass/fail percentage gauge for cutover readiness tracking without manual status checks.
+All new migration issues must include:
 
-- Completed deterministic AiBC1 instruction-section decode in `AiVM.C` with fixed-capacity storage and explicit decode errors.
-- Added `AiVM.C` C-test harness (`ctest`) for program loader and VM core deterministic state transitions.
-- Added initial `AivmValue` helper API (`void/int/bool/string` constructors and equality) with dedicated unit test.
-- Added deterministic syscall dispatch-table skeleton and syscall unit test (`invoke` + `dispatch` paths).
-- Added deterministic VM error code/message mapping scaffold with unit test coverage.
-- Added deterministic VM stack primitives (push/pop, overflow/underflow errors) with unit test coverage.
-- Added deterministic call-frame and locals primitives with overflow/underflow/bounds tests.
-- Extended AiBC1 loader scaffold to deterministic header parsing (magic/version/flags) with unit tests.
-- Added initial deterministic opcode execution primitives (`PUSH_INT`, `POP`, `STORE_LOCAL`, `LOAD_LOCAL`) with unit tests.
-- Added parity normalization/equality helper module as groundwork for dual-run comparison tooling.
-- Added AiBC1 section-table bounds validation in loader (truncated and out-of-bounds detection) with unit tests.
-- Added `aivm_parity_cli` utility to support dual-run output comparison scripting.
-- Added initial runtime bridge API (`aivm_execute_program`) plus unit test as CLI integration groundwork.
-- Added deterministic `scripts/test-aivm-c.sh` test entrypoint for local/CI reuse.
-- Added fixed-capacity section descriptor parsing in AiBC1 loader with section-limit and bounds validation tests.
-- Added deterministic integer arithmetic opcode scaffold (`ADD_INT`) with type-safety error handling and tests.
-- Added deterministic syscall-contract validation scaffold (`target + typed args + return kind`) with unit tests.
-- Added `scripts/aivm-parity-compare.sh` and GitHub Actions workflow `aivm-c-ci.yml` for cross-platform build/test.
-- Added C-ABI adapter scaffold (`aivm_c_api`) and test coverage for host integration entrypoints.
-- Added deterministic control-flow opcode scaffolding (`JUMP`, `JUMP_IF_FALSE`) with bounds/type checks and tests.
-- Added deterministic boolean literal opcode (`PUSH_BOOL`) and moved branch tests to opcode-driven setup.
-- Added command-driven dual-run parity harness script (`scripts/aivm-dualrun-parity.sh`) for left/right command output comparison.
-- Added deterministic call/return opcode scaffolding (`CALL`, `RET`) with frame-stack validation tests.
-- Added deterministic integer equality opcode (`EQ_INT`) with type-safety tests.
-- Added deterministic generic equality opcode (`EQ`) with value-equality and underflow tests.
-- Fixed generic value equality string semantics to compare deterministic string content (not pointer identity), with VM/value tests.
-- Hardened deterministic call-frame transitions: `RET` now restores frame base with single-value return semantics and rejects invalid negative control-flow/local operands.
-- Added deterministic constant-pool loading (int/bool/string/void) in AiBC1 binary sections plus `CONST` opcode execution and tests.
-- Expanded syscall contract handling with stable numeric IDs, deterministic target/id lookup, and typed validation tests.
-- Added deterministic status-to-code/message mappings for AiBC1 loader and syscall-contract validation to support parity diagnostics.
-- Extended C ABI runtime bridge with `aivm_c_execute_aibc1` to load+execute AiBC1 bytes and return deterministic loader/runtime status fields.
-- Added manifest-driven dual-run parity harness (`scripts/aivm-dualrun-parity-manifest.sh`) and wired a parity smoke case into `scripts/test-aivm-c.sh` and CI path filters.
-- Updated `aivm-c-ci` workflow with `workflow_dispatch` and parity-report artifact upload for deterministic parity debugging in CI.
-- Added deterministic `STR_CONCAT` opcode support with fixed-capacity VM string arena (no heap allocation), plus opcode and diagnostics tests.
-- Added deterministic `TO_STRING` opcode support for int/bool/string/null-like values using VM string arena storage, with VM opcode tests.
-- Added contract-checked syscall dispatch path (`aivm_syscall_dispatch_checked`) enforcing deterministic arg/return type checks at runtime.
-- Enhanced manifest parity runner to emit per-case output artifacts and deterministic report entries for CI/debug traceability.
-- Added deterministic `STR_ESCAPE` opcode behavior (backslash/quote/newline/carriage-return/tab escaping) with strict type validation tests.
-- Added explicit VM tests for fixed-capacity string arena overflow across `STR_CONCAT`, `TO_STRING`, and `STR_ESCAPE` (`AIVM009` behavior).
-- Added deterministic syscall status code/message mapping (`AIVMS*`) for dispatch outcomes with unit coverage.
-- Added explicit `RETURN` opcode alias support (mapped to `RET` semantics) to align C opcode surface with C# VM instruction naming.
-- Expanded C syscall contract table with string operations (`sys.str_substring`, `sys.str_remove`) and added validation/id lookup tests.
-- Expanded parity manifest smoke coverage to include CRLF/LF normalization and trailing-newline equivalence cases.
-- Added rune-aware deterministic `STR_SUBSTRING` / `STR_REMOVE` VM opcodes (UTF-8 code-point clamped semantics) with unit tests.
-- Added deterministic `CALL_SYS` opcode path with contract-checked host binding dispatch and explicit VM syscall failure diagnostic (`AIVM010`).
-- Added explicit async/parallel opcode IDs (`ASYNC_CALL*`, `AWAIT`, `PAR_*`) with deterministic unsupported-op failure semantics in C core.
-- Added `STR_UTF8_BYTE_COUNT` opcode support with type validation and UTF-8 byte-count test coverage.
-- Extended runtime/C-API bridge with syscall-injected execution entrypoints (`aivm_execute_program_with_syscalls`, `aivm_c_execute_program_with_syscalls`) and tests.
-- Added explicit node/attribute/child/make opcode IDs with deterministic placeholder failure semantics to align C decode/dispatch surface with C# VM opcode families.
-- Updated CI parity artifacts to upload per-case left/right output files alongside parity reports for failure triage.
-- Expanded syscall contract parity for `sys.str_utf8ByteCount` with typed argument/return validation and stable ID coverage.
-- Added deterministic parity diff-location helpers and CLI reporting (`index`, `line`, `col`, normalized lengths) for faster C-vs-C# mismatch triage.
-- Enhanced manifest-driven parity harness with deterministic exit-status parity checks (including expected non-zero cases) and status fields in report entries.
-- Added syscall-heavy VM opcode coverage for `CALL_SYS` across `sys.str_substring`, `sys.str_remove`, and `sys.str_utf8ByteCount`, including contract type-mismatch failure behavior.
-- Enforced warning-clean C builds by applying strict warning flags as errors (`-Wall -Wextra -Wpedantic -Werror` and `/W4 /WX`) across core, examples, and C tests.
-- Added deterministic replay-stability test (`aivm_test_vm_determinism`) that re-executes mixed opcode+syscall programs over 128 iterations and asserts identical VM outcomes.
-- Added `Docs/AiVM-C-Conformance-Matrix.md` to freeze the runtime/opcode/syscall parity checklist anchored to `SPEC/*` contracts.
-- Expanded parity manifest coverage with syscall-focused deterministic error fixtures for `sys.str_utf8ByteCount`, `sys.str_substring`, and `sys.str_remove` (non-zero status + exact output matching).
-- Made dual-run parity scripts shell-configurable (`AIVM_PARITY_SHELL`, default `bash`) to remove `/bin/zsh` coupling and improve cross-platform CI execution reliability.
-- Added Windows-friendly portable parity manifest (`parity_commands_portable.txt`) and CI execution step so parity report artifacts are generated across all workflow OS targets.
-- Implemented deterministic async/parallel scaffold semantics for `ASYNC_CALL_SYS`, `AWAIT`, and `PAR_BEGIN/FORK/JOIN/CANCEL` with fixed-capacity VM state; `ASYNC_CALL` remains explicit unsupported.
-- Added `AIVM_VAL_NODE` runtime value kind and deterministic node arena model (fixed-capacity nodes/attrs/children, no heap allocation in VM core).
-- Implemented deterministic node opcode semantics for `NODE_KIND`, `NODE_ID`, `ATTR_*`, `CHILD_*`, `MAKE_BLOCK`, `APPEND_CHILD`, `MAKE_ERR`, and `MAKE_LIT_*`; retained explicit unsupported behavior for `MAKE_NODE`.
-- Expanded syscall-heavy parity manifest with REPL success/error fixtures for `sys.str_substring`, `sys.str_remove`, and `sys.str_utf8ByteCount` under explicit `sys` permission gating.
-- Added deterministic `MAKE_NODE` scaffold semantics in C VM (template + argument children from stack) with tests; exact bytecode operand-shape parity remains a tracked follow-up.
-- Extended C value model with explicit `AIVM_VAL_UNKNOWN` kind to align with C# `VmValueKind.Unknown` surface.
-- Added deterministic VM error-detail channel (`aivm_vm_error_detail`) with stable messages for central failure paths (operand/stack/frame/local/syscall/unsupported opcode) and diagnostics test coverage.
-- Added CLI/runtime mode plumbing for `--vm=c` with deterministic `DEV008` backend gate, creating an explicit feature-flagged bridge point for future C backend activation without changing default VM behavior.
-- Implemented deterministic `ASYNC_CALL` subroutine-task scaffold (with `AWAIT` interop) and added async-call opcode tests for roundtrip and invalid-target behavior.
-- Expanded dual-run manifest parity with stable golden VM error-path cases (`vm_default_is_canonical`, `vm_unsupported_construct`) including explicit non-zero status parity.
-- Added deterministic perf-smoke baseline tooling (`scripts/aivm-c-perf-smoke.sh` + `AiVM.C/tests/perf_baseline.env`) and optional integration in `scripts/test-aivm-c.sh` via `AIVM_PERF_SMOKE=1`.
-- Aligned C syscall-contract IDs to canonical C# `SyscallId` numeric values for covered syscalls (`sys.str_*`, `sys.ui_*` subset), reducing ABI/id drift risk.
-- Wired Linux CI perf-smoke execution (`AIVM_PERF_SMOKE=1`) into `aivm-c-ci` so baseline guardrails run in automation.
-- Expanded C syscall-contract surface to match C# UI draw syscall signatures for `sys.ui_drawRect`, `sys.ui_drawText`, `sys.ui_drawLine`, `sys.ui_drawEllipse`, `sys.ui_drawPath`, and `sys.ui_drawImage`, with updated contract+dispatch tests.
-- Expanded syscall-heavy parity suites with deterministic REPL UI validation-error fixtures (`sys.ui_drawLine` type mismatch, `sys.ui_drawPath` arity mismatch).
-- Expanded C UI syscall contract coverage for lifecycle/window calls (`sys.ui_createWindow`, `sys.ui_beginFrame`, `sys.ui_endFrame`, `sys.ui_pollEvent`, `sys.ui_present`, `sys.ui_closeWindow`, `sys.ui_waitFrame`) and aligned `sys.ui_getWindowSize` to C# signature (`1 int -> node`) with runtime/ABI tests.
-- Improved VM syscall diagnostics detail: `CALL_SYS` failure paths now emit deterministic `AIVMS*`-scoped detail strings (`not found`, `contract`, `return type`, etc.) and added assertions in VM opcode tests.
-- Expanded syscall-heavy parity manifest with REPL UI lifecycle/window validation-error fixtures for `sys.ui_getWindowSize` (type mismatch) and `sys.ui_createWindow` (arity mismatch).
-- Expanded C syscall-contract/dispatch unit coverage for UI lifecycle IDs (`46/47/50/52/53/58/72`) and node-return enforcement for `sys.ui_pollEvent`/`sys.ui_getWindowSize`.
-- Added parity-manifest coverage for CLI `--vm=c` deterministic bridge gate (`DEV008`) so current C-backend-not-linked behavior is regression-checked while Task 8 continues.
-- Refined VM syscall diagnostics for contract failures to include deterministic contract subcodes in detail (`AIVMS004/AIVMC001..003`) via a contract-aware checked-dispatch path, with unit coverage.
-- Enhanced manifest-driven dual-run parity harness to support asymmetric expected left/right exit codes, enabling bridge-phase parity checks where status codes intentionally differ while output must remain normalized-equal.
-- Expanded C syscall contract table with core console/sysout IDs (`sys.console_*`, `sys.stdout_writeLine`) and added contract+dispatch tests for typed args and returns.
-- Expanded C syscall contract coverage for process/runtime metadata calls (`sys.process_cwd`, `sys.process_envGet`, `sys.process_argv`, `sys.platform`, `sys.arch`, `sys.os_version`, `sys.runtime`) with ID+return-kind tests and dispatch checks.
-- Expanded C syscall contracts for `sys.time_*`, `sys.proc_exit`, and `sys.fs_*` (canonical IDs/signatures) with unit coverage for contract validation and representative dispatch return typing.
-- Expanded C syscall contracts for `sys.crypto_*` (`base64*`, `sha*`, `hmac`, `randomBytes`) with canonical IDs and contract/dispatch validation coverage.
-- Expanded C syscall contract table for network surface parity (`sys.net_*`, `sys.net_tcp*`, `sys.net_udp*`, `sys.net_async*`) with typed validation coverage in unit tests.
-- Expanded C syscall contract table for worker/debug syscall surface (`sys.worker_*`, `sys.debug_*`) with canonical IDs and typed validation coverage.
-- Completed canonical syscall ID coverage in C contract table for `SyscallId` `0..89` with no missing or duplicate IDs.
-- Expanded syscall-heavy parity manifest with REPL validation-error fixtures for `sys.net_tcpConnect`, `sys.crypto_hmacSha256`, and `sys.worker_cancel`.
-- Added optional shared-library build path (`AIVM_BUILD_SHARED=1`) in `AiVM.C`/test script to support future host bridge loading experiments without changing default static build behavior.
-- Added `scripts/build-aivm-c-shared.sh` to produce and print the shared-library artifact path (`.dylib/.so/.dll`) for deterministic host-bridge wiring work.
-- Added explicit C API export/import macros (`AIVM_API`) and shared-target compile definitions for Windows-compatible symbol export in host bridge scenarios.
-- Added shared-bridge loader test (`AiVM.C/tests/test_shared_bridge_loader.c`) that dynamically loads `aivm_core_shared` and executes `aivm_c_execute_instructions`, validating runtime symbol wiring.
-- Added `scripts/test-aivm-c-bridge.sh` smoke command to run shared-build + dynamic loader test as a single bridge-readiness check.
-- Added `AiLang.Core` bridge loader scaffold (`AivmCBridge`) with opt-in probe hooks (`AIVM_C_BRIDGE_PROBE`, `AIVM_C_BRIDGE_LIB`) while preserving current `DEV008` gate behavior.
-- Added explicit native bridge ABI marker (`aivm_c_abi_version` = `1`) with static/dynamic loader tests to support host compatibility checks during cutover.
-- Extended `AiLang.Core` bridge probe to resolve and validate `aivm_c_abi_version` (default expected ABI `1`, overridable via `AIVM_C_BRIDGE_ABI`) while keeping probe path opt-in.
-- Expanded deterministic VM error-detail coverage for core execution faults (`null instruction buffer`, `LOAD_LOCAL`, `ADD_INT`, `JUMP/JUMP_IF_FALSE`, `CALL`, `RET`) and added assertion coverage in VM core/opcode tests.
-- Expanded deterministic VM error-detail coverage further across comparison/string/async/parallel/node opcode paths; unit tests now assert additional detail strings and non-empty detail behavior for error cases.
-- Routed embedded-bytecode execution through VM mode selection so `--vm=c` now consistently hits the C-bridge `DEV008` gate/probe path (matching source/bundle runtime behavior) while backend linking remains in-progress.
-- Added `AiLang.Tests` coverage for embedded bytecode and embedded bundle `vmMode="c"` paths to assert deterministic `DEV008` bridge-gate behavior in CLI execution engine entrypoints.
-- Added `AiLang.Tests` coverage for source/serve `vmMode="c"` paths so all major CLI execution entrypoints (`run source`, `run embedded bytecode`, `run embedded bundle`, `serve`) now assert deterministic `DEV008` gate behavior while native backend linking remains pending.
-- Hardened `scripts/test-aivm-c*.sh` for parallel safety by allowing isolated build/parity-report paths (`AIVM_C_BUILD_DIR`, `AIVM_PARITY_REPORT`) and defaulting bridge smoke to its own build/report outputs.
-- Extended C API execution result contract with deterministic `has_exit_code`/`exit_code` extraction from halted VM top-of-stack `int` values, with unit coverage and bridge-struct alignment in `AiLang.Core`.
-- Hardened `AivmCBridge` probe to execute a deterministic native smoke instruction (`HALT`) after export/ABI validation, proving live call-path readiness in addition to symbol presence.
-- Fixed parallel test script collisions by isolating bridge parity report outputs and ensuring parity-report directories are created before manifest execution.
-- Expanded shared-library bridge loader test to validate `has_exit_code`/`exit_code` behavior over dynamic loading, improving bridge ABI/result contract coverage.
-- Added opt-in `AIVM_C_BRIDGE_EXECUTE=1` embedded-bytecode runtime path for `--vm=c` that lowers a compatibility-safe `main` instruction subset to native C API execution and falls back deterministically with `DEV008` when bridge execution is unavailable.
-- Aligned C VM top-level `RET`/`RETURN` behavior with entry-function semantics by halting (instead of frame-underflow error) when no call frame exists, with updated opcode tests.
-- Updated `aivm-c-ci` workflow path filters to include bridge loader changes in `src/AiLang.Core/AivmCBridge.cs` so Task 8 bridge increments always trigger CI.
-- Bridge execute path now performs deterministic bytecode compatibility lowering before native library resolution, enabling actionable unsupported-op diagnostics (`DEV008`) even when no shared bridge library is present.
-- Added `AiLang.Tests` coverage for execute-enabled compatibility diagnostics when embedded bytecode lacks a `main` entry function.
-- Expanded bridge opcode lowering map to accept both `RETURN` and `RET` mnemonics in execute-enabled embedded-bytecode compatibility checks.
-- Improved bridge execute compatibility diagnostics to include VM code + node ID from bytecode-lowering failures, with test coverage for unsupported node constants.
-- Enforced `AIVM_C_BRIDGE_ABI` compatibility in execute-enabled bridge path (matching probe behavior) so native execution refuses mismatched bridge ABIs deterministically.
-- Added deterministic execute-mode compatibility guard for `main` function parameters (not yet supported by native bridge execution path), with `AiLang.Tests` coverage.
-- Tightened execute-mode safety by explicitly rejecting `MAKE_NODE` in bridge bytecode compatibility lowering (current C VM shape differs from C# operand semantics), with regression coverage in `AiLang.Tests`.
-- Tightened execute-mode safety by explicitly rejecting `CALL_SYS`/`ASYNC_CALL_SYS` in bridge compatibility lowering until syscall host-binding bridge is implemented, with regression coverage.
-- Fixed C VM call-frame locals scoping parity by snapshotting/restoring `locals_count` on `CALL`/`RET`, with new opcode test coverage to prevent caller-local leakage across function calls.
-- Added strict execute-mode validation for malformed `AIVM_C_BRIDGE_ABI` values so bridge execution fails fast with deterministic diagnostics before native library loading.
-- Added execute-mode compatibility guard for non-zero secondary `b` operands on lowered bytecode instructions, preventing silent loss of semantics when mapping C# `a/b/s` instructions into C single-operand opcodes.
-- Added execute-mode compatibility guard for unexpected non-empty string operand `s` on lowered opcodes, preventing silent metadata loss in C bridge execution mode.
-- Improved execute-mode native-failure diagnostics by appending mapped VM error codes (`AIVM*`) and added focused unit coverage for the error-code mapping helper.
-- Normalized missing-entry diagnostics in execute-mode bridge lowering to include `VM001` + explicit `nodeId` envelope for deterministic consistency with other bytecode-lowering failures.
-- Tightened VM call-target boundary semantics by treating `CALL`/`ASYNC_CALL` targets equal to `instruction_count` as invalid (not callable), with dedicated opcode regression tests.
-- Unified probe/execute ABI parsing behavior by reusing strict `AIVM_C_BRIDGE_ABI` parsing in probe mode (invalid values now short-circuit probe instead of silently defaulting).
-- Expanded execute-mode bridge lowering to support zero-parameter `CALL`/`ASYNC_CALL` by flattening function bodies into a single deterministic instruction stream, remapping per-function jump/call targets, and inserting explicit function-end `RET` sentinels; argument-carrying calls and parameterized functions remain explicitly rejected.
-- Expanded execute-mode bridge lowering to support `CALL_SYS`/`ASYNC_CALL_SYS` by deterministically rewriting each syscall instruction into `CONST "<target>"` + syscall opcode with arity operand; execute mode now validates syscall slot/target shape up front and keeps malformed syscall instructions as deterministic compatibility failures.
-- Added bridge-lowering unit coverage (reflection-based) to assert deterministic `CALL_SYS` expansion shape and jump-target remapping correctness when expanded instructions change absolute instruction offsets.
-- Added bridge-lowering unit coverage for internal `CALL`/`ASYNC_CALL` remapping so function-index operands are regression-checked against flattened absolute instruction offsets in execute mode.
-- Simplified execute/probe native export requirements in `AivmCBridge` to resolve only the symbols actually used by execute mode (`aivm_c_execute_instructions_with_constants`, `aivm_c_abi_version`), removing unnecessary coupling to unused `aivm_c_execute_aibc1` export presence.
-- Added execute-mode guardrail tests for malformed syscall bytecode lowering (`CALL_SYS`/`ASYNC_CALL_SYS` invalid slot and missing target) to ensure deterministic compatibility failures remain stable.
-- Added execute-mode guardrail tests for invalid internal call targets (`CALL`/`ASYNC_CALL` out-of-range function index) so bridge compatibility failures remain deterministic before native load.
-- Normalized execute-mode bridge compatibility failures to deterministic `VM001: ... (nodeId=...)` envelope for manual lowering checks (function/opcode/operand/target/constant-shape errors), improving diagnostic parity consistency.
-- Extended `RunSource(..., --vm=c)` to route bytecode-root files through the existing execute-enabled C bridge path when `AIVM_C_BRIDGE_EXECUTE=1`, while preserving existing `DEV008` gate behavior for standard Program sources.
-- Added `AiLang.Tests` coverage for `RunSource(..., --vm=c)` bytecode routing to assert deterministic bridge diagnostics for both library-load failures and compatibility failures (for example missing `main`).
-- Added explicit `RunSource(..., --vm=c)` regression coverage to keep standard Program-source behavior on the existing backend gate even when execute mode is enabled (bytecode-source routing remains opt-in by root kind).
-- Expanded `AiVM.C` parity manifest coverage with execute-enabled bytecode-source bridge diagnostics (`CALL` target out-of-range, `CALL_SYS` invalid slot, `CALL_SYS` missing target) so Task 8 compatibility behavior is enforced in dual-run harness checks.
-- Updated `aivm-c-ci` gate-entrypoint unit-test filter to include execute-enabled source-bytecode routing coverage (`RunSource_CVmMode_ExecuteEnabledBytecodeSource*`) in addition to baseline `CVmMode_ReturnsDev008Gate` tests.
-- Normalized `AosCliExecutionEngine` source reads onto `HostFileSystem.ReadAllText` for execution/load benchmark paths so bridge-related source loading stays on the same host abstraction boundary.
-- Synced Windows-portable parity manifest coverage with new execute-enabled source-bytecode bridge diagnostics, and validated via direct `parity_commands_portable.txt` run (`9` cases) plus standard `test-aivm-c` manifest (`24` cases).
-- Added parity-manifest coverage for execute-enabled source-kind split: Program source remains backend gate while Bytecode source enters bridge execute path and surfaces deterministic load-failure diagnostics. Current manifest counts: portable `11`, standard `26`.
-- Added `AiLang.Tests` regression coverage that `RunEmbeddedBundle(..., --vm=c)` remains on canonical backend gate even when `AIVM_C_BRIDGE_EXECUTE=1`, preventing accidental bridge-path expansion into bundle flow before planned cutover.
-- Added execute-enabled source-bytecode parity manifest case for missing `main` compatibility diagnostics and propagated it to portable manifest. Current manifest counts: portable `12`, standard `27`.
-- Added execute-enabled source-bytecode parity manifest case for `main`-with-params compatibility diagnostics and propagated it to portable manifest. Current manifest counts: portable `13`, standard `28`.
-- Added execute-enabled source parse-error parity manifest case confirming malformed source remains on canonical backend gate (no bridge path); propagated to portable manifest. Current manifest counts: portable `14`, standard `29`.
-- Added execute-enabled bundle parity manifest case for current compatibility behavior (`main` params unsupported in bridge execute path) and propagated to portable manifest. Current manifest counts: portable `15`, standard `30`.
-- Expanded `aivm-c-ci` vm=c gate test filter to include newly added execute-enabled edge regressions (`RunSource` malformed-source gate + `RunEmbeddedBundle` execute-enabled gate), keeping Task 8 behavior locked in fast CI checks.
-- Added execute-enabled source-bytecode parity manifest case for invalid `AIVM_C_BRIDGE_ABI` configuration diagnostics and propagated to portable manifest. Current manifest counts: portable `16`, standard `31`.
-- Added execute-enabled source-bytecode parity manifest cases for unsupported generic instruction operand channels (`b` and `s`) and propagated to portable manifest. Current manifest counts: portable `18`, standard `33`.
-- Added execute-enabled source-bytecode parity manifest cases for `ASYNC_CALL_SYS` malformed operand shapes (invalid slot, missing target) and unsupported `MAKE_NODE` diagnostics; propagated to portable manifest. Current manifest counts: portable `21`, standard `36`.
-- Added execute-enabled source-bytecode parity manifest cases for out-of-range control-flow targets (`ASYNC_CALL`, `JUMP`) to lock deterministic bridge-lowering diagnostics; propagated to portable manifest. Current manifest counts: portable `23`, standard `38`.
-- Added execute-enabled source-bytecode parity manifest case for non-entry function parameter rejection (`Function '<name>' with params ...`) and propagated to portable manifest. Current manifest counts: portable `24`, standard `39`.
-- Added execute-enabled source-bytecode parity manifest case for unsupported node constants (`VM001` with `nodeId=c1`) and propagated to portable manifest. Current manifest counts: portable `25`, standard `40`.
-- Added execute-enabled source-bytecode parity manifest case for unmapped opcode compatibility diagnostics (`Opcode '<op>' is not mapped for native C bridge execute path`) and propagated to portable manifest. Current manifest counts: portable `26`, standard `41`.
-- Hardened `scripts/aivm-dualrun-parity-manifest.sh` argument validation to reject unexpected extra CLI args, preventing accidental report-file creation from misordered flags while preserving deterministic manifest execution.
-- Hardened `AIVM_C_BRIDGE_ABI` parsing to deterministic digit-only/invariant semantics (rejecting whitespace-padded values) and added matching execute-enabled parity coverage. Current manifest counts: portable `27`, standard `42`.
-- Added parity + `AiLang.Tests` coverage for `AIVM_C_BRIDGE_PROBE=1` with invalid ABI input to assert probe remains non-disruptive and canonical `--vm=c` backend gate output stays stable. Current manifest counts: portable `28`, standard `43`.
-- Tightened ABI env parsing further to reject whitespace-only `AIVM_C_BRIDGE_ABI` values (instead of silently defaulting) with matching execute-enabled unit/parity coverage. Current manifest counts: portable `29`, standard `44`.
-- Added execute-enabled source-bytecode parity manifest cases for additional call/jump target-shape diagnostics (`JUMP_IF_FALSE` out-of-range and negative `CALL` target). Current manifest counts: portable `31`, standard `46`.
-- Added execute-enabled source-bytecode parity manifest cases for negative target diagnostics across `ASYNC_CALL`, `JUMP`, and `JUMP_IF_FALSE`. Current manifest counts: portable `34`, standard `49`.
-- Added focused `AiLang.Tests` execute-mode regressions for negative-target compatibility diagnostics (`ASYNC_CALL a=-1`, `JUMP a=-1`) to mirror parity-manifest guardrails in managed test coverage.
-- Added focused `AiLang.Tests` execute-mode regression for `JUMP_IF_FALSE a=-1` compatibility diagnostics to mirror manifest-level negative-target coverage.
-- Added probe-mode parity + `AiLang.Tests` coverage for whitespace-only ABI env (`AIVM_C_BRIDGE_ABI='   '`) to keep probe non-disruptive and backend-gate output stable. Current manifest counts: portable `35`, standard `50`.
-- Added execute-mode parity + `AiLang.Tests` coverage for `AWAIT`/`PAR_BEGIN`/`PAR_JOIN` bridge-lowering behavior (currently compatibility-accepted and failing at native library load), preventing accidental regression to unsupported-op compatibility failures. Current manifest counts: portable `38`, standard `53`.
-- Added execute-mode parity + `AiLang.Tests` coverage for remaining parallel opcodes (`PAR_FORK`, `PAR_CANCEL`) under current bridge-lowering behavior (compatibility-accepted, native-load-failure gated). Current manifest counts: portable `40`, standard `55`.
-- Added opcode-specific operand-shape coverage for `PAR_BEGIN` (`b` and `s` channels) in both parity manifests and `AiLang.Tests`, locking deterministic compatibility diagnostics beyond the generic `HALT` operand cases. Current manifest counts: portable `42`, standard `57`.
-- Added opcode-specific operand-shape coverage for `AWAIT` (`b` and `s` channels) in both parity manifests and `AiLang.Tests` so async-path compatibility diagnostics are regression-locked at opcode level. Current manifest counts: portable `44`, standard `59`.
-- Enabled `MAKE_NODE` bridge bytecode lowering (`MAKE_NODE a,b` => `CONST a` + `PUSH_INT b` + `MAKE_NODE`), added lowering-shape regression coverage in `AiLang.Tests`, and updated execute-enabled make-node bridge diagnostics from compatibility rejection to native-load-gated behavior.
-- Aligned C runtime parallel semantics with canonical VM structure: `PAR_JOIN` now returns a `Block` node (instead of join-count int), converts forked scalar values into runtime `Lit`/`Block`/`Err` nodes, and resolves completed task handles before materializing child nodes; added VM-op tests for both scalar and task-handle branches.
-- Aligned C parallel diagnostics wording with canonical VM messages for active-context and branch-count failures (`PAR_FORK requires active Par context.`, `PAR_JOIN requires active Par context.`, `PAR_JOIN branch count mismatch.`) and updated VM-op assertions accordingly.
-- Expanded diagnostics wording alignment with canonical VM across control/data/node/string paths (`Invalid function index`, `Invalid local slot`, `Invalid CONST index`, `JUMP_IF_FALSE requires bool.`, `AWAIT requires valid task handle.`, `MAKE_BLOCK requires string id.`, `MAKE_ERR requires (string,string,string,string).`, and `STR_CONCAT`/`STR_ESCAPE` wording), with updated VM-op assertions.
-- Aligned node/attr literal diagnostics closer to canonical opcode-specific wording: `ATTR_KEY/ATTR_VALUE_* requires (node,int).` and `MAKE_LIT_STRING/MAKE_LIT_INT requires (...)` now emit opcode-specific contracts instead of wildcard-form messages, with updated VM-op assertions.
-- Aligned `MAKE_NODE` child coercion semantics with canonical VM value-to-node behavior: scalar children are now materialized as runtime `Lit` nodes (instead of hard-failing unless already node-typed), with dedicated VM-op coverage.
-- Normalized additional diagnostics text toward canonical wording: `STR_UTF8_BYTE_COUNT requires string operand.` and invalid-opcode reporting now uses `Unsupported opcode.` in both runtime detail and error-message mapping.
-- Expanded VM-op diagnostic regression coverage for opcode-specific attribute access contracts (`ATTR_VALUE_KIND`, `ATTR_VALUE_STRING`, `ATTR_VALUE_INT`, `ATTR_VALUE_BOOL`) to keep per-opcode error wording stable.
-- Extended `--vm=c` source runtime selection to a real feature-flagged dual path: when `AIVM_C_BRIDGE_EXECUTE=1`, Program sources now load/validate, compile through `compiler.emitBytecode`, and execute via native bridge lowering/compatibility checks (instead of unconditional backend gate); malformed source now returns parser diagnostics on the C path, and parity fixtures/manifests were updated accordingly.
+- Behavioral contract reference (`SPEC/*`)
+- Determinism impact
+- Parity case(s)
+- Memory impact (alloc/free path touched)
+- Acceptance test IDs
+
+## Labels
+
+- `parity`
+- `zero-csharp`
+- `gc`
+- `memory-leak`
+- `bench`
+- `samples`
+- `ci-gate`
+- `spec-impact`
+
+## Milestones
+
+- `M1 Parity 100`
+- `M2 C-only runtime`
+- `M3 Zero C# repo`
+- `M4 Memory + Benchmark done`
+
+## Execution Order
+
+1. Close parity from 18/66 to 66/66.
+2. Remove runtime transitional fallback behavior; keep AST debug-only.
+3. Remove repo-wide C# from mainline.
+4. Complete RC+cycle memory model and leak/profiling.
+5. Lock benchmark gates and finish all samples.
+

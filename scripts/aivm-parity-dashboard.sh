@@ -10,11 +10,33 @@ MODE="${AIVM_PARITY_DASHBOARD_MODE:-auto}"
 BRIDGE_LIB="${AIVM_C_BRIDGE_LIB:-}"
 BRIDGE_ENABLED=0
 MODE_USED="gate"
+RUN_TESTS="${AIVM_DOD_RUN_TESTS:-1}"
+RUN_BENCH="${AIVM_DOD_RUN_BENCH:-1}"
 
 mkdir -p "${TMP_DIR}"
 mkdir -p "$(dirname "${REPORT_PATH}")"
-
 cd "${ROOT_DIR}"
+
+run_c_mode() {
+  local input="$1"
+  local output="$2"
+  if [[ ${BRIDGE_ENABLED} -eq 1 ]]; then
+    AIVM_C_BRIDGE_EXECUTE=1 AIVM_C_BRIDGE_LIB="${BRIDGE_LIB}" ./tools/airun run "${input}" --vm=c >"${output}" 2>&1
+  else
+    ./tools/airun run "${input}" --vm=c >"${output}" 2>&1
+  fi
+}
+
+status_word() {
+  local status="$1"
+  if [[ "${status}" == "PASS" ]]; then
+    printf "PASS"
+  elif [[ "${status}" == "FAIL" ]]; then
+    printf "FAIL"
+  else
+    printf "PENDING"
+  fi
+}
 
 ./scripts/bootstrap-golden-publish-fixtures.sh >/dev/null
 cmake -S "${ROOT_DIR}/AiVM.C" -B "${BUILD_DIR}" >/dev/null
@@ -52,66 +74,194 @@ fi
 TOTAL=0
 PASSED=0
 FAILED=0
-
 DETAILS_FILE="${TMP_DIR}/details.tsv"
 : > "${DETAILS_FILE}"
 
-for INPUT in "${GOLDEN_INPUTS[@]}"; do
-  NAME="$(basename "${INPUT}" .in.aos)"
-  LEFT_OUT="${TMP_DIR}/${NAME}.canonical.out"
-  RIGHT_OUT="${TMP_DIR}/${NAME}.cvm.out"
+for input in "${GOLDEN_INPUTS[@]}"; do
+  name="$(basename "${input}" .in.aos)"
+  left_out="${TMP_DIR}/${name}.canonical.out"
+  right_out="${TMP_DIR}/${name}.cvm.out"
 
   set +e
-  ./tools/airun run "${INPUT}" >"${LEFT_OUT}" 2>&1
-  LEFT_STATUS=$?
-  if [[ ${BRIDGE_ENABLED} -eq 1 ]]; then
-    AIVM_C_BRIDGE_EXECUTE=1 AIVM_C_BRIDGE_LIB="${BRIDGE_LIB}" ./tools/airun run "${INPUT}" --vm=c >"${RIGHT_OUT}" 2>&1
-  else
-    ./tools/airun run "${INPUT}" --vm=c >"${RIGHT_OUT}" 2>&1
-  fi
-  RIGHT_STATUS=$?
+  ./tools/airun run "${input}" >"${left_out}" 2>&1
+  left_status=$?
+  run_c_mode "${input}" "${right_out}"
+  right_status=$?
   set -e
 
   TOTAL=$((TOTAL + 1))
-  if [[ ${LEFT_STATUS} -eq ${RIGHT_STATUS} ]] && "${PARITY_CLI}" "${LEFT_OUT}" "${RIGHT_OUT}" >/dev/null 2>&1; then
-    RESULT="PASS"
+  if [[ ${left_status} -eq ${right_status} ]] && "${PARITY_CLI}" "${left_out}" "${right_out}" >/dev/null 2>&1; then
+    result="PASS"
     PASSED=$((PASSED + 1))
   else
-    RESULT="FAIL"
+    result="FAIL"
     FAILED=$((FAILED + 1))
   fi
-
-  printf '%s\t%s\t%s\t%s\n' "${RESULT}" "${NAME}" "${LEFT_STATUS}" "${RIGHT_STATUS}" >> "${DETAILS_FILE}"
+  printf '%s\t%s\t%s\t%s\n' "${result}" "${name}" "${left_status}" "${right_status}" >> "${DETAILS_FILE}"
 done
 
-PERCENT="$(awk -v p="${PASSED}" -v t="${TOTAL}" 'BEGIN { if (t == 0) { print "0.00" } else { printf "%.2f", (p*100.0)/t } }')"
-TS_UTC="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
+PARITY_PERCENT="$(awk -v p="${PASSED}" -v t="${TOTAL}" 'BEGIN { if (t == 0) { print "0.00" } else { printf "%.2f", (p*100.0)/t } }')"
 
+# Behavioral parity gate and required entrypoint sub-gates.
+ENTRY_SOURCE_STATUS="FAIL"
+if [[ ${PASSED} -eq ${TOTAL} ]]; then
+  ENTRY_SOURCE_STATUS="PASS"
+fi
+ENTRY_BYTECODE_STATUS="PENDING"
+ENTRY_BUNDLE_STATUS="PENDING"
+ENTRY_SERVE_STATUS="PENDING"
+
+BEHAVIORAL_GATE_STATUS="FAIL"
+if [[ ${PASSED} -eq ${TOTAL} &&
+      "${ENTRY_SOURCE_STATUS}" == "PASS" &&
+      "${ENTRY_BYTECODE_STATUS}" == "PASS" &&
+      "${ENTRY_BUNDLE_STATUS}" == "PASS" &&
+      "${ENTRY_SERVE_STATUS}" == "PASS" ]]; then
+  BEHAVIORAL_GATE_STATUS="PASS"
+fi
+
+# Zero-C# gate.
+TRACKED_CS_COUNT="$(git ls-files '*.cs' '*.csproj' '*.sln' '*.slnx' | wc -l | tr -d ' ')"
+DOTNET_REF_COUNT="$(rg -n '\bdotnet\b' .github/workflows scripts 2>/dev/null | wc -l | tr -d ' ')"
+ZERO_CSHARP_STATUS="FAIL"
+if [[ "${TRACKED_CS_COUNT}" == "0" && "${DOTNET_REF_COUNT}" == "0" ]]; then
+  ZERO_CSHARP_STATUS="PASS"
+fi
+
+# Test coverage gate.
+TEST_GATE_STATUS="PENDING"
+TEST_AIVM_C_STATUS="not-run"
+TEST_FULL_STATUS="not-run"
+DETERMINISM_STATUS="not-run"
+if [[ "${RUN_TESTS}" == "1" ]]; then
+  set +e
+  ./scripts/test-aivm-c.sh > "${TMP_DIR}/test-aivm-c.log" 2>&1
+  t1=$?
+  ./scripts/test.sh > "${TMP_DIR}/test-full.log" 2>&1
+  t2=$?
+  ctest --test-dir "${BUILD_DIR}" -R aivm_test_vm_determinism > "${TMP_DIR}/test-determinism.log" 2>&1
+  t3=$?
+  set -e
+  if [[ ${t1} -eq 0 ]]; then TEST_AIVM_C_STATUS="pass"; else TEST_AIVM_C_STATUS="fail"; fi
+  if [[ ${t2} -eq 0 ]]; then TEST_FULL_STATUS="pass"; else TEST_FULL_STATUS="fail"; fi
+  if [[ ${t3} -eq 0 ]]; then DETERMINISM_STATUS="pass"; else DETERMINISM_STATUS="fail"; fi
+  if [[ ${t1} -eq 0 && ${t2} -eq 0 && ${t3} -eq 0 ]]; then
+    TEST_GATE_STATUS="PASS"
+  else
+    TEST_GATE_STATUS="FAIL"
+  fi
+fi
+
+# Benchmark gate.
+BENCH_GATE_STATUS="PENDING"
+BENCH_BASELINE_FILE="${ROOT_DIR}/AiVM.C/tests/compiler_runtime_bench_baseline.tsv"
+BENCH_RUN_STATUS="not-run"
+BENCH_BASELINE_STATUS="missing"
+BENCH_THRESHOLD_STATUS="not-evaluated"
+if [[ "${RUN_BENCH}" == "1" ]]; then
+  set +e
+  ./tools/airun bench --iterations 10 --human > "${TMP_DIR}/bench.out" 2>&1
+  bench_rc=$?
+  set -e
+  if [[ ${bench_rc} -eq 0 ]]; then
+    BENCH_RUN_STATUS="pass"
+  else
+    BENCH_RUN_STATUS="fail"
+  fi
+
+  if [[ -f "${BENCH_BASELINE_FILE}" ]]; then
+    BENCH_BASELINE_STATUS="present"
+    invalid_baseline_count="$(awk 'BEGIN{c=0} !/^#/ && NF>=2 {if ($2 <= 0) c++} END{print c}' "${BENCH_BASELINE_FILE}")"
+    if [[ "${invalid_baseline_count}" == "0" && "${BENCH_RUN_STATUS}" == "pass" ]]; then
+      BENCH_THRESHOLD_STATUS="pending-comparison"
+      BENCH_GATE_STATUS="FAIL"
+    else
+      BENCH_THRESHOLD_STATUS="baseline-not-calibrated"
+      BENCH_GATE_STATUS="FAIL"
+    fi
+  else
+    BENCH_BASELINE_STATUS="missing"
+    BENCH_THRESHOLD_STATUS="baseline-not-found"
+    BENCH_GATE_STATUS="FAIL"
+  fi
+fi
+
+# Sample completion gate.
+SAMPLE_GATE_STATUS="FAIL"
+SAMPLE_MANIFEST="${ROOT_DIR}/Docs/Sample-Completion-Manifest.md"
+sample_total="$(find "${ROOT_DIR}/samples" -mindepth 1 -maxdepth 2 -name project.aiproj | wc -l | tr -d ' ')"
+sample_complete=0
+if [[ -f "${SAMPLE_MANIFEST}" ]]; then
+  sample_complete="$( (rg -n '\|\s*`samples/.*\|\s*pass\s*\|\s*pass\s*\|\s*pass\s*\|\s*pass\s*\|\s*COMPLETE\s*\|' "${SAMPLE_MANIFEST}" || true) | wc -l | tr -d ' ')"
+fi
+if [[ "${sample_total}" != "0" && "${sample_complete}" == "${sample_total}" ]]; then
+  SAMPLE_GATE_STATUS="PASS"
+fi
+
+# Memory/GC gate.
+MEMORY_GATE_STATUS="FAIL"
+RC_TEST_PRESENT="no"
+CYCLE_TEST_PRESENT="no"
+LEAK_SCRIPT_PRESENT="no"
+PROFILE_SCRIPT_PRESENT="no"
+if [[ -f "${ROOT_DIR}/AiVM.C/tests/test_memory_rc.c" ]]; then RC_TEST_PRESENT="yes"; fi
+if [[ -f "${ROOT_DIR}/AiVM.C/tests/test_memory_cycle.c" ]]; then CYCLE_TEST_PRESENT="yes"; fi
+if [[ -x "${ROOT_DIR}/scripts/aivm-mem-leak-check.sh" ]]; then LEAK_SCRIPT_PRESENT="yes"; fi
+if [[ -x "${ROOT_DIR}/scripts/aivm-mem-profile.sh" ]]; then PROFILE_SCRIPT_PRESENT="yes"; fi
+if [[ "${RC_TEST_PRESENT}" == "yes" &&
+      "${CYCLE_TEST_PRESENT}" == "yes" &&
+      "${LEAK_SCRIPT_PRESENT}" == "yes" &&
+      "${PROFILE_SCRIPT_PRESENT}" == "yes" ]]; then
+  MEMORY_GATE_STATUS="PASS"
+fi
+
+OVERALL_STATUS="FAIL"
+if [[ "${BEHAVIORAL_GATE_STATUS}" == "PASS" &&
+      "${ZERO_CSHARP_STATUS}" == "PASS" &&
+      "${TEST_GATE_STATUS}" == "PASS" &&
+      "${BENCH_GATE_STATUS}" == "PASS" &&
+      "${SAMPLE_GATE_STATUS}" == "PASS" &&
+      "${MEMORY_GATE_STATUS}" == "PASS" ]]; then
+  OVERALL_STATUS="PASS"
+fi
+
+TS_UTC="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 {
-  echo "# AiVM-C Parity Status"
+  echo "# AiLang Zero-C# DoD Dashboard"
   echo
   echo "Generated: ${TS_UTC}"
   echo
-  echo "- Target suite: \`examples/golden/*.in.aos\`"
-  echo "- C VM mode: ${MODE_USED}"
-  if [[ ${BRIDGE_ENABLED} -eq 1 ]]; then
-    echo "- C bridge library: \`${BRIDGE_LIB}\`"
-  else
-    echo "- C bridge library: (none)"
-  fi
-  echo "- Total targets: ${TOTAL}"
-  echo "- Passing parity targets: ${PASSED}"
-  echo "- Failing parity targets: ${FAILED}"
-  echo "- Progress: ${PERCENT}%"
+  echo "Overall status: **${OVERALL_STATUS}**"
   echo
-  echo "## Cases"
+  echo "## Gates"
+  echo
+  echo "| Gate | Status | Details |"
+  echo "|---|---|---|"
+  echo "| Behavioral parity | ${BEHAVIORAL_GATE_STATUS} | ${PASSED}/${TOTAL} (${PARITY_PERCENT}%) with mode=${MODE_USED} |"
+  echo "| Zero-C# | ${ZERO_CSHARP_STATUS} | tracked_csharp=${TRACKED_CS_COUNT}, dotnet_refs_in_ci_scripts=${DOTNET_REF_COUNT} |"
+  echo "| Test coverage | ${TEST_GATE_STATUS} | test-aivm-c=${TEST_AIVM_C_STATUS}, test.sh=${TEST_FULL_STATUS}, determinism=${DETERMINISM_STATUS} |"
+  echo "| Benchmark | ${BENCH_GATE_STATUS} | bench_run=${BENCH_RUN_STATUS}, baseline=${BENCH_BASELINE_STATUS}, threshold=${BENCH_THRESHOLD_STATUS} |"
+  echo "| Samples completion | ${SAMPLE_GATE_STATUS} | complete=${sample_complete}/${sample_total} (manifest=${SAMPLE_MANIFEST##${ROOT_DIR}/}) |"
+  echo "| Memory/GC | ${MEMORY_GATE_STATUS} | rc_test=${RC_TEST_PRESENT}, cycle_test=${CYCLE_TEST_PRESENT}, leak_script=${LEAK_SCRIPT_PRESENT}, profile_script=${PROFILE_SCRIPT_PRESENT} |"
+  echo
+  echo "## Behavioral Sub-Gates"
+  echo
+  echo "| Entrypoint | Status | Details |"
+  echo "|---|---|---|"
+  echo "| run source | ${ENTRY_SOURCE_STATUS} | backed by canonical golden corpus parity |"
+  echo "| embedded bytecode | ${ENTRY_BYTECODE_STATUS} | dedicated end-to-end entrypoint parity harness not finalized |"
+  echo "| embedded bundle | ${ENTRY_BUNDLE_STATUS} | dedicated end-to-end entrypoint parity harness not finalized |"
+  echo "| serve | ${ENTRY_SERVE_STATUS} | dedicated deterministic parity harness not finalized |"
+  echo
+  echo "## Behavioral Cases"
   echo
   echo "| Result | Case | Canonical Exit | C VM Exit |"
   echo "|---|---|---:|---:|"
-  while IFS=$'\t' read -r RESULT NAME LEFT_STATUS RIGHT_STATUS; do
-    echo "| ${RESULT} | ${NAME} | ${LEFT_STATUS} | ${RIGHT_STATUS} |"
+  while IFS=$'\t' read -r result name left_status right_status; do
+    echo "| ${result} | ${name} | ${left_status} | ${right_status} |"
   done < "${DETAILS_FILE}"
 } > "${REPORT_PATH}"
 
-echo "parity dashboard: ${PASSED}/${TOTAL} passing (${PERCENT}%)"
+echo "parity dashboard: ${PASSED}/${TOTAL} passing (${PARITY_PERCENT}%)"
+echo "overall DoD status: ${OVERALL_STATUS}"
 echo "report written: ${REPORT_PATH}"
