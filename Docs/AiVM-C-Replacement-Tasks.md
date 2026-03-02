@@ -197,3 +197,4 @@ Output: code cleanup and doc/runbook updates.
 - Added execute-mode compatibility guard for unexpected non-empty string operand `s` on lowered opcodes, preventing silent metadata loss in C bridge execution mode.
 - Improved execute-mode native-failure diagnostics by appending mapped VM error codes (`AIVM*`) and added focused unit coverage for the error-code mapping helper.
 - Normalized missing-entry diagnostics in execute-mode bridge lowering to include `VM001` + explicit `nodeId` envelope for deterministic consistency with other bytecode-lowering failures.
+- Tightened VM call-target boundary semantics by treating `CALL`/`ASYNC_CALL` targets equal to `instruction_count` as invalid (not callable), with dedicated opcode regression tests.

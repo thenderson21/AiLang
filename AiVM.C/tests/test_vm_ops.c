@@ -520,6 +520,34 @@ static int test_return_alias_roundtrip(void)
     return 0;
 }
 
+static int test_call_target_equal_instruction_count_sets_error(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_CALL, .operand_int = 1 }
+    };
+    static const AivmProgram program = {
+        .instructions = instructions,
+        .instruction_count = 1U,
+        .format_version = 0U,
+        .format_flags = 0U,
+        .section_count = 0U
+    };
+
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "Call target out of range.") == 0) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
 static int test_call_ret_restores_caller_locals_scope(void)
 {
     AivmVm vm;
@@ -1613,6 +1641,28 @@ static int test_async_call_invalid_target_sets_error(void)
     return 0;
 }
 
+static int test_async_call_target_equal_instruction_count_sets_error(void)
+{
+    AivmVm vm;
+    static const AivmInstruction instructions[] = {
+        { .opcode = AIVM_OP_ASYNC_CALL, .operand_int = 1 }
+    };
+    AivmProgram program;
+    aivm_program_init(&program, &instructions[0], 1U);
+    aivm_init(&vm, &program);
+    aivm_run(&vm);
+    if (expect(vm.status == AIVM_VM_STATUS_ERROR) != 0) {
+        return 1;
+    }
+    if (expect(vm.error == AIVM_VM_ERR_INVALID_PROGRAM) != 0) {
+        return 1;
+    }
+    if (expect(strcmp(aivm_vm_error_detail(&vm), "Invalid function target.") == 0) != 0) {
+        return 1;
+    }
+    return 0;
+}
+
 static int test_async_call_sys_and_await_roundtrip(void)
 {
     AivmVm vm;
@@ -2336,6 +2386,9 @@ int main(void)
     if (test_return_alias_roundtrip() != 0) {
         return 1;
     }
+    if (test_call_target_equal_instruction_count_sets_error() != 0) {
+        return 1;
+    }
     if (test_call_ret_restores_caller_locals_scope() != 0) {
         return 1;
     }
@@ -2406,6 +2459,9 @@ int main(void)
         return 1;
     }
     if (test_async_call_invalid_target_sets_error() != 0) {
+        return 1;
+    }
+    if (test_async_call_target_equal_instruction_count_sets_error() != 0) {
         return 1;
     }
     if (test_async_call_sys_and_await_roundtrip() != 0) {

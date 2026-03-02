@@ -399,7 +399,7 @@ static int execute_call_subroutine_sync(AivmVm* vm, size_t target, AivmValue* ou
     if (vm == NULL || out_result == NULL) {
         return 0;
     }
-    if (target > vm->program->instruction_count) {
+    if (target >= vm->program->instruction_count) {
         set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Invalid function target.");
         return 0;
     }
@@ -878,7 +878,7 @@ void aivm_step(AivmVm* vm)
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
             }
-            if (target > vm->program->instruction_count) {
+            if (target >= vm->program->instruction_count) {
                 set_vm_error(vm, AIVM_VM_ERR_INVALID_PROGRAM, "Call target out of range.");
                 vm->instruction_pointer = vm->program->instruction_count;
                 break;
