@@ -222,3 +222,4 @@ Output: code cleanup and doc/runbook updates.
 - Added execute-enabled bundle parity manifest case for current compatibility behavior (`main` params unsupported in bridge execute path) and propagated to portable manifest. Current manifest counts: portable `15`, standard `30`.
 - Expanded `aivm-c-ci` vm=c gate test filter to include newly added execute-enabled edge regressions (`RunSource` malformed-source gate + `RunEmbeddedBundle` execute-enabled gate), keeping Task 8 behavior locked in fast CI checks.
 - Added execute-enabled source-bytecode parity manifest case for invalid `AIVM_C_BRIDGE_ABI` configuration diagnostics and propagated to portable manifest. Current manifest counts: portable `16`, standard `31`.
+- Added execute-enabled source-bytecode parity manifest cases for unsupported generic instruction operand channels (`b` and `s`) and propagated to portable manifest. Current manifest counts: portable `18`, standard `33`.
