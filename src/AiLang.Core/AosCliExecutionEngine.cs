@@ -31,6 +31,17 @@ public static class AosCliExecutionEngine
             if (IsCAivmMode(vmMode))
             {
                 AivmCBridge.TryProbeFromEnvironment();
+                if (AivmCBridge.IsExecutionEnabledFromEnvironment() &&
+                    TryReadSource(path, out var sourceText))
+                {
+                    var parse = Parse(sourceText);
+                    if (parse.Root is not null &&
+                        parse.Diagnostics.Count == 0 &&
+                        string.Equals(parse.Root.Kind, "Bytecode", StringComparison.Ordinal))
+                    {
+                        return RunEmbeddedBytecode(sourceText, argv, traceEnabled, vmMode, writeLine);
+                    }
+                }
                 writeLine(FormatErr("err1", "DEV008", "C VM backend is not linked in this runtime build.", "vmMode"));
                 return 1;
             }
@@ -90,6 +101,20 @@ public static class AosCliExecutionEngine
             ActiveDebugRecorder?.RecordDiagnostic("RUN001", ex.Message, "unknown");
             writeLine(FormatErr("err1", "RUN001", ex.Message, "unknown"));
             return 3;
+        }
+    }
+
+    private static bool TryReadSource(string path, out string sourceText)
+    {
+        sourceText = string.Empty;
+        try
+        {
+            sourceText = HostFileSystem.ReadAllText(path);
+            return true;
+        }
+        catch
+        {
+            return false;
         }
     }
 
