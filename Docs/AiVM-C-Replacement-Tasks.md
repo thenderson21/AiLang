@@ -210,3 +210,4 @@ Output: code cleanup and doc/runbook updates.
 - Extended `RunSource(..., --vm=c)` to route bytecode-root files through the existing execute-enabled C bridge path when `AIVM_C_BRIDGE_EXECUTE=1`, while preserving existing `DEV008` gate behavior for standard Program sources.
 - Added `AiLang.Tests` coverage for `RunSource(..., --vm=c)` bytecode routing to assert deterministic bridge diagnostics for both library-load failures and compatibility failures (for example missing `main`).
 - Added explicit `RunSource(..., --vm=c)` regression coverage to keep standard Program-source behavior on the existing backend gate even when execute mode is enabled (bytecode-source routing remains opt-in by root kind).
+- Expanded `AiVM.C` parity manifest coverage with execute-enabled bytecode-source bridge diagnostics (`CALL` target out-of-range, `CALL_SYS` invalid slot, `CALL_SYS` missing target) so Task 8 compatibility behavior is enforced in dual-run harness checks.
