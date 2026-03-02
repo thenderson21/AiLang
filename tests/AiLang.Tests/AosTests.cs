@@ -5235,6 +5235,38 @@ public class AosTests
     }
 
     [Test]
+    public void RunEmbeddedBytecode_CVmMode_ExecuteEnabledAwaitNonZeroBOperand_ReturnsCompatibilityError()
+    {
+        const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=main params=\"\" locals=\"\") { Inst#i1(op=AWAIT b=1) } }";
+        var previousExecute = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE");
+        var previousLib = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB");
+        var lines = new List<string>();
+
+        try
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", "1");
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", "does-not-matter-for-await-b-operand");
+
+            var exitCode = AosCliExecutionEngine.RunEmbeddedBytecode(
+                bytecodeText,
+                Array.Empty<string>(),
+                traceEnabled: false,
+                vmMode: "c",
+                lines.Add);
+
+            Assert.That(exitCode, Is.EqualTo(1));
+            Assert.That(lines.Count, Is.EqualTo(1));
+            Assert.That(lines[0], Does.Contain("code=DEV008"));
+            Assert.That(lines[0], Does.Contain("Opcode 'AWAIT' uses unsupported secondary operand b=1"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", previousExecute);
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", previousLib);
+        }
+    }
+
+    [Test]
     public void RunEmbeddedBytecode_CVmMode_ExecuteEnabledUnexpectedStringOperand_ReturnsCompatibilityError()
     {
         const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=main params=\"\" locals=\"\") { Inst#i1(op=HALT s=\"extra\") } }";
@@ -5290,6 +5322,38 @@ public class AosTests
             Assert.That(lines.Count, Is.EqualTo(1));
             Assert.That(lines[0], Does.Contain("code=DEV008"));
             Assert.That(lines[0], Does.Contain("Opcode 'PAR_BEGIN' uses unsupported string operand s"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", previousExecute);
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", previousLib);
+        }
+    }
+
+    [Test]
+    public void RunEmbeddedBytecode_CVmMode_ExecuteEnabledAwaitUnexpectedStringOperand_ReturnsCompatibilityError()
+    {
+        const string bytecodeText = "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=main params=\"\" locals=\"\") { Inst#i1(op=AWAIT s=\"meta\") } }";
+        var previousExecute = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE");
+        var previousLib = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB");
+        var lines = new List<string>();
+
+        try
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", "1");
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", "does-not-matter-for-await-s-operand");
+
+            var exitCode = AosCliExecutionEngine.RunEmbeddedBytecode(
+                bytecodeText,
+                Array.Empty<string>(),
+                traceEnabled: false,
+                vmMode: "c",
+                lines.Add);
+
+            Assert.That(exitCode, Is.EqualTo(1));
+            Assert.That(lines.Count, Is.EqualTo(1));
+            Assert.That(lines[0], Does.Contain("code=DEV008"));
+            Assert.That(lines[0], Does.Contain("Opcode 'AWAIT' uses unsupported string operand s"));
         }
         finally
         {
