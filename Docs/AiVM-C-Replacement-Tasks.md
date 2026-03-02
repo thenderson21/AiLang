@@ -208,3 +208,4 @@ Output: code cleanup and doc/runbook updates.
 - Added execute-mode guardrail tests for invalid internal call targets (`CALL`/`ASYNC_CALL` out-of-range function index) so bridge compatibility failures remain deterministic before native load.
 - Normalized execute-mode bridge compatibility failures to deterministic `VM001: ... (nodeId=...)` envelope for manual lowering checks (function/opcode/operand/target/constant-shape errors), improving diagnostic parity consistency.
 - Extended `RunSource(..., --vm=c)` to route bytecode-root files through the existing execute-enabled C bridge path when `AIVM_C_BRIDGE_EXECUTE=1`, while preserving existing `DEV008` gate behavior for standard Program sources.
+- Added `AiLang.Tests` coverage for `RunSource(..., --vm=c)` bytecode routing to assert deterministic bridge diagnostics for both library-load failures and compatibility failures (for example missing `main`).

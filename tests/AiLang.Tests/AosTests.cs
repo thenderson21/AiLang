@@ -5139,6 +5139,47 @@ public class AosTests
     }
 
     [Test]
+    public void RunSource_CVmMode_ExecuteEnabledBytecodeSourceMissingMain_ReturnsCompatibilityError()
+    {
+        var tempPath = Path.Combine(Path.GetTempPath(), $"aivm-c-bytecode-nomain-{Guid.NewGuid():N}.aos");
+        var lines = new List<string>();
+        var previousExecute = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE");
+        var previousLib = Environment.GetEnvironmentVariable("AIVM_C_BRIDGE_LIB");
+
+        try
+        {
+            File.WriteAllText(
+                tempPath,
+                "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) { Func#f1(name=helper params=\"\" locals=\"\") { Inst#i1(op=RET) } }");
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", "1");
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", "does-not-matter-for-missing-main");
+
+            var exitCode = AosCliExecutionEngine.RunSource(
+                path: tempPath,
+                argv: Array.Empty<string>(),
+                traceEnabled: false,
+                vmMode: "c",
+                writeLine: lines.Add);
+
+            Assert.That(exitCode, Is.EqualTo(1));
+            Assert.That(lines.Count, Is.EqualTo(1));
+            Assert.That(lines[0], Does.Contain("code=DEV008"));
+            Assert.That(lines[0], Does.Contain("C VM bridge execute path is unavailable"));
+            Assert.That(lines[0], Does.Contain("VM001: Entry function 'main' was not found."));
+            Assert.That(lines[0], Does.Contain("nodeId=bc1"));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_EXECUTE", previousExecute);
+            Environment.SetEnvironmentVariable("AIVM_C_BRIDGE_LIB", previousLib);
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
+    }
+
+    [Test]
     public void RunServe_CVmMode_ReturnsDev008Gate()
     {
         var lines = new List<string>();
