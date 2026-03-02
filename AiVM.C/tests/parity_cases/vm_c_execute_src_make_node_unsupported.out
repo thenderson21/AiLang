@@ -1,0 +1,1 @@
+Err#err1(code=DEV008 message="C VM bridge execute path is unavailable: VM001: Opcode 'MAKE_NODE' is not yet supported by C bridge execute path. (nodeId=main)" nodeId=vmMode)
