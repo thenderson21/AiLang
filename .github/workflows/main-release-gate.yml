@@ -33,18 +33,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Stage airun (non-Windows)
+      - name: Build + stage airun (non-Windows)
         if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p ./dist
-          if [[ -x ./tools/airun ]]; then
-            cp ./tools/airun ./dist/airun
-            chmod +x ./dist/airun
-          else
-            printf 'airun runtime not yet produced in native release\n' > ./dist/AIRUN_UNAVAILABLE.txt
-          fi
+          ./scripts/build-airun.sh
+          test -x ./tools/airun
+          cp ./tools/airun ./dist/airun
+          chmod +x ./dist/airun
 
       - name: Stage airun (Windows)
         if: runner.os == 'Windows'
@@ -56,7 +54,7 @@ jobs:
           } elseif (Test-Path .\tools\airun) {
             Copy-Item .\tools\airun .\dist\airun.exe
           } else {
-            "airun runtime not yet produced in native release" | Out-File .\dist\AIRUN_UNAVAILABLE.txt -Encoding utf8
+            throw "missing runtime binary: tools/airun(.exe)"
           }
 
       - name: Build frontend parser (non-Windows)
@@ -111,7 +109,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          if (!(Test-Path .\dist\airun.exe) -and !(Test-Path .\dist\AIRUN_UNAVAILABLE.txt)) { throw "missing airun artifact" }
+          if (!(Test-Path .\dist\airun.exe)) { throw "missing airun artifact" }
           if (!(Test-Path .\dist\${{ matrix.frontend }})) { throw "missing frontend exe" }
           if (!(Test-Path .\dist\compiler\format.aos)) { throw "missing format.aos" }
           if (!(Test-Path .\dist\compiler\validate.aos)) { throw "missing validate.aos" }
@@ -149,9 +147,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ./dist
-          if [[ -x ./tools/airun ]]; then
-            cp ./tools/airun "./dist/${{ matrix.airun }}"
-          fi
+          ./scripts/build-airun.sh
+          test -x ./tools/airun
+          cp ./tools/airun "./dist/${{ matrix.airun }}"
+          chmod +x "./dist/${{ matrix.airun }}"
           cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
           chmod +x "./dist/${{ matrix.frontend }}"
 
@@ -176,6 +175,8 @@ jobs:
             Copy-Item .\tools\airun.exe .\dist\${{ matrix.airun }}
           } elseif (Test-Path .\tools\airun) {
             Copy-Item .\tools\airun .\dist\${{ matrix.airun }}
+          } else {
+            throw "missing runtime binary: tools/airun(.exe)"
           }
           cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
           Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue

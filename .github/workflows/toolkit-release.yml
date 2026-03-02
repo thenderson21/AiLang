@@ -87,9 +87,10 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p ./dist
-          if [[ -x ./tools/airun ]]; then
-            cp ./tools/airun "./dist/${{ matrix.airun }}"
-          fi
+          ./scripts/build-airun.sh
+          test -x ./tools/airun
+          cp ./tools/airun "./dist/${{ matrix.airun }}"
+          chmod +x "./dist/${{ matrix.airun }}"
           cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
           chmod +x "./dist/${{ matrix.frontend }}"
 
@@ -114,6 +115,8 @@ jobs:
             Copy-Item .\tools\airun.exe .\dist\${{ matrix.airun }}
           } elseif (Test-Path .\tools\airun) {
             Copy-Item .\tools\airun .\dist\${{ matrix.airun }}
+          } else {
+            throw "missing runtime binary: tools/airun(.exe)"
           }
           cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
           Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
@@ -183,25 +186,26 @@ jobs:
           cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
           Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
 
-      - name: Stage runtime binary (if present, non-Windows)
+      - name: Build + stage runtime binary (non-Windows)
         if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -x ./tools/airun ]]; then
-            cp ./tools/airun "./dist/${{ matrix.airun }}"
-          else
-            printf 'airun runtime not yet produced in native release\n' > ./dist/AIRUN_UNAVAILABLE.txt
-          fi
+          ./scripts/build-airun.sh
+          test -x ./tools/airun
+          cp ./tools/airun "./dist/${{ matrix.airun }}"
+          chmod +x "./dist/${{ matrix.airun }}"
 
-      - name: Stage runtime binary (if present, Windows)
+      - name: Stage runtime binary (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           if (Test-Path .\tools\airun.exe) {
             Copy-Item .\tools\airun.exe .\dist\${{ matrix.airun }}
+          } elseif (Test-Path .\tools\airun) {
+            Copy-Item .\tools\airun .\dist\${{ matrix.airun }}
           } else {
-            "airun runtime not yet produced in native release" | Out-File .\dist\AIRUN_UNAVAILABLE.txt -Encoding utf8
+            throw "missing runtime binary: tools/airun(.exe)"
           }
 
       - name: Stage compiler assets (non-Windows)
@@ -228,11 +232,8 @@ jobs:
           PACKAGE_DIR="airun-${VERSION}-${{ matrix.rid }}"
           mkdir -p "${PACKAGE_DIR}"
           cp "./dist/${{ matrix.frontend }}" "${PACKAGE_DIR}/"
-          if [[ -f "./dist/${{ matrix.airun }}" ]]; then
-            cp "./dist/${{ matrix.airun }}" "${PACKAGE_DIR}/"
-          else
-            cp ./dist/AIRUN_UNAVAILABLE.txt "${PACKAGE_DIR}/"
-          fi
+          test -f "./dist/${{ matrix.airun }}"
+          cp "./dist/${{ matrix.airun }}" "${PACKAGE_DIR}/"
           cp -R ./dist/compiler "${PACKAGE_DIR}/compiler"
           cp ./LICENSE "${PACKAGE_DIR}/"
           tar -czf "${PACKAGE_DIR}.tar.gz" "${PACKAGE_DIR}"
@@ -245,11 +246,8 @@ jobs:
           $packageDir = "airun-$version-${{ matrix.rid }}"
           New-Item -ItemType Directory -Force $packageDir | Out-Null
           Copy-Item ".\dist\${{ matrix.frontend }}" "$packageDir\${{ matrix.frontend }}"
-          if (Test-Path ".\dist\${{ matrix.airun }}") {
-            Copy-Item ".\dist\${{ matrix.airun }}" "$packageDir\${{ matrix.airun }}"
-          } else {
-            Copy-Item ".\dist\AIRUN_UNAVAILABLE.txt" "$packageDir\AIRUN_UNAVAILABLE.txt"
-          }
+          if (!(Test-Path ".\dist\${{ matrix.airun }}")) { throw "missing runtime binary for package" }
+          Copy-Item ".\dist\${{ matrix.airun }}" "$packageDir\${{ matrix.airun }}"
           Copy-Item ".\dist\compiler" "$packageDir\compiler" -Recurse
           Copy-Item ".\LICENSE" "$packageDir\LICENSE"
           Compress-Archive -Path $packageDir -DestinationPath "$packageDir.zip"

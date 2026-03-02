@@ -41,6 +41,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Build airun runtime (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./scripts/build-airun.sh
+          test -x ./tools/airun
+
       - name: Configure + build + test (Unix)
         if: runner.os != 'Windows'
         run: ./scripts/test-aivm-c.sh

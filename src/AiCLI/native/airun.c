@@ -159,6 +159,7 @@ static int strip_vm_c(char** argv, int argc, char*** out_argv, int* out_argc, in
     char** next;
     int i;
     int w;
+    int passthrough;
     if (argv == NULL || out_argv == NULL || out_argc == NULL || had_vm_c == NULL) {
         return 0;
     }
@@ -168,8 +169,14 @@ static int strip_vm_c(char** argv, int argc, char*** out_argv, int* out_argc, in
     }
     *had_vm_c = 0;
     w = 0;
+    passthrough = 0;
     for (i = 0; i < argc; i++) {
-        if (strcmp(argv[i], "--vm=c") == 0) {
+        if (!passthrough && strcmp(argv[i], "--") == 0) {
+            passthrough = 1;
+            next[w++] = argv[i];
+            continue;
+        }
+        if (!passthrough && strcmp(argv[i], "--vm=c") == 0) {
             *had_vm_c = 1;
             continue;
         }
