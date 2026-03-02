@@ -72,6 +72,8 @@ Output: code cleanup and doc/runbook updates.
 
 ## Current Increment
 
+- Added parity progress dashboard tooling: `scripts/aivm-parity-dashboard.sh` now dual-runs all `examples/golden/*.in.aos` against canonical VM vs `--vm=c`, writes `Docs/AiVM-C-Parity-Status.md`, and reports a simple pass/fail percentage gauge for cutover readiness tracking without manual status checks.
+
 - Completed deterministic AiBC1 instruction-section decode in `AiVM.C` with fixed-capacity storage and explicit decode errors.
 - Added `AiVM.C` C-test harness (`ctest`) for program loader and VM core deterministic state transitions.
 - Added initial `AivmValue` helper API (`void/int/bool/string` constructors and equality) with dedicated unit test.
