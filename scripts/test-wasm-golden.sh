@@ -3,8 +3,13 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP_DIR="${ROOT_DIR}/.tmp/aivm-wasm-golden"
-CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos"
-CASE_NAME="vm_c_execute_src_main_params"
+CASES=(
+  "vm_c_execute_program_source_gate"
+  "vm_c_execute_src_invalid_abi"
+  "vm_c_execute_src_main_params"
+  "vm_c_execute_src_missing_lib"
+  "vm_c_execute_src_missing_main"
+)
 HTTP_CASE="${ROOT_DIR}/samples/cli-fetch/project.aiproj"
 PUBLISH_DIR="${TMP_DIR}/publish"
 PUBLISH_SPA_DIR="${TMP_DIR}/publish-spa"
@@ -34,30 +39,35 @@ mkdir -p "${PUBLISH_SPA_DIR}"
 mkdir -p "${PUBLISH_FULLSTACK_DIR}"
 mkdir -p "${PUBLISH_HTTP_CLI_DIR}"
 
-./tools/airun publish "${CASE_PATH}" --target wasm32 --out "${PUBLISH_DIR}" >/dev/null
-./tools/airun publish "${CASE_PATH}" --target wasm32 --wasm-profile spa --out "${PUBLISH_SPA_DIR}" >/dev/null
-./tools/airun publish "${CASE_PATH}" --target wasm32 --wasm-profile fullstack --out "${PUBLISH_FULLSTACK_DIR}" >/dev/null
+for CASE_NAME in "${CASES[@]}"; do
+  CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
+  CASE_OUT="${PUBLISH_DIR}/${CASE_NAME}"
+  mkdir -p "${CASE_OUT}"
+  ./tools/airun publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null
+
+  set +e
+  ./tools/airun run "${CASE_PATH}" --vm=c >"${NATIVE_OUT}" 2>&1
+  native_rc=$?
+  wasmtime run -C cache=n "${CASE_OUT}/${CASE_NAME}.wasm" - < "${CASE_OUT}/app.aibc1" >"${WASM_OUT}" 2>&1
+  wasm_rc=$?
+  set -e
+
+  if [[ ${native_rc} -ne ${wasm_rc} ]]; then
+    echo "wasm golden mismatch (${CASE_NAME}): status native=${native_rc} wasm=${wasm_rc}" >&2
+    exit 1
+  fi
+
+  if ! diff -u "${NATIVE_OUT}" "${WASM_OUT}" >/dev/null; then
+    echo "wasm golden mismatch (${CASE_NAME}): output differs from native baseline" >&2
+    diff -u "${NATIVE_OUT}" "${WASM_OUT}" || true
+    exit 1
+  fi
+done
+
+./tools/airun publish "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --target wasm32 --wasm-profile spa --out "${PUBLISH_SPA_DIR}" >/dev/null
+./tools/airun publish "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --target wasm32 --wasm-profile fullstack --out "${PUBLISH_FULLSTACK_DIR}" >/dev/null
 ./tools/airun publish "${HTTP_CASE}" --target wasm32 --wasm-profile cli --out "${PUBLISH_HTTP_CLI_DIR}" >"${HTTP_OUT}" 2>"${HTTP_ERR}"
-
-set +e
-./tools/airun run "${CASE_PATH}" --vm=c >"${NATIVE_OUT}" 2>&1
-native_rc=$?
-wasmtime run -C cache=n "${PUBLISH_DIR}/${CASE_NAME}.wasm" - < "${PUBLISH_DIR}/app.aibc1" >"${WASM_OUT}" 2>&1
-wasm_rc=$?
-set -e
-
-if [[ ${native_rc} -ne ${wasm_rc} ]]; then
-  echo "wasm golden mismatch: status native=${native_rc} wasm=${wasm_rc}" >&2
-  exit 1
-fi
-
-if ! diff -u "${NATIVE_OUT}" "${WASM_OUT}" >/dev/null; then
-  echo "wasm golden mismatch: output differs from native baseline" >&2
-  diff -u "${NATIVE_OUT}" "${WASM_OUT}" || true
-  exit 1
-fi
-
-echo "wasm golden: PASS (${CASE_NAME})"
+echo "wasm golden corpus: PASS (${#CASES[@]} cases)"
 
 if [[ ! -f "${PUBLISH_SPA_DIR}/index.html" || ! -f "${PUBLISH_SPA_DIR}/main.js" ]]; then
   echo "wasm profile mismatch: spa publish did not emit web bootstrap files" >&2
