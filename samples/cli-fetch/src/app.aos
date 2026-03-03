@@ -1,4 +1,4 @@
-Bytecode#cf_bc1(magic="AIBC" format="AiBC1" version=1 flags=0) {
+Bytecode#cf_bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {
   Const#cf_k0(kind=string value="sys.process_argv")
   Const#cf_k1(kind=string value="sys.http_get")
   Const#cf_k2(kind=string value="sys.stdout_writeLine")

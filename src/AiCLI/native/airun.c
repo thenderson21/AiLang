@@ -1274,6 +1274,11 @@ static int opcode_from_text(const char* op_text, AivmOpcode* out_opcode)
 static int parse_bytecode_aos_to_program_text(const char* source, AivmProgram* out_program)
 {
     const char* p;
+    const char* bytecode_decl;
+    const char* decl_lparen;
+    const char* decl_rparen;
+    char decl_attrs[512];
+    size_t decl_len;
 
     if (source == NULL || out_program == NULL) {
         return 0;
@@ -1281,12 +1286,56 @@ static int parse_bytecode_aos_to_program_text(const char* source, AivmProgram* o
     if (strstr(source, "Bytecode#") == NULL) {
         return 0;
     }
+    bytecode_decl = strstr(source, "Bytecode#");
+    if (bytecode_decl == NULL) {
+        return 0;
+    }
+    decl_lparen = strchr(bytecode_decl, '(');
+    decl_rparen = decl_lparen == NULL ? NULL : strchr(decl_lparen, ')');
+    if (decl_lparen == NULL || decl_rparen == NULL || decl_rparen <= decl_lparen) {
+        return 0;
+    }
+    decl_len = (size_t)(decl_rparen - (decl_lparen + 1));
+    if (decl_len + 1U > sizeof(decl_attrs)) {
+        return 0;
+    }
+    memcpy(decl_attrs, decl_lparen + 1, decl_len);
+    decl_attrs[decl_len] = '\0';
 
     aivm_program_clear(out_program);
     out_program->instructions = out_program->instruction_storage;
     out_program->constants = out_program->constant_storage;
     out_program->format_version = 2U;
     out_program->format_flags = 0U;
+    if (has_attr_key(decl_attrs, "version")) {
+        int64_t declared_version = 0;
+        if (!parse_attr_int64(decl_attrs, "version", &declared_version) || declared_version != 2) {
+            return 0;
+        }
+    }
+    if (has_attr_key(decl_attrs, "flags")) {
+        int64_t declared_flags = 0;
+        if (!parse_attr_int64(decl_attrs, "flags", &declared_flags) ||
+            declared_flags < 0 ||
+            declared_flags > (int64_t)UINT32_MAX) {
+            return 0;
+        }
+        out_program->format_flags = (uint32_t)declared_flags;
+    }
+    if (has_attr_key(decl_attrs, "magic")) {
+        char declared_magic[16];
+        if (!parse_attr_span(decl_attrs, "magic", declared_magic, sizeof(declared_magic)) ||
+            strcmp(declared_magic, "AIBC") != 0) {
+            return 0;
+        }
+    }
+    if (has_attr_key(decl_attrs, "format")) {
+        char declared_format[16];
+        if (!parse_attr_span(decl_attrs, "format", declared_format, sizeof(declared_format)) ||
+            strcmp(declared_format, "AiBC1") != 0) {
+            return 0;
+        }
+    }
 
     p = source;
     while ((p = strstr(p, "Const#")) != NULL) {
@@ -1728,7 +1777,7 @@ static int parse_simple_program_aos_to_program_text(const char* source, AivmProg
     aivm_program_clear(out_program);
     out_program->instructions = out_program->instruction_storage;
     out_program->constants = out_program->constant_storage;
-    out_program->format_version = 1U;
+    out_program->format_version = 2U;
     out_program->format_flags = 0U;
 
     p = first_open + 1;
@@ -2387,7 +2436,7 @@ static int handle_bench(int argc, char** argv)
         "  Call#c1(target=io.print) { Var#v1(name=message) }\n"
         "}";
     static const char* bytecode_bench_source =
-        "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) {\n"
+        "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=2 flags=0) {\n"
         "  Const#k0(kind=string value=\"hello\")\n"
         "  Func#f1(name=main params=\"argv\" locals=\"\") {\n"
         "    Inst#i1(op=HALT)\n"
@@ -2410,7 +2459,7 @@ static int handle_bench(int argc, char** argv)
         "  Call#c2(target=io.print) { Var#v2(name=out) }\n"
         "}";
     static const char* app_bundle_source =
-        "Bytecode#bc1(flags=0 format=\"AiBC1\" magic=\"AIBC\" version=1) {\n"
+        "Bytecode#bc1(flags=0 format=\"AiBC1\" magic=\"AIBC\" version=2) {\n"
         "  Const#k0(kind=int value=0)\n"
         "  Func#f_main(locals=\"argv,start\" name=main params=\"argv\") {\n"
         "    Inst#i0(a=0 op=CONST)\n"

@@ -62,7 +62,7 @@ Program#p1 {
 }
 EOF
     cat > "${TMP_NATIVE_PROJECT_DIR}/main.aos" <<'EOF'
-Bytecode#bc1(magic="AIBC" format="AiBC1" version=1 flags=0) {
+Bytecode#bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {
   Func#f1(name=main params="argv" locals="") {
     Inst#i1(op=HALT)
   }
