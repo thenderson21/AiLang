@@ -12,10 +12,11 @@ Current:
 - `scripts/build-airun.ps1` compiles Windows targets (`windows-x64`, `windows-arm64`).
 - `.aibc1` runtime execution is C-only.
 - Source/project `run` flows are native-only. Unsupported source shapes return deterministic `DEV008` guidance (no backend delegation).
+- `.aibundle` runtime execution is native-only (Bytecode# bundle shape).
 - Native `Bytecode#...` `.aos` inputs run directly in C VM without backend fallback.
 - Native `publish` can emit `app.aibc1` from supported `Program#...`/`Bytecode#...` `.aos`; unsupported source/project compile shapes return deterministic `DEV008`.
 - Native `Program#...`/`Bytecode#...` supported subsets run/publish without backend fallback.
-- `serve` is intentionally not part of the native runtime command surface.
+- `serve` is provided by native runtime lifecycle loop; unsupported program shapes return deterministic `DEV008`.
 - `publish` writes a ready-to-run app executable named from project/app input (run as `./<appname>`), plus `app.aibc1`.
 - `project.aiproj` can set publish default target via `publishTarget="<rid>"` (or single-entry `publishTargets="..."`).
 

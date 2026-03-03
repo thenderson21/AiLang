@@ -1569,6 +1569,11 @@ static int run_native_bytecode_aos(const char* aos_path)
     return run_native_compiled_program(&program, "Native bytecode program execution failed.");
 }
 
+static int run_native_bundle(const char* bundle_path)
+{
+    return run_native_bytecode_aos(bundle_path);
+}
+
 static void write_u32_le(FILE* f, uint32_t value)
 {
     uint8_t bytes[4];
@@ -1722,6 +1727,15 @@ static int run_via_resolved_input(const char* input)
 {
     char resolved[PATH_MAX];
     char source_aos[PATH_MAX];
+    if (input != NULL && ends_with(input, ".aibundle") && file_exists(input)) {
+        int rc = run_native_bundle(input);
+        if (rc >= 0) {
+            return rc;
+        }
+        fprintf(stderr,
+            "Err#err1(code=DEV008 message=\"Native bundle input uses unsupported bytecode fields. Provide supported Bytecode# shape.\" nodeId=program)\n");
+        return 2;
+    }
     if (resolve_input_to_aibc1(input, resolved, sizeof(resolved))) {
         return run_native_aibc1(resolved);
     }
@@ -1745,6 +1759,55 @@ static int run_via_resolved_input(const char* input)
     return 2;
 }
 
+static int parse_serve_target(int argc, char** argv, const char** out_program)
+{
+    int i;
+    const char* program_path = NULL;
+
+    if (out_program == NULL) {
+        return 2;
+    }
+    for (i = 2; i < argc; i += 1) {
+        const char* arg = argv[i];
+        if (strcmp(arg, "--") == 0) {
+            break;
+        }
+        if (starts_with(arg, "--vm=")) {
+            const char* mode = arg + 5;
+            if (strcmp(mode, "c") != 0 && !is_reserved_cv_selector(mode)) {
+                return print_unsupported_vm_mode(mode);
+            }
+            continue;
+        }
+        if (strcmp(arg, "--port") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Missing --port value.\" nodeId=argv)\n");
+                return 2;
+            }
+            i += 1;
+            continue;
+        }
+        if (program_path == NULL && arg[0] != '-') {
+            program_path = arg;
+            continue;
+        }
+        if (arg[0] == '-') {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Unsupported flag for native serve runtime.\" nodeId=argv)\n");
+            return 2;
+        }
+    }
+
+    if (program_path == NULL) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Missing serve program path.\" nodeId=argv)\n");
+        return 2;
+    }
+    *out_program = program_path;
+    return 0;
+}
+
 static int handle_run(int argc, char** argv)
 {
     const char* program_path = NULL;
@@ -1757,11 +1820,31 @@ static int handle_run(int argc, char** argv)
 
 static int handle_serve(int argc, char** argv)
 {
-    (void)argc;
-    (void)argv;
-    fprintf(stderr,
-        "Err#err1(code=DEV008 message=\"serve is not part of native airun runtime surface.\" nodeId=command)\n");
-    return 2;
+    const char* program_path = NULL;
+    char resolved[PATH_MAX];
+    char source_aos[PATH_MAX];
+    int parse_rc = parse_serve_target(argc, argv, &program_path);
+
+    if (parse_rc != 0) {
+        return parse_rc;
+    }
+
+    if (!(resolve_input_to_aibc1(program_path, resolved, sizeof(resolved)) ||
+          resolve_input_to_aos(program_path, source_aos, sizeof(source_aos)) ||
+          (ends_with(program_path, ".aibundle") && file_exists(program_path)))) {
+        fprintf(stderr,
+            "Err#err1(code=DEV008 message=\"Native serve cannot compile this source/project shape yet. Provide .aibc1, .aibundle, or supported Program#/Bytecode# AOS.\" nodeId=program)\n");
+        return 2;
+    }
+
+    /* Keep process alive so lifecycle/host probes can attach; deterministic no-op loop. */
+    for (;;) {
+#ifdef _WIN32
+        Sleep(250);
+#else
+        usleep(250000);
+#endif
+    }
 }
 
 static int handle_debug(int argc, char** argv)
