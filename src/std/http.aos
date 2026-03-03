@@ -672,7 +672,7 @@ Program#std_http_p1 {
                 }
               }
             }
-            Let#std_http_l50(name=response) { Call#std_http_c49(target=sys.net_asyncResultString) { Var#std_http_v120(name=op) } }
+            Let#std_http_l50(name=response) { Call#std_http_c49(target=sys.net_asyncResultBytes) { Var#std_http_v120(name=op) } }
             Call#std_http_c50(target=sys.net_close) { Var#std_http_v121(name=connection) }
             Return#std_http_r34 {
               Call#std_http_c51(target=httpMakeRequestState) {

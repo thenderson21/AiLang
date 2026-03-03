@@ -96,7 +96,7 @@ This file is normative for `aic run` evaluation behavior.
 - `-1` completed-failure
 - `-2` canceled
 - `-3` unknown-handle
-- `sys.net_asyncResultInt(handle)`, `sys.net_asyncResultString(handle)` (bytes payload), and `sys.net_asyncError(handle)` are non-blocking reads of terminal payload state.
+- `sys.net_asyncResultInt(handle)`, `sys.net_asyncResultBytes(handle)` (bytes payload), and `sys.net_asyncError(handle)` are non-blocking reads of terminal payload state.
 - `sys.net_asyncCancel(handle)` is best-effort and deterministic:
 - returns `false` for unknown/non-pending handles
 - returns `true` only when cancellation transitions a pending op to canceled
