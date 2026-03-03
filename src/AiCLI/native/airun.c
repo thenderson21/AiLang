@@ -2401,6 +2401,12 @@ static int handle_publish(int argc, char** argv)
     char wasm_run_ps1[PATH_MAX];
     char wasm_index_html[PATH_MAX];
     char wasm_main_js[PATH_MAX];
+    char wasm_web_module_src[PATH_MAX];
+    char wasm_web_module_dst[PATH_MAX];
+    char wasm_web_wasm_src[PATH_MAX];
+    char wasm_web_wasm_dst[PATH_MAX];
+    char wasm_web_module_name[160];
+    char wasm_web_wasm_name[160];
     char manifest_target[64];
     int i;
 
@@ -2569,6 +2575,23 @@ static int handle_publish(int argc, char** argv)
                 return 2;
             }
         } else {
+            if (snprintf(wasm_web_module_name, sizeof(wasm_web_module_name), "%s.mjs", publish_app_name) >= (int)sizeof(wasm_web_module_name) ||
+                snprintf(wasm_web_wasm_name, sizeof(wasm_web_wasm_name), "%s.web.wasm", publish_app_name) >= (int)sizeof(wasm_web_wasm_name)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Wasm web runtime name overflow.\" nodeId=publish)\n");
+                return 2;
+            }
+            if (!join_path(artifact_dir, "aivm-runtime-wasm32-web.mjs", wasm_web_module_src, sizeof(wasm_web_module_src)) ||
+                !join_path(artifact_dir, "aivm-runtime-wasm32-web.wasm", wasm_web_wasm_src, sizeof(wasm_web_wasm_src)) ||
+                !join_path(out_dir, wasm_web_module_name, wasm_web_module_dst, sizeof(wasm_web_module_dst)) ||
+                !join_path(out_dir, wasm_web_wasm_name, wasm_web_wasm_dst, sizeof(wasm_web_wasm_dst)) ||
+                !copy_runtime_file(wasm_web_module_src, wasm_web_module_dst) ||
+                !copy_runtime_file(wasm_web_wasm_src, wasm_web_wasm_dst)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Failed to copy wasm web runtime. Build wasm runtime first.\" nodeId=publish)\n");
+                return 2;
+            }
+
             const char* index_html =
                 "<!doctype html>\n"
                 "<html lang=\"en\">\n"
@@ -2579,13 +2602,31 @@ static int handle_publish(int argc, char** argv)
                 "    <script type=\"module\" src=\"./main.js\"></script>\n"
                 "  </body>\n"
                 "</html>\n";
-            char main_js[1024];
+            char main_js[4096];
             if (snprintf(main_js, sizeof(main_js),
+                    "import createRuntime from './%s';\n"
                     "const log = document.getElementById('log');\n"
-                    "const wasmUrl = './%s';\n"
-                    "const appUrl = './app.aibc1';\n"
-                    "log.textContent = 'TODO: host bridge loader not implemented yet. Runtime=' + wasmUrl + ', App=' + appUrl + '\\n';\n",
-                    publish_runtime_name) >= (int)sizeof(main_js)) {
+                    "const append = (line) => { log.textContent += String(line) + '\\n'; };\n"
+                    "const boot = async () => {\n"
+                    "  const appResp = await fetch('./app.aibc1');\n"
+                    "  if (!appResp.ok) {\n"
+                    "    throw new Error('Failed to fetch app.aibc1');\n"
+                    "  }\n"
+                    "  const appBytes = new Uint8Array(await appResp.arrayBuffer());\n"
+                    "  const runtime = await createRuntime({\n"
+                    "    noInitialRun: true,\n"
+                    "    locateFile: (path) => (path.endsWith('.wasm') ? './%s' : path),\n"
+                    "    print: append,\n"
+                    "    printErr: append\n"
+                    "  });\n"
+                    "  runtime.FS.writeFile('/app.aibc1', appBytes);\n"
+                    "  runtime.callMain(['/app.aibc1']);\n"
+                    "};\n"
+                    "boot().catch((err) => {\n"
+                    "  append('Err#err1(code=RUN001 message=\"' + err.message + '\" nodeId=wasm)');\n"
+                    "});\n",
+                    wasm_web_module_name,
+                    wasm_web_wasm_name) >= (int)sizeof(main_js)) {
                 fprintf(stderr,
                     "Err#err1(code=RUN001 message=\"Wasm web bootstrap content overflow.\" nodeId=publish)\n");
                 return 2;
