@@ -1713,13 +1713,8 @@ static int parse_run_target(int argc, char** argv, int start_index, const char**
         }
     }
 
-    if (program_path == NULL) {
-        fprintf(stderr,
-            "Err#err1(code=RUN001 message=\"Missing program path.\" nodeId=argv)\n");
-        return 2;
-    }
-
-    *out_program = program_path;
+    /* Preserve wrapper contract: default to current project directory when omitted. */
+    *out_program = (program_path != NULL) ? program_path : ".";
     return 0;
 }
 
