@@ -1,12 +1,12 @@
 #!/usr/bin/env pwsh
-$ErrorActionPreference = 'Stop'
-
 param(
   [Parameter(Mandatory = $true, Position = 0)]
   [string]$Target,
   [Parameter(Mandatory = $false, Position = 1)]
   [int]$Iterations = 20
 )
+
+$ErrorActionPreference = 'Stop'
 
 if ($Iterations -le 0) {
   throw 'iterations must be a positive integer'

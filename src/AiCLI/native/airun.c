@@ -20,7 +20,7 @@
 #include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <time.h>
+#include <sys/time.h>
 #include <unistd.h>
 #include <sys/wait.h>
 #ifndef PATH_MAX
@@ -191,11 +191,11 @@ static int monotonic_time_ns(int64_t* out_ns)
     *out_ns = (int64_t)((counter.QuadPart * 1000000000LL) / freq.QuadPart);
     return 1;
 #else
-    struct timespec ts;
-    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+    struct timeval tv;
+    if (gettimeofday(&tv, NULL) != 0) {
         return 0;
     }
-    *out_ns = ((int64_t)ts.tv_sec * 1000000000LL) + (int64_t)ts.tv_nsec;
+    *out_ns = ((int64_t)tv.tv_sec * 1000000000LL) + ((int64_t)tv.tv_usec * 1000LL);
     return 1;
 #endif
 }
