@@ -118,7 +118,6 @@ This file is normative for semantic validation used by `aic check` (default path
 - Current blocking target set includes:
 - `sys.net_asyncAwait`
 - `sys.net_accept`
-- `sys.net_readHeaders`
 - `sys.net_tcpAccept`
 - `sys.net_tcpConnect`
 - `sys.net_tcpConnectTls`

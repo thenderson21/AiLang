@@ -65,7 +65,7 @@ Required minimal primitives:
 
 ### 4. net
 
-Current status: partial (`sys.net_listen`, `sys.net_listen_tls`, `sys.net_accept`, `sys.net_readHeaders`, `sys.net_write`, `sys.net_close`).
+Current status: partial (`sys.net_listen`, `sys.net_listen_tls`, `sys.net_accept`, `sys.net_write`, `sys.net_close`).
 
 Required minimal primitives:
 
@@ -82,7 +82,6 @@ Required minimal primitives:
 Notes:
 
 - Keep HTTP/WebSocket protocol logic in AiLang libraries; provide only transport primitives.
-- Existing `sys.net_readHeaders` can remain temporarily but should not be the long-term generic net primitive.
 
 ### 5. time
 
