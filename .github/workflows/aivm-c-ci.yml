@@ -61,6 +61,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup MSVC toolchain (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Configure + build + test (Unix)
         if: runner.os != 'Windows'
         run: ./scripts/test-aivm-c.sh
