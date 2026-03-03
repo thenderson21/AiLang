@@ -125,6 +125,7 @@ This file is normative for `aic run` evaluation behavior.
 - `sys.process_exitCode(processHandle) -> int`
 - `sys.process_kill(processHandle) -> bool`
 - Status contract is deterministic (`0,1,-1,-2,-3` as defined in `SPEC/IL.md`).
+- In the current native baseline, non-empty `envText` may be rejected by host adapters; portable library code should pass empty `envText` until normalized env-map support lands.
 - Native baseline may complete work synchronously during `sys.process_start`; libraries should still consume state through `poll/wait/result` calls.
 - Host may implement internal scheduling/threads for process execution, but VM-visible state remains owner-thread deterministic.
 

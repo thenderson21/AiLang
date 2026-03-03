@@ -139,7 +139,7 @@ static int copy_file(const char* src, const char* dst)
     FILE* in;
     FILE* out;
     unsigned char buffer[4096];
-    int n;
+    size_t n;
 
     if (src == NULL || dst == NULL) {
         return 0;
@@ -1069,8 +1069,10 @@ static int native_process_start_command(
     const char* cwd_text,
     const char* env_text)
 {
-    (void)env_text;
     if (record == NULL || command_text == NULL || command_text[0] == '\0') {
+        return 0;
+    }
+    if (env_text != NULL && env_text[0] != '\0') {
         return 0;
     }
 #ifdef _WIN32
@@ -1133,6 +1135,16 @@ static int native_process_start_command(
         return 1;
     }
 #endif
+}
+
+static void native_process_cleanup_all(void)
+{
+    int i;
+    for (i = 0; i < NATIVE_PROCESS_MAX; i += 1) {
+        if (g_native_process_records[i].used) {
+            native_process_free_record(&g_native_process_records[i]);
+        }
+    }
 }
 
 static int native_process_refresh_status(NativeProcessRecord* record, int wait_for_completion)
@@ -1550,17 +1562,21 @@ static int run_native_compiled_program(
         process_argv_count);
 
     if (!result.loaded || result.load_status != AIVM_PROGRAM_OK) {
+        native_process_cleanup_all();
         fprintf(stderr, "Err#err1(code=RUN001 message=\"Failed to load native program.\" nodeId=program)\n");
         return 2;
     }
     if (!result.ok || result.status == AIVM_VM_STATUS_ERROR) {
+        native_process_cleanup_all();
         fprintf(stderr, "Err#err1(code=RUN001 message=\"%s\" nodeId=vm)\n", vm_error_message);
         return 3;
     }
     if (result.has_exit_code) {
         printf("Ok#ok1(type=int value=%d)\n", result.exit_code);
+        native_process_cleanup_all();
         return result.exit_code;
     }
+    native_process_cleanup_all();
     return 0;
 }
 
