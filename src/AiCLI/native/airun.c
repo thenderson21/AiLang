@@ -8,9 +8,9 @@
 #ifdef _WIN32
 #include <direct.h>
 #include <process.h>
-#include <psapi.h>
 #include <sys/stat.h>
 #include <windows.h>
+#include <psapi.h>
 #ifndef PATH_MAX
 #define PATH_MAX 260
 #endif

@@ -78,6 +78,7 @@ jobs:
       - name: Memory leak gate (Linux/macOS)
         if: runner.os != 'Windows'
         run: |
+          ./scripts/build-airun.sh
           AIVM_MEM_AUDIT_REPORT=.tmp/aivm-mem-audit-${{ runner.os }}.toml \
           AIVM_LEAK_MAX_RSS_GROWTH_KB=2048 \
           ./scripts/aivm-mem-audit.sh ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos 20
@@ -86,6 +87,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          ./scripts/build-airun.ps1
           $env:AIVM_MEM_AUDIT_REPORT = '.tmp/aivm-mem-audit-Windows.toml'
           $env:AIVM_LEAK_MAX_RSS_GROWTH_KB = '2048'
           ./scripts/aivm-mem-audit.ps1 .\src\AiVM.Core\native\tests\parity_cases\vm_c_execute_src_main_params.aos 20
