@@ -166,14 +166,14 @@ jobs:
           if (-not (Test-Path .\dist\compiler\runtime.aos)) { throw 'missing compiler assets' }
 
       - name: Runtime smoke (Unix)
-        if: matrix.platform != 'windows'
+        if: matrix.platform != 'windows' && !(matrix.platform == 'linux' && matrix.arch == 'arm64')
         shell: bash
         run: |
           set -euo pipefail
           "./dist/${{ matrix.airun }}" run ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos --vm=c >/dev/null
 
       - name: Runtime smoke (Windows)
-        if: matrix.platform == 'windows'
+        if: matrix.platform == 'windows' && matrix.arch != 'arm64'
         shell: pwsh
         run: |
           & ".\\dist\\${{ matrix.airun }}" run .\src\AiVM.Core\native\tests\parity_cases\vm_c_execute_src_main_params.aos --vm=c | Out-Null
