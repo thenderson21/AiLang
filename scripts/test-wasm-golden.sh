@@ -4,11 +4,46 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP_DIR="${ROOT_DIR}/.tmp/aivm-wasm-golden"
 CASES=(
+  "sys_remove_bad_type"
+  "sys_substring_bad_arity"
+  "sys_utf8_bad_type"
   "vm_c_execute_program_source_gate"
+  "vm_c_execute_src_async_call_negative"
+  "vm_c_execute_src_async_call_oob"
+  "vm_c_execute_src_async_callsys_bad_slot"
+  "vm_c_execute_src_await_unsupported"
+  "vm_c_execute_src_call_negative"
+  "vm_c_execute_src_call_oob"
+  "vm_c_execute_src_callsys_bad_slot"
   "vm_c_execute_src_invalid_abi"
+  "vm_c_execute_src_invalid_abi_whitespace"
+  "vm_c_execute_src_invalid_abi_whitespace_only"
+  "vm_c_execute_src_jump_if_false_negative"
+  "vm_c_execute_src_jump_if_false_oob"
+  "vm_c_execute_src_jump_negative"
+  "vm_c_execute_src_jump_oob"
   "vm_c_execute_src_main_params"
+  "vm_c_execute_src_make_node_unsupported"
   "vm_c_execute_src_missing_lib"
   "vm_c_execute_src_missing_main"
+  "vm_c_execute_src_nonmain_params"
+  "vm_c_execute_src_par_begin_unsupported"
+  "vm_c_execute_src_par_cancel_unsupported"
+  "vm_c_execute_src_par_fork_unsupported"
+  "vm_c_execute_src_par_join_unsupported"
+)
+UNSUPPORTED_CASES=(
+  "vm_c_execute_src_async_callsys_missing_target"
+  "vm_c_execute_src_await_nonzero_b"
+  "vm_c_execute_src_await_unexpected_s"
+  "vm_c_execute_src_callsys_missing_target"
+  "vm_c_execute_src_node_constant_unsupported"
+  "vm_c_execute_src_nonzero_b"
+  "vm_c_execute_src_opcode_unmapped"
+  "vm_c_execute_src_par_begin_nonzero_b"
+  "vm_c_execute_src_par_begin_unexpected_s"
+  "vm_c_execute_src_parse_error"
+  "vm_c_execute_src_unexpected_s"
 )
 HTTP_CASE="${ROOT_DIR}/samples/cli-fetch/project.aiproj"
 PUBLISH_DIR="${TMP_DIR}/publish"
@@ -64,10 +99,21 @@ for CASE_NAME in "${CASES[@]}"; do
   fi
 done
 
+for CASE_NAME in "${UNSUPPORTED_CASES[@]}"; do
+  CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
+  CASE_OUT="${PUBLISH_DIR}/${CASE_NAME}"
+  mkdir -p "${CASE_OUT}"
+  if ./tools/airun publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null 2>&1; then
+    echo "wasm publish contract mismatch (${CASE_NAME}): expected deterministic unsupported publish failure" >&2
+    exit 1
+  fi
+done
+
 ./tools/airun publish "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --target wasm32 --wasm-profile spa --out "${PUBLISH_SPA_DIR}" >/dev/null
 ./tools/airun publish "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --target wasm32 --wasm-profile fullstack --out "${PUBLISH_FULLSTACK_DIR}" >/dev/null
 ./tools/airun publish "${HTTP_CASE}" --target wasm32 --wasm-profile cli --out "${PUBLISH_HTTP_CLI_DIR}" >"${HTTP_OUT}" 2>"${HTTP_ERR}"
 echo "wasm golden corpus: PASS (${#CASES[@]} cases)"
+echo "wasm unsupported corpus: PASS (${#UNSUPPORTED_CASES[@]} cases)"
 
 if [[ ! -f "${PUBLISH_SPA_DIR}/index.html" || ! -f "${PUBLISH_SPA_DIR}/main.js" ]]; then
   echo "wasm profile mismatch: spa publish did not emit web bootstrap files" >&2

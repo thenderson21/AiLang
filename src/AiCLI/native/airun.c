@@ -1356,7 +1356,9 @@ static int parse_bytecode_aos_to_program_text(const char* source, AivmProgram* o
         const char* rparen;
         char attrs[512];
         char op[64];
+        char s_value[64];
         int64_t a = 0;
+        int64_t b = 0;
         AivmOpcode opcode;
         size_t n;
 
@@ -1377,10 +1379,20 @@ static int parse_bytecode_aos_to_program_text(const char* source, AivmProgram* o
         if (!parse_attr_span(attrs, "op", op, sizeof(op)) || !opcode_from_text(op, &opcode)) {
             return 0;
         }
-        if (has_attr_key(attrs, "b") || has_attr_key(attrs, "s")) {
-            return 0;
-        }
         (void)parse_attr_int64(attrs, "a", &a);
+        if (has_attr_key(attrs, "b")) {
+            if (!parse_attr_int64(attrs, "b", &b) || b != 0) {
+                return 0;
+            }
+        }
+        if (has_attr_key(attrs, "s")) {
+            if (!parse_attr_span(attrs, "s", s_value, sizeof(s_value))) {
+                return 0;
+            }
+            if (s_value[0] != '\0') {
+                return 0;
+            }
+        }
 
         out_program->instruction_storage[out_program->instruction_count].opcode = opcode;
         out_program->instruction_storage[out_program->instruction_count].operand_int = a;
@@ -1739,30 +1751,30 @@ static int parse_simple_program_aos_to_program_text(const char* source, AivmProg
         }
         if (strcmp(node.kind, "Call") == 0) {
             char target[128];
-            const char* mapped = NULL;
             size_t target_idx = 0U;
-            SimpleNodeView arg;
+            size_t arg_count = 0U;
+            const char* c = node.body_start;
             if (!parse_attr_span(node.attrs, "target", target, sizeof(target))) {
                 return simple_fail("call missing target");
             }
-            if (strcmp(target, "io.print") == 0 || strcmp(target, "io.write") == 0 || strcmp(target, "sys.stdout_writeLine") == 0) {
-                mapped = "sys.stdout_writeLine";
-            } else {
-                return simple_fail("call unsupported target");
-            }
-            if (!simple_add_string_const(out_program, mapped, &target_idx)) {
+            if (!simple_add_string_const(out_program, target, &target_idx)) {
                 return simple_fail("call target const add failed");
             }
             if (!simple_emit_instruction(out_program, AIVM_OP_CONST, (int64_t)target_idx)) {
                 return simple_fail("call target const emit failed");
             }
-            if (!simple_parse_next_node(node.body_start, node.body_end, &arg)) {
-                return simple_fail("call missing argument");
+            while (c < node.body_end) {
+                SimpleNodeView arg;
+                if (!simple_parse_next_node(c, node.body_end, &arg)) {
+                    break;
+                }
+                if (!simple_compile_expr_node(&arg, out_program, locals, &local_count)) {
+                    return simple_fail("call argument compile failed");
+                }
+                arg_count += 1U;
+                c = arg.next;
             }
-            if (!simple_compile_expr_node(&arg, out_program, locals, &local_count)) {
-                return simple_fail("call argument compile failed");
-            }
-            if (!simple_emit_instruction(out_program, AIVM_OP_CALL_SYS, 1) ||
+            if (!simple_emit_instruction(out_program, AIVM_OP_CALL_SYS, (int64_t)arg_count) ||
                 !simple_emit_instruction(out_program, AIVM_OP_POP, 0)) {
                 return simple_fail("call emit failed");
             }
