@@ -120,6 +120,22 @@ With VM args:
 C_VM_BIN=./tools/airun-c C_VM_RUN_ARGS="run --vm=bytecode" ./scripts/profile-c-vm.sh examples/bench/loop_compute.aos
 ```
 
+## 4) Memory leak gate
+
+Runs repeated deterministic executions and enforces RSS-growth threshold.
+
+```bash
+./scripts/aivm-mem-leak-check.sh ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos 20
+```
+
+Optional threshold tuning (KB):
+
+```bash
+AIVM_LEAK_MAX_RSS_GROWTH_KB=2048 ./scripts/aivm-mem-leak-check.sh ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos 20
+```
+
+Report path can be overridden with `AIVM_LEAK_REPORT`.
+
 ## Notes
 
 - Keep benchmark inputs deterministic and side-effect-free.

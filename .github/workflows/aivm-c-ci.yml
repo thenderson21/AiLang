@@ -14,6 +14,8 @@ on:
       - 'scripts/aivm-dualrun-parity-manifest.sh'
       - 'scripts/aivm-dualrun-parity-manifest.ps1'
       - 'scripts/aivm-bench-gate.sh'
+      - 'scripts/aivm-mem-leak-check.sh'
+      - 'scripts/aivm-mem-profile.sh'
       - 'src/AiVM.Core/native/tests/parity_commands.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_portable.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_ci.txt'
@@ -34,6 +36,8 @@ on:
       - 'scripts/aivm-dualrun-parity-manifest.sh'
       - 'scripts/aivm-dualrun-parity-manifest.ps1'
       - 'scripts/aivm-bench-gate.sh'
+      - 'scripts/aivm-mem-leak-check.sh'
+      - 'scripts/aivm-mem-profile.sh'
       - 'src/AiVM.Core/native/tests/parity_commands.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_portable.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_ci.txt'
@@ -67,6 +71,13 @@ jobs:
           ./scripts/build-airun.sh
           ./scripts/aivm-bench-gate.sh
 
+      - name: Memory leak gate (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          AIVM_LEAK_REPORT=.tmp/aivm-mem-leak-check.txt \
+          AIVM_LEAK_MAX_RSS_GROWTH_KB=2048 \
+          ./scripts/aivm-mem-leak-check.sh ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos 20
+
       - name: Configure + build + test (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -82,4 +93,5 @@ jobs:
             .tmp/aivm-dualrun-manifest/report.txt
             .tmp/aivm-dualrun-manifest/*.left.out
             .tmp/aivm-dualrun-manifest/*.right.out
+            .tmp/aivm-mem-leak-check.txt
           if-no-files-found: ignore
