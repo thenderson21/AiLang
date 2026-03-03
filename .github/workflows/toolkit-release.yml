@@ -326,14 +326,39 @@ jobs:
       - package-wasm32
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Download packaged artifacts
         uses: actions/download-artifact@v4
         with:
           path: ./release-assets
           merge-multiple: true
 
+      - name: Generate release notes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = '${{ needs.prepare.outputs.tag }}';
+            const target = context.sha;
+            const { data } = await github.request('POST /repos/{owner}/{repo}/releases/generate-notes', {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              target_commitish: target
+            });
+            const marker = [
+              '## Cutover Notice',
+              '- `v0.0.1-alpha.6` is the final release that may include C# dependencies.',
+              '- Releases after `v0.0.1-alpha.6` are C-runtime/tooling canonical in active paths.',
+              ''
+            ].join('\n');
+            const notes = `${marker}\n${data.body || ''}\n`;
+            require('fs').writeFileSync('RELEASE_NOTES.md', notes, { encoding: 'utf8' });
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.prepare.outputs.tag }}
+          body_path: ./RELEASE_NOTES.md
           files: ./release-assets/*
