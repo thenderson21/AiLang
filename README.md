@@ -93,10 +93,10 @@ Run from project manifest:
 ./tools/airun run samples/cli-fetch/project.aiproj
 ```
 
-Force AST interpreter mode for debugging only:
+Native runtime expects AiBC1 bytecode input:
 
 ```bash
-./tools/airun run --vm=ast examples/hello.aos
+./tools/airun run examples/hello.aibc1
 ```
 
 Load a program and evaluate expressions:
@@ -134,29 +134,28 @@ Ok#ok4(type=int value=5)
 
 ## Testing
 
-Run golden tests without dotnet:
+Run C runtime test suite:
 
 ```bash
 ./scripts/test.sh
 ```
 
-`scripts/test.sh` uses only `./tools/airun`; it does not invoke dotnet.
+`scripts/test.sh` is C-only and does not invoke dotnet.
 
 ## Build Launcher
 
-Rebuild `tools/airun` (NativeAOT, osx-arm64):
+Rebuild `tools/airun` (native C, host platform):
 
 ```bash
 ./scripts/build-airun.sh
 ```
 
-Dotnet is only required for `scripts/build-airun.sh`.
 `scripts/build-airun.sh` also rebuilds the standalone frontend parser `tools/aos_frontend`.
 
 ## Runtime Engine
 
 - Canonical runtime: AiBC1 bytecode VM (default).
-- AST interpreter: debug-only fallback via `--vm=ast`.
+- Runtime is C-only in active build/test/release workflows.
 - New publish artifacts embed bytecode payloads by default.
 - Build flag: `AosDevMode=false` creates a production runtime build with AST mode disabled.
 - HTTP body parsing boundary: `std.json.parse` is a constrained HTTP integration helper that converts JSON request body text into canonical AOS nodes. It does not introduce JSON as a runtime value model.

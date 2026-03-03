@@ -30,6 +30,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Build airun runtime (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./scripts/build-airun.sh
+          test -x ./tools/airun
+
+      - name: Setup MSVC tools
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Build airun runtime (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ./scripts/build-airun.ps1
+          if (-not (Test-Path .\tools\airun.exe)) { throw 'missing tools/airun.exe' }
+
       - name: Build frontend parser (non-Windows)
         if: runner.os != 'Windows'
         shell: bash
@@ -39,10 +58,6 @@ jobs:
           cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
           chmod +x "./dist/${{ matrix.frontend }}"
 
-      - name: Setup MSVC tools
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
-
       - name: Build frontend parser (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
@@ -51,26 +66,18 @@ jobs:
           cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
           Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
 
-      - name: Stage runtime binary (if present, non-Windows)
+      - name: Stage runtime binary (non-Windows)
         if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
-          if [[ -x ./tools/airun ]]; then
-            cp ./tools/airun "./dist/${{ matrix.airun }}"
-          else
-            printf 'airun runtime not yet produced in native CI\n' > ./dist/AIRUN_UNAVAILABLE.txt
-          fi
+          cp ./tools/airun "./dist/${{ matrix.airun }}"
 
-      - name: Stage runtime binary (if present, Windows)
+      - name: Stage runtime binary (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          if (Test-Path .\tools\airun.exe) {
-            Copy-Item .\tools\airun.exe .\dist\${{ matrix.airun }}
-          } else {
-            "airun runtime not yet produced in native CI" | Out-File .\dist\AIRUN_UNAVAILABLE.txt -Encoding utf8
-          }
+          Copy-Item .\tools\airun.exe .\dist\${{ matrix.airun }}
 
       - name: Stage compiler assets (non-Windows)
         if: runner.os != 'Windows'

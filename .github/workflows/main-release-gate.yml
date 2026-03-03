@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-matrix:
-    name: build-${{ matrix.os }}
+    name: build-${{ matrix.rid }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -18,52 +18,136 @@ jobs:
         include:
           - os: ubuntu-latest
             rid: linux-x64
+            platform: linux
+            arch: x64
             frontend: aos_frontend
+            airun: airun
+            artifact_dir: .artifacts/airun-linux-x64
+          - os: ubuntu-latest
+            rid: linux-arm64
+            platform: linux
+            arch: arm64
+            frontend: aos_frontend
+            airun: airun
+            artifact_dir: .artifacts/airun-linux-arm64
+          - os: macos-13
+            rid: osx-x64
+            platform: osx
+            arch: x64
+            frontend: aos_frontend
+            airun: airun
+            artifact_dir: .artifacts/airun-osx-x64
           - os: macos-14
             rid: osx-arm64
+            platform: osx
+            arch: arm64
             frontend: aos_frontend
-          - os: macos-14
-            rid: osx-x64
-            frontend: aos_frontend
+            airun: airun
+            artifact_dir: .artifacts/airun-osx-arm64
+          - os: windows-latest
+            rid: windows-x64
+            platform: windows
+            arch: x64
+            frontend: aos_frontend.exe
+            airun: airun.exe
+            artifact_dir: .artifacts/airun-windows-x64
+            msvc_arch: amd64
+          - os: windows-latest
+            rid: windows-arm64
+            platform: windows
+            arch: arm64
+            frontend: aos_frontend.exe
+            airun: airun.exe
+            artifact_dir: .artifacts/airun-windows-arm64
+            msvc_arch: amd64_arm64
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
+      - name: Setup MSVC tools
+        if: matrix.platform == 'windows'
+        uses: ilammy/msvc-dev-cmd@v1
         with:
-          dotnet-version: '10.0.x'
+          arch: ${{ matrix.msvc_arch }}
 
-      - name: Build + stage airun
+      - name: Setup Linux ARM64 cross toolchain
+        if: matrix.platform == 'linux' && matrix.arch == 'arm64'
+        shell: bash
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Build + stage airun (Unix)
+        if: matrix.platform != 'windows'
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p ./dist
+          AIVM_AIRUN_PLATFORM="${{ matrix.platform }}" \
+          AIVM_AIRUN_ARCH="${{ matrix.arch }}" \
           ./scripts/build-airun.sh
-          test -x ./tools/airun
-          cp ./tools/airun ./dist/airun
-          chmod +x ./dist/airun
+          test -x "./${{ matrix.artifact_dir }}/${{ matrix.airun }}"
+          cp "./${{ matrix.artifact_dir }}/${{ matrix.airun }}" "./dist/${{ matrix.airun }}"
+          chmod +x "./dist/${{ matrix.airun }}"
 
-      - name: Build frontend parser
+      - name: Build + stage airun (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .\dist | Out-Null
+          $env:AIVM_AIRUN_ARCH = '${{ matrix.arch }}'
+          ./scripts/build-airun.ps1
+          if (-not (Test-Path ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}")) { throw 'missing airun runtime' }
+          Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}" ".\\dist\\${{ matrix.airun }}"
+
+      - name: Build frontend parser (Unix)
+        if: matrix.platform != 'windows'
         shell: bash
         run: |
           set -euo pipefail
-          cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
+          if [[ "${{ matrix.platform }}" == "linux" && "${{ matrix.arch }}" == "arm64" ]]; then
+            aarch64-linux-gnu-gcc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
+          elif [[ "${{ matrix.platform }}" == "osx" ]]; then
+            if [[ "${{ matrix.arch }}" == "x64" ]]; then
+              clang -std=c11 -O2 -arch x86_64 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
+            else
+              clang -std=c11 -O2 -arch arm64 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
+            fi
+          else
+            cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
+          fi
           chmod +x "./dist/${{ matrix.frontend }}"
 
-      - name: Stage compiler assets
+      - name: Build frontend parser (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
+          Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
+
+      - name: Stage compiler assets (Unix)
+        if: matrix.platform != 'windows'
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p ./dist/compiler
           cp ./src/compiler/*.aos ./dist/compiler/
 
-      - name: Verify toolkit files
+      - name: Stage compiler assets (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .\dist\compiler | Out-Null
+          Copy-Item .\src\compiler\*.aos .\dist\compiler\
+
+      - name: Verify toolkit files (Unix)
+        if: matrix.platform != 'windows'
         shell: bash
         run: |
           set -euo pipefail
-          test -x ./dist/airun
+          test -x "./dist/${{ matrix.airun }}"
           test -x "./dist/${{ matrix.frontend }}"
           test -f ./dist/compiler/format.aos
           test -f ./dist/compiler/validate.aos
@@ -72,42 +156,31 @@ jobs:
           test -f ./dist/compiler/http.aos
           test -f ./dist/compiler/runtime.aos
 
-  golden-gate:
-    name: golden-gate-${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: ubuntu-latest
-            rid: linux-x64
-            frontend: aos_frontend
-            airun: airun
-          - os: macos-14
-            rid: osx-arm64
-            frontend: aos_frontend
-            airun: airun
+      - name: Verify toolkit files (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          if (-not (Test-Path ".\\dist\\${{ matrix.airun }}")) { throw 'missing airun' }
+          if (-not (Test-Path ".\\dist\\${{ matrix.frontend }}")) { throw 'missing aos_frontend' }
+          if (-not (Test-Path .\dist\compiler\format.aos)) { throw 'missing compiler assets' }
+          if (-not (Test-Path .\dist\compiler\runtime.aos)) { throw 'missing compiler assets' }
+
+  wasm-runtime-artifact:
+    name: wasm-runtime-artifact
+    runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build toolkit for gate
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: latest
+
+      - name: Build wasm runtime artifact
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p ./dist
-          ./scripts/build-airun.sh
-          test -x ./tools/airun
-          cp ./tools/airun "./dist/${{ matrix.airun }}"
-          chmod +x "./dist/${{ matrix.airun }}"
-          cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
-          chmod +x "./dist/${{ matrix.frontend }}"
-          mkdir -p ./dist/compiler
-          cp ./src/compiler/*.aos ./dist/compiler/
-
-      - name: Run full golden gate
-        shell: bash
-        env:
-          AIRUN_BIN: ./dist/${{ matrix.airun }}
-          AOS_FRONTEND: ./dist/${{ matrix.frontend }}
-        run: ./scripts/test.sh
+          ./scripts/build-aivm-wasm.sh
+          test -f ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm
