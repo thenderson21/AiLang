@@ -801,12 +801,15 @@ static int native_syscall_process_argv(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
-    /* Native wrapper currently exposes an empty argv node sentinel. */
-    *result = aivm_value_node(0);
+    *result = aivm_value_node(1);
     return AIVM_SYSCALL_OK;
 }
 
-static int run_native_compiled_program(const AivmProgram* program, const char* vm_error_message)
+static int run_native_compiled_program(
+    const AivmProgram* program,
+    const char* vm_error_message,
+    const char* const* process_argv,
+    size_t process_argv_count)
 {
     AivmSyscallBinding bindings[4];
     AivmCResult result;
@@ -823,7 +826,12 @@ static int run_native_compiled_program(const AivmProgram* program, const char* v
     bindings[2].handler = native_syscall_stdout_write_line;
     bindings[3].target = "sys.process_argv";
     bindings[3].handler = native_syscall_process_argv;
-    result = aivm_c_execute_program_with_syscalls(program, bindings, 4U);
+    result = aivm_c_execute_program_with_syscalls_and_argv(
+        program,
+        bindings,
+        4U,
+        process_argv,
+        process_argv_count);
 
     if (!result.loaded || result.load_status != AIVM_PROGRAM_OK) {
         fprintf(stderr, "Err#err1(code=RUN001 message=\"Failed to load native program.\" nodeId=program)\n");
@@ -840,7 +848,7 @@ static int run_native_compiled_program(const AivmProgram* program, const char* v
     return 0;
 }
 
-static int run_native_aibc1(const char* path)
+static int run_native_aibc1(const char* path, const char* const* process_argv, size_t process_argv_count)
 {
     unsigned char* bytes = NULL;
     size_t byte_count = 0U;
@@ -859,7 +867,7 @@ static int run_native_aibc1(const char* path)
         fprintf(stderr, "Err#err1(code=RUN001 message=\"Failed to load AiBC1 program.\" nodeId=program)\n");
         return 2;
     }
-    return run_native_compiled_program(&program, "AiBC1 execution failed.");
+    return run_native_compiled_program(&program, "AiBC1 execution failed.", process_argv, process_argv_count);
 }
 
 static int parse_attr_span(const char* attrs, const char* key, char* out, size_t out_len)
@@ -1572,29 +1580,37 @@ static int parse_simple_program_aos_to_program_file(const char* aos_path, AivmPr
     return parse_simple_program_aos_to_program_text(source, out_program);
 }
 
-static int run_native_simple_program_aos(const char* aos_path)
+static int run_native_simple_program_aos(const char* aos_path, const char* const* process_argv, size_t process_argv_count)
 {
     AivmProgram program;
 
     if (!parse_simple_program_aos_to_program_file(aos_path, &program)) {
         return -1;
     }
-    return run_native_compiled_program(&program, "Native simple source execution failed.");
+    return run_native_compiled_program(
+        &program,
+        "Native simple source execution failed.",
+        process_argv,
+        process_argv_count);
 }
 
-static int run_native_bytecode_aos(const char* aos_path)
+static int run_native_bytecode_aos(const char* aos_path, const char* const* process_argv, size_t process_argv_count)
 {
     AivmProgram program;
 
     if (!parse_bytecode_aos_to_program_file(aos_path, &program)) {
         return -1;
     }
-    return run_native_compiled_program(&program, "Native bytecode program execution failed.");
+    return run_native_compiled_program(
+        &program,
+        "Native bytecode program execution failed.",
+        process_argv,
+        process_argv_count);
 }
 
-static int run_native_bundle(const char* bundle_path)
+static int run_native_bundle(const char* bundle_path, const char* const* process_argv, size_t process_argv_count)
 {
-    return run_native_bytecode_aos(bundle_path);
+    return run_native_bytecode_aos(bundle_path, process_argv, process_argv_count);
 }
 
 static void write_u32_le(FILE* f, uint32_t value)
@@ -1708,50 +1724,69 @@ static int write_program_as_aibc1(const AivmProgram* program, const char* out_pa
     return 1;
 }
 
-static int parse_run_target(int argc, char** argv, int start_index, const char** out_program)
+typedef struct {
+    const char* program_path;
+    int app_arg_start;
+    int app_arg_count;
+} RunTarget;
+
+static int parse_run_target(int argc, char** argv, int start_index, RunTarget* out_target)
 {
     int i;
     const char* program_path = NULL;
+    int app_arg_start = -1;
 
+    if (out_target == NULL) {
+        return 2;
+    }
     for (i = start_index; i < argc; i++) {
         const char* arg = argv[i];
         if (strcmp(arg, "--") == 0) {
+            if (app_arg_start < 0) {
+                app_arg_start = i + 1;
+            }
             break;
         }
-        if (starts_with(arg, "--vm=")) {
+        if (app_arg_start < 0 && starts_with(arg, "--vm=")) {
             const char* mode = arg + 5;
             if (strcmp(mode, "c") != 0 && !is_reserved_cv_selector(mode)) {
                 return print_unsupported_vm_mode(mode);
             }
             continue;
         }
-        if (program_path == NULL && arg[0] != '-') {
+        if (program_path == NULL && arg[0] != '-' && app_arg_start < 0) {
             program_path = arg;
             continue;
         }
-        if (program_path != NULL && arg[0] != '-') {
-            fprintf(stderr,
-                "Err#err1(code=RUN001 message=\"Unsupported app arguments for native C runtime.\" nodeId=argv)\n");
-            return 2;
-        }
-        if (arg[0] == '-') {
+        if (program_path == NULL && arg[0] == '-' && app_arg_start < 0) {
             fprintf(stderr,
                 "Err#err1(code=RUN001 message=\"Unsupported flag for native C runtime.\" nodeId=argv)\n");
             return 2;
         }
+        if (app_arg_start < 0) {
+            app_arg_start = i;
+        }
+        break;
     }
 
     /* Preserve wrapper contract: default to current project directory when omitted. */
-    *out_program = (program_path != NULL) ? program_path : ".";
+    out_target->program_path = (program_path != NULL) ? program_path : ".";
+    if (app_arg_start >= 0 && app_arg_start <= argc) {
+        out_target->app_arg_start = app_arg_start;
+        out_target->app_arg_count = argc - app_arg_start;
+    } else {
+        out_target->app_arg_start = argc;
+        out_target->app_arg_count = 0;
+    }
     return 0;
 }
 
-static int run_via_resolved_input(const char* input)
+static int run_via_resolved_input(const char* input, const char* const* process_argv, size_t process_argv_count)
 {
     char resolved[PATH_MAX];
     char source_aos[PATH_MAX];
     if (input != NULL && ends_with(input, ".aibundle") && file_exists(input)) {
-        int rc = run_native_bundle(input);
+        int rc = run_native_bundle(input, process_argv, process_argv_count);
         if (rc >= 0) {
             return rc;
         }
@@ -1760,10 +1795,10 @@ static int run_via_resolved_input(const char* input)
         return 2;
     }
     if (resolve_input_to_aibc1(input, resolved, sizeof(resolved))) {
-        return run_native_aibc1(resolved);
+        return run_native_aibc1(resolved, process_argv, process_argv_count);
     }
     if (resolve_input_to_aos(input, source_aos, sizeof(source_aos))) {
-        int rc = run_native_bytecode_aos(source_aos);
+        int rc = run_native_bytecode_aos(source_aos, process_argv, process_argv_count);
         if (rc >= 0) {
             return rc;
         }
@@ -1772,7 +1807,7 @@ static int run_via_resolved_input(const char* input)
                 "Err#err1(code=DEV008 message=\"Native bytecode AOS input uses unsupported fields. Build precompiled .aibc1 or use supported instruction attributes.\" nodeId=program)\n");
             return 2;
         }
-        rc = run_native_simple_program_aos(source_aos);
+        rc = run_native_simple_program_aos(source_aos, process_argv, process_argv_count);
         if (rc >= 0) {
             return rc;
         }
@@ -1784,12 +1819,15 @@ static int run_via_resolved_input(const char* input)
 
 static int handle_run(int argc, char** argv)
 {
-    const char* program_path = NULL;
-    int parse_rc = parse_run_target(argc, argv, 2, &program_path);
+    RunTarget target;
+    int parse_rc = parse_run_target(argc, argv, 2, &target);
     if (parse_rc != 0) {
         return parse_rc;
     }
-    return run_via_resolved_input(program_path);
+    return run_via_resolved_input(
+        target.program_path,
+        (const char* const*)&argv[target.app_arg_start],
+        (size_t)target.app_arg_count);
 }
 
 static int handle_serve(int argc, char** argv)
@@ -1803,14 +1841,17 @@ static int handle_serve(int argc, char** argv)
 
 static int handle_debug(int argc, char** argv)
 {
-    const char* program_path = NULL;
+    RunTarget target;
     int parse_rc;
     if (argc >= 3 && strcmp(argv[2], "run") == 0) {
-        parse_rc = parse_run_target(argc, argv, 3, &program_path);
+        parse_rc = parse_run_target(argc, argv, 3, &target);
         if (parse_rc != 0) {
             return parse_rc;
         }
-        return run_via_resolved_input(program_path);
+        return run_via_resolved_input(
+            target.program_path,
+            (const char* const*)&argv[target.app_arg_start],
+            (size_t)target.app_arg_count);
     }
     fprintf(stderr,
         "Err#err1(code=DEV008 message=\"Native debug supports only: debug run <program>\" nodeId=command)\n");
@@ -1837,7 +1878,7 @@ static int handle_repl(void)
             continue;
         }
         if (starts_with(line, "run ")) {
-            return run_via_resolved_input(line + 4);
+            return run_via_resolved_input(line + 4, NULL, 0U);
         }
 
         fprintf(stderr,
@@ -2264,7 +2305,7 @@ int main(int argc, char** argv)
             file_exists(bundled_aibc1)) {
             exe_base = path_basename_ptr(exe_path);
             if (exe_base != NULL && strcmp(exe_base, "airun") != 0 && strcmp(exe_base, "airun.exe") != 0) {
-                return run_native_aibc1(bundled_aibc1);
+                return run_native_aibc1(bundled_aibc1, NULL, 0U);
             }
         }
         print_usage();
