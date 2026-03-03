@@ -148,6 +148,35 @@ static int copy_runtime_file(const char* src, const char* dst)
     return 1;
 }
 
+static int write_text_file(const char* path, const char* content, int executable)
+{
+    FILE* out;
+    size_t len;
+    if (path == NULL || content == NULL) {
+        return 0;
+    }
+    out = fopen(path, "wb");
+    if (out == NULL) {
+        return 0;
+    }
+    len = strlen(content);
+    if (len > 0U && fwrite(content, 1U, len, out) != len) {
+        fclose(out);
+        return 0;
+    }
+    if (fclose(out) != 0) {
+        return 0;
+    }
+#ifndef _WIN32
+    if (executable != 0 && chmod(path, 0755) != 0) {
+        return 0;
+    }
+#else
+    (void)executable;
+#endif
+    return 1;
+}
+
 static int read_binary_file(const char* path, unsigned char** out_bytes, size_t* out_size)
 {
     FILE* f;
@@ -799,7 +828,7 @@ static void print_usage(void)
         "  repl\n"
         "  bench [--iterations <n>] [--human]\n"
         "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>]\n"
-        "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--out <dir>]\n"
+        "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--out <dir>] [--wasm-profile <web|cli>]\n"
         "  version | --version\n"
         "\n"
         "VM selectors:\n"
@@ -2180,6 +2209,8 @@ static int handle_publish(int argc, char** argv)
     const char* program_input = NULL;
     const char* target = NULL;
     const char* out_dir = "dist";
+    const char* wasm_profile = "web";
+    int wasm_profile_set = 0;
     char resolved_program[PATH_MAX];
     char source_aos[PATH_MAX];
     char artifact_dir[PATH_MAX];
@@ -2189,6 +2220,11 @@ static int handle_publish(int argc, char** argv)
     char runtime_src[PATH_MAX];
     char runtime_dst[PATH_MAX];
     char app_dst[PATH_MAX];
+    char wasm_readme[PATH_MAX];
+    char wasm_run_sh[PATH_MAX];
+    char wasm_run_ps1[PATH_MAX];
+    char wasm_index_html[PATH_MAX];
+    char wasm_main_js[PATH_MAX];
     char manifest_target[64];
     int i;
 
@@ -2209,6 +2245,21 @@ static int handle_publish(int argc, char** argv)
                 return 2;
             }
             out_dir = argv[++i];
+            continue;
+        }
+        if (strcmp(argv[i], "--wasm-profile") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Missing --wasm-profile value.\" nodeId=argv)\n");
+                return 2;
+            }
+            wasm_profile = argv[++i];
+            wasm_profile_set = 1;
+            if (strcmp(wasm_profile, "web") != 0 && strcmp(wasm_profile, "cli") != 0) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Unsupported --wasm-profile value. Use web or cli.\" nodeId=argv)\n");
+                return 2;
+            }
             continue;
         }
         if (program_input == NULL && argv[i][0] != '-') {
@@ -2300,6 +2351,11 @@ static int handle_publish(int argc, char** argv)
             "Err#err1(code=RUN001 message=\"Unsupported publish target RID.\" nodeId=target)\n");
         return 2;
     }
+    if (wasm_profile_set != 0 && strcmp(target, "wasm32") != 0) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"--wasm-profile is only valid with --target wasm32.\" nodeId=argv)\n");
+        return 2;
+    }
     if (!derive_publish_app_name(program_input, publish_app_name, sizeof(publish_app_name))) {
         fprintf(stderr,
             "Err#err1(code=RUN001 message=\"Failed to derive publish app name.\" nodeId=publish)\n");
@@ -2355,6 +2411,82 @@ static int handle_publish(int argc, char** argv)
         fprintf(stderr,
             "Err#err1(code=RUN001 message=\"Failed to copy runtime for target RID. Build target runtime first.\" nodeId=publish)\n");
         return 2;
+    }
+
+    if (strcmp(target, "wasm32") == 0) {
+        char readme_content[1024];
+        if (snprintf(readme_content, sizeof(readme_content),
+                "# %s (wasm32)\n\n"
+                "Artifacts:\n"
+                "- `%s`\n"
+                "- `app.aibc1`\n\n"
+                "Profile: %s\n",
+                publish_app_name,
+                publish_runtime_name,
+                wasm_profile) >= (int)sizeof(readme_content)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Wasm README content overflow.\" nodeId=publish)\n");
+            return 2;
+        }
+        if (!join_path(out_dir, "README.md", wasm_readme, sizeof(wasm_readme)) ||
+            !write_text_file(wasm_readme, readme_content, 0)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Failed to write wasm publish README.\" nodeId=publish)\n");
+            return 2;
+        }
+
+        if (strcmp(wasm_profile, "cli") == 0) {
+            char run_sh_content[512];
+            char run_ps1_content[512];
+            if (snprintf(run_sh_content, sizeof(run_sh_content),
+                    "#!/usr/bin/env bash\nset -euo pipefail\nwasmtime \"./%s\" \"./app.aibc1\" \"$@\"\n",
+                    publish_runtime_name) >= (int)sizeof(run_sh_content) ||
+                snprintf(run_ps1_content, sizeof(run_ps1_content),
+                    "$ErrorActionPreference = 'Stop'\n& wasmtime \".\\%s\" \".\\app.aibc1\" @args\nexit $LASTEXITCODE\n",
+                    publish_runtime_name) >= (int)sizeof(run_ps1_content)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Wasm launcher content overflow.\" nodeId=publish)\n");
+                return 2;
+            }
+            if (!join_path(out_dir, "run.sh", wasm_run_sh, sizeof(wasm_run_sh)) ||
+                !join_path(out_dir, "run.ps1", wasm_run_ps1, sizeof(wasm_run_ps1)) ||
+                !write_text_file(wasm_run_sh, run_sh_content, 1) ||
+                !write_text_file(wasm_run_ps1, run_ps1_content, 0)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Failed to write wasm CLI launcher files.\" nodeId=publish)\n");
+                return 2;
+            }
+        } else {
+            const char* index_html =
+                "<!doctype html>\n"
+                "<html lang=\"en\">\n"
+                "  <head><meta charset=\"utf-8\"><title>AiLang wasm app</title></head>\n"
+                "  <body>\n"
+                "    <h1>AiLang wasm app</h1>\n"
+                "    <pre id=\"log\"></pre>\n"
+                "    <script type=\"module\" src=\"./main.js\"></script>\n"
+                "  </body>\n"
+                "</html>\n";
+            char main_js[1024];
+            if (snprintf(main_js, sizeof(main_js),
+                    "const log = document.getElementById('log');\n"
+                    "const wasmUrl = './%s';\n"
+                    "const appUrl = './app.aibc1';\n"
+                    "log.textContent = 'TODO: host bridge loader not implemented yet. Runtime=' + wasmUrl + ', App=' + appUrl + '\\n';\n",
+                    publish_runtime_name) >= (int)sizeof(main_js)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Wasm web bootstrap content overflow.\" nodeId=publish)\n");
+                return 2;
+            }
+            if (!join_path(out_dir, "index.html", wasm_index_html, sizeof(wasm_index_html)) ||
+                !join_path(out_dir, "main.js", wasm_main_js, sizeof(wasm_main_js)) ||
+                !write_text_file(wasm_index_html, index_html, 0) ||
+                !write_text_file(wasm_main_js, main_js, 0)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Failed to write wasm web files.\" nodeId=publish)\n");
+                return 2;
+            }
+        }
     }
 
     printf("Ok#ok1(type=string value=\"publish-complete\")\n");
