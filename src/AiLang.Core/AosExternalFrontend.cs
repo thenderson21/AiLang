@@ -92,15 +92,22 @@ public static class AosExternalFrontend
             return env;
         }
 
-        var candidates = new[]
-        {
-            HostFileSystem.Combine(HostEnvironment.BaseDirectory, "aos_frontend"),
-            HostFileSystem.Combine(HostEnvironment.BaseDirectory, "aos_frontend.exe"),
-            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "tools", "aos_frontend"),
-            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "tools", "aos_frontend.exe"),
-            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "aos_frontend"),
-            HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "aos_frontend.exe")
-        };
+        var candidates = OperatingSystem.IsWindows()
+            ? new[]
+            {
+                HostFileSystem.Combine(HostEnvironment.BaseDirectory, "aos_frontend.exe"),
+                HostFileSystem.Combine(HostEnvironment.BaseDirectory, "aos_frontend"),
+                HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "tools", "aos_frontend.exe"),
+                HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "tools", "aos_frontend"),
+                HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "aos_frontend.exe"),
+                HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "aos_frontend")
+            }
+            : new[]
+            {
+                HostFileSystem.Combine(HostEnvironment.BaseDirectory, "aos_frontend"),
+                HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "tools", "aos_frontend"),
+                HostFileSystem.Combine(HostFileSystem.GetCurrentDirectory(), "aos_frontend")
+            };
 
         foreach (var candidate in candidates)
         {
