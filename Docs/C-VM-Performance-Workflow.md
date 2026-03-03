@@ -73,6 +73,26 @@ loop_compute|examples/bench/loop_compute.aos|
 CASE_FILE=/absolute/path/to/bench-cases.txt ./scripts/bench-c-vm.sh
 ```
 
+## 2.1) Regression gate (baseline-enforced)
+
+Run the benchmark regression gate against frozen baseline values:
+
+```bash
+./scripts/aivm-bench-gate.sh
+```
+
+Optional tuning:
+
+```bash
+AIVM_BENCH_ITERATIONS=10 AIVM_BENCH_MAX_REGRESSION_PCT=5 ./scripts/aivm-bench-gate.sh
+```
+
+Inputs:
+
+- Baseline file: `src/AiVM.Core/native/tests/compiler_runtime_bench_baseline.tsv`
+- Current run: `./tools/airun bench --iterations <n> --human`
+- Policy: fail if any baseline case is missing from current output or exceeds `max_regression_pct`.
+
 ## 3) Profiling
 
 Profiles one program and writes artifacts in `.artifacts/profile/c-vm/<timestamp>/`.
@@ -105,4 +125,3 @@ C_VM_BIN=./tools/airun-c C_VM_RUN_ARGS="run --vm=bytecode" ./scripts/profile-c-v
 - Keep benchmark inputs deterministic and side-effect-free.
 - For apples-to-apples runs, use the same machine, power mode, and background-load conditions.
 - The C VM should match canonical output and exit codes before treating benchmark numbers as valid.
-

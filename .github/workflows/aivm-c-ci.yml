@@ -13,9 +13,11 @@ on:
       - 'scripts/aivm-dualrun-parity.sh'
       - 'scripts/aivm-dualrun-parity-manifest.sh'
       - 'scripts/aivm-dualrun-parity-manifest.ps1'
+      - 'scripts/aivm-bench-gate.sh'
       - 'src/AiVM.Core/native/tests/parity_commands.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_portable.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_ci.txt'
+      - 'src/AiVM.Core/native/tests/compiler_runtime_bench_baseline.tsv'
       - '.github/workflows/aivm-c-ci.yml'
   push:
     branches:
@@ -31,9 +33,11 @@ on:
       - 'scripts/aivm-dualrun-parity.sh'
       - 'scripts/aivm-dualrun-parity-manifest.sh'
       - 'scripts/aivm-dualrun-parity-manifest.ps1'
+      - 'scripts/aivm-bench-gate.sh'
       - 'src/AiVM.Core/native/tests/parity_commands.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_portable.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_ci.txt'
+      - 'src/AiVM.Core/native/tests/compiler_runtime_bench_baseline.tsv'
       - '.github/workflows/aivm-c-ci.yml'
 
 jobs:
@@ -56,6 +60,12 @@ jobs:
       - name: Perf smoke (Linux)
         if: runner.os == 'Linux'
         run: AIVM_PERF_SMOKE=1 AIVM_PERF_RUNS=10 ./scripts/test-aivm-c.sh
+
+      - name: Benchmark gate (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          ./scripts/build-airun.sh
+          ./scripts/aivm-bench-gate.sh
 
       - name: Configure + build + test (Windows)
         if: runner.os == 'Windows'
