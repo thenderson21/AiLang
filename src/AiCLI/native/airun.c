@@ -20,6 +20,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/wait.h>
+/* Some test translation units include this file directly without POSIX feature
+   macros, which can hide realpath(3) declaration on glibc. */
+extern char* realpath(const char* path, char* resolved_path);
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
