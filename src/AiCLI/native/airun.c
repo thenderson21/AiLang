@@ -374,19 +374,30 @@ static int resolve_executable_path(const char* argv0, char* out, size_t out_len)
     }
     return GetModuleFileNameA(NULL, out, (DWORD)out_len) > 0U;
 #else
+    char cwd[PATH_MAX];
     if (out != NULL && out_len > 0U) {
         out[0] = '\0';
     }
     if (argv0 == NULL || out == NULL || out_len == 0U) {
         return 0;
     }
-    if (realpath(argv0, out) != NULL) {
-        return 1;
-    }
-    if (strchr(argv0, '/') == NULL && strchr(argv0, '\\') == NULL) {
-        if (find_executable_on_path(argv0, out, out_len)) {
+    if (strchr(argv0, '/') != NULL || strchr(argv0, '\\') != NULL) {
+        if (argv0[0] == '/') {
+            if (snprintf(out, out_len, "%s", argv0) < (int)out_len) {
+                return 1;
+            }
+            return 0;
+        }
+        if (aivm_getcwd(cwd, sizeof(cwd)) == NULL) {
+            return 0;
+        }
+        if (snprintf(out, out_len, "%s/%s", cwd, argv0) < (int)out_len) {
             return 1;
         }
+        return 0;
+    }
+    if (find_executable_on_path(argv0, out, out_len)) {
+        return 1;
     }
     return 0;
 #endif
@@ -426,8 +437,10 @@ static int find_executable_on_path(const char* name, char* out, size_t out_len)
                 candidate[segment_len] = '\0';
                 written = snprintf(candidate + segment_len, sizeof(candidate) - segment_len, "%c%s", AIVM_PATH_SEP, name);
                 if (written > 0 && (size_t)written < (sizeof(candidate) - segment_len) &&
-                    realpath(candidate, out) != NULL) {
-                    return 1;
+                    access(candidate, X_OK) == 0) {
+                    if (snprintf(out, out_len, "%s", candidate) < (int)out_len) {
+                        return 1;
+                    }
                 }
             }
         }
