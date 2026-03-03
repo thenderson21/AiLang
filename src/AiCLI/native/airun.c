@@ -824,6 +824,7 @@ static void print_usage(void)
         "Usage: airun <command> [options]\n"
         "\n"
         "Commands:\n"
+        "  build <program(.aibc1|.aos|project-dir|project.aiproj)> [--out <dir>]\n"
         "  run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>]\n"
         "  repl\n"
         "  bench [--iterations <n>] [--human]\n"
@@ -1676,20 +1677,6 @@ static int parse_simple_program_aos_to_program_file(const char* aos_path, AivmPr
     return parse_simple_program_aos_to_program_text(source, out_program);
 }
 
-static int run_native_simple_program_aos(const char* aos_path, const char* const* process_argv, size_t process_argv_count)
-{
-    AivmProgram program;
-
-    if (!parse_simple_program_aos_to_program_file(aos_path, &program)) {
-        return -1;
-    }
-    return run_native_compiled_program(
-        &program,
-        "Native simple source execution failed.",
-        process_argv,
-        process_argv_count);
-}
-
 static int run_native_bytecode_aos(const char* aos_path, const char* const* process_argv, size_t process_argv_count)
 {
     AivmProgram program;
@@ -1820,6 +1807,69 @@ static int write_program_as_aibc1(const AivmProgram* program, const char* out_pa
     return 1;
 }
 
+static int compile_input_to_aibc1(const char* program_input, const char* out_dir, char* out_aibc1, size_t out_aibc1_len)
+{
+    char resolved_program[PATH_MAX];
+    char source_aos[PATH_MAX];
+    char app_dst[PATH_MAX];
+    AivmProgram program;
+
+    if (program_input == NULL || out_dir == NULL || out_aibc1 == NULL || out_aibc1_len == 0U) {
+        return 0;
+    }
+    if (!ensure_directory(out_dir)) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Failed to create build output directory.\" nodeId=outDir)\n");
+        return 0;
+    }
+    if (!join_path(out_dir, "app.aibc1", app_dst, sizeof(app_dst))) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Build output path overflow.\" nodeId=build)\n");
+        return 0;
+    }
+
+    if (resolve_input_to_aibc1(program_input, resolved_program, sizeof(resolved_program))) {
+        if (!copy_file(resolved_program, app_dst)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Failed to copy app bytecode for build.\" nodeId=build)\n");
+            return 0;
+        }
+    } else if (resolve_input_to_aos(program_input, source_aos, sizeof(source_aos))) {
+        if (parse_bytecode_aos_to_program_file(source_aos, &program)) {
+            if (!write_program_as_aibc1(&program, app_dst)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Failed to emit native AiBC1 for build.\" nodeId=build)\n");
+                return 0;
+            }
+        } else if (parse_simple_program_aos_to_program_file(source_aos, &program)) {
+            if (!write_program_as_aibc1(&program, app_dst)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Failed to emit native AiBC1 for build.\" nodeId=build)\n");
+                return 0;
+            }
+        } else if (source_file_looks_like_bytecode_aos(source_aos)) {
+            fprintf(stderr,
+                "Err#err1(code=DEV008 message=\"Native build cannot encode this bytecode AOS shape yet. Build precompiled .aibc1.\" nodeId=program)\n");
+            return 0;
+        } else {
+            fprintf(stderr,
+                "Err#err1(code=DEV008 message=\"Build needs prebuilt .aibc1 unless source is supported Program#/Bytecode# AOS.\" nodeId=program)\n");
+            return 0;
+        }
+    } else {
+        fprintf(stderr,
+            "Err#err1(code=DEV008 message=\"Build needs prebuilt .aibc1 unless source is supported Program#/Bytecode# AOS.\" nodeId=program)\n");
+        return 0;
+    }
+
+    if (snprintf(out_aibc1, out_aibc1_len, "%s", app_dst) >= (int)out_aibc1_len) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Build output path overflow.\" nodeId=build)\n");
+        return 0;
+    }
+    return 1;
+}
+
 typedef struct {
     const char* program_path;
     int app_arg_start;
@@ -1881,6 +1931,8 @@ static int run_via_resolved_input(const char* input, const char* const* process_
 {
     char resolved[PATH_MAX];
     char source_aos[PATH_MAX];
+    char build_out[PATH_MAX];
+    char built_aibc1[PATH_MAX];
     if (input != NULL && ends_with(input, ".aibundle") && file_exists(input)) {
         int rc = run_native_bundle(input, process_argv, process_argv_count);
         if (rc >= 0) {
@@ -1894,23 +1946,59 @@ static int run_via_resolved_input(const char* input, const char* const* process_
         return run_native_aibc1(resolved, process_argv, process_argv_count);
     }
     if (resolve_input_to_aos(input, source_aos, sizeof(source_aos))) {
-        int rc = run_native_bytecode_aos(source_aos, process_argv, process_argv_count);
-        if (rc >= 0) {
-            return rc;
-        }
-        if (source_file_looks_like_bytecode_aos(source_aos)) {
-            fprintf(stderr,
-                "Err#err1(code=DEV008 message=\"Native bytecode AOS input uses unsupported fields. Build precompiled .aibc1 or use supported instruction attributes.\" nodeId=program)\n");
-            return 2;
-        }
-        rc = run_native_simple_program_aos(source_aos, process_argv, process_argv_count);
-        if (rc >= 0) {
-            return rc;
-        }
+        (void)source_aos;
+    }
+    if (!join_path(".tmp", "airun-build-run", build_out, sizeof(build_out))) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Build temp path overflow.\" nodeId=run)\n");
+        return 2;
+    }
+    if (compile_input_to_aibc1(input, build_out, built_aibc1, sizeof(built_aibc1))) {
+        return run_native_aibc1(built_aibc1, process_argv, process_argv_count);
     }
     fprintf(stderr,
-        "Err#err1(code=DEV008 message=\"Native C runtime cannot compile this source/project shape yet. Provide .aibc1 or supported Program#/Bytecode# AOS.\" nodeId=program)\n");
+        "Err#err1(code=DEV008 message=\"Native C runtime cannot build this source/project shape yet. Provide .aibc1 or supported Program#/Bytecode# AOS.\" nodeId=program)\n");
     return 2;
+}
+
+static int handle_build(int argc, char** argv)
+{
+    const char* program_input = NULL;
+    const char* out_dir = "dist";
+    char built_aibc1[PATH_MAX];
+    int i;
+
+    for (i = 2; i < argc; i++) {
+        if (strcmp(argv[i], "--out") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Missing --out value.\" nodeId=argv)\n");
+                return 2;
+            }
+            out_dir = argv[++i];
+            continue;
+        }
+        if (program_input == NULL && argv[i][0] != '-') {
+            program_input = argv[i];
+            continue;
+        }
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Unsupported build argument.\" nodeId=argv)\n");
+        return 2;
+    }
+
+    if (program_input == NULL) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Missing build program path.\" nodeId=argv)\n");
+        return 2;
+    }
+
+    if (!compile_input_to_aibc1(program_input, out_dir, built_aibc1, sizeof(built_aibc1))) {
+        return 2;
+    }
+
+    printf("Ok#ok1(type=string value=\"build-complete\")\n");
+    return 0;
 }
 
 static int handle_run(int argc, char** argv)
@@ -2211,15 +2299,13 @@ static int handle_publish(int argc, char** argv)
     const char* out_dir = "dist";
     const char* wasm_profile = "web";
     int wasm_profile_set = 0;
-    char resolved_program[PATH_MAX];
-    char source_aos[PATH_MAX];
+    char built_aibc1[PATH_MAX];
     char artifact_dir[PATH_MAX];
     char runtime_bin[64];
     char publish_app_name[128];
     char publish_runtime_name[160];
     char runtime_src[PATH_MAX];
     char runtime_dst[PATH_MAX];
-    char app_dst[PATH_MAX];
     char wasm_readme[PATH_MAX];
     char wasm_run_sh[PATH_MAX];
     char wasm_run_ps1[PATH_MAX];
@@ -2277,59 +2363,8 @@ static int handle_publish(int argc, char** argv)
         return 2;
     }
 
-    if (!resolve_input_to_aibc1(program_input, resolved_program, sizeof(resolved_program))) {
-        if (resolve_input_to_aos(program_input, source_aos, sizeof(source_aos))) {
-            AivmProgram program;
-            if (parse_bytecode_aos_to_program_file(source_aos, &program)) {
-                if (!ensure_directory(out_dir)) {
-                    fprintf(stderr,
-                        "Err#err1(code=RUN001 message=\"Failed to create publish output directory.\" nodeId=outDir)\n");
-                    return 2;
-                }
-                if (!join_path(out_dir, "app.aibc1", app_dst, sizeof(app_dst))) {
-                    fprintf(stderr,
-                        "Err#err1(code=RUN001 message=\"App destination path overflow.\" nodeId=publish)\n");
-                    return 2;
-                }
-                if (!write_program_as_aibc1(&program, app_dst)) {
-                    fprintf(stderr,
-                        "Err#err1(code=RUN001 message=\"Failed to emit native AiBC1 for publish.\" nodeId=publish)\n");
-                    return 2;
-                }
-                resolved_program[0] = '\0';
-            } else {
-                if (parse_simple_program_aos_to_program_file(source_aos, &program)) {
-                    if (!ensure_directory(out_dir)) {
-                        fprintf(stderr,
-                            "Err#err1(code=RUN001 message=\"Failed to create publish output directory.\" nodeId=outDir)\n");
-                        return 2;
-                    }
-                    if (!join_path(out_dir, "app.aibc1", app_dst, sizeof(app_dst))) {
-                        fprintf(stderr,
-                            "Err#err1(code=RUN001 message=\"App destination path overflow.\" nodeId=publish)\n");
-                        return 2;
-                    }
-                    if (!write_program_as_aibc1(&program, app_dst)) {
-                        fprintf(stderr,
-                            "Err#err1(code=RUN001 message=\"Failed to emit native AiBC1 for publish.\" nodeId=publish)\n");
-                        return 2;
-                    }
-                    resolved_program[0] = '\0';
-                } else if (source_file_looks_like_bytecode_aos(source_aos)) {
-                    fprintf(stderr,
-                        "Err#err1(code=DEV008 message=\"Native publish cannot encode this bytecode AOS shape yet. Build precompiled .aibc1.\" nodeId=program)\n");
-                    return 2;
-                } else {
-                    fprintf(stderr,
-                        "Err#err1(code=DEV008 message=\"Publish needs prebuilt .aibc1 unless source is bytecode-style AOS.\" nodeId=program)\n");
-                    return 2;
-                }
-            }
-        } else {
-            fprintf(stderr,
-                "Err#err1(code=DEV008 message=\"Publish needs prebuilt .aibc1 unless source is bytecode-style AOS.\" nodeId=program)\n");
-            return 2;
-        }
+    if (!compile_input_to_aibc1(program_input, out_dir, built_aibc1, sizeof(built_aibc1))) {
+        return 2;
     }
 
     if (target == NULL) {
@@ -2394,19 +2429,6 @@ static int handle_publish(int argc, char** argv)
             "Err#err1(code=RUN001 message=\"Runtime destination path overflow.\" nodeId=publish)\n");
         return 2;
     }
-    if (resolved_program[0] != '\0') {
-        if (!join_path(out_dir, "app.aibc1", app_dst, sizeof(app_dst))) {
-            fprintf(stderr,
-                "Err#err1(code=RUN001 message=\"App destination path overflow.\" nodeId=publish)\n");
-            return 2;
-        }
-        if (!copy_file(resolved_program, app_dst)) {
-            fprintf(stderr,
-                "Err#err1(code=RUN001 message=\"Failed to copy app bytecode for publish.\" nodeId=publish)\n");
-            return 2;
-        }
-    }
-
     if (!copy_runtime_file(runtime_src, runtime_dst)) {
         fprintf(stderr,
             "Err#err1(code=RUN001 message=\"Failed to copy runtime for target RID. Build target runtime first.\" nodeId=publish)\n");
@@ -2528,6 +2550,9 @@ int main(int argc, char** argv)
     }
     if (strcmp(argv[1], "run") == 0) {
         return handle_run(argc, argv);
+    }
+    if (strcmp(argv[1], "build") == 0) {
+        return handle_build(argc, argv);
     }
     if (strcmp(argv[1], "serve") == 0) {
         return handle_serve(argc, argv);
