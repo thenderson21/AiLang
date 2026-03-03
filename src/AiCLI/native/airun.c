@@ -902,13 +902,101 @@ static int native_syscall_process_argv(
     return AIVM_SYSCALL_OK;
 }
 
+static int is_safe_http_url(const char* url)
+{
+    size_t i;
+    if (url == NULL) {
+        return 0;
+    }
+    if (!(starts_with(url, "http://") || starts_with(url, "https://"))) {
+        return 0;
+    }
+    for (i = 0U; url[i] != '\0'; i += 1U) {
+        unsigned char c = (unsigned char)url[i];
+        if (isalnum(c) != 0) {
+            continue;
+        }
+        if (c == ':' || c == '/' || c == '?' || c == '&' || c == '=' || c == '%' ||
+            c == '.' || c == '_' || c == '-' || c == '+' || c == '~' || c == '#') {
+            continue;
+        }
+        return 0;
+    }
+    return 1;
+}
+
+static int native_syscall_http_get(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    static char response_buf[32768];
+    char cmd[1024];
+    FILE* pipe;
+    size_t used = 0U;
+    size_t nread;
+    int pipe_status;
+
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (!is_safe_http_url(args[0].string_value)) {
+        *result = aivm_value_string("ERR http_get requires safe http/https URL.");
+        return AIVM_SYSCALL_OK;
+    }
+    if (snprintf(cmd, sizeof(cmd),
+            "curl -LsS --connect-timeout 5 --max-time 15 %s",
+            args[0].string_value) >= (int)sizeof(cmd)) {
+        *result = aivm_value_string("ERR http_get URL too long.");
+        return AIVM_SYSCALL_OK;
+    }
+#ifdef _WIN32
+    pipe = _popen(cmd, "rb");
+#else
+    pipe = popen(cmd, "r");
+#endif
+    if (pipe == NULL) {
+        *result = aivm_value_string("ERR http_get failed to start curl.");
+        return AIVM_SYSCALL_OK;
+    }
+    while (used + 1U < sizeof(response_buf)) {
+        nread = fread(response_buf + used, 1U, sizeof(response_buf) - used - 1U, pipe);
+        used += nread;
+        if (nread == 0U) {
+            break;
+        }
+    }
+    response_buf[used] = '\0';
+#ifdef _WIN32
+    pipe_status = _pclose(pipe);
+#else
+    pipe_status = pclose(pipe);
+#endif
+    if (pipe_status != 0 && used == 0U) {
+        *result = aivm_value_string("ERR http_get curl failed.");
+        return AIVM_SYSCALL_OK;
+    }
+    while (used > 0U && (response_buf[used - 1U] == '\n' || response_buf[used - 1U] == '\r')) {
+        used -= 1U;
+        response_buf[used] = '\0';
+    }
+    *result = aivm_value_string(response_buf);
+    return AIVM_SYSCALL_OK;
+}
+
 static int run_native_compiled_program(
     const AivmProgram* program,
     const char* vm_error_message,
     const char* const* process_argv,
     size_t process_argv_count)
 {
-    AivmSyscallBinding bindings[4];
+    AivmSyscallBinding bindings[5];
     AivmCResult result;
 
     if (program == NULL) {
@@ -923,10 +1011,12 @@ static int run_native_compiled_program(
     bindings[2].handler = native_syscall_stdout_write_line;
     bindings[3].target = "sys.process_argv";
     bindings[3].handler = native_syscall_process_argv;
+    bindings[4].target = "sys.http_get";
+    bindings[4].handler = native_syscall_http_get;
     result = aivm_c_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        4U,
+        5U,
         process_argv,
         process_argv_count);
 
