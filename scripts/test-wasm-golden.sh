@@ -30,7 +30,7 @@ mkdir -p "${PUBLISH_DIR}"
 set +e
 ./tools/airun run "${CASE_PATH}" --vm=c >"${NATIVE_OUT}" 2>&1
 native_rc=$?
-wasmtime "${PUBLISH_DIR}/${CASE_NAME}.wasm" "${PUBLISH_DIR}/app.aibc1" >"${WASM_OUT}" 2>&1
+wasmtime run -C cache=n "${PUBLISH_DIR}/${CASE_NAME}.wasm" - < "${PUBLISH_DIR}/app.aibc1" >"${WASM_OUT}" 2>&1
 wasm_rc=$?
 set -e
 

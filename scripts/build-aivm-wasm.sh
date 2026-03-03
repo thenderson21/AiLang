@@ -26,6 +26,8 @@ emcc -O2 -std=c17 -Wall -Wextra -Werror \
   "${NATIVE_SRC_DIR}/aivm_runtime.c" \
   "${NATIVE_SRC_DIR}/aivm_c_api.c" \
   -s STANDALONE_WASM=1 \
+  -s FILESYSTEM=1 \
+  -s STACK_SIZE=262144 \
   -o "${OUT_WASM}"
 
 echo "${OUT_WASM}"

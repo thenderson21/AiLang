@@ -2461,10 +2461,10 @@ static int handle_publish(int argc, char** argv)
             char run_sh_content[512];
             char run_ps1_content[512];
             if (snprintf(run_sh_content, sizeof(run_sh_content),
-                    "#!/usr/bin/env bash\nset -euo pipefail\nwasmtime \"./%s\" \"./app.aibc1\" \"$@\"\n",
+                    "#!/usr/bin/env bash\nset -euo pipefail\nwasmtime run -C cache=n \"./%s\" - \"$@\" < \"./app.aibc1\"\n",
                     publish_runtime_name) >= (int)sizeof(run_sh_content) ||
                 snprintf(run_ps1_content, sizeof(run_ps1_content),
-                    "$ErrorActionPreference = 'Stop'\n& wasmtime \".\\%s\" \".\\app.aibc1\" @args\nexit $LASTEXITCODE\n",
+                    "$ErrorActionPreference = 'Stop'\nGet-Content -Encoding Byte -ReadCount 0 \".\\app.aibc1\" | & wasmtime run -C cache=n \".\\%s\" \"-\" @args\nexit $LASTEXITCODE\n",
                     publish_runtime_name) >= (int)sizeof(run_ps1_content)) {
                 fprintf(stderr,
                     "Err#err1(code=RUN001 message=\"Wasm launcher content overflow.\" nodeId=publish)\n");
