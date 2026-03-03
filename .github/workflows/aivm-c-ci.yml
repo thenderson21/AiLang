@@ -6,9 +6,11 @@ on:
     paths:
       - 'src/AiVM.Core/native/**'
       - 'scripts/test-aivm-c.sh'
+      - 'scripts/test-aivm-c.ps1'
       - 'scripts/aivm-parity-compare.sh'
       - 'scripts/aivm-dualrun-parity.sh'
       - 'scripts/aivm-dualrun-parity-manifest.sh'
+      - 'scripts/aivm-dualrun-parity-manifest.ps1'
       - 'src/AiVM.Core/native/tests/parity_commands.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_portable.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_ci.txt'
@@ -20,9 +22,11 @@ on:
     paths:
       - 'src/AiVM.Core/native/**'
       - 'scripts/test-aivm-c.sh'
+      - 'scripts/test-aivm-c.ps1'
       - 'scripts/aivm-parity-compare.sh'
       - 'scripts/aivm-dualrun-parity.sh'
       - 'scripts/aivm-dualrun-parity-manifest.sh'
+      - 'scripts/aivm-dualrun-parity-manifest.ps1'
       - 'src/AiVM.Core/native/tests/parity_commands.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_portable.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_ci.txt'
@@ -49,41 +53,11 @@ jobs:
         if: runner.os == 'Linux'
         run: AIVM_PERF_SMOKE=1 AIVM_PERF_RUNS=10 ./scripts/test-aivm-c.sh
 
-      - name: Configure + build (Windows)
+      - name: Configure + build + test (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          cmake -S src/AiVM.Core/native -B .tmp/aivm-c-build -G "Visual Studio 17 2022" -A x64
-          cmake --build .tmp/aivm-c-build --config Debug
-
-      - name: Compile native airun wrapper (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          cl /nologo /std:c17 /W4 /D_CRT_SECURE_NO_WARNINGS /I .\src\AiVM.Core\native\include /Fe:.\tools\airun.exe `
-            .\src\AiCLI\native\airun.c `
-            .\src\AiVM.Core\native\src\aivm_types.c `
-            .\src\AiVM.Core\native\src\aivm_vm.c `
-            .\src\AiVM.Core\native\src\aivm_program.c `
-            .\src\AiVM.Core\native\src\aivm_syscall.c `
-            .\src\AiVM.Core\native\src\aivm_syscall_contracts.c `
-            .\src\AiVM.Core\native\src\aivm_parity.c `
-            .\src\AiVM.Core\native\src\aivm_runtime.c `
-            .\src\AiVM.Core\native\src\aivm_c_api.c
-          if (!(Test-Path .\tools\airun.exe)) { throw "failed to compile tools/airun.exe" }
-          Remove-Item -Force .\airun.obj -ErrorAction SilentlyContinue
-          Remove-Item -Force .\aivm_*.obj -ErrorAction SilentlyContinue
-
-      - name: Run parity manifest (Windows portable set)
-        if: runner.os == 'Windows'
-        shell: bash
-        run: |
-          if [[ -x ./tools/airun || -x ./tools/airun.exe ]]; then
-            ./scripts/aivm-dualrun-parity-manifest.sh src/AiVM.Core/native/tests/parity_commands_portable.txt .tmp/aivm-dualrun-manifest/report.txt
-          else
-            mkdir -p .tmp/aivm-dualrun-manifest
-            printf 'parity manifest skipped: missing ./tools/airun(.exe)\n' > .tmp/aivm-dualrun-manifest/report.txt
-          fi
+          ./scripts/test-aivm-c.ps1
 
       - name: Upload parity report
         if: always()
