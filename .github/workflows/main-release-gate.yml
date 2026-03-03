@@ -165,6 +165,20 @@ jobs:
           if (-not (Test-Path .\dist\compiler\format.aos)) { throw 'missing compiler assets' }
           if (-not (Test-Path .\dist\compiler\runtime.aos)) { throw 'missing compiler assets' }
 
+      - name: Runtime smoke (Unix)
+        if: matrix.platform != 'windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          "./dist/${{ matrix.airun }}" run ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos --vm=c >/dev/null
+
+      - name: Runtime smoke (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          & ".\\dist\\${{ matrix.airun }}" run .\src\AiVM.Core\native\tests\parity_cases\vm_c_execute_src_main_params.aos --vm=c | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'native runtime smoke failed' }
+
   wasm-runtime-artifact:
     name: wasm-runtime-artifact
     runs-on: ubuntu-latest

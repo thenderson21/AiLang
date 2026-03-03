@@ -91,6 +91,20 @@ jobs:
           ./scripts/build-airun.ps1
           if (-not (Test-Path .\tools\airun.exe)) { throw 'missing tools/airun.exe' }
 
+      - name: Runtime smoke (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./tools/airun run ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos --vm=c >/dev/null
+
+      - name: Runtime smoke (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & .\tools\airun.exe run .\src\AiVM.Core\native\tests\parity_cases\vm_c_execute_src_main_params.aos --vm=c | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw 'native runtime smoke failed' }
+
   package:
     name: package-${{ matrix.rid }}
     runs-on: ${{ matrix.os }}

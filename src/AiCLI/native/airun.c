@@ -30,6 +30,7 @@
 #include "aivm_c_api.h"
 
 static int join_path(const char* left, const char* right, char* out, size_t out_len);
+static int find_executable_on_path(const char* name, char* out, size_t out_len);
 
 static int ends_with(const char* value, const char* suffix)
 {
@@ -304,10 +305,69 @@ static int resolve_executable_path(const char* argv0, char* out, size_t out_len)
     }
     return GetModuleFileNameA(NULL, out, (DWORD)out_len) > 0U;
 #else
+    if (out != NULL && out_len > 0U) {
+        out[0] = '\0';
+    }
     if (argv0 == NULL || out == NULL || out_len == 0U) {
         return 0;
     }
-    return realpath(argv0, out) != NULL;
+    if (realpath(argv0, out) != NULL) {
+        return 1;
+    }
+    if (strchr(argv0, '/') == NULL && strchr(argv0, '\\') == NULL) {
+        if (find_executable_on_path(argv0, out, out_len)) {
+            return 1;
+        }
+    }
+    return 0;
+#endif
+}
+
+static int find_executable_on_path(const char* name, char* out, size_t out_len)
+{
+#ifdef _WIN32
+    (void)name;
+    (void)out;
+    (void)out_len;
+    return 0;
+#else
+    const char* path_env;
+    const char* segment;
+    const char* end;
+
+    if (name == NULL || out == NULL || out_len == 0U) {
+        return 0;
+    }
+
+    path_env = getenv("PATH");
+    if (path_env == NULL || path_env[0] == '\0') {
+        return 0;
+    }
+
+    segment = path_env;
+    while (segment != NULL && segment[0] != '\0') {
+        char candidate[PATH_MAX];
+        size_t segment_len;
+        end = strchr(segment, ':');
+        segment_len = (end == NULL) ? strlen(segment) : (size_t)(end - segment);
+        if (segment_len > 0U && segment_len < sizeof(candidate)) {
+            if (segment_len + 1U + strlen(name) + 1U < sizeof(candidate)) {
+                int written;
+                memcpy(candidate, segment, segment_len);
+                candidate[segment_len] = '\0';
+                written = snprintf(candidate + segment_len, sizeof(candidate) - segment_len, "%c%s", AIVM_PATH_SEP, name);
+                if (written > 0 && (size_t)written < (sizeof(candidate) - segment_len) &&
+                    realpath(candidate, out) != NULL) {
+                    return 1;
+                }
+            }
+        }
+        if (end == NULL) {
+            break;
+        }
+        segment = end + 1;
+    }
+    return 0;
 #endif
 }
 
@@ -2298,16 +2358,20 @@ int main(int argc, char** argv)
     char bundled_aibc1[PATH_MAX];
     const char* exe_base;
 
-    if (argc <= 1 || argv == NULL) {
-        if (resolve_executable_path((argv != NULL) ? argv[0] : NULL, exe_path, sizeof(exe_path)) &&
-            dirname_of(exe_path, exe_dir, sizeof(exe_dir)) &&
-            join_path(exe_dir, "app.aibc1", bundled_aibc1, sizeof(bundled_aibc1)) &&
-            file_exists(bundled_aibc1)) {
-            exe_base = path_basename_ptr(exe_path);
-            if (exe_base != NULL && strcmp(exe_base, "airun") != 0 && strcmp(exe_base, "airun.exe") != 0) {
-                return run_native_aibc1(bundled_aibc1, NULL, 0U);
-            }
+    if (argv != NULL &&
+        resolve_executable_path(argv[0], exe_path, sizeof(exe_path)) &&
+        dirname_of(exe_path, exe_dir, sizeof(exe_dir)) &&
+        join_path(exe_dir, "app.aibc1", bundled_aibc1, sizeof(bundled_aibc1)) &&
+        file_exists(bundled_aibc1)) {
+        exe_base = path_basename_ptr(exe_path);
+        if (exe_base != NULL && strcmp(exe_base, "airun") != 0 && strcmp(exe_base, "airun.exe") != 0) {
+            const char* const* app_argv = (argc > 1) ? (const char* const*)&argv[1] : NULL;
+            size_t app_argc = (argc > 1) ? (size_t)(argc - 1) : 0U;
+            return run_native_aibc1(bundled_aibc1, app_argv, app_argc);
         }
+    }
+
+    if (argc <= 1 || argv == NULL) {
         print_usage();
         return 2;
     }
