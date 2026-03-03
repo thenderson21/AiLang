@@ -31,6 +31,7 @@
 
 static int join_path(const char* left, const char* right, char* out, size_t out_len);
 static int find_executable_on_path(const char* name, char* out, size_t out_len);
+static int simple_add_string_const(AivmProgram* program, const char* value, size_t* out_idx);
 
 static int ends_with(const char* value, const char* suffix)
 {
@@ -1284,7 +1285,7 @@ static int parse_bytecode_aos_to_program_text(const char* source, AivmProgram* o
     aivm_program_clear(out_program);
     out_program->instructions = out_program->instruction_storage;
     out_program->constants = out_program->constant_storage;
-    out_program->format_version = 1U;
+    out_program->format_version = 2U;
     out_program->format_flags = 0U;
 
     p = source;
@@ -1356,11 +1357,12 @@ static int parse_bytecode_aos_to_program_text(const char* source, AivmProgram* o
         const char* rparen;
         char attrs[512];
         char op[64];
-        char s_value[64];
+        char s_value[512];
         int64_t a = 0;
         int64_t b = 0;
         AivmOpcode opcode;
         size_t n;
+        int64_t s_index = -1;
 
         if (out_program->instruction_count >= AIVM_PROGRAM_MAX_INSTRUCTIONS || lparen == NULL) {
             return 0;
@@ -1381,7 +1383,7 @@ static int parse_bytecode_aos_to_program_text(const char* source, AivmProgram* o
         }
         (void)parse_attr_int64(attrs, "a", &a);
         if (has_attr_key(attrs, "b")) {
-            if (!parse_attr_int64(attrs, "b", &b) || b != 0) {
+            if (!parse_attr_int64(attrs, "b", &b)) {
                 return 0;
             }
         }
@@ -1390,12 +1392,24 @@ static int parse_bytecode_aos_to_program_text(const char* source, AivmProgram* o
                 return 0;
             }
             if (s_value[0] != '\0') {
-                return 0;
+                char s_unescaped[512];
+                size_t s_const_index = 0U;
+                if (!unescape_string(s_value, s_unescaped, sizeof(s_unescaped))) {
+                    return 0;
+                }
+                if (!simple_add_string_const(out_program, s_unescaped, &s_const_index)) {
+                    return 0;
+                }
+                s_index = (int64_t)s_const_index;
+            } else {
+                s_index = -1;
             }
         }
 
         out_program->instruction_storage[out_program->instruction_count].opcode = opcode;
         out_program->instruction_storage[out_program->instruction_count].operand_int = a;
+        out_program->instruction_storage[out_program->instruction_count].operand_secondary = b;
+        out_program->instruction_storage[out_program->instruction_count].operand_string_constant_index = s_index;
         out_program->instruction_count += 1U;
         p = rparen + 1;
     }
@@ -1862,6 +1876,7 @@ static void write_i64_le(FILE* f, int64_t value)
 static int write_program_as_aibc1(const AivmProgram* program, const char* out_path)
 {
     FILE* f;
+    const uint32_t format_version = 2U;
     uint32_t section_count = 1U;
     uint32_t inst_payload_size;
     uint32_t const_payload_size = 4U;
@@ -1891,10 +1906,10 @@ static int write_program_as_aibc1(const AivmProgram* program, const char* out_pa
         section_count = 2U;
     }
 
-    if (program->instruction_count > (size_t)((0xffffffffU - 4U) / 12U)) {
+    if (program->instruction_count > (size_t)((0xffffffffU - 4U) / 28U)) {
         return 0;
     }
-    inst_payload_size = 4U + (uint32_t)(program->instruction_count * 12U);
+    inst_payload_size = 4U + (uint32_t)(program->instruction_count * 28U);
 
     f = fopen(out_path, "wb");
     if (f == NULL) {
@@ -1902,7 +1917,7 @@ static int write_program_as_aibc1(const AivmProgram* program, const char* out_pa
     }
 
     (void)fwrite("AIBC", 1U, 4U, f);
-    write_u32_le(f, 1U);
+    write_u32_le(f, format_version);
     write_u32_le(f, 0U);
     write_u32_le(f, section_count);
 
@@ -1912,6 +1927,8 @@ static int write_program_as_aibc1(const AivmProgram* program, const char* out_pa
     for (i = 0U; i < program->instruction_count; i += 1U) {
         write_u32_le(f, (uint32_t)program->instruction_storage[i].opcode);
         write_i64_le(f, program->instruction_storage[i].operand_int);
+        write_i64_le(f, program->instruction_storage[i].operand_secondary);
+        write_i64_le(f, program->instruction_storage[i].operand_string_constant_index);
     }
 
     if (section_count == 2U) {

@@ -33,17 +33,9 @@ CASES=(
   "vm_c_execute_src_par_join_unsupported"
 )
 UNSUPPORTED_CASES=(
-  "vm_c_execute_src_async_callsys_missing_target"
-  "vm_c_execute_src_await_nonzero_b"
-  "vm_c_execute_src_await_unexpected_s"
-  "vm_c_execute_src_callsys_missing_target"
   "vm_c_execute_src_node_constant_unsupported"
-  "vm_c_execute_src_nonzero_b"
   "vm_c_execute_src_opcode_unmapped"
-  "vm_c_execute_src_par_begin_nonzero_b"
-  "vm_c_execute_src_par_begin_unexpected_s"
   "vm_c_execute_src_parse_error"
-  "vm_c_execute_src_unexpected_s"
 )
 HTTP_CASE="${ROOT_DIR}/samples/cli-fetch/project.aiproj"
 PUBLISH_DIR="${TMP_DIR}/publish"
