@@ -56,6 +56,14 @@ jobs:
           cmake -S src/AiVM.Core/native -B .tmp/aivm-c-build -G "Visual Studio 17 2022" -A x64
           cmake --build .tmp/aivm-c-build --config Debug
 
+      - name: Compile native airun wrapper (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cl /nologo /std:c17 /W4 /Fe:.\tools\airun.exe .\src\AiCLI\native\airun.c
+          if (!(Test-Path .\tools\airun.exe)) { throw "failed to compile tools/airun.exe" }
+          Remove-Item -Force .\airun.obj -ErrorAction SilentlyContinue
+
       - name: Run parity manifest (Windows portable set)
         if: runner.os == 'Windows'
         shell: bash

@@ -3,8 +3,66 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef _WIN32
+#include <process.h>
+#include <sys/stat.h>
+#ifndef PATH_MAX
+#define PATH_MAX MAX_PATH
+#endif
+#include <windows.h>
+#define AIVM_PATH_SEP '\\'
+#define AIVM_EXE_EXT ".exe"
+#else
 #include <sys/stat.h>
 #include <unistd.h>
+#define AIVM_PATH_SEP '/'
+#define AIVM_EXE_EXT ""
+#endif
+
+static int resolve_executable_path(const char* argv0, char* out, size_t out_len)
+{
+#ifdef _WIN32
+    DWORD n;
+    (void)argv0;
+    if (out == NULL || out_len == 0) {
+        return 0;
+    }
+    n = GetModuleFileNameA(NULL, out, (DWORD)out_len);
+    if (n == 0 || n >= (DWORD)out_len) {
+        return 0;
+    }
+    return 1;
+#else
+    (void)out_len;
+    (void)argv0;
+    return realpath(argv0, out) != NULL ? 1 : 0;
+#endif
+}
+
+static int set_env_var(const char* name, const char* value)
+{
+#ifdef _WIN32
+    return _putenv_s(name, value) == 0 ? 1 : 0;
+#else
+    return setenv(name, value, 1) == 0 ? 1 : 0;
+#endif
+}
+
+static int exec_process(const char* path, char** argv)
+{
+#ifdef _WIN32
+    intptr_t rc;
+    rc = _spawnv(_P_WAIT, path, (const char* const*)argv);
+    if (rc == -1) {
+        return 0;
+    }
+    exit((int)rc);
+#else
+    execv(path, argv);
+#endif
+    return 0;
+}
 
 static int is_executable(const char* path)
 {
@@ -98,9 +156,12 @@ static int ensure_bridge_library(const char* repo_root, char* out_path, size_t o
         return 1;
     }
 
-    if (snprintf(build_script, sizeof(build_script), "%s/scripts/build-aivm-c-shared.sh", repo_root) >= (int)sizeof(build_script)) {
+    if (snprintf(build_script, sizeof(build_script), "%s%cscripts%cbuild-aivm-c-shared.sh", repo_root, AIVM_PATH_SEP, AIVM_PATH_SEP) >= (int)sizeof(build_script)) {
         return 0;
     }
+#ifdef _WIN32
+    return 0;
+#else
     if (!is_executable(build_script)) {
         return 0;
     }
@@ -132,16 +193,22 @@ static int ensure_bridge_library(const char* repo_root, char* out_path, size_t o
     }
     write_file_line(cache_path, out_path);
     return 1;
+#endif
 }
 
 static int path_dirname(const char* path, char* out, size_t out_len)
 {
     const char* slash;
+    const char* bslash;
     size_t n;
     if (path == NULL || out == NULL || out_len == 0) {
         return 0;
     }
     slash = strrchr(path, '/');
+    bslash = strrchr(path, '\\');
+    if (slash == NULL || (bslash != NULL && bslash > slash)) {
+        slash = bslash;
+    }
     if (slash == NULL) {
         return 0;
     }
@@ -210,7 +277,7 @@ int main(int argc, char** argv)
         return 2;
     }
 
-    if (realpath(argv[0], exe_real) == NULL) {
+    if (!resolve_executable_path(argv[0], exe_real, sizeof(exe_real))) {
         fprintf(stderr, "airun native wrapper: failed to resolve executable path: %s\n", strerror(errno));
         return 2;
     }
@@ -225,7 +292,7 @@ int main(int argc, char** argv)
         return 2;
     }
 
-    if (snprintf(backend_path, sizeof(backend_path), "%s/tools/airun-host", repo_root) >= (int)sizeof(backend_path)) {
+    if (snprintf(backend_path, sizeof(backend_path), "%s%ctools%cairun-host%s", repo_root, AIVM_PATH_SEP, AIVM_PATH_SEP, AIVM_EXE_EXT) >= (int)sizeof(backend_path)) {
         fprintf(stderr, "airun native wrapper: backend path overflow\n");
         return 2;
     }
@@ -262,7 +329,7 @@ int main(int argc, char** argv)
             free(filtered_argv);
             return 2;
         }
-        if (setenv("AIVM_C_BRIDGE_EXECUTE", "1", 1) != 0 || setenv("AIVM_C_BRIDGE_LIB", bridge_lib_path, 1) != 0) {
+        if (!set_env_var("AIVM_C_BRIDGE_EXECUTE", "1") || !set_env_var("AIVM_C_BRIDGE_LIB", bridge_lib_path)) {
             fprintf(stderr, "airun native wrapper: failed to set bridge environment\n");
             free(filtered_argv);
             return 2;
@@ -280,7 +347,9 @@ int main(int argc, char** argv)
         }
         exec_argv[filtered_argc] = "--vm=c";
         exec_argv[filtered_argc + 1] = NULL;
-        execv(backend_path, exec_argv);
+        if (exec_process(backend_path, exec_argv)) {
+            return 0;
+        }
         fprintf(stderr, "airun native wrapper: failed to exec vm-c backend (%s): %s\n", backend_path, strerror(errno));
         free(exec_argv);
         free(filtered_argv);
@@ -292,13 +361,13 @@ int main(int argc, char** argv)
             fprintf(stderr, "[airun-native] exec backend filtered path for vm=c non-run\n");
         }
         filtered_argv[0] = backend_path;
-        execv(backend_path, filtered_argv);
+        exec_process(backend_path, filtered_argv);
     } else {
         if (trace_enabled) {
             fprintf(stderr, "[airun-native] exec backend raw argv path\n");
         }
         argv[0] = backend_path;
-        execv(backend_path, argv);
+        exec_process(backend_path, argv);
     }
     fprintf(stderr, "airun native wrapper: failed to exec backend (%s): %s\n", backend_path, strerror(errno));
     free(filtered_argv);
