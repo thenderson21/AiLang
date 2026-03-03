@@ -2,6 +2,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#include <fcntl.h>
+#include <io.h>
+#endif
 
 typedef struct {
     int line;
@@ -592,6 +596,11 @@ static char *read_file_all(const char *path) {
 }
 
 int main(int argc, char **argv) {
+#ifdef _WIN32
+    _setmode(_fileno(stdin), _O_BINARY);
+    _setmode(_fileno(stdout), _O_BINARY);
+#endif
+
     char *source = NULL;
     if (argc >= 2 && strcmp(argv[1], "--stdin") == 0) {
         source = read_stdin_all();

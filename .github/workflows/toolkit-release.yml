@@ -104,6 +104,14 @@ jobs:
           cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
           chmod +x "./dist/${{ matrix.airun }}" "./dist/${{ matrix.frontend }}"
 
+      - name: Stage compiler assets for gate (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ./dist/compiler
+          cp ./src/compiler/*.aos ./dist/compiler/
+
       - name: Setup MSVC tools
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
@@ -121,6 +129,13 @@ jobs:
             -o .\dist
           cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
           Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
+
+      - name: Stage compiler assets for gate (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force .\dist\compiler | Out-Null
+          Copy-Item .\src\compiler\*.aos .\dist\compiler\
 
       - name: Run full golden gate
         shell: bash

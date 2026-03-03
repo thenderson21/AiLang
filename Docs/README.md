@@ -25,6 +25,7 @@ If a doc in `Docs/` conflicts with `SPEC/`, follow `SPEC/`.
 - [Agent Code Map](./Agent-CodeMap.md)
 - [Conventions](./Conventions.md)
 - [Agent Debug Workflow](./Agent-Debug-Workflow.md)
+- [C VM Test/Profile/Benchmark Workflow](./C-VM-Performance-Workflow.md)
 - [CLI Wrapper Contract](./CLI-Wrapper-Contract.md)
 - [Branching and Release Policy](./Branching-Release-Policy.md)
 - [Versioning](./Versioning.md)
