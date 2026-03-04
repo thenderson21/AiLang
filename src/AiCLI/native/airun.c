@@ -884,7 +884,69 @@ static int64_t native_process_allocate_slot(void)
     return -1;
 }
 
-#ifndef _WIN32
+#ifdef _WIN32
+static int native_delete_dir_recursive_windows(const char* path)
+{
+    char pattern[PATH_MAX];
+    WIN32_FIND_DATAA find_data;
+    HANDLE find_handle;
+
+    if (path == NULL) {
+        return 0;
+    }
+    if (!join_path(path, "*", pattern, sizeof(pattern))) {
+        return 0;
+    }
+
+    find_handle = FindFirstFileA(pattern, &find_data);
+    if (find_handle == INVALID_HANDLE_VALUE) {
+        return RemoveDirectoryA(path) != 0;
+    }
+
+    do {
+        char child[PATH_MAX];
+        if (strcmp(find_data.cFileName, ".") == 0 || strcmp(find_data.cFileName, "..") == 0) {
+            continue;
+        }
+        if (!join_path(path, find_data.cFileName, child, sizeof(child))) {
+            FindClose(find_handle);
+            return 0;
+        }
+        if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0U) {
+            if (!native_delete_dir_recursive_windows(child)) {
+                FindClose(find_handle);
+                return 0;
+            }
+        } else {
+            if (!DeleteFileA(child)) {
+                FindClose(find_handle);
+                return 0;
+            }
+        }
+    } while (FindNextFileA(find_handle, &find_data) != 0);
+
+    FindClose(find_handle);
+    return RemoveDirectoryA(path) != 0;
+}
+
+static void native_process_refresh(NativeProcessState* process)
+{
+    DWORD wait_status;
+    DWORD exit_code;
+    if (process == NULL || process->finished || process->process_handle == NULL) {
+        return;
+    }
+    wait_status = WaitForSingleObject(process->process_handle, 0);
+    if (wait_status == WAIT_OBJECT_0) {
+        process->finished = 1;
+        if (GetExitCodeProcess(process->process_handle, &exit_code) != 0) {
+            process->exit_code = (int)exit_code;
+        } else {
+            process->exit_code = -1;
+        }
+    }
+}
+#else
 static void native_process_set_nonblocking(int fd)
 {
     int flags;
@@ -1048,10 +1110,10 @@ static int native_syscall_fs_dir_delete(
     recursive = args[1].bool_value ? 1 : 0;
 #ifdef _WIN32
     if (recursive) {
-        *result = aivm_value_bool(0);
-        return AIVM_SYSCALL_OK;
+        *result = aivm_value_bool(native_delete_dir_recursive_windows(path) ? 1 : 0);
+    } else {
+        *result = aivm_value_bool(_rmdir(path) == 0 ? 1 : 0);
     }
-    *result = aivm_value_bool(_rmdir(path) == 0 ? 1 : 0);
 #else
     if (recursive) {
         *result = aivm_value_bool(native_delete_dir_recursive_posix(path) ? 1 : 0);
@@ -1081,9 +1143,116 @@ static int native_syscall_process_spawn(
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
 #ifdef _WIN32
-    (void)args;
-    *result = aivm_value_int(-1);
-    return AIVM_SYSCALL_OK;
+    {
+        SECURITY_ATTRIBUTES security_attributes;
+        HANDLE stdout_read = NULL;
+        HANDLE stdout_write = NULL;
+        HANDLE stderr_read = NULL;
+        HANDLE stderr_write = NULL;
+        PROCESS_INFORMATION process_info;
+        STARTUPINFOA startup_info;
+        int64_t slot_handle;
+        NativeProcessState* process;
+        char* command_line;
+        const char* cwd = NULL;
+
+        memset(&security_attributes, 0, sizeof(security_attributes));
+        security_attributes.nLength = sizeof(security_attributes);
+        security_attributes.bInheritHandle = TRUE;
+        security_attributes.lpSecurityDescriptor = NULL;
+
+        if (!CreatePipe(&stdout_read, &stdout_write, &security_attributes, 0) ||
+            !CreatePipe(&stderr_read, &stderr_write, &security_attributes, 0)) {
+            if (stdout_read != NULL) {
+                CloseHandle(stdout_read);
+            }
+            if (stdout_write != NULL) {
+                CloseHandle(stdout_write);
+            }
+            if (stderr_read != NULL) {
+                CloseHandle(stderr_read);
+            }
+            if (stderr_write != NULL) {
+                CloseHandle(stderr_write);
+            }
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+
+        (void)SetHandleInformation(stdout_read, HANDLE_FLAG_INHERIT, 0);
+        (void)SetHandleInformation(stderr_read, HANDLE_FLAG_INHERIT, 0);
+
+        memset(&startup_info, 0, sizeof(startup_info));
+        memset(&process_info, 0, sizeof(process_info));
+        startup_info.cb = sizeof(startup_info);
+        startup_info.dwFlags = STARTF_USESTDHANDLES;
+        startup_info.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+        startup_info.hStdOutput = stdout_write;
+        startup_info.hStdError = stderr_write;
+
+        command_line = _strdup(args[0].string_value);
+        if (command_line == NULL) {
+            CloseHandle(stdout_read);
+            CloseHandle(stdout_write);
+            CloseHandle(stderr_read);
+            CloseHandle(stderr_write);
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+        if (args[2].string_value[0] != '\0') {
+            cwd = args[2].string_value;
+        }
+
+        if (!CreateProcessA(
+                NULL,
+                command_line,
+                NULL,
+                NULL,
+                TRUE,
+                CREATE_NO_WINDOW,
+                NULL,
+                cwd,
+                &startup_info,
+                &process_info)) {
+            free(command_line);
+            CloseHandle(stdout_read);
+            CloseHandle(stdout_write);
+            CloseHandle(stderr_read);
+            CloseHandle(stderr_write);
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+
+        free(command_line);
+        CloseHandle(stdout_write);
+        CloseHandle(stderr_write);
+        CloseHandle(process_info.hThread);
+
+        slot_handle = native_process_allocate_slot();
+        if (slot_handle < 0) {
+            (void)TerminateProcess(process_info.hProcess, 1);
+            CloseHandle(process_info.hProcess);
+            CloseHandle(stdout_read);
+            CloseHandle(stderr_read);
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+
+        process = native_process_lookup(slot_handle);
+        if (process == NULL) {
+            (void)TerminateProcess(process_info.hProcess, 1);
+            CloseHandle(process_info.hProcess);
+            CloseHandle(stdout_read);
+            CloseHandle(stderr_read);
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+        process->process_handle = process_info.hProcess;
+        process->stdout_read = stdout_read;
+        process->stderr_read = stderr_read;
+        *result = aivm_value_int(slot_handle);
+        return AIVM_SYSCALL_OK;
+    }
 #else
     {
         int stdout_pipe[2] = { -1, -1 };
@@ -1184,7 +1353,19 @@ static int native_syscall_process_wait(
         return AIVM_SYSCALL_OK;
     }
 #ifdef _WIN32
-    *result = aivm_value_int(-1);
+    if (!process->finished) {
+        DWORD wait_status = WaitForSingleObject(process->process_handle, INFINITE);
+        if (wait_status == WAIT_OBJECT_0) {
+            DWORD exit_code;
+            process->finished = 1;
+            if (GetExitCodeProcess(process->process_handle, &exit_code) != 0) {
+                process->exit_code = (int)exit_code;
+            } else {
+                process->exit_code = -1;
+            }
+        }
+    }
+    *result = aivm_value_int((int64_t)process->exit_code);
     return AIVM_SYSCALL_OK;
 #else
     if (!process->finished) {
@@ -1227,7 +1408,8 @@ static int native_syscall_process_poll(
         return AIVM_SYSCALL_OK;
     }
 #ifdef _WIN32
-    *result = aivm_value_int(-1);
+    native_process_refresh(process);
+    *result = aivm_value_int(process->finished ? 1 : 0);
     return AIVM_SYSCALL_OK;
 #else
     native_process_refresh(process);
@@ -1257,7 +1439,11 @@ static int native_syscall_process_kill(
         return AIVM_SYSCALL_OK;
     }
 #ifdef _WIN32
-    *result = aivm_value_bool(0);
+    if (process->finished) {
+        *result = aivm_value_bool(0);
+    } else {
+        *result = aivm_value_bool(TerminateProcess(process->process_handle, 1) ? 1 : 0);
+    }
 #else
     if (process->finished) {
         *result = aivm_value_bool(0);
@@ -1290,9 +1476,59 @@ static int native_syscall_process_stream_read(
         return AIVM_SYSCALL_OK;
     }
 #ifdef _WIN32
-    (void)read_stdout;
-    *result = aivm_value_bytes(NULL, 0U);
-    return AIVM_SYSCALL_OK;
+    {
+        HANDLE stream = read_stdout ? process->stdout_read : process->stderr_read;
+        int* closed_flag = read_stdout ? &process->stdout_closed : &process->stderr_closed;
+        DWORD available = 0;
+        DWORD read_count = 0;
+        if (*closed_flag || stream == NULL) {
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        if (!PeekNamedPipe(stream, NULL, 0, NULL, &available, NULL)) {
+            DWORD err = GetLastError();
+            if (err == ERROR_BROKEN_PIPE) {
+                CloseHandle(stream);
+                if (read_stdout) {
+                    process->stdout_read = NULL;
+                } else {
+                    process->stderr_read = NULL;
+                }
+                *closed_flag = 1;
+                *result = aivm_value_bytes(NULL, 0U);
+                return AIVM_SYSCALL_OK;
+            }
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        if (available == 0) {
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        if (available > (DWORD)NATIVE_PROCESS_READ_CHUNK) {
+            available = (DWORD)NATIVE_PROCESS_READ_CHUNK;
+        }
+        if (!ReadFile(stream, g_native_process_read_scratch, available, &read_count, NULL)) {
+            DWORD err = GetLastError();
+            if (err == ERROR_BROKEN_PIPE) {
+                CloseHandle(stream);
+                if (read_stdout) {
+                    process->stdout_read = NULL;
+                } else {
+                    process->stderr_read = NULL;
+                }
+                *closed_flag = 1;
+            }
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        if (read_count == 0) {
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        *result = aivm_value_bytes(g_native_process_read_scratch, (size_t)read_count);
+        return AIVM_SYSCALL_OK;
+    }
 #else
     {
         int fd = read_stdout ? process->stdout_fd : process->stderr_fd;
