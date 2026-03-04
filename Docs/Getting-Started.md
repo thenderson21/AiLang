@@ -48,11 +48,11 @@ cat examples/golden/run_var.in.aos | ./tools/airun run --vm=ast src/compiler/aic
 - `publish --target wasm32`:
   - default profile `spa` writes `index.html` + `main.js`.
   - `--wasm-profile cli` writes `run.sh` + `run.ps1`.
-  - `--wasm-profile fullstack` writes `client/` wasm web artifacts and `server/` AiLang scaffold (`project.aiproj`, `src/app.aos`, `README.md`) plus root launchers (`run`, `run.ps1`) and bundled host runtime in `server/runtime/`.
+  - `--wasm-profile fullstack` writes `client/` wasm web artifacts and `server/` AiLang scaffold (`project.aiproj`, `src/app.aos`, `README.md`) and bundled host runtime in `server/runtime/`.
     - also emits a self-contained root app binary (`./<appname>` or `.<\\appname>.exe`) for published-package execution.
     - optional override: `--wasm-fullstack-host-target <rid>`
     - project manifest override: `publishWasmFullstackHostTarget="<rid>"`
-    - launchers run the published root app binary; the AiLang app is responsible for self-hosting `server/www`.
+    - the AiLang app is responsible for self-hosting `server/www`.
   - malformed bytecode/source inputs are rejected deterministically with `DEV008` at publish time.
 
 ## Failure Codes

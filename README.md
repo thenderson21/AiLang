@@ -112,7 +112,7 @@ Publish wasm artifacts (web profile default):
 ./scripts/build-aivm-wasm.sh
 ./tools/airun publish samples/cli-fetch/project.aiproj --target wasm32 --out ./dist-wasm
 
-# wasm fullstack + explicit host runtime target for generated server launcher
+# wasm fullstack + explicit host runtime target for self-contained app binary
 ./tools/airun publish samples/cli-fetch/project.aiproj --target wasm32 --wasm-profile fullstack --wasm-fullstack-host-target linux-x64 --out ./dist-wasm-fullstack-linux
 ```
 
@@ -183,11 +183,11 @@ Rebuild `tools/airun` (native C, host platform):
 - `wasm32` publish supports profiles:
   - `web` (default): emits `index.html` + `main.js` package files.
   - `cli`: emits `run.sh` + `run.ps1` launcher files.
-  - `fullstack`: emits `client/` web package + `server/` AiLang server scaffold (`project.aiproj`, `src/app.aos`, `README.md`) and root launchers (`run`, `run.ps1`).
+  - `fullstack`: emits `client/` web package + `server/` AiLang server scaffold (`project.aiproj`, `src/app.aos`, `README.md`).
     - bundles host runtime in `server/runtime/` (default host RID, override with `--wasm-fullstack-host-target <rid>`).
     - emits a self-contained root app binary (`./<appname>` or `.<\\appname>.exe`) for published-package execution.
     - project manifest override: `publishWasmFullstackHostTarget="<rid>"`.
-    - launchers execute only the published root app binary; the AiLang app must self-host `server/www` assets.
+    - AiLang app must self-host `server/www` assets.
   - malformed bytecode/source fixtures are deterministically rejected at publish-time with `DEV008` (contract guard, not runtime drift).
 - wasm client/server capability channel MVP uses `sys.remote.call` (see `SPEC/WASM_REMOTE_CHANNEL.md`).
   - MVP security baseline: `SPEC/WASM_REMOTE_SECURITY.md`.

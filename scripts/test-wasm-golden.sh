@@ -196,7 +196,7 @@ if ! cmp -s "${PUBLISH_SPA_DIR}/aivm-runtime-wasm32-web.wasm" "${ROOT_DIR}/.arti
   exit 1
 fi
 
-if [[ ! -f "${PUBLISH_FULLSTACK_DIR}/client/index.html" || ! -f "${PUBLISH_FULLSTACK_DIR}/client/aivm-runtime-wasm32-web.wasm" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/README.md" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/project.aiproj" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/src/app.aos" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/www/index.html" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/www/main.js" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/www/app.aibc1" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/www/aivm-runtime-wasm32-web.wasm" || ! -f "${PUBLISH_FULLSTACK_DIR}/run" || ! -f "${PUBLISH_FULLSTACK_DIR}/run.ps1" ]]; then
+if [[ ! -f "${PUBLISH_FULLSTACK_DIR}/client/index.html" || ! -f "${PUBLISH_FULLSTACK_DIR}/client/aivm-runtime-wasm32-web.wasm" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/README.md" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/project.aiproj" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/src/app.aos" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/www/index.html" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/www/main.js" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/www/app.aibc1" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/www/aivm-runtime-wasm32-web.wasm" ]]; then
   echo "wasm profile mismatch: fullstack publish did not emit AiLang server scaffold layout" >&2
   exit 1
 fi
@@ -221,8 +221,8 @@ if [[ -f "${PUBLISH_FULLSTACK_DIR}/server/run-remote-ws-bridge.sh" || -f "${PUBL
   echo "wasm profile mismatch: fullstack publish should not emit C bridge run scripts" >&2
   exit 1
 fi
-if rg -q 'python|http\\.server' "${PUBLISH_FULLSTACK_DIR}/run" "${PUBLISH_FULLSTACK_DIR}/run.ps1"; then
-  echo "wasm profile mismatch: fullstack launchers must not depend on external python/http static server" >&2
+if [[ -f "${PUBLISH_FULLSTACK_DIR}/run" || -f "${PUBLISH_FULLSTACK_DIR}/run.ps1" ]]; then
+  echo "wasm profile mismatch: fullstack publish must not emit legacy root run launchers" >&2
   exit 1
 fi
 

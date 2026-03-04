@@ -43,6 +43,7 @@ extern int kill(pid_t pid, int sig);
 static int join_path(const char* left, const char* right, char* out, size_t out_len);
 static int find_executable_on_path(const char* name, char* out, size_t out_len);
 static int write_text_file(const char* path, const char* text);
+static int remove_file_if_exists(const char* path);
 
 static int ends_with(const char* value, const char* suffix)
 {
@@ -158,6 +159,17 @@ static int copy_runtime_file(const char* src, const char* dst)
     }
 #endif
     return 1;
+}
+
+static int remove_file_if_exists(const char* path)
+{
+    if (path == NULL || path[0] == '\0') {
+        return 0;
+    }
+    if (!file_exists(path)) {
+        return 1;
+    }
+    return remove(path) == 0;
 }
 
 static int read_binary_file(const char* path, unsigned char** out_bytes, size_t* out_size)
@@ -1123,7 +1135,7 @@ static int emit_wasm_spa_files(const char* out_dir)
            write_text_file(remote_client_path, remote_client_js);
 }
 
-static int emit_wasm_fullstack_layout(const char* out_dir, const char* server_runtime_bin)
+static int emit_wasm_fullstack_layout(const char* out_dir)
 {
     char client_dir[PATH_MAX];
     char server_dir[PATH_MAX];
@@ -1132,14 +1144,10 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* server_ru
     char server_readme_path[PATH_MAX];
     char server_project_path[PATH_MAX];
     char server_app_path[PATH_MAX];
-    char root_run_path[PATH_MAX];
-    char root_run_ps1_path[PATH_MAX];
     char server_readme[2048];
     char server_project[1024];
     char server_app[2048];
-    char root_run[4096];
-    char root_run_ps1[4096];
-    if (out_dir == NULL || server_runtime_bin == NULL) {
+    if (out_dir == NULL) {
         return 0;
     }
     if (!join_path(out_dir, "client", client_dir, sizeof(client_dir)) ||
@@ -1161,9 +1169,7 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* server_ru
     }
     if (!join_path(server_dir, "README.md", server_readme_path, sizeof(server_readme_path)) ||
         !join_path(server_dir, "project.aiproj", server_project_path, sizeof(server_project_path)) ||
-        !join_path(server_src_dir, "app.aos", server_app_path, sizeof(server_app_path)) ||
-        !join_path(out_dir, "run", root_run_path, sizeof(root_run_path)) ||
-        !join_path(out_dir, "run.ps1", root_run_ps1_path, sizeof(root_run_ps1_path))) {
+        !join_path(server_src_dir, "app.aos", server_app_path, sizeof(server_app_path))) {
         return 0;
     }
     if (snprintf(
@@ -1172,7 +1178,7 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* server_ru
             "# AiLang wasm fullstack package\n\n"
             "This folder contains an AiLang server scaffold.\n"
             "Client web assets are colocated in `www/` and also mirrored in `../client/`.\n"
-            "The app launched by `../run` is responsible for serving `www/` and websocket endpoint `ws://<host>:8765`.\n"
+            "The app binary in package root is responsible for serving `www/` and websocket endpoint `ws://<host>:8765`.\n"
             "Set `AIVM_REMOTE_WS_ENDPOINT` in browser page to override endpoint.\n"
             "Implement remote capability routing in `src/app.aos` using AiLang `sys.net.*` primitives and the channel contract in `SPEC/WASM_REMOTE_CHANNEL.md`.\n") >= (int)sizeof(server_readme)) {
         return 0;
@@ -1197,50 +1203,11 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* server_ru
             "}\n") >= (int)sizeof(server_app)) {
         return 0;
     }
-    if (snprintf(
-            root_run,
-            sizeof(root_run),
-            "#!/usr/bin/env bash\n"
-            "set -euo pipefail\n"
-            "DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\n"
-            "APP_BIN=\"${DIR}/%s\"\n"
-            "if [[ ! -x \"${APP_BIN}\" ]]; then\n"
-            "  echo \"Err#err1(code=RUN001 message=\\\"Published app binary missing: %s\\\" nodeId=publish)\" >&2\n"
-            "  exit 2\n"
-            "fi\n"
-            "echo \"[fullstack] starting self-contained app binary: ${APP_BIN}\" >&2\n"
-            "echo \"[fullstack] app must self-host client assets from ${DIR}/server/www\" >&2\n"
-            "exec \"${APP_BIN}\" \"$@\"\n",
-            server_runtime_bin,
-            server_runtime_bin) >= (int)sizeof(root_run)) {
-        return 0;
-    }
-    if (snprintf(
-            root_run_ps1,
-            sizeof(root_run_ps1),
-            "$ErrorActionPreference = 'Stop'\n"
-            "$dir = Split-Path -Parent $MyInvocation.MyCommand.Path\n"
-            "$app = Join-Path $dir '%s'\n"
-            "if (-not (Test-Path $app)) { throw \"Err#err1(code=RUN001 message=\\\"Published app binary missing: %s\\\" nodeId=publish)\" }\n"
-            "Write-Host \"[fullstack] starting self-contained app binary: $app\"\n"
-            "Write-Host \"[fullstack] app must self-host client assets from $(Join-Path $dir 'server/www')\"\n"
-            "& $app @args\n",
-            server_runtime_bin,
-            server_runtime_bin) >= (int)sizeof(root_run_ps1)) {
-        return 0;
-    }
     if (!write_text_file(server_readme_path, server_readme) ||
         !write_text_file(server_project_path, server_project) ||
-        !write_text_file(server_app_path, server_app) ||
-        !write_text_file(root_run_path, root_run) ||
-        !write_text_file(root_run_ps1_path, root_run_ps1)) {
+        !write_text_file(server_app_path, server_app)) {
         return 0;
     }
-#ifndef _WIN32
-    if (chmod(root_run_path, 0755) != 0) {
-        return 0;
-    }
-#endif
     return 1;
 }
 
@@ -4327,6 +4294,8 @@ static int handle_publish(int argc, char** argv)
             char fullstack_host_runtime_dst[PATH_MAX];
             char fullstack_host_runtime_root_dst[PATH_MAX];
             char fullstack_runtime_app_dst[PATH_MAX];
+            char legacy_run_dst[PATH_MAX];
+            char legacy_run_ps1_dst[PATH_MAX];
             wasm_fullstack_host_target[0] = '\0';
             if (wasm_fullstack_host_target_arg != NULL) {
                 if (snprintf(wasm_fullstack_host_target, sizeof(wasm_fullstack_host_target), "%s", wasm_fullstack_host_target_arg) >= (int)sizeof(wasm_fullstack_host_target)) {
@@ -4389,9 +4358,13 @@ static int handle_publish(int argc, char** argv)
                 !join_path(server_runtime_dir, fullstack_host_runtime_name, fullstack_host_runtime_dst, sizeof(fullstack_host_runtime_dst)) ||
                 !join_path(out_dir, fullstack_host_runtime_name, fullstack_host_runtime_root_dst, sizeof(fullstack_host_runtime_root_dst)) ||
                 !join_path(server_runtime_dir, "app.aibc1", fullstack_runtime_app_dst, sizeof(fullstack_runtime_app_dst)) ||
+                !join_path(out_dir, "run", legacy_run_dst, sizeof(legacy_run_dst)) ||
+                !join_path(out_dir, "run.ps1", legacy_run_ps1_dst, sizeof(legacy_run_ps1_dst)) ||
                 !copy_runtime_file(fullstack_host_runtime_src, fullstack_host_runtime_dst) ||
                 !copy_runtime_file(fullstack_host_runtime_src, fullstack_host_runtime_root_dst) ||
-                !copy_file(app_dst, fullstack_runtime_app_dst)) {
+                !copy_file(app_dst, fullstack_runtime_app_dst) ||
+                !remove_file_if_exists(legacy_run_dst) ||
+                !remove_file_if_exists(legacy_run_ps1_dst)) {
                 fprintf(stderr,
                     "Err#err1(code=RUN001 message=\"Failed to copy wasm fullstack host runtime for target RID. Build target runtime first.\" nodeId=wasmFullstackHostTarget)\n");
                 return 2;
@@ -4404,7 +4377,7 @@ static int handle_publish(int argc, char** argv)
                 !join_path(client_dir, runtime_web_wasm_bin, runtime_web_wasm_dst, sizeof(runtime_web_wasm_dst)) ||
                 !copy_runtime_file(runtime_web_src, runtime_web_dst) ||
                 !copy_runtime_file(runtime_web_wasm_src, runtime_web_wasm_dst) ||
-                !emit_wasm_fullstack_layout(out_dir, fullstack_host_runtime_name) ||
+                !emit_wasm_fullstack_layout(out_dir) ||
                 !join_path(out_dir, "server/www", server_www_dir, sizeof(server_www_dir)) ||
                 !join_path(server_www_dir, "app.aibc1", wasm_app_dst, sizeof(wasm_app_dst)) ||
                 !copy_file(app_dst, wasm_app_dst) ||
