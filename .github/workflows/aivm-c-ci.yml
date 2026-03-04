@@ -81,7 +81,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          ctest --test-dir .tmp/aivm-c-build-native -R aivm_test_bytes_host --output-on-failure
+          ctest --test-dir .tmp/aivm-c-build-native -C Debug -R aivm_test_bytes_host --output-on-failure
 
       - name: Upload parity report
         if: always()
