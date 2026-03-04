@@ -74,6 +74,45 @@ EOF
       exit 1
     fi
   fi
+
+  TMP_NATIVE_CACHE_PROJECT="${ROOT_DIR}/.tmp/aivm-c-native-cache-smoke"
+  TMP_NATIVE_CACHE_OUT_NO="${ROOT_DIR}/.tmp/aivm-c-native-cache-out-no"
+  TMP_NATIVE_CACHE_OUT_YES="${ROOT_DIR}/.tmp/aivm-c-native-cache-out-yes"
+  rm -rf "${TMP_NATIVE_CACHE_PROJECT}" "${TMP_NATIVE_CACHE_OUT_NO}" "${TMP_NATIVE_CACHE_OUT_YES}"
+  mkdir -p "${TMP_NATIVE_CACHE_PROJECT}"
+  cat > "${TMP_NATIVE_CACHE_PROJECT}/project.aiproj" <<'EOF'
+Program#p1 {
+  Project#proj1(name="cache_smoke" entryFile="app.aos" entryExport="start")
+}
+EOF
+  cat > "${TMP_NATIVE_CACHE_PROJECT}/app.aos" <<'EOF'
+Program#p1 {
+  Export#e1(name=start)
+  Let#l1(name=start) {
+    Fn#f1(params=argv) {
+      Block#b1 {
+        Return#r1 { Lit#i1(value=0) }
+      }
+    }
+  }
+}
+EOF
+  "${ROOT_DIR}/tools/airun" clean "${TMP_NATIVE_CACHE_PROJECT}" >/dev/null
+  "${ROOT_DIR}/tools/airun" build --no-cache "${TMP_NATIVE_CACHE_PROJECT}" --out "${TMP_NATIVE_CACHE_OUT_NO}" >/dev/null
+  if find "${TMP_NATIVE_CACHE_PROJECT}/.toolchain/cache/airun" -type f -name app.aibc1 2>/dev/null | grep -q .; then
+    echo "native cache smoke failed: --no-cache build populated cache unexpectedly" >&2
+    exit 1
+  fi
+  "${ROOT_DIR}/tools/airun" build "${TMP_NATIVE_CACHE_PROJECT}" --out "${TMP_NATIVE_CACHE_OUT_YES}" >/dev/null
+  if ! find "${TMP_NATIVE_CACHE_PROJECT}/.toolchain/cache/airun" -type f -name app.aibc1 2>/dev/null | grep -q .; then
+    echo "native cache smoke failed: cached build did not write cache artifact" >&2
+    exit 1
+  fi
+  "${ROOT_DIR}/tools/airun" clean "${TMP_NATIVE_CACHE_PROJECT}" >/dev/null
+  if find "${TMP_NATIVE_CACHE_PROJECT}/.toolchain/cache/airun" -type f -name app.aibc1 2>/dev/null | grep -q .; then
+    echo "native cache smoke failed: clean did not remove cache artifacts" >&2
+    exit 1
+  fi
 fi
 
 mkdir -p "$(dirname "${PARITY_REPORT}")"

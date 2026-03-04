@@ -11,7 +11,10 @@ Current:
 - `scripts/build-airun.sh` compiles Unix targets (`osx-x64`, `osx-arm64`, `linux-x64`, `linux-arm64`).
 - `scripts/build-airun.ps1` compiles Windows targets (`windows-x64`, `windows-arm64`).
 - `.aibc1` runtime execution is C-only.
-- Source/project `run` flows are native-only. Unsupported source shapes return deterministic `DEV008` guidance (no backend delegation).
+- `build` command is available: `airun build <program|project-dir> [--out <dir>] [--no-cache]` and emits `app.aibc1`.
+- `run` supports deterministic build cache bypass: `airun run <program|project-dir> [--no-cache]`.
+- `clean` command clears native build cache for a project: `airun clean [program|project-dir]`.
+- Source/project `run` compiles through native C paths only (no backend delegation).
 - `.aibundle` runtime execution is native-only (Bytecode# bundle shape).
 - Native `Bytecode#...` `.aos` inputs run directly in C VM without backend fallback.
 - Native `publish` can emit `app.aibc1` from supported `Program#...`/`Bytecode#...` `.aos`; unsupported source/project compile shapes return deterministic `DEV008`.

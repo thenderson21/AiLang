@@ -94,6 +94,15 @@ Run from project manifest:
 ./tools/airun run samples/cli-fetch/project.aiproj
 ```
 
+By default, `run`/`build` reuse deterministic project-local cache entries under `.toolchain/cache/airun/`.
+Use `--no-cache` to force rebuild and `clean` to clear cache:
+
+```bash
+./tools/airun build samples/cli-fetch --no-cache
+./tools/airun run samples/cli-fetch --no-cache
+./tools/airun clean samples/cli-fetch
+```
+
 Build bytecode artifact from source/project input:
 
 ```bash

@@ -5,7 +5,6 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP_ROOT="${ROOT_DIR}/.tmp/aivm-wasm-golden"
 TMP_DIR="${TMP_ROOT}/run-$$"
 CASES=(
-  "vm_c_execute_program_source_gate"
   "vm_c_execute_src_invalid_abi"
   "vm_c_execute_src_main_params"
   "vm_c_execute_src_missing_lib"
@@ -13,9 +12,6 @@ CASES=(
   "vm_c_execute_src_remote_call_echo_int"
 )
 BYTECODE_ONLY_CASES=(
-  "sys_remove_bad_type"
-  "sys_substring_bad_arity"
-  "sys_utf8_bad_type"
   "vm_c_execute_src_node_constant_unsupported"
   "vm_c_execute_src_async_call_negative"
   "vm_c_execute_src_async_call_oob"
@@ -38,6 +34,10 @@ BYTECODE_ONLY_CASES=(
   "vm_c_execute_src_par_join_unsupported"
 )
 MALFORMED_CASES=(
+  "sys_remove_bad_type"
+  "sys_substring_bad_arity"
+  "sys_utf8_bad_type"
+  "vm_c_execute_program_source_gate"
   "vm_c_execute_src_opcode_unmapped"
   "vm_c_execute_src_parse_error"
 )

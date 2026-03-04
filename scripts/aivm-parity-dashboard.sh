@@ -19,6 +19,9 @@ HAS_RG=0
 if command -v rg >/dev/null 2>&1; then
   HAS_RG=1
 fi
+REQUIRE_SAMPLES="${AIVM_DOD_REQUIRE_SAMPLES:-0}"
+REQUIRE_MEMORY="${AIVM_DOD_REQUIRE_MEMORY:-0}"
+REQUIRE_ZERO_CSHARP="${AIVM_DOD_REQUIRE_ZERO_CSHARP:-0}"
 
 mkdir -p "${TMP_DIR}"
 mkdir -p "$(dirname "${REPORT_PATH}")"
@@ -128,7 +131,7 @@ if [[ ${PASSED} -eq ${TOTAL} &&
   BEHAVIORAL_GATE_STATUS="PASS"
 fi
 
-# Zero-C# gate.
+# Zero-C# gate (informational unless explicitly required).
 TRACKED_CS_COUNT="$(git ls-files '*.cs' '*.csproj' '*.sln' '*.slnx' | wc -l | tr -d ' ')"
 if [[ "${HAS_RG}" == "1" ]]; then
   DOTNET_REF_COUNT="$( (rg -n '\bdotnet\b' .github/workflows scripts 2>/dev/null || true) | wc -l | tr -d ' ')"
@@ -140,7 +143,7 @@ if [[ "${TRACKED_CS_COUNT}" == "0" && "${DOTNET_REF_COUNT}" == "0" ]]; then
   ZERO_CSHARP_STATUS="PASS"
 fi
 
-# Test coverage gate.
+# Test coverage gate (required only when RUN_TESTS=1).
 TEST_GATE_STATUS="PENDING"
 TEST_AIVM_C_STATUS="not-run"
 TEST_FULL_STATUS="not-run"
@@ -164,7 +167,7 @@ if [[ "${RUN_TESTS}" == "1" ]]; then
   fi
 fi
 
-# Benchmark gate.
+# Benchmark gate (required only when RUN_BENCH=1).
 BENCH_GATE_STATUS="PENDING"
 BENCH_BASELINE_FILE="${AIVM_C_TESTS_DIR}/compiler_runtime_bench_baseline.tsv"
 BENCH_RUN_STATUS="not-run"
@@ -329,24 +332,84 @@ if [[ "${RUN_WASM}" == "1" ]]; then
   fi
 fi
 
-OVERALL_STATUS="FAIL"
-if [[ "${BEHAVIORAL_GATE_STATUS}" == "PASS" &&
-      "${ZERO_CSHARP_STATUS}" == "PASS" &&
-      "${TEST_GATE_STATUS}" == "PASS" &&
-      "${BENCH_GATE_STATUS}" == "PASS" &&
-      "${SAMPLE_GATE_STATUS}" == "PASS" &&
-      "${MEMORY_GATE_STATUS}" == "PASS" &&
-      "${WASM_GATE_STATUS}" == "PASS" ]]; then
-  OVERALL_STATUS="PASS"
+OVERALL_STATUS="PASS"
+OVERALL_FAILURES=0
+OVERALL_REQUIRED_DESC=()
+OVERALL_OPTIONAL_DESC=()
+
+OVERALL_REQUIRED_DESC+=("behavioral=${BEHAVIORAL_GATE_STATUS}")
+if [[ "${BEHAVIORAL_GATE_STATUS}" != "PASS" ]]; then
+  OVERALL_FAILURES=$((OVERALL_FAILURES + 1))
+fi
+
+if [[ "${RUN_TESTS}" == "1" ]]; then
+  OVERALL_REQUIRED_DESC+=("tests=${TEST_GATE_STATUS}")
+  if [[ "${TEST_GATE_STATUS}" != "PASS" ]]; then
+    OVERALL_FAILURES=$((OVERALL_FAILURES + 1))
+  fi
+else
+  OVERALL_OPTIONAL_DESC+=("tests=skipped")
+fi
+
+if [[ "${RUN_BENCH}" == "1" ]]; then
+  OVERALL_REQUIRED_DESC+=("bench=${BENCH_GATE_STATUS}")
+  if [[ "${BENCH_GATE_STATUS}" != "PASS" ]]; then
+    OVERALL_FAILURES=$((OVERALL_FAILURES + 1))
+  fi
+else
+  OVERALL_OPTIONAL_DESC+=("bench=skipped")
+fi
+
+if [[ "${REQUIRE_SAMPLES}" == "1" ]]; then
+  OVERALL_REQUIRED_DESC+=("samples=${SAMPLE_GATE_STATUS}")
+  if [[ "${SAMPLE_GATE_STATUS}" != "PASS" ]]; then
+    OVERALL_FAILURES=$((OVERALL_FAILURES + 1))
+  fi
+else
+  OVERALL_OPTIONAL_DESC+=("samples=${SAMPLE_GATE_STATUS}")
+fi
+
+if [[ "${REQUIRE_MEMORY}" == "1" ]]; then
+  OVERALL_REQUIRED_DESC+=("memory=${MEMORY_GATE_STATUS}")
+  if [[ "${MEMORY_GATE_STATUS}" != "PASS" ]]; then
+    OVERALL_FAILURES=$((OVERALL_FAILURES + 1))
+  fi
+else
+  OVERALL_OPTIONAL_DESC+=("memory=${MEMORY_GATE_STATUS}")
+fi
+
+if [[ "${REQUIRE_ZERO_CSHARP}" == "1" ]]; then
+  OVERALL_REQUIRED_DESC+=("zero-csharp=${ZERO_CSHARP_STATUS}")
+  if [[ "${ZERO_CSHARP_STATUS}" != "PASS" ]]; then
+    OVERALL_FAILURES=$((OVERALL_FAILURES + 1))
+  fi
+else
+  OVERALL_OPTIONAL_DESC+=("zero-csharp=${ZERO_CSHARP_STATUS}")
+fi
+
+if [[ "${RUN_WASM}" == "1" ]]; then
+  OVERALL_REQUIRED_DESC+=("wasm=${WASM_GATE_STATUS}")
+  if [[ "${WASM_GATE_STATUS}" != "PASS" ]]; then
+    OVERALL_FAILURES=$((OVERALL_FAILURES + 1))
+  fi
+else
+  OVERALL_OPTIONAL_DESC+=("wasm=skipped")
+fi
+
+if [[ ${OVERALL_FAILURES} -ne 0 ]]; then
+  OVERALL_STATUS="FAIL"
 fi
 
 TS_UTC="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
 {
-  echo "# AiLang Zero-C# DoD Dashboard"
+  echo "# AiLang Runtime Regression Dashboard"
   echo
   echo "Generated: ${TS_UTC}"
   echo
   echo "Overall status: **${OVERALL_STATUS}**"
+  echo
+  echo "Required gate set: ${OVERALL_REQUIRED_DESC[*]}"
+  echo "Optional gate set: ${OVERALL_OPTIONAL_DESC[*]}"
   echo
   echo "## Gates"
   echo

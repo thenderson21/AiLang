@@ -77,3 +77,7 @@ out/
 .ai/
 .llm/
 .prompts/
+
+# AiLang project generated outputs
+**/.toolchain/
+**/app.aibc1

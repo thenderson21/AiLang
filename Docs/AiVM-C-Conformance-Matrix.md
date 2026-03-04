@@ -39,7 +39,7 @@ Status keys:
 | `STR_SUBSTRING`, `STR_REMOVE`, `STR_UTF8_BYTE_COUNT` | implemented | Rune-aware/clamped semantics in VM tests. |
 | `CALL_SYS` | implemented | Contract-checked dispatch via typed syscall bindings. |
 | `ASYNC_CALL*`, `AWAIT`, `PAR_*` | implemented | Deterministic semantics implemented for `ASYNC_CALL`, `ASYNC_CALL_SYS`, `AWAIT`, and `PAR_BEGIN/FORK/JOIN/CANCEL`; `PAR_JOIN` now materializes a deterministic `Block` node with resolved child values (including completed task-handle resolution) to align runtime behavior with canonical VM structure. |
-| `NODE_*`, `ATTR_*`, `CHILD_*`, `MAKE_*` | implemented | Deterministic `NODE_*`, `ATTR_*`, `CHILD_*`, `MAKE_BLOCK`, `APPEND_CHILD`, `MAKE_ERR`, `MAKE_LIT_*`, and stack-template `MAKE_NODE` semantics are implemented in the C runtime. |
+| `NODE_*`, `ATTR_*`, `CHILD_*`, `MAKE_*` | implemented | Deterministic `NODE_*`, `ATTR_*`, `CHILD_*`, `MAKE_BLOCK`, `APPEND_CHILD`, `MAKE_ERR`, `MAKE_LIT_*`, `MAKE_FIELD_STRING`, `MAKE_MAP`, and stack-template `MAKE_NODE` semantics are implemented in the C runtime. |
 
 ## Syscall ABI
 
