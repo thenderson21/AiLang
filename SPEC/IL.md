@@ -96,6 +96,19 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 - `sys.bytes.fromBase64(text)` returns `bytes`.
 - `sys.bytes.toBase64(data)` returns base64 text as string.
 
+## Process Syscall Value Contract
+
+- `sys.process.spawn(command, argsNode, cwd, envNode)` returns an int process handle (`-1` when start fails).
+- `sys.process_poll(processHandle)` returns int status:
+- `0` pending
+- `1` completed-success
+- `-1` completed-failure
+- `-2` canceled
+- `-3` unknown-handle
+- `sys.process_wait(processHandle)` returns the same terminal status contract as `sys.process_poll`.
+- `sys.process.stdout.read(processHandle)` and `sys.process.stderr.read(processHandle)` return bytes payloads (empty when unavailable).
+- `sys.process_kill(processHandle)` returns bool for kill transition success.
+
 ## Debug Syscall Value Contract
 
 - `sys.debug.emit(channel, payload)` writes one deterministic debug record and returns `void`.

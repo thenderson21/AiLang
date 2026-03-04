@@ -115,6 +115,19 @@ This file is normative for `aic run` evaluation behavior.
 - For deterministic tie-breaking in app-level aggregation, ready workers must be consumed in ascending worker-handle order.
 - Worker APIs do not introduce user-visible thread objects, shared-memory mutation, or lock primitives.
 
+## Process Execution Contract (Phase 1)
+
+- Process APIs are host-executed effectful operations with owner-thread-visible completion:
+- `sys.process.spawn(command, argsNode, cwd, envNode) -> processHandle`
+- `sys.process_poll(processHandle) -> status`
+- `sys.process_wait(processHandle) -> status`
+- `sys.process.stdout.read(processHandle) -> bytes`
+- `sys.process.stderr.read(processHandle) -> bytes`
+- `sys.process_kill(processHandle) -> bool`
+- Status contract is deterministic (`0,1,-1,-2,-3` as defined in `SPEC/IL.md`).
+- Native baseline may complete work synchronously during `sys.process.spawn`; libraries should still consume state through `poll/wait/result` calls.
+- Host may implement internal scheduling/threads for process execution, but VM-visible state remains owner-thread deterministic.
+
 ## Debug Instrumentation Contract
 
 - Debug syscalls are explicit effect syscalls, not implicit runtime side effects.

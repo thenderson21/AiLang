@@ -299,6 +299,20 @@ jobs:
           set -euo pipefail
           ./scripts/build-aivm-wasm.sh
 
+      - name: Setup wasmtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://wasmtime.dev/install.sh | bash
+          echo "${HOME}/.wasmtime/bin" >> "${GITHUB_PATH}"
+
+      - name: Wasm golden smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x ./scripts/test-wasm-golden.sh
+          ./scripts/test-wasm-golden.sh
+
       - name: Pack wasm runtime artifact
         shell: bash
         run: |

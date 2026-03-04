@@ -138,11 +138,11 @@ This file is normative for semantic validation used by `aic check` (default path
 
 ## Host Async Boundary Rules
 
-- Validation treats `*Start` + `net_async*` patterns as the canonical non-blocking effect model for UI/update paths.
+- Validation treats `*Start` + `sys.net.async.*` patterns as the canonical non-blocking effect model for UI/update paths.
 - Blocking waits in update paths remain invalid (`VAL340` set above), including `httpRequestAwait`.
 - Runtime contract requirements (normative, host-enforced):
 - `*Start` syscalls must not block on operation completion.
-- `sys.net.async.poll`/`sys.net.asyncResult*`/`sys.net.async.error` must be non-blocking.
+- `sys.net.async.poll`/`sys.net.async.result*`/`sys.net.async.error` must be non-blocking.
 - Host worker threads may execute effectful work, but VM state mutation is owner-thread only and must occur via deterministic evaluator steps.
 
 ## Contracts for `aic check`

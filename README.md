@@ -15,6 +15,7 @@ AiLang is organized into four explicit layers under `src/`:
 - `src/AiLang.Core` — language layer (AOS AST model, parser bridge, validator, formatter wiring, semantic helpers).
 - `src/AiVM.Core` — deterministic VM/runtime engine (AiBC1 load/run + syscall dispatch boundary).
 - `src/AiCLI` — executable bootloader and CLI argument handling (`run`, `serve`, `repl`, `bench`).
+  - Native command surface includes `build`, `run`, `publish`, `repl`, `bench`, and `debug run`.
 - `src/AiVectra` — UI-layer placeholder for future integration.
 
 Layer rule:
@@ -93,10 +94,29 @@ Run from project manifest:
 ./tools/airun run samples/cli-fetch/project.aiproj
 ```
 
+Build bytecode artifact from source/project input:
+
+```bash
+./tools/airun build samples/cli-fetch/project.aiproj --out ./.tmp/build-cli-fetch
+```
+
 Native runtime expects AiBC1 bytecode input:
 
 ```bash
 ./tools/airun run examples/hello.aibc1
+```
+
+Publish wasm artifacts (web profile default):
+
+```bash
+./scripts/build-aivm-wasm.sh
+./tools/airun publish samples/cli-fetch/project.aiproj --target wasm32 --out ./dist-wasm
+```
+
+Publish wasm CLI profile:
+
+```bash
+./tools/airun publish samples/cli-fetch/project.aiproj --target wasm32 --wasm-profile cli --out ./dist-wasm-cli
 ```
 
 Load a program and evaluate expressions:
@@ -157,6 +177,9 @@ Rebuild `tools/airun` (native C, host platform):
 - Canonical runtime: AiBC1 bytecode VM (default).
 - Runtime is C-only in active build/test/release workflows.
 - New publish artifacts embed bytecode payloads by default.
+- `wasm32` publish supports profiles:
+  - `web` (default): emits `index.html` + `main.js` package files.
+  - `cli`: emits `run.sh` + `run.ps1` launcher files.
 - Build flag: `AosDevMode=false` creates a production runtime build with AST mode disabled.
 - HTTP body parsing boundary: `std.json.parse` is a constrained HTTP integration helper that converts JSON request body text into canonical AOS nodes. It does not introduce JSON as a runtime value model.
 
@@ -173,6 +196,10 @@ Canonical sample projects live in `samples/`:
 - `samples/cli-fetch`: CLI-style app that formats and prints weather output.
 
 Note: weather samples now call a live upstream weather endpoint via `httpRequest` from `src/std/http.aos`, so runtime internet access is required.
+
+Current limitation:
+- Full sample source-graph compilation (imports-heavy project shapes) is still being expanded in the native build pipeline.
+- `build/run/publish` are unified through one native compile path; unsupported shapes fail with deterministic `DEV008` messages rather than any C#/DLL fallback.
 
 Run samples:
 

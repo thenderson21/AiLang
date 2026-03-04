@@ -40,7 +40,7 @@ Program#p1 {
 EOF
 
 cat > "${PUBLISH_DIR}/binary_runs/binaryrun.aibundle" <<'EOF'
-Bytecode#bc1(flags=0 format="AiBC1" magic="AIBC" version=1) { Func#f_main(locals="argv" name=main params="argv") { Inst#i0(op=RETURN) } Func#f_main(locals="argv" name=main params="argv") { Inst#i1(op=RETURN) } }
+Bytecode#bc1(flags=0 format="AiBC1" magic="AIBC" version=2) { Func#f_main(locals="argv" name=main params="argv") { Inst#i0(op=RETURN) } Func#f_main(locals="argv" name=main params="argv") { Inst#i1(op=RETURN) } }
 EOF
 
 cat > "${PUBLISH_DIR}/bundle_cycle_error/a_main.aos" <<'EOF'
@@ -79,7 +79,7 @@ Program#p1 {
 EOF
 
 cat > "${PUBLISH_DIR}/bundle_single_file/single.aibundle" <<'EOF'
-Bytecode#bc1(flags=0 format="AiBC1" magic="AIBC" version=1) { Const#k0(kind=string value="ok") Func#f_main(locals="argv,main" name=main params="argv") { Inst#i0(a=0 op=CONST) Inst#i1(a=1 op=STORE_LOCAL) Inst#i2(op=RETURN) } }
+Bytecode#bc1(flags=0 format="AiBC1" magic="AIBC" version=2) { Const#k0(kind=string value="ok") Func#f_main(locals="argv,main" name=main params="argv") { Inst#i0(a=0 op=CONST) Inst#i1(a=1 op=STORE_LOCAL) Inst#i2(op=RETURN) } }
 EOF
 
 cat > "${PUBLISH_DIR}/bundle_with_import/a_main.aos" <<'EOF'
@@ -104,7 +104,7 @@ Program#p1 {
 EOF
 
 cat > "${PUBLISH_DIR}/bundle_with_import/with_import.aibundle" <<'EOF'
-Bytecode#bc1(flags=0 format="AiBC1" magic="AIBC" version=1) { Const#k0(kind=string value="ok") Func#f_main(locals="argv,main" name=main params="argv") { Inst#i0(a=0 op=CONST) Inst#i1(a=1 op=STORE_LOCAL) Inst#i2(op=RETURN) } }
+Bytecode#bc1(flags=0 format="AiBC1" magic="AIBC" version=2) { Const#k0(kind=string value="ok") Func#f_main(locals="argv,main" name=main params="argv") { Inst#i0(a=0 op=CONST) Inst#i1(a=1 op=STORE_LOCAL) Inst#i2(op=RETURN) } }
 EOF
 
 cat > "${PUBLISH_DIR}/overwrite_bundle/main.aos" <<'EOF'
@@ -121,7 +121,7 @@ Program#p1 {
 EOF
 
 cat > "${PUBLISH_DIR}/overwrite_bundle/overwrite.aibundle" <<'EOF'
-Bytecode#bc1(flags=0 format="AiBC1" magic="AIBC" version=1) { Const#k0(kind=string value="ok") Func#f_main(locals="argv,main" name=main params="argv") { Inst#i0(a=0 op=CONST) Inst#i1(a=1 op=STORE_LOCAL) Inst#i2(op=RETURN) } }
+Bytecode#bc1(flags=0 format="AiBC1" magic="AIBC" version=2) { Const#k0(kind=string value="ok") Func#f_main(locals="argv,main" name=main params="argv") { Inst#i0(a=0 op=CONST) Inst#i1(a=1 op=STORE_LOCAL) Inst#i2(op=RETURN) } }
 EOF
 
 cat > "${PUBLISH_DIR}/success/project.aiproj" <<'EOF'
@@ -144,7 +144,7 @@ Program#p1 {
 EOF
 
 cat > "${PUBLISH_DIR}/writes_bundle/writes.aibundle" <<'EOF'
-Bytecode#bc1(flags=0 format="AiBC1" magic="AIBC" version=1) { Const#k0(kind=string value="ok") Func#f_main(locals="argv,main" name=main params="argv") { Inst#i0(a=0 op=CONST) Inst#i1(a=1 op=STORE_LOCAL) Inst#i2(op=RETURN) } }
+Bytecode#bc1(flags=0 format="AiBC1" magic="AIBC" version=2) { Const#k0(kind=string value="ok") Func#f_main(locals="argv,main" name=main params="argv") { Inst#i0(a=0 op=CONST) Inst#i1(a=1 op=STORE_LOCAL) Inst#i2(op=RETURN) } }
 EOF
 
 cat > "${PUBLISHCASES_DIR}/include_missing_library/main.aos" <<'EOF'
@@ -184,7 +184,7 @@ Program#p1 {
 EOF
 
 cat > "${PUBLISHCASES_DIR}/include_success/app_include_ok.aibundle" <<'EOF'
-Bytecode#bc1(flags=0 format="AiBC1" magic="AIBC" version=1) { Const#k0(kind=int value=0) Func#f_main(locals="argv,start" name=main params="argv") { Inst#i0(a=0 op=CONST) Inst#i1(a=1 op=STORE_LOCAL) Inst#i2(op=RETURN) } }
+Bytecode#bc1(flags=0 format="AiBC1" magic="AIBC" version=2) { Const#k0(kind=int value=0) Func#f_main(locals="argv,start" name=main params="argv") { Inst#i0(a=0 op=CONST) Inst#i1(a=1 op=STORE_LOCAL) Inst#i2(op=RETURN) } }
 EOF
 
 cat > "${PUBLISHCASES_DIR}/include_version_mismatch/main.aos" <<'EOF'

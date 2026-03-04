@@ -63,7 +63,7 @@ Program#p1 {
 }
 "@ | Set-Content -Path (Join-Path $projectDir 'project.aiproj') -NoNewline
     @"
-Bytecode#bc1(magic="AIBC" format="AiBC1" version=1 flags=0) {
+Bytecode#bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {
   Func#f1(name=main params="argv" locals="") {
     Inst#i1(op=HALT)
   }
@@ -108,7 +108,7 @@ Program#p1 {
 }
 "@ | Set-Content -Path (Join-Path $projectDir 'project.aiproj') -NoNewline
       @"
-Bytecode#bc1(magic="AIBC" format="AiBC1" version=1 flags=0) {
+Bytecode#bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {
   Func#f1(name=main params="argv" locals="") {
     Inst#i1(op=HALT)
   }

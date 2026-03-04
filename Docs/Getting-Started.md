@@ -23,7 +23,15 @@ Run build and verification flows with deterministic outputs.
 ```bash
 ./tools/airun run examples/hello.aos
 ```
-4. Run compiler driver modes:
+4. Build bytecode from project/source:
+```bash
+./tools/airun build samples/cli-fetch/project.aiproj --out ./.tmp/build-cli-fetch
+```
+5. Publish wasm package (web default):
+```bash
+./tools/airun publish samples/cli-fetch/project.aiproj --target wasm32 --out ./.tmp/publish-cli-fetch-wasm
+```
+6. Run compiler driver modes:
 ```bash
 cat examples/golden/fmt_basic.in.aos | ./tools/airun run --vm=ast src/compiler/aic.aos fmt
 cat examples/golden/fmt_basic.in.aos | ./tools/airun run --vm=ast src/compiler/aic.aos fmt --ids
@@ -37,6 +45,10 @@ cat examples/golden/run_var.in.aos | ./tools/airun run --vm=ast src/compiler/aic
 - `test.sh`: prints `PASS/FAIL` per golden and final `Ok#ok1(type=int value=0)` on success.
 - `aic fmt/check/run`: emits canonical AOS only.
 - Source node ids are optional; canonical ids are assigned deterministically.
+- `publish --target wasm32`:
+  - default profile `spa` writes `index.html` + `main.js`.
+  - `--wasm-profile cli` writes `run.sh` + `run.ps1`.
+  - `--wasm-profile fullstack` writes `client/` wasm web artifacts and `server/` native-server guidance.
 
 ## Failure Codes
 
@@ -49,10 +61,20 @@ cat examples/golden/run_var.in.aos | ./tools/airun run --vm=ast src/compiler/aic
 ## Debugging Notes
 
 - For golden verification, prefer native `airun` execution over `dotnet .../airun.dll` because the golden harness spawns subprocesses using the current process path.
+- Native toolchain is C-only in active workflows; no C#/DLL fallback is required for command execution.
 - If `./tools/airun` is not usable in your environment, use the published native artifact:
 ```bash
 ./.artifacts/airun-osx-arm64/airun run --vm=ast src/compiler/aic.aos test examples/golden
 ```
+- For wasm publish/run validation, build the wasm runtime artifact first:
+```bash
+./scripts/build-aivm-wasm.sh
+```
+
+## Current Compile Coverage Note
+
+- `build/run/publish` share one native compile pipeline.
+- Imports-heavy project shapes may still return deterministic `DEV008` until native compile coverage completes for those constructs.
 
 ## Minimal Import Example
 
