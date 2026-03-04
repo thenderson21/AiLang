@@ -50,6 +50,7 @@ Defined `sys.*` targets (dispatcher + contracts):
 | `sys.process.exit` | `(code:int)` | `void` | Raises process-exit exception boundary. |
 | `sys.fs.file.read` | `(path:string)` | `bytes` | Reads full file bytes. |
 | `sys.fs.file.exists` | `(path:string)` | `bool` | Returns file existence. |
+| `sys.bytes.toUtf8String` | `(data:bytes)` | `string` | Decodes bytes as strict UTF-8 string; rejects invalid sequences and embedded NUL. |
 | `sys.str.utf8ByteCount` | `(text:string)` | `int` | UTF-8 byte count utility. |
 | `sys.platform` | `()` | `string` | Host OS family (`macos`, `windows`, `linux`, `unknown`). |
 | `sys.arch` | `()` | `string` | Host OS architecture. |

@@ -106,11 +106,13 @@ Required minimal primitives:
 - `sys.str.utf8ByteCount(text:string) -> int`
 - `sys.str.substring(text:string, start:int, length:int) -> string`
 - `sys.str.remove(text:string, start:int, length:int) -> string`
+- `sys.bytes.toUtf8String(data:bytes) -> string`
 
 Notes:
 
 - `start`/`length` are deterministic Unicode-scalar indexes (not bytes).
 - Out-of-range inputs are clamped; operations must not throw.
+- `sys.bytes.toUtf8String` must reject invalid UTF-8 and embedded NUL bytes deterministically.
 
 ### 7. crypto (minimal)
 

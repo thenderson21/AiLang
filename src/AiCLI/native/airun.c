@@ -1798,6 +1798,110 @@ static int native_bytes_to_base64(
     return 1;
 }
 
+static int native_is_valid_utf8_without_nul(const uint8_t* data, size_t len)
+{
+    size_t i = 0U;
+    if (data == NULL) {
+        return len == 0U;
+    }
+    while (i < len) {
+        uint8_t b0 = data[i];
+        if (b0 == 0U) {
+            return 0;
+        }
+        if (b0 <= 0x7FU) {
+            i += 1U;
+            continue;
+        }
+        if (b0 >= 0xC2U && b0 <= 0xDFU) {
+            if (i + 1U >= len) {
+                return 0;
+            }
+            if ((data[i + 1U] & 0xC0U) != 0x80U) {
+                return 0;
+            }
+            i += 2U;
+            continue;
+        }
+        if (b0 == 0xE0U) {
+            if (i + 2U >= len) {
+                return 0;
+            }
+            if (data[i + 1U] < 0xA0U || data[i + 1U] > 0xBFU) {
+                return 0;
+            }
+            if ((data[i + 2U] & 0xC0U) != 0x80U) {
+                return 0;
+            }
+            i += 3U;
+            continue;
+        }
+        if ((b0 >= 0xE1U && b0 <= 0xECU) || (b0 >= 0xEEU && b0 <= 0xEFU)) {
+            if (i + 2U >= len) {
+                return 0;
+            }
+            if ((data[i + 1U] & 0xC0U) != 0x80U || (data[i + 2U] & 0xC0U) != 0x80U) {
+                return 0;
+            }
+            i += 3U;
+            continue;
+        }
+        if (b0 == 0xEDU) {
+            if (i + 2U >= len) {
+                return 0;
+            }
+            if (data[i + 1U] < 0x80U || data[i + 1U] > 0x9FU) {
+                return 0;
+            }
+            if ((data[i + 2U] & 0xC0U) != 0x80U) {
+                return 0;
+            }
+            i += 3U;
+            continue;
+        }
+        if (b0 == 0xF0U) {
+            if (i + 3U >= len) {
+                return 0;
+            }
+            if (data[i + 1U] < 0x90U || data[i + 1U] > 0xBFU) {
+                return 0;
+            }
+            if ((data[i + 2U] & 0xC0U) != 0x80U || (data[i + 3U] & 0xC0U) != 0x80U) {
+                return 0;
+            }
+            i += 4U;
+            continue;
+        }
+        if (b0 >= 0xF1U && b0 <= 0xF3U) {
+            if (i + 3U >= len) {
+                return 0;
+            }
+            if ((data[i + 1U] & 0xC0U) != 0x80U ||
+                (data[i + 2U] & 0xC0U) != 0x80U ||
+                (data[i + 3U] & 0xC0U) != 0x80U) {
+                return 0;
+            }
+            i += 4U;
+            continue;
+        }
+        if (b0 == 0xF4U) {
+            if (i + 3U >= len) {
+                return 0;
+            }
+            if (data[i + 1U] < 0x80U || data[i + 1U] > 0x8FU) {
+                return 0;
+            }
+            if ((data[i + 2U] & 0xC0U) != 0x80U || (data[i + 3U] & 0xC0U) != 0x80U) {
+                return 0;
+            }
+            i += 4U;
+            continue;
+        }
+        return 0;
+    }
+    return 1;
+}
+
 static int native_syscall_bytes_length(
     const char* target,
     const AivmValue* args,
@@ -2017,11 +2121,11 @@ static int native_syscall_bytes_to_utf8_string(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_INVALID;
     }
+    if (!native_is_valid_utf8_without_nul(args[0].bytes_value.data, in_len)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
     for (i = 0U; i < in_len; i += 1U) {
-        if (args[0].bytes_value.data[i] == 0U) {
-            result->type = AIVM_VAL_VOID;
-            return AIVM_SYSCALL_ERR_INVALID;
-        }
         g_native_base64_scratch[i] = (char)args[0].bytes_value.data[i];
     }
     g_native_base64_scratch[in_len] = '\0';

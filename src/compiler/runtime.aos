@@ -195,7 +195,7 @@ Program#rt_p1 {
       Block#rt_b9 {
         Let#rt_l15(name=programText) {
           StrConcat#rt_s1 {
-            Lit#rt_i7(value="Program#rt_event_p1 { Event#Message(type=\"http.request\" payload=\"")
+            Lit#rt_i7(value="Program#rt_event_p1 { Event#Message(type=\"net.request\" payload=\"")
             StrConcat#rt_s2 {
               StrEscape#rt_se1 { Var#rt_v23(name=payload) }
               Lit#rt_i8(value="\") }")
@@ -207,7 +207,7 @@ Program#rt_p1 {
           Eq#rt_eq3 { NodeKind#rt_nk1 { Var#rt_v25(name=parsed) } Lit#rt_i9(value="Program") }
           Block#rt_b10 { Return#rt_r7 { ChildAt#rt_ca1 { Var#rt_v26(name=parsed) Lit#rt_i10(value=0) } } }
           Block#rt_b11 {
-            Let#rt_l17(name=fallback) { Call#rt_c16(target=compiler.parse) { Lit#rt_i11(value="Program#rt_event_p2 { Event#Message(type=\"http.request\" payload=\"\") }") } }
+            Let#rt_l17(name=fallback) { Call#rt_c16(target=compiler.parse) { Lit#rt_i11(value="Program#rt_event_p2 { Event#Message(type=\"net.request\" payload=\"\") }") } }
             Return#rt_r8 { ChildAt#rt_ca2 { Var#rt_v27(name=fallback) Lit#rt_i12(value=0) } }
           }
         }
