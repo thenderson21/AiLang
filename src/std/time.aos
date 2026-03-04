@@ -16,9 +16,9 @@ Program#std_time_p1 {
   }
 
   Let#std_time_l3(name=sleepMs) {
-    Fn#std_time_f3(params=ms) {
+    Fn#std_time_f3(params=durationMs) {
       Block#std_time_b3 {
-        Return#std_time_r3 { Call#std_time_c3(target=sys.time.sleepMs) { Var#std_time_v1(name=ms) } }
+        Return#std_time_r3 { Call#std_time_c3(target=sys.time.sleepMs) { Var#std_time_v1(name=durationMs) } }
       }
     }
   }

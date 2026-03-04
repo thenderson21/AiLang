@@ -1,0 +1,4 @@
+Program#gstruh_p1 {
+  Import#gstruh_i1(path="./src/std/str.aos")
+  Call#gstruh_c1(target=decodeUnicodeHex4) { Lit#gstruh_l1(value="263A") }
+}

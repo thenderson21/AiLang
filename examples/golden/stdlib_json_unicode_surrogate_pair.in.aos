@@ -1,0 +1,17 @@
+Program#gjsonusp_p1 {
+  Import#gjsonusp_i1(path="./src/std/core.aos")
+  Import#gjsonusp_i2(path="./src/std/json.aos")
+  Call#gjsonusp_c1(target=AttrValueString) {
+    ChildAt#gjsonusp_ca1 {
+      ChildAt#gjsonusp_ca2 {
+        Call#gjsonusp_c2(target=resultNodeOr) {
+          Call#gjsonusp_c3(target=parseNode) { Lit#gjsonusp_l1(value="\"\\uD83D\\uDE42\"") }
+          Call#gjsonusp_c4(target=nodeEmpty) { Lit#gjsonusp_l2(value="fallback") }
+        }
+        Lit#gjsonusp_l3(value=0)
+      }
+      Lit#gjsonusp_l4(value=0)
+    }
+    Lit#gjsonusp_l5(value=0)
+  }
+}

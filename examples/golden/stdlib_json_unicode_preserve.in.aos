@@ -1,0 +1,17 @@
+Program#gjsonup_p1 {
+  Import#gjsonup_i1(path="./src/std/core.aos")
+  Import#gjsonup_i2(path="./src/std/json.aos")
+  Call#gjsonup_c1(target=AttrValueString) {
+    ChildAt#gjsonup_ca1 {
+      ChildAt#gjsonup_ca2 {
+        Call#gjsonup_c2(target=resultNodeOr) {
+          Call#gjsonup_c3(target=parseNode) { Lit#gjsonup_l1(value="\"x\\uD83Dy\"") }
+          Call#gjsonup_c4(target=nodeEmpty) { Lit#gjsonup_l2(value="fallback") }
+        }
+        Lit#gjsonup_l3(value=0)
+      }
+      Lit#gjsonup_l4(value=0)
+    }
+    Lit#gjsonup_l5(value=0)
+  }
+}

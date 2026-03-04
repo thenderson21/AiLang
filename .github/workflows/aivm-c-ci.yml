@@ -17,6 +17,7 @@ on:
       - 'scripts/aivm-parity-dashboard.sh'
       - 'scripts/test-wasm-golden.sh'
       - 'scripts/build-aivm-wasm.sh'
+      - 'scripts/aivm-mem-leak-check.sh'
       - 'src/AiVM.Core/native/tests/parity_commands.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_portable.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_ci.txt'
@@ -40,6 +41,7 @@ on:
       - 'scripts/aivm-parity-dashboard.sh'
       - 'scripts/test-wasm-golden.sh'
       - 'scripts/build-aivm-wasm.sh'
+      - 'scripts/aivm-mem-leak-check.sh'
       - 'src/AiVM.Core/native/tests/parity_commands.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_portable.txt'
       - 'src/AiVM.Core/native/tests/parity_commands_ci.txt'
@@ -61,7 +63,11 @@ jobs:
 
       - name: Configure + build + test (Unix)
         if: runner.os != 'Windows'
-        run: ./scripts/test-aivm-c.sh
+        run: |
+          AIVM_MEM_LEAK_GATE=1 \
+          AIVM_LEAK_CHECK_ITERATIONS=20 \
+          AIVM_LEAK_MAX_GROWTH_KB=4096 \
+          ./scripts/test-aivm-c.sh
 
       - name: Verify bytes host syscall test (Unix)
         if: runner.os != 'Windows'

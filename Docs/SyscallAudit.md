@@ -41,15 +41,16 @@ Defined `sys.*` targets (dispatcher + contracts):
 
 | Syscall | Args | Return | Observed behavior |
 |---|---:|---|---|
-| `sys.net.listen` | `(port:int)` | `int` | Start TCP listener on loopback; returns listener handle. |
-| `sys.net.listen.tls` | `(port:int, certPath:string, keyPath:string)` | `int` | Start TLS listener on loopback; returns listener handle or `-1` on cert failure. |
-| `sys.net.accept` | `(listenerHandle:int)` | `int` | Blocking accept; returns connection handle or `-1`. |
-| `sys.net.write` | `(connectionHandle:int, data:bytes)` | `void` | Writes raw bytes to socket stream. |
-| `sys.net.close` | `(handle:int)` | `void` | Closes listener/connection handle. |
+| `sys.net.tcp.listen` | `(host:string, port:int)` | `int` | Start TCP listener; returns listener handle. |
+| `sys.net.tcp.listenTls` | `(host:string, port:int, certPath:string, keyPath:string)` | `int` | Start TLS listener; returns listener handle or `-1` on cert failure. |
+| `sys.net.tcp.accept` | `(listenerHandle:int)` | `int` | Blocking accept; returns connection handle or `-1`. |
+| `sys.net.tcp.write` | `(connectionHandle:int, data:bytes)` | `int` | Writes bytes to socket stream; returns bytes written. |
+| `sys.net.tcp.close` | `(handle:int)` | `void` | Closes listener/connection handle. |
 | `sys.stdout.writeLine` | `(text:string)` | `void` | Writes line to stdout. |
 | `sys.process.exit` | `(code:int)` | `void` | Raises process-exit exception boundary. |
 | `sys.fs.file.read` | `(path:string)` | `bytes` | Reads full file bytes. |
 | `sys.fs.file.exists` | `(path:string)` | `bool` | Returns file existence. |
+| `sys.bytes.toUtf8String` | `(data:bytes)` | `string` | Decodes bytes to UTF-8 string; returns empty string for invalid UTF-8 or embedded NUL. |
 | `sys.str.utf8ByteCount` | `(text:string)` | `int` | UTF-8 byte count utility. |
 | `sys.platform` | `()` | `string` | Host OS family (`macos`, `windows`, `linux`, `unknown`). |
 | `sys.arch` | `()` | `string` | Host OS architecture. |

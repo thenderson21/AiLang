@@ -1,0 +1,8 @@
+Program#gjsona_p1 {
+  Import#gjsona_i1(path="./src/std/core.aos")
+  Import#gjsona_i2(path="./src/std/json.aos")
+  Call#gjsona_c1(target=resultValueOr) {
+    Call#gjsona_c2(target=parse) { Lit#gjsona_l1(value="[1,{\"t\":\"x]y\"},[2,3]]") }
+    Lit#gjsona_l2(value="fallback")
+  }
+}

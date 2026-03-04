@@ -65,7 +65,7 @@ Required minimal primitives:
 
 ### 4. net
 
-Current status: partial (`sys.net.listen`, `sys.net.listen.tls`, `sys.net.accept`, `sys.net.write`, `sys.net.close`).
+Current status: partial (`sys.net.tcp.listen`, `sys.net.tcp.listenTls`, `sys.net.tcp.accept`, `sys.net.tcp.write`, `sys.net.tcp.close`).
 
 Required minimal primitives:
 
@@ -74,7 +74,7 @@ Required minimal primitives:
 - `sys.net.tcp.accept(listenerHandle:int) -> int`
 - `sys.net.tcp.read(connectionHandle:int, maxBytes:int) -> bytes`
 - `sys.net.tcp.write(connectionHandle:int, data:bytes) -> int` (bytes written)
-- `sys.net.close(handle:int) -> void`
+- `sys.net.tcp.close(handle:int) -> void`
 - `sys.net.udp.bind(host:string, port:int) -> int`
 - `sys.net.udp.recv(handle:int, maxBytes:int) -> node` (payload + peer)
 - `sys.net.udp.send(handle:int, host:string, port:int, data:bytes) -> int`
@@ -106,11 +106,15 @@ Required minimal primitives:
 - `sys.str.utf8ByteCount(text:string) -> int`
 - `sys.str.substring(text:string, start:int, length:int) -> string`
 - `sys.str.remove(text:string, start:int, length:int) -> string`
+- `sys.bytes.toUtf8String(data:bytes) -> string`
 
 Notes:
 
 - `start`/`length` are deterministic Unicode-scalar indexes (not bytes).
 - Out-of-range inputs are clamped; operations must not throw.
+- `sys.bytes.toUtf8String` must be deterministic and non-throwing for malformed input.
+  - valid UTF-8 without embedded NUL: decoded string
+  - invalid UTF-8 or embedded NUL: empty string
 
 ### 7. crypto (minimal)
 

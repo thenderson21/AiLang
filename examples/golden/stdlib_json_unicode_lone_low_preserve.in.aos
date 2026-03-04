@@ -1,0 +1,17 @@
+Program#gjsonullp_p1 {
+  Import#gjsonullp_i1(path="./src/std/core.aos")
+  Import#gjsonullp_i2(path="./src/std/json.aos")
+  Call#gjsonullp_c1(target=AttrValueString) {
+    ChildAt#gjsonullp_ca1 {
+      ChildAt#gjsonullp_ca2 {
+        Call#gjsonullp_c2(target=resultNodeOr) {
+          Call#gjsonullp_c3(target=parseNode) { Lit#gjsonullp_l1(value="\"x\\uDE42y\"") }
+          Call#gjsonullp_c4(target=nodeEmpty) { Lit#gjsonullp_l2(value="fallback") }
+        }
+        Lit#gjsonullp_l3(value=0)
+      }
+      Lit#gjsonullp_l4(value=0)
+    }
+    Lit#gjsonullp_l5(value=0)
+  }
+}

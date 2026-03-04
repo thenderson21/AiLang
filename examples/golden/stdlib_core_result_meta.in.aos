@@ -1,0 +1,10 @@
+Program#gcorem_p1 {
+  Import#gcorem_i1(path="./src/std/core.aos")
+  Call#gcorem_c1(target=resultMessageOr) {
+    Call#gcorem_c2(target=resultErr) {
+      Lit#gcorem_l1(value="E1")
+      Lit#gcorem_l2(value="boom")
+    }
+    Lit#gcorem_l3(value="fallback")
+  }
+}

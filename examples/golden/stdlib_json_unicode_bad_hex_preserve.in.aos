@@ -1,0 +1,17 @@
+Program#gjsonubh_p1 {
+  Import#gjsonubh_i1(path="./src/std/core.aos")
+  Import#gjsonubh_i2(path="./src/std/json.aos")
+  Call#gjsonubh_c1(target=AttrValueString) {
+    ChildAt#gjsonubh_ca1 {
+      ChildAt#gjsonubh_ca2 {
+        Call#gjsonubh_c2(target=resultNodeOr) {
+          Call#gjsonubh_c3(target=parseNode) { Lit#gjsonubh_l1(value="\"x\\u12G4y\"") }
+          Call#gjsonubh_c4(target=nodeEmpty) { Lit#gjsonubh_l2(value="fallback") }
+        }
+        Lit#gjsonubh_l3(value=0)
+      }
+      Lit#gjsonubh_l4(value=0)
+    }
+    Lit#gjsonubh_l5(value=0)
+  }
+}

@@ -1,0 +1,11 @@
+Program#gproc_p1 {
+  Import#gproc_i1(path="./src/std/process.aos")
+  If#gproc_if1 {
+    Eq#gproc_eq1 {
+      Call#gproc_c1(target=envGet) { Lit#gproc_l1(value="__AIVM_STD_PROCESS_MISSING_9E6D0D__") }
+      Lit#gproc_l2(value="")
+    }
+    Block#gproc_b1 { Return#gproc_r1 { Lit#gproc_l3(value="ok") } }
+    Block#gproc_b2 { Return#gproc_r2 { Lit#gproc_l4(value="bad") } }
+  }
+}
