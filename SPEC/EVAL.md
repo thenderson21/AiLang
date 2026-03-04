@@ -26,6 +26,7 @@ This file is normative for `aic run` evaluation behavior.
 - `Eq`: evaluate both sides, then compare by primitive type and value.
 - `StrConcat`: evaluate both sides, convert to string form, concatenate.
 - `Add`: evaluate both sides, both must be int literals.
+- `bytes` values are first-class runtime values and participate in equality by length+byte-content.
 - `Call`: evaluate arguments, then dispatch:
 - native target (`io.*`, `compiler.*`) dispatches directly.
 - otherwise resolve function binding, apply closure with captured env.
@@ -45,21 +46,21 @@ This file is normative for `aic run` evaluation behavior.
 
 - VM-level UI syscalls are intentionally minimal and composable primitives.
 - Current required VM UI syscall set is:
-- `sys.ui_createWindow`
-- `sys.ui_beginFrame`
-- `sys.ui_drawRect`
-- `sys.ui_drawText`
-- `sys.ui_drawLine`
-- `sys.ui_drawEllipse`
-- `sys.ui_drawPath`
-- `sys.ui_drawPolyline`
-- `sys.ui_drawPolygon`
-- `sys.ui_endFrame`
-- `sys.ui_pollEvent`
-- `sys.ui_waitFrame`
-- `sys.ui_present`
-- `sys.ui_closeWindow`
-- `sys.ui_getWindowSize`
+- `sys.ui.createWindow`
+- `sys.ui.beginFrame`
+- `sys.ui.drawRect`
+- `sys.ui.drawText`
+- `sys.ui.drawLine`
+- `sys.ui.drawEllipse`
+- `sys.ui.drawPath`
+- `sys.ui.drawPolyline`
+- `sys.ui.drawPolygon`
+- `sys.ui.endFrame`
+- `sys.ui.pollEvent`
+- `sys.ui.waitFrame`
+- `sys.ui.present`
+- `sys.ui.closeWindow`
+- `sys.ui.getWindowSize`
 - High-level style/composition effects (for example text-on-path layout, paint bundles, blur/shadow filters, and group transform helpers) are not VM syscall contracts and must be composed above VM (for example in AiVectra) from minimal primitives.
 
 ## Async Determinism Rules
@@ -79,24 +80,24 @@ This file is normative for `aic run` evaluation behavior.
 - Host/runtime may use internal worker threads for effectful operations (network, file, process, heavy compute), but workers must not mutate VM state directly.
 - Worker completion is observed only through explicit syscall polling/result reads in evaluator steps.
 - UI rendering and input consumption are owner-thread responsibilities:
-- event step (`sys.ui_pollEvent`)
+- event step (`sys.ui.pollEvent`)
 - deterministic state transition/recompute
-- present (`sys.ui_present`)
-- pacing (`sys.ui_waitFrame` when available)
+- present (`sys.ui.present`)
+- pacing (`sys.ui.waitFrame` when available)
 - Worker scheduling order/timing may vary; observable program behavior for identical input/event logs must remain deterministic.
 
 ## Non-Blocking Async Syscall Contract
 
 - Effectful async syscalls follow explicit `start -> poll -> result/cancel` phases.
 - `*Start` syscalls must return quickly with an operation handle and must not wait for completion.
-- `sys.net_asyncPoll(handle)` must be non-blocking and returns:
+- `sys.net.async.poll(handle)` must be non-blocking and returns:
 - `0` pending
 - `1` completed-success
 - `-1` completed-failure
 - `-2` canceled
 - `-3` unknown-handle
-- `sys.net_asyncResultInt(handle)`, `sys.net_asyncResultString(handle)`, and `sys.net_asyncError(handle)` are non-blocking reads of terminal payload state.
-- `sys.net_asyncCancel(handle)` is best-effort and deterministic:
+- `sys.net.async.resultInt(handle)`, `sys.net.async.resultBytes(handle)` (bytes payload), and `sys.net.async.error(handle)` are non-blocking reads of terminal payload state.
+- `sys.net.async.cancel(handle)` is best-effort and deterministic:
 - returns `false` for unknown/non-pending handles
 - returns `true` only when cancellation transitions a pending op to canceled
 - Library-level APIs (for example HTTP helpers) must not hide blocking waits in UI/event-loop hot paths; prefer poll-driven state machines.
@@ -104,32 +105,45 @@ This file is normative for `aic run` evaluation behavior.
 ## Worker Execution Contract (Phase 1)
 
 - Worker APIs are host-executed effectful operations with owner-thread-visible completion:
-- `sys.worker_start(taskName, payload) -> workerHandle`
-- `sys.worker_poll(workerHandle) -> status`
-- `sys.worker_result(workerHandle) -> string`
-- `sys.worker_error(workerHandle) -> string`
-- `sys.worker_cancel(workerHandle) -> bool`
+- `sys.worker.start(taskName, payload) -> workerHandle`
+- `sys.worker.poll(workerHandle) -> status`
+- `sys.worker.result(workerHandle) -> string`
+- `sys.worker.error(workerHandle) -> string`
+- `sys.worker.cancel(workerHandle) -> bool`
 - Worker task execution may overlap on host threads.
 - Completion becomes language-visible only when owner thread performs polling in evaluator steps.
 - For deterministic tie-breaking in app-level aggregation, ready workers must be consumed in ascending worker-handle order.
 - Worker APIs do not introduce user-visible thread objects, shared-memory mutation, or lock primitives.
 
+## Process Execution Contract (Phase 1)
+
+- Process APIs are host-executed effectful operations with owner-thread-visible completion:
+- `sys.process.spawn(command, argsNode, cwd, envNode) -> processHandle`
+- `sys.process_poll(processHandle) -> status`
+- `sys.process_wait(processHandle) -> status`
+- `sys.process.stdout.read(processHandle) -> bytes`
+- `sys.process.stderr.read(processHandle) -> bytes`
+- `sys.process_kill(processHandle) -> bool`
+- Status contract is deterministic (`0,1,-1,-2,-3` as defined in `SPEC/IL.md`).
+- Native baseline may complete work synchronously during `sys.process.spawn`; libraries should still consume state through `poll/wait/result` calls.
+- Host may implement internal scheduling/threads for process execution, but VM-visible state remains owner-thread deterministic.
+
 ## Debug Instrumentation Contract
 
 - Debug syscalls are explicit effect syscalls, not implicit runtime side effects.
 - Canonical debug syscall surface:
-- `sys.debug_emit(channel, payload)`
-- `sys.debug_mode()`
-- `sys.debug_captureFrameBegin(frameId, width, height)`
-- `sys.debug_captureFrameEnd(frameId)`
-- `sys.debug_captureDraw(op, args)`
-- `sys.debug_captureInput(eventPayload)`
-- `sys.debug_captureState(key, valuePayload)`
-- `sys.debug_replayLoad(path)`
-- `sys.debug_replayNext(handle)`
-- `sys.debug_assert(cond, code, message)`
-- `sys.debug_artifactWrite(path, text)`
-- `sys.debug_traceAsync(opId, phase, detail)`
+- `sys.debug.emit(channel, payload)`
+- `sys.debug.mode()`
+- `sys.debug.captureFrameBegin(frameId, width, height)`
+- `sys.debug.captureFrameEnd(frameId)`
+- `sys.debug.captureDraw(op, args)`
+- `sys.debug.captureInput(eventPayload)`
+- `sys.debug.captureState(key, valuePayload)`
+- `sys.debug.replayLoad(path)`
+- `sys.debug.replayNext(handle)`
+- `sys.debug.assert(cond, code, message)`
+- `sys.debug.artifactWrite(path, text)`
+- `sys.debug.traceAsync(opId, phase, detail)`
 - Host may store/write debug artifacts, but debug-visible state transitions remain deterministic for identical syscall sequences.
 - Replay consumption is pull-based (`debug_replayNext`) so evaluator order controls determinism.
 
@@ -203,7 +217,7 @@ This file is normative for `aic run` evaluation behavior.
 - For non-`none` events, evaluator performs one deterministic state transition and one full declarative tree recompute before presenting the frame.
 - Recompute order is deterministic and matches canonical child order.
 - Idle behavior (`type=none`) performs no implicit state mutation.
-- For UI-driven loops, `sys.ui_waitFrame(windowHandle)` is the preferred host pacing primitive over `sys.time_sleepMs`, when host support is available.
+- For UI-driven loops, `sys.ui.waitFrame(windowHandle)` is the preferred host pacing primitive over `sys.time.sleepMs`, when host support is available.
 - Host scheduling/timing may vary, but language-visible state transitions and presented outputs must be identical for identical input event sequences.
 
 ## Host Normalization vs Library Semantics
@@ -223,7 +237,7 @@ This file is normative for `aic run` evaluation behavior.
 
 ## Raster Image Primitive
 
-- `sys.ui_drawImage(windowHandle, x, y, width, height, rgbaBase64)` is a VM-level raster primitive.
+- `sys.ui.drawImage(windowHandle, x, y, width, height, rgbaBase64)` is a VM-level raster primitive.
 - `rgbaBase64` encodes raw row-major RGBA8 bytes (`width * height * 4` bytes).
 - Host responsibility is mechanical rendering only (no fit/crop/layout semantics).
 - Image composition semantics (sizing policy, alignment, clipping policy choices) are library-owned.
@@ -233,3 +247,11 @@ This file is normative for `aic run` evaluation behavior.
 - `aic run` emits canonical AOS:
 - `Ok#...` for successful value completion.
 - `Err#...` for runtime error completion.
+
+## Bytes Runtime Rules
+
+- Syscall-returned bytes and string payloads are materialized into VM-owned arenas before becoming observable runtime values.
+- `TO_STRING(bytes)` yields lowercase hex with `0x` prefix (`0x` for empty bytes).
+- `sys.bytes.at(data,index)` returns `-1` when `index` is out of range.
+- `sys.bytes.slice(data,start,length)` clamps start/length and never throws for range overflow.
+- `sys.bytes.fromBase64(text)` uses strict base64 validation; invalid input is syscall error.

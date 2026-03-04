@@ -67,7 +67,15 @@ jobs:
 
       - name: Configure + build + test (Unix)
         if: runner.os != 'Windows'
-        run: ./scripts/test-aivm-c.sh
+        run: |
+          AIVM_MEM_LEAK_GATE=1 \
+          AIVM_LEAK_CHECK_ITERATIONS=20 \
+          AIVM_LEAK_MAX_GROWTH_KB=4096 \
+          ./scripts/test-aivm-c.sh
+
+      - name: Verify bytes host syscall test (Unix)
+        if: runner.os != 'Windows'
+        run: ctest --test-dir .tmp/aivm-c-build-native -R aivm_test_bytes_host --output-on-failure
 
       - name: Perf smoke (Linux)
         if: runner.os == 'Linux'
@@ -101,6 +109,12 @@ jobs:
         shell: pwsh
         run: |
           ./scripts/test-aivm-c.ps1
+
+      - name: Verify bytes host syscall test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          ctest --test-dir .tmp/aivm-c-build-native -C Debug -R aivm_test_bytes_host --output-on-failure
 
       - name: Upload parity report
         if: always()

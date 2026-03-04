@@ -1,0 +1,8 @@
+Program#gjsonw_p1 {
+  Import#gjsonw_i1(path="./src/std/core.aos")
+  Import#gjsonw_i2(path="./src/std/json.aos")
+  Call#gjsonw_c1(target=resultValueOr) {
+    Call#gjsonw_c2(target=parse) { Lit#gjsonw_l1(value=" \n\t\"ok\"  ") }
+    Lit#gjsonw_l2(value="fallback")
+  }
+}

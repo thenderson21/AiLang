@@ -1,0 +1,17 @@
+Program#gjsonsd_p1 {
+  Import#gjsonsd_i1(path="./src/std/core.aos")
+  Import#gjsonsd_i2(path="./src/std/json.aos")
+  Call#gjsonsd_c1(target=AttrValueString) {
+    ChildAt#gjsonsd_ca1 {
+      ChildAt#gjsonsd_ca2 {
+        Call#gjsonsd_c2(target=resultNodeOr) {
+          Call#gjsonsd_c3(target=parseNode) { Lit#gjsonsd_l1(value="\"a\\n\\\"b\\\"\"") }
+          Call#gjsonsd_c4(target=nodeEmpty) { Lit#gjsonsd_l2(value="fallback") }
+        }
+        Lit#gjsonsd_l3(value=0)
+      }
+      Lit#gjsonsd_l4(value=0)
+    }
+    Lit#gjsonsd_l5(value=0)
+  }
+}

@@ -1,0 +1,17 @@
+Program#gjsonul_p1 {
+  Import#gjsonul_i1(path="./src/std/core.aos")
+  Import#gjsonul_i2(path="./src/std/json.aos")
+  Call#gjsonul_c1(target=AttrValueString) {
+    ChildAt#gjsonul_ca1 {
+      ChildAt#gjsonul_ca2 {
+        Call#gjsonul_c2(target=resultNodeOr) {
+          Call#gjsonul_c3(target=parseNode) { Lit#gjsonul_l1(value="\"a\\u002fb\\u000ac\"") }
+          Call#gjsonul_c4(target=nodeEmpty) { Lit#gjsonul_l2(value="fallback") }
+        }
+        Lit#gjsonul_l3(value=0)
+      }
+      Lit#gjsonul_l4(value=0)
+    }
+    Lit#gjsonul_l5(value=0)
+  }
+}

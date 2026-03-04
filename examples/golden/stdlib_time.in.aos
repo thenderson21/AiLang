@@ -1,0 +1,4 @@
+Program#gtime_p1 {
+  Import#gtime_i1(path="./src/std/time.aos")
+  Call#gtime_c1(target=sleepMs) { Lit#gtime_l1(value=0) }
+}

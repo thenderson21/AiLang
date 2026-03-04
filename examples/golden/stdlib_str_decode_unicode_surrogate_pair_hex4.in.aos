@@ -1,0 +1,7 @@
+Program#gstrusph_p1 {
+  Import#gstrusph_i1(path="./src/std/str.aos")
+  Call#gstrusph_c1(target=decodeUnicodeSurrogatePairHex4) {
+    Lit#gstrusph_l1(value="D83D")
+    Lit#gstrusph_l2(value="DE42")
+  }
+}

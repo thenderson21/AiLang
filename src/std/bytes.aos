@@ -1,0 +1,81 @@
+Program#std_bytes_p1 {
+  Let#std_bytes_l1(name=length) {
+    Fn#std_bytes_f1(params=data) {
+      Block#std_bytes_b1 {
+        Return#std_bytes_r1 { Call#std_bytes_c1(target=sys.bytes.length) { Var#std_bytes_v1(name=data) } }
+      }
+    }
+  }
+
+  Let#std_bytes_l2(name=at) {
+    Fn#std_bytes_f2(params=data,index) {
+      Block#std_bytes_b2 {
+        Return#std_bytes_r2 {
+          Call#std_bytes_c2(target=sys.bytes.at) {
+            Var#std_bytes_v2(name=data)
+            Var#std_bytes_v3(name=index)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_bytes_l3(name=slice) {
+    Fn#std_bytes_f3(params=data,start,length) {
+      Block#std_bytes_b3 {
+        Return#std_bytes_r3 {
+          Call#std_bytes_c3(target=sys.bytes.slice) {
+            Var#std_bytes_v4(name=data)
+            Var#std_bytes_v5(name=start)
+            Var#std_bytes_v6(name=length)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_bytes_l4(name=concat) {
+    Fn#std_bytes_f4(params=left,right) {
+      Block#std_bytes_b4 {
+        Return#std_bytes_r4 {
+          Call#std_bytes_c4(target=sys.bytes.concat) {
+            Var#std_bytes_v7(name=left)
+            Var#std_bytes_v8(name=right)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_bytes_l5(name=fromBase64) {
+    Fn#std_bytes_f5(params=text) {
+      Block#std_bytes_b5 {
+        Return#std_bytes_r5 { Call#std_bytes_c5(target=sys.bytes.fromBase64) { Var#std_bytes_v9(name=text) } }
+      }
+    }
+  }
+
+  Let#std_bytes_l6(name=toBase64) {
+    Fn#std_bytes_f6(params=data) {
+      Block#std_bytes_b6 {
+        Return#std_bytes_r6 { Call#std_bytes_c6(target=sys.bytes.toBase64) { Var#std_bytes_v10(name=data) } }
+      }
+    }
+  }
+
+  Let#std_bytes_l7(name=toUtf8String) {
+    Fn#std_bytes_f7(params=data) {
+      Block#std_bytes_b7 {
+        Return#std_bytes_r7 { Call#std_bytes_c7(target=sys.bytes.toUtf8String) { Var#std_bytes_v11(name=data) } }
+      }
+    }
+  }
+
+  Export#std_bytes_e1(name=length)
+  Export#std_bytes_e2(name=at)
+  Export#std_bytes_e3(name=slice)
+  Export#std_bytes_e4(name=concat)
+  Export#std_bytes_e5(name=fromBase64)
+  Export#std_bytes_e6(name=toBase64)
+  Export#std_bytes_e7(name=toUtf8String)
+}

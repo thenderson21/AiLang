@@ -1,0 +1,8 @@
+Program#gjson_p1 {
+  Import#gjson_i1(path="./src/std/core.aos")
+  Import#gjson_i2(path="./src/std/json.aos")
+  Call#gjson_c1(target=resultValueOr) {
+    Call#gjson_c2(target=parse) { Lit#gjson_l1(value="\"x\"") }
+    Lit#gjson_l2(value="fallback")
+  }
+}

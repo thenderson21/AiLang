@@ -63,7 +63,7 @@ Program#p1 {
 }
 "@ | Set-Content -Path (Join-Path $projectDir 'project.aiproj') -NoNewline
     @"
-Bytecode#bc1(magic="AIBC" format="AiBC1" version=1 flags=0) {
+Bytecode#bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {
   Func#f1(name=main params="argv" locals="") {
     Inst#i1(op=HALT)
   }
@@ -108,7 +108,7 @@ Program#p1 {
 }
 "@ | Set-Content -Path (Join-Path $projectDir 'project.aiproj') -NoNewline
       @"
-Bytecode#bc1(magic="AIBC" format="AiBC1" version=1 flags=0) {
+Bytecode#bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {
   Func#f1(name=main params="argv" locals="") {
     Inst#i1(op=HALT)
   }
@@ -121,6 +121,18 @@ Bytecode#bc1(magic="AIBC" format="AiBC1" version=1 flags=0) {
     Set-Content -Path $parityReport -Value 'parity manifest skipped: source-mode dualrun removed in C-only runtime cutover'
   } else {
     Set-Content -Path $parityReport -Value 'parity manifest skipped: missing ./tools/airun'
+  }
+}
+
+if ($env:AIVM_MEM_LEAK_GATE -eq '1') {
+  if ($IsWindows) {
+    Write-Host 'AIVM_MEM_LEAK_GATE is not implemented on Windows yet.'
+  } else {
+    $leakIterations = if ($env:AIVM_LEAK_CHECK_ITERATIONS) { $env:AIVM_LEAK_CHECK_ITERATIONS } else { '50' }
+    $leakTarget = if ($env:AIVM_LEAK_CHECK_TARGET) { $env:AIVM_LEAK_CHECK_TARGET } else { Join-Path $root 'src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos' }
+    if (-not $env:AIVM_LEAK_MAX_GROWTH_KB) { $env:AIVM_LEAK_MAX_GROWTH_KB = '2048' }
+    & (Join-Path $root 'scripts/aivm-mem-leak-check.sh') $leakTarget $leakIterations | Out-Null
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   }
 }
 

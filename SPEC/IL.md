@@ -10,7 +10,7 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 | `Block` | none | `0..N` | Evaluate children in order. |
 | `Let` | `name` (identifier) | `1` | Binds evaluated child result to `name`. |
 | `Var` | `name` (identifier) | `0` | Reads from environment. |
-| `Lit` | `value` (`string\|int\|bool`) | `0` | Literal value node. |
+| `Lit` | `value` (`string\|int\|bool\|bytes`) | `0` | Literal value node. |
 | `Call` | `target` (identifier/dotted identifier) | `0..N` | Native or user-defined call. |
 | `Import` | `path` (string, relative) | `0` | Loads another module and merges explicit exports. |
 | `Export` | `name` (identifier) | `0` | Exposes one binding from current module. |
@@ -28,17 +28,18 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 
 - Runtime values are represented as nodes:
 - `Lit(value=...)` for primitive values.
+- Primitive runtime kinds are `string`, `int`, `bool`, and `bytes`.
 - `Block#void` as the canonical void value.
 - `Err(code=... message="..." nodeId=...)` for runtime errors.
 - `Task(handle=...)` for async in-flight work handles returned by async calls.
-- `UiEvent(...)` for UI input payloads returned by `sys.ui_pollEvent`.
-- `UiWindowSize(width=... height=...)` for UI window size payloads returned by `sys.ui_getWindowSize`.
+- `UiEvent(...)` for UI input payloads returned by `sys.ui.pollEvent`.
+- `UiWindowSize(width=... height=...)` for UI window size payloads returned by `sys.ui.getWindowSize`.
 - Function values are closures represented as block nodes containing:
 - function node + captured environment.
 
 ## UI Event Value Contract
 
-- `sys.ui_pollEvent` returns one canonical `UiEvent` node per call.
+- `sys.ui.pollEvent` returns one canonical `UiEvent` node per call.
 - Canonical attributes on `UiEvent`:
 - `type` (string): `none`, `closed`, `click`, `key`.
 - `targetId` (string): target node id, or empty string when no target applies.
@@ -53,7 +54,7 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 
 ## UI Window Size Value Contract
 
-- `sys.ui_getWindowSize` returns one canonical `UiWindowSize` node per call.
+- `sys.ui.getWindowSize` returns one canonical `UiWindowSize` node per call.
 - Canonical attributes on `UiWindowSize`:
 - `width` (int): current client-area width in pixels, or `-1` when unavailable.
 - `height` (int): current client-area height in pixels, or `-1` when unavailable.
@@ -75,29 +76,51 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 
 ## Worker Syscall Value Contract
 
-- `sys.worker_start(taskName, payload)` returns an int worker handle.
-- `sys.worker_poll(workerHandle)` returns int status:
+- `sys.worker.start(taskName, payload)` returns an int worker handle.
+- `sys.worker.poll(workerHandle)` returns int status:
 - `0` pending
 - `1` completed-success
 - `-1` completed-failure
 - `-2` canceled
 - `-3` unknown-handle
-- `sys.worker_result(workerHandle)` returns string payload (empty when unavailable).
-- `sys.worker_error(workerHandle)` returns string error code (`unknown_worker` for unknown handles).
-- `sys.worker_cancel(workerHandle)` returns bool for cancellation transition success.
+- `sys.worker.result(workerHandle)` returns string payload (empty when unavailable).
+- `sys.worker.error(workerHandle)` returns string error code (`unknown_worker` for unknown handles).
+- `sys.worker.cancel(workerHandle)` returns bool for cancellation transition success.
+
+## Bytes Syscall Value Contract
+
+- `sys.bytes.length(data)` returns byte length as int.
+- `sys.bytes.at(data,index)` returns byte value (`0..255`) or `-1` when index is out of range.
+- `sys.bytes.slice(data,start,length)` returns clamped bytes slice.
+- `sys.bytes.concat(left,right)` returns concatenated bytes.
+- `sys.bytes.fromBase64(text)` returns `bytes`.
+- `sys.bytes.toBase64(data)` returns base64 text as string.
+
+## Process Syscall Value Contract
+
+- `sys.process.spawn(command, argsNode, cwd, envNode)` returns an int process handle (`-1` when start fails).
+- `sys.process_poll(processHandle)` returns int status:
+- `0` pending
+- `1` completed-success
+- `-1` completed-failure
+- `-2` canceled
+- `-3` unknown-handle
+- `sys.process_wait(processHandle)` returns the same terminal status contract as `sys.process_poll`.
+- `sys.process.stdout.read(processHandle)` and `sys.process.stderr.read(processHandle)` return bytes payloads (empty when unavailable).
+- `sys.process_kill(processHandle)` returns bool for kill transition success.
 
 ## Debug Syscall Value Contract
 
-- `sys.debug_emit(channel, payload)` writes one deterministic debug record and returns `void`.
-- `sys.debug_mode()` returns current debug mode string: `off`, `live`, `snapshot`, `replay`, or `scene`.
-- `sys.debug_captureFrameBegin(frameId, width, height)` and `sys.debug_captureFrameEnd(frameId)` return `void`.
-- `sys.debug_captureDraw(op, args)` returns `void`; canonical `op` values: `rect`, `ellipse`, `path`, `text`, `line`, `transform`, `filter`, `image`.
-- `sys.debug_captureInput(eventPayload)` and `sys.debug_captureState(key, valuePayload)` return `void`.
-- `sys.debug_replayLoad(path)` returns int replay handle (`-1` on load failure).
-- `sys.debug_replayNext(handle)` returns next replay record string, or empty string at EOF/unknown handle.
-- `sys.debug_assert(cond, code, message)` returns `void` when `cond=true`, otherwise raises deterministic runtime error.
-- `sys.debug_artifactWrite(path, text)` returns bool success.
-- `sys.debug_traceAsync(opId, phase, detail)` returns `void`; canonical `phase` values: `start`, `poll`, `done`, `fail`, `cancel`.
+- `sys.debug.emit(channel, payload)` writes one deterministic debug record and returns `void`.
+- `sys.debug.mode()` returns current debug mode string: `off`, `live`, `snapshot`, `replay`, or `scene`.
+- `sys.debug.captureFrameBegin(frameId, width, height)` and `sys.debug.captureFrameEnd(frameId)` return `void`.
+- `sys.debug.captureDraw(op, args)` returns `void`; canonical `op` values: `rect`, `ellipse`, `path`, `text`, `line`, `transform`, `filter`, `image`.
+- `sys.debug.captureInput(eventPayload)` and `sys.debug.captureState(key, valuePayload)` return `void`.
+- `sys.debug.replayLoad(path)` returns int replay handle (`-1` on load failure).
+- `sys.debug.replayNext(handle)` returns next replay record string, or empty string at EOF/unknown handle.
+- `sys.debug.assert(cond, code, message)` returns `void` when `cond=true`, otherwise raises deterministic runtime error.
+- `sys.debug.artifactWrite(path, text)` returns bool success.
+- `sys.debug.traceAsync(opId, phase, detail)` returns `void`; canonical `phase` values: `start`, `poll`, `done`, `fail`, `cancel`.
 
 ## Stability Rule
 

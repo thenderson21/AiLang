@@ -85,7 +85,7 @@ Runtime Changes:
 Exit Criteria:
 	•	HTTP apps no longer manipulate raw text
 	•	JSON response built via Map + std.json.stringify
-	•	TLS supported via sys.tls_listen
+	•	TLS supported via sys.tls.listen
 
 ⸻
 
@@ -132,12 +132,12 @@ Objective: Cross-platform UI system
 Architecture:
 
 C# syscalls:
-	•	sys.gfx_createWindow
-	•	sys.gfx_beginFrame
-	•	sys.gfx_drawRect
-	•	sys.gfx_drawText
-	•	sys.gfx_endFrame
-	•	sys.gfx_pollEvent
+	•	sys.gfx.createWindow
+	•	sys.gfx.beginFrame
+	•	sys.gfx.drawRect
+	•	sys.gfx.drawText
+	•	sys.gfx.endFrame
+	•	sys.gfx.pollEvent
 
 AiLang:
 	•	State → UiTree

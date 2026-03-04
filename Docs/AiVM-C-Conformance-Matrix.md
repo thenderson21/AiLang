@@ -52,10 +52,10 @@ Status keys:
 | UI lifecycle/window syscall parity | in_progress | Added C contracts for `ui_createWindow/ui_beginFrame/ui_endFrame/ui_pollEvent/ui_present/ui_closeWindow/ui_waitFrame`; `ui_getWindowSize` now matches C# shape (`1 int -> node`) and runtime dispatch tests enforce node returns for `ui_pollEvent/ui_getWindowSize`. |
 | String syscall contracts (`sys.str_*`) | implemented | `utf8ByteCount`, `substring`, `remove` in C contract table and tests. |
 | Console syscall contracts (`sys.console_*`, `sys.stdout_*`) | in_progress | Added core write/read/writeErr/stdout contracts with canonical IDs and typed dispatch coverage. |
-| Process/runtime metadata syscall contracts | in_progress | Added `sys.process_cwd/sys.process_envGet/sys.process_argv/sys.platform/sys.arch/sys.os_version/sys.runtime` with canonical IDs and return-kind coverage. |
-| Time/filesystem syscall contracts | in_progress | Added `sys.time_nowUnixMs/sys.time_monotonicMs/sys.time_sleepMs/sys.proc_exit` and `sys.fs_*` contracts with canonical IDs plus representative typed dispatch tests. |
-| Crypto syscall contracts | in_progress | Added `sys.crypto_base64Encode/sys.crypto_base64Decode/sys.crypto_sha1/sys.crypto_sha256/sys.crypto_hmacSha256/sys.crypto_randomBytes` with canonical IDs and typed coverage. |
-| Network syscall contracts | in_progress | Added `sys.net_*` legacy + `sys.net_tcp*` + `sys.net_udp*` + `sys.net_async*` contract entries with canonical IDs and typed validation coverage. |
+| Process/runtime metadata syscall contracts | in_progress | Added `sys.process.cwd/sys.process.env.get/sys.process.args/sys.platform/sys.arch/sys.os.version/sys.runtime` with canonical IDs and return-kind coverage. |
+| Time/filesystem syscall contracts | in_progress | Added `sys.time.nowUnixMs/sys.time.monotonicMs/sys.time.sleepMs/sys.process.exit` and `sys.fs_*` contracts with canonical IDs plus representative typed dispatch tests. |
+| Crypto syscall contracts | in_progress | Added `sys.crypto.base64Encode/sys.crypto.base64Decode/sys.crypto.sha1/sys.crypto.sha256/sys.crypto.hmacSha256/sys.crypto.randomBytes` with canonical IDs and typed coverage. |
+| Network syscall contracts | in_progress | Added `sys.net_*` legacy + `sys.net.tcp*` + `sys.net.udp*` + `sys.net.async*` contract entries with canonical IDs and typed validation coverage. |
 | Worker/debug syscall contracts | in_progress | Added `sys.worker_*` and `sys.debug_*` contract entries with canonical IDs and typed validation coverage. |
 | UI syscall contracts (initial set) | implemented | Contract scaffold supports UI targets used by VM tests. |
 | Host mechanical boundary | implemented | VM does not call OS APIs directly. |

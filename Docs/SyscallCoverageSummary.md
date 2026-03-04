@@ -6,11 +6,11 @@ Audit date: 2026-02-13
 
 Existing syscall surface supports parts of:
 
-- CLI output/input via `console.print` and `io.*` plus `sys.stdout_writeLine`
-- Process exit and host metadata (`sys.proc_exit`, `sys.platform`, `sys.arch`, `sys.os_version`, `sys.runtime`)
-- File read/existence (`sys.fs_readFile`, `sys.fs_fileExists`)
+- CLI output/input via `console.print` and `io.*` plus `sys.stdout.writeLine`
+- Process exit and host metadata (`sys.process.exit`, `sys.platform`, `sys.arch`, `sys.os.version`, `sys.runtime`)
+- File read/existence (`sys.fs.file.read`, `sys.fs.file.exists`)
 - TCP/TLS listener basics and HTTP-style header/body read (`sys.net_*` subset)
-- Outbound HTTP can be implemented in AiLang stdlib via `httpRequest` over `sys.net_tcp*`
+- Outbound HTTP can be implemented in AiLang stdlib via `httpRequest` over `sys.net.tcp*`
 
 ## What Was Added as Planning Artifacts
 

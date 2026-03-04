@@ -3,7 +3,7 @@ Program#std_net_p1 {
     Fn#std_net_f1(params=host,port) {
       Block#std_net_b1 {
         Return#std_net_r1 {
-          Call#std_net_c1(target=sys.net_udpBind) {
+          Call#std_net_c1(target=sys.net.udp.bind) {
             Var#std_net_v1(name=host)
             Var#std_net_v2(name=port)
           }
@@ -16,7 +16,7 @@ Program#std_net_p1 {
     Fn#std_net_f2(params=handle,host,port,data) {
       Block#std_net_b2 {
         Return#std_net_r2 {
-          Call#std_net_c2(target=sys.net_udpSend) {
+          Call#std_net_c2(target=sys.net.udp.send) {
             Var#std_net_v3(name=handle)
             Var#std_net_v4(name=host)
             Var#std_net_v5(name=port)
@@ -31,7 +31,7 @@ Program#std_net_p1 {
     Fn#std_net_f3(params=handle,maxBytes) {
       Block#std_net_b3 {
         Return#std_net_r3 {
-          Call#std_net_c3(target=sys.net_udpRecv) {
+          Call#std_net_c3(target=sys.net.udp.recv) {
             Var#std_net_v7(name=handle)
             Var#std_net_v8(name=maxBytes)
           }

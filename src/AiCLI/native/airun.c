@@ -7,6 +7,7 @@
 
 #ifdef _WIN32
 #include <direct.h>
+#include <io.h>
 #include <process.h>
 #include <sys/stat.h>
 #include <windows.h>
@@ -18,11 +19,19 @@
 #define AIVM_EXE_EXT ".exe"
 #else
 #include <sys/resource.h>
+#include <dirent.h>
+#include <fcntl.h>
+#include <signal.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/time.h>
 #include <unistd.h>
 #include <sys/wait.h>
+/* Some test translation units include this file directly without POSIX feature
+   macros, which can hide realpath(3) declaration on glibc. */
+extern char* realpath(const char* path, char* resolved_path);
+extern int lstat(const char* path, struct stat* buffer);
+extern int kill(pid_t pid, int sig);
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
@@ -907,6 +916,237 @@ static int is_reserved_cv_selector(const char* mode)
     return 1;
 }
 
+#define NATIVE_PROCESS_CAPACITY 32U
+#define NATIVE_PROCESS_READ_CHUNK 4096U
+
+typedef struct NativeProcessState
+{
+    int used;
+    int finished;
+    int exit_code;
+    int stdout_closed;
+    int stderr_closed;
+#ifdef _WIN32
+    HANDLE process_handle;
+    HANDLE stdout_read;
+    HANDLE stderr_read;
+#else
+    pid_t pid;
+    int stdout_fd;
+    int stderr_fd;
+#endif
+} NativeProcessState;
+
+static NativeProcessState g_native_processes[NATIVE_PROCESS_CAPACITY];
+static uint8_t g_native_process_read_scratch[NATIVE_PROCESS_READ_CHUNK];
+
+static void native_process_init_slot(NativeProcessState* process)
+{
+    if (process == NULL) {
+        return;
+    }
+    memset(process, 0, sizeof(*process));
+#ifndef _WIN32
+    process->pid = (pid_t)-1;
+    process->stdout_fd = -1;
+    process->stderr_fd = -1;
+#endif
+}
+
+static void native_process_release_slot(NativeProcessState* process)
+{
+    if (process == NULL || !process->used) {
+        return;
+    }
+#ifdef _WIN32
+    if (process->process_handle != NULL) {
+        CloseHandle(process->process_handle);
+        process->process_handle = NULL;
+    }
+    if (process->stdout_read != NULL) {
+        CloseHandle(process->stdout_read);
+        process->stdout_read = NULL;
+    }
+    if (process->stderr_read != NULL) {
+        CloseHandle(process->stderr_read);
+        process->stderr_read = NULL;
+    }
+#else
+    if (process->stdout_fd >= 0) {
+        close(process->stdout_fd);
+        process->stdout_fd = -1;
+    }
+    if (process->stderr_fd >= 0) {
+        close(process->stderr_fd);
+        process->stderr_fd = -1;
+    }
+#endif
+    native_process_init_slot(process);
+}
+
+static NativeProcessState* native_process_lookup(int64_t handle_value)
+{
+    size_t index;
+    if (handle_value <= 0 || handle_value > (int64_t)NATIVE_PROCESS_CAPACITY) {
+        return NULL;
+    }
+    index = (size_t)(handle_value - 1);
+    if (!g_native_processes[index].used) {
+        return NULL;
+    }
+    return &g_native_processes[index];
+}
+
+static int64_t native_process_allocate_slot(void)
+{
+    size_t index;
+    for (index = 0U; index < NATIVE_PROCESS_CAPACITY; index += 1U) {
+        if (!g_native_processes[index].used) {
+            native_process_init_slot(&g_native_processes[index]);
+            g_native_processes[index].used = 1;
+            return (int64_t)(index + 1U);
+        }
+    }
+    return -1;
+}
+
+#ifdef _WIN32
+static int native_delete_dir_recursive_windows(const char* path)
+{
+    char pattern[PATH_MAX];
+    WIN32_FIND_DATAA find_data;
+    HANDLE find_handle;
+
+    if (path == NULL) {
+        return 0;
+    }
+    if (!join_path(path, "*", pattern, sizeof(pattern))) {
+        return 0;
+    }
+
+    find_handle = FindFirstFileA(pattern, &find_data);
+    if (find_handle == INVALID_HANDLE_VALUE) {
+        return RemoveDirectoryA(path) != 0;
+    }
+
+    do {
+        char child[PATH_MAX];
+        if (strcmp(find_data.cFileName, ".") == 0 || strcmp(find_data.cFileName, "..") == 0) {
+            continue;
+        }
+        if (!join_path(path, find_data.cFileName, child, sizeof(child))) {
+            FindClose(find_handle);
+            return 0;
+        }
+        if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0U) {
+            if (!native_delete_dir_recursive_windows(child)) {
+                FindClose(find_handle);
+                return 0;
+            }
+        } else {
+            if (!DeleteFileA(child)) {
+                FindClose(find_handle);
+                return 0;
+            }
+        }
+    } while (FindNextFileA(find_handle, &find_data) != 0);
+
+    FindClose(find_handle);
+    return RemoveDirectoryA(path) != 0;
+}
+
+static void native_process_refresh(NativeProcessState* process)
+{
+    DWORD wait_status;
+    DWORD exit_code;
+    if (process == NULL || process->finished || process->process_handle == NULL) {
+        return;
+    }
+    wait_status = WaitForSingleObject(process->process_handle, 0);
+    if (wait_status == WAIT_OBJECT_0) {
+        process->finished = 1;
+        if (GetExitCodeProcess(process->process_handle, &exit_code) != 0) {
+            process->exit_code = (int)exit_code;
+        } else {
+            process->exit_code = -1;
+        }
+    }
+}
+#else
+static void native_process_set_nonblocking(int fd)
+{
+    int flags;
+    if (fd < 0) {
+        return;
+    }
+    flags = fcntl(fd, F_GETFL, 0);
+    if (flags >= 0) {
+        (void)fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    }
+}
+
+static int native_delete_dir_recursive_posix(const char* path)
+{
+    DIR* dir;
+    struct dirent* entry;
+    if (path == NULL) {
+        return 0;
+    }
+    dir = opendir(path);
+    if (dir == NULL) {
+        return 0;
+    }
+    while ((entry = readdir(dir)) != NULL) {
+        char child[PATH_MAX];
+        struct stat st;
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+        if (!join_path(path, entry->d_name, child, sizeof(child))) {
+            (void)closedir(dir);
+            return 0;
+        }
+        if (lstat(child, &st) != 0) {
+            (void)closedir(dir);
+            return 0;
+        }
+        if (S_ISDIR(st.st_mode)) {
+            if (!native_delete_dir_recursive_posix(child)) {
+                (void)closedir(dir);
+                return 0;
+            }
+        } else {
+            if (remove(child) != 0) {
+                (void)closedir(dir);
+                return 0;
+            }
+        }
+    }
+    (void)closedir(dir);
+    return rmdir(path) == 0;
+}
+
+static void native_process_refresh(NativeProcessState* process)
+{
+    int status;
+    pid_t wait_result;
+    if (process == NULL || process->finished) {
+        return;
+    }
+    wait_result = waitpid(process->pid, &status, WNOHANG);
+    if (wait_result == process->pid) {
+        process->finished = 1;
+        if (WIFEXITED(status)) {
+            process->exit_code = WEXITSTATUS(status);
+        } else if (WIFSIGNALED(status)) {
+            process->exit_code = 128 + WTERMSIG(status);
+        } else {
+            process->exit_code = -1;
+        }
+    }
+}
+#endif
+
 static int native_syscall_stdout_write_line(
     const char* target,
     const AivmValue* args,
@@ -945,31 +1185,1254 @@ static int native_syscall_process_argv(
     return AIVM_SYSCALL_OK;
 }
 
+static int native_syscall_fs_file_delete(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    struct stat st;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (stat(args[0].string_value, &st) != 0) {
+        *result = aivm_value_bool(0);
+        return AIVM_SYSCALL_OK;
+    }
+#ifdef _WIN32
+    if ((st.st_mode & _S_IFREG) == 0) {
+#else
+    if (!S_ISREG(st.st_mode)) {
+#endif
+        *result = aivm_value_bool(0);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_bool(remove(args[0].string_value) == 0 ? 1 : 0);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_fs_dir_delete(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    const char* path;
+    int recursive;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 2U || args == NULL || args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL || args[1].type != AIVM_VAL_BOOL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    path = args[0].string_value;
+    recursive = args[1].bool_value ? 1 : 0;
+#ifdef _WIN32
+    if (recursive) {
+        *result = aivm_value_bool(native_delete_dir_recursive_windows(path) ? 1 : 0);
+    } else {
+        *result = aivm_value_bool(_rmdir(path) == 0 ? 1 : 0);
+    }
+#else
+    if (recursive) {
+        *result = aivm_value_bool(native_delete_dir_recursive_posix(path) ? 1 : 0);
+    } else {
+        *result = aivm_value_bool(rmdir(path) == 0 ? 1 : 0);
+    }
+#endif
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_process_spawn(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 4U || args == NULL ||
+        args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL ||
+        args[1].type != AIVM_VAL_NODE ||
+        args[2].type != AIVM_VAL_STRING || args[2].string_value == NULL ||
+        args[3].type != AIVM_VAL_NODE) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+#ifdef _WIN32
+    {
+        SECURITY_ATTRIBUTES security_attributes;
+        HANDLE stdout_read = NULL;
+        HANDLE stdout_write = NULL;
+        HANDLE stderr_read = NULL;
+        HANDLE stderr_write = NULL;
+        PROCESS_INFORMATION process_info;
+        STARTUPINFOA startup_info;
+        int64_t slot_handle;
+        NativeProcessState* process;
+        char* command_line;
+        const char* cwd = NULL;
+
+        memset(&security_attributes, 0, sizeof(security_attributes));
+        security_attributes.nLength = sizeof(security_attributes);
+        security_attributes.bInheritHandle = TRUE;
+        security_attributes.lpSecurityDescriptor = NULL;
+
+        if (!CreatePipe(&stdout_read, &stdout_write, &security_attributes, 0) ||
+            !CreatePipe(&stderr_read, &stderr_write, &security_attributes, 0)) {
+            if (stdout_read != NULL) {
+                CloseHandle(stdout_read);
+            }
+            if (stdout_write != NULL) {
+                CloseHandle(stdout_write);
+            }
+            if (stderr_read != NULL) {
+                CloseHandle(stderr_read);
+            }
+            if (stderr_write != NULL) {
+                CloseHandle(stderr_write);
+            }
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+
+        (void)SetHandleInformation(stdout_read, HANDLE_FLAG_INHERIT, 0);
+        (void)SetHandleInformation(stderr_read, HANDLE_FLAG_INHERIT, 0);
+
+        memset(&startup_info, 0, sizeof(startup_info));
+        memset(&process_info, 0, sizeof(process_info));
+        startup_info.cb = sizeof(startup_info);
+        startup_info.dwFlags = STARTF_USESTDHANDLES;
+        startup_info.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+        startup_info.hStdOutput = stdout_write;
+        startup_info.hStdError = stderr_write;
+
+        command_line = _strdup(args[0].string_value);
+        if (command_line == NULL) {
+            CloseHandle(stdout_read);
+            CloseHandle(stdout_write);
+            CloseHandle(stderr_read);
+            CloseHandle(stderr_write);
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+        if (args[2].string_value[0] != '\0') {
+            cwd = args[2].string_value;
+        }
+
+        if (!CreateProcessA(
+                NULL,
+                command_line,
+                NULL,
+                NULL,
+                TRUE,
+                CREATE_NO_WINDOW,
+                NULL,
+                cwd,
+                &startup_info,
+                &process_info)) {
+            free(command_line);
+            CloseHandle(stdout_read);
+            CloseHandle(stdout_write);
+            CloseHandle(stderr_read);
+            CloseHandle(stderr_write);
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+
+        free(command_line);
+        CloseHandle(stdout_write);
+        CloseHandle(stderr_write);
+        CloseHandle(process_info.hThread);
+
+        slot_handle = native_process_allocate_slot();
+        if (slot_handle < 0) {
+            (void)TerminateProcess(process_info.hProcess, 1);
+            CloseHandle(process_info.hProcess);
+            CloseHandle(stdout_read);
+            CloseHandle(stderr_read);
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+
+        process = native_process_lookup(slot_handle);
+        if (process == NULL) {
+            (void)TerminateProcess(process_info.hProcess, 1);
+            CloseHandle(process_info.hProcess);
+            CloseHandle(stdout_read);
+            CloseHandle(stderr_read);
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+        process->process_handle = process_info.hProcess;
+        process->stdout_read = stdout_read;
+        process->stderr_read = stderr_read;
+        *result = aivm_value_int(slot_handle);
+        return AIVM_SYSCALL_OK;
+    }
+#else
+    {
+        int stdout_pipe[2] = { -1, -1 };
+        int stderr_pipe[2] = { -1, -1 };
+        pid_t pid;
+        int64_t slot_handle;
+        NativeProcessState* process;
+        if (pipe(stdout_pipe) != 0 || pipe(stderr_pipe) != 0) {
+            if (stdout_pipe[0] >= 0) {
+                close(stdout_pipe[0]);
+            }
+            if (stdout_pipe[1] >= 0) {
+                close(stdout_pipe[1]);
+            }
+            if (stderr_pipe[0] >= 0) {
+                close(stderr_pipe[0]);
+            }
+            if (stderr_pipe[1] >= 0) {
+                close(stderr_pipe[1]);
+            }
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+
+        pid = fork();
+        if (pid == 0) {
+            if (args[2].string_value[0] != '\0') {
+                if (chdir(args[2].string_value) != 0) {
+                    _exit(126);
+                }
+            }
+            dup2(stdout_pipe[1], STDOUT_FILENO);
+            dup2(stderr_pipe[1], STDERR_FILENO);
+            close(stdout_pipe[0]);
+            close(stdout_pipe[1]);
+            close(stderr_pipe[0]);
+            close(stderr_pipe[1]);
+            execl("/bin/sh", "sh", "-c", args[0].string_value, (char*)NULL);
+            _exit(127);
+        }
+        if (pid < 0) {
+            close(stdout_pipe[0]);
+            close(stdout_pipe[1]);
+            close(stderr_pipe[0]);
+            close(stderr_pipe[1]);
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+
+        slot_handle = native_process_allocate_slot();
+        if (slot_handle < 0) {
+            kill(pid, SIGTERM);
+            close(stdout_pipe[0]);
+            close(stdout_pipe[1]);
+            close(stderr_pipe[0]);
+            close(stderr_pipe[1]);
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+
+        close(stdout_pipe[1]);
+        close(stderr_pipe[1]);
+        process = native_process_lookup(slot_handle);
+        if (process == NULL) {
+            kill(pid, SIGTERM);
+            close(stdout_pipe[0]);
+            close(stderr_pipe[0]);
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+        process->pid = pid;
+        process->stdout_fd = stdout_pipe[0];
+        process->stderr_fd = stderr_pipe[0];
+        native_process_set_nonblocking(process->stdout_fd);
+        native_process_set_nonblocking(process->stderr_fd);
+        *result = aivm_value_int(slot_handle);
+        return AIVM_SYSCALL_OK;
+    }
+#endif
+}
+
+static int native_syscall_process_wait(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeProcessState* process;
+    int exit_code;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    process = native_process_lookup(args[0].int_value);
+    if (process == NULL) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+#ifdef _WIN32
+    if (!process->finished) {
+        DWORD wait_status = WaitForSingleObject(process->process_handle, INFINITE);
+        if (wait_status == WAIT_OBJECT_0) {
+            DWORD exit_code;
+            process->finished = 1;
+            if (GetExitCodeProcess(process->process_handle, &exit_code) != 0) {
+                process->exit_code = (int)exit_code;
+            } else {
+                process->exit_code = -1;
+            }
+        }
+    }
+    exit_code = process->exit_code;
+    *result = aivm_value_int((int64_t)exit_code);
+    native_process_release_slot(process);
+    return AIVM_SYSCALL_OK;
+#else
+    if (!process->finished) {
+        int status;
+        pid_t wait_result = waitpid(process->pid, &status, 0);
+        if (wait_result == process->pid) {
+            process->finished = 1;
+            if (WIFEXITED(status)) {
+                process->exit_code = WEXITSTATUS(status);
+            } else if (WIFSIGNALED(status)) {
+                process->exit_code = 128 + WTERMSIG(status);
+            } else {
+                process->exit_code = -1;
+            }
+        }
+    }
+    exit_code = process->exit_code;
+    *result = aivm_value_int((int64_t)exit_code);
+    native_process_release_slot(process);
+    return AIVM_SYSCALL_OK;
+#endif
+}
+
+static int native_syscall_process_poll(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeProcessState* process;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    process = native_process_lookup(args[0].int_value);
+    if (process == NULL) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+#ifdef _WIN32
+    native_process_refresh(process);
+    *result = aivm_value_int(process->finished ? 1 : 0);
+    return AIVM_SYSCALL_OK;
+#else
+    native_process_refresh(process);
+    *result = aivm_value_int(process->finished ? 1 : 0);
+    return AIVM_SYSCALL_OK;
+#endif
+}
+
+static int native_syscall_process_kill(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeProcessState* process;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    process = native_process_lookup(args[0].int_value);
+    if (process == NULL) {
+        *result = aivm_value_bool(0);
+        return AIVM_SYSCALL_OK;
+    }
+#ifdef _WIN32
+    if (process->finished) {
+        *result = aivm_value_bool(0);
+    } else {
+        *result = aivm_value_bool(TerminateProcess(process->process_handle, 1) ? 1 : 0);
+    }
+#else
+    if (process->finished) {
+        *result = aivm_value_bool(0);
+    } else {
+        *result = aivm_value_bool(kill(process->pid, SIGTERM) == 0 ? 1 : 0);
+    }
+#endif
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_process_stream_read(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result,
+    int read_stdout)
+{
+    NativeProcessState* process;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    process = native_process_lookup(args[0].int_value);
+    if (process == NULL) {
+        *result = aivm_value_bytes(NULL, 0U);
+        return AIVM_SYSCALL_OK;
+    }
+#ifdef _WIN32
+    {
+        HANDLE stream = read_stdout ? process->stdout_read : process->stderr_read;
+        int* closed_flag = read_stdout ? &process->stdout_closed : &process->stderr_closed;
+        DWORD available = 0;
+        DWORD read_count = 0;
+        if (*closed_flag || stream == NULL) {
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        if (!PeekNamedPipe(stream, NULL, 0, NULL, &available, NULL)) {
+            DWORD err = GetLastError();
+            if (err == ERROR_BROKEN_PIPE) {
+                CloseHandle(stream);
+                if (read_stdout) {
+                    process->stdout_read = NULL;
+                } else {
+                    process->stderr_read = NULL;
+                }
+                *closed_flag = 1;
+                *result = aivm_value_bytes(NULL, 0U);
+                return AIVM_SYSCALL_OK;
+            }
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        if (available == 0) {
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        if (available > (DWORD)NATIVE_PROCESS_READ_CHUNK) {
+            available = (DWORD)NATIVE_PROCESS_READ_CHUNK;
+        }
+        if (!ReadFile(stream, g_native_process_read_scratch, available, &read_count, NULL)) {
+            DWORD err = GetLastError();
+            if (err == ERROR_BROKEN_PIPE) {
+                CloseHandle(stream);
+                if (read_stdout) {
+                    process->stdout_read = NULL;
+                } else {
+                    process->stderr_read = NULL;
+                }
+                *closed_flag = 1;
+            }
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        if (read_count == 0) {
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        *result = aivm_value_bytes(g_native_process_read_scratch, (size_t)read_count);
+        return AIVM_SYSCALL_OK;
+    }
+#else
+    {
+        int fd = read_stdout ? process->stdout_fd : process->stderr_fd;
+        int* closed_flag = read_stdout ? &process->stdout_closed : &process->stderr_closed;
+        ssize_t read_count;
+        if (*closed_flag || fd < 0) {
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        read_count = read(fd, g_native_process_read_scratch, NATIVE_PROCESS_READ_CHUNK);
+        if (read_count > 0) {
+            *result = aivm_value_bytes(g_native_process_read_scratch, (size_t)read_count);
+            return AIVM_SYSCALL_OK;
+        }
+        if (read_count == 0) {
+            close(fd);
+            *closed_flag = 1;
+            if (read_stdout) {
+                process->stdout_fd = -1;
+            } else {
+                process->stderr_fd = -1;
+            }
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        *result = aivm_value_bytes(NULL, 0U);
+        return AIVM_SYSCALL_OK;
+    }
+#endif
+}
+
+static int native_syscall_process_stdout_read(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    return native_syscall_process_stream_read(target, args, arg_count, result, 1);
+}
+
+static int native_syscall_process_stderr_read(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    return native_syscall_process_stream_read(target, args, arg_count, result, 0);
+}
+
+static int native_base64_decode_char(char ch)
+{
+    if (ch >= 'A' && ch <= 'Z') {
+        return (int)(ch - 'A');
+    }
+    if (ch >= 'a' && ch <= 'z') {
+        return (int)(ch - 'a') + 26;
+    }
+    if (ch >= '0' && ch <= '9') {
+        return (int)(ch - '0') + 52;
+    }
+    if (ch == '+') {
+        return 62;
+    }
+    if (ch == '/') {
+        return 63;
+    }
+    return -1;
+}
+
+#define NATIVE_BYTES_SCRATCH_CAPACITY 131072U
+static uint8_t g_native_bytes_scratch[NATIVE_BYTES_SCRATCH_CAPACITY];
+static char g_native_base64_scratch[NATIVE_BYTES_SCRATCH_CAPACITY];
+static char g_native_utf8_scratch[8];
+
+static int native_bytes_from_base64(
+    const char* input,
+    uint8_t* out_bytes,
+    size_t out_capacity,
+    size_t* out_length)
+{
+    size_t input_len;
+    size_t i;
+    size_t out_index = 0U;
+    if (out_length == NULL) {
+        return 0;
+    }
+    *out_length = 0U;
+    if (input == NULL) {
+        return 0;
+    }
+    input_len = strlen(input);
+    if (input_len == 0U) {
+        return 1;
+    }
+    if ((input_len % 4U) != 0U) {
+        return 0;
+    }
+
+    for (i = 0U; i < input_len; i += 4U) {
+        int c0 = native_base64_decode_char(input[i]);
+        int c1 = native_base64_decode_char(input[i + 1U]);
+        int c2;
+        int c3;
+        uint32_t chunk;
+        int pad = 0;
+        if (c0 < 0 || c1 < 0) {
+            return 0;
+        }
+        if (input[i + 2U] == '=') {
+            c2 = 0;
+            pad += 1;
+            if (input[i + 3U] != '=') {
+                return 0;
+            }
+            c3 = 0;
+            pad += 1;
+        } else {
+            c2 = native_base64_decode_char(input[i + 2U]);
+            if (c2 < 0) {
+                return 0;
+            }
+            if (input[i + 3U] == '=') {
+                c3 = 0;
+                pad += 1;
+            } else {
+                c3 = native_base64_decode_char(input[i + 3U]);
+                if (c3 < 0) {
+                    return 0;
+                }
+            }
+        }
+        if (pad > 0 && i + 4U != input_len) {
+            return 0;
+        }
+        chunk = ((uint32_t)c0 << 18U) |
+                ((uint32_t)c1 << 12U) |
+                ((uint32_t)c2 << 6U) |
+                (uint32_t)c3;
+
+        if (out_bytes != NULL && out_index < out_capacity) {
+            out_bytes[out_index] = (uint8_t)((chunk >> 16U) & 0xffU);
+        }
+        out_index += 1U;
+        if (pad < 2) {
+            if (out_bytes != NULL && out_index < out_capacity) {
+                out_bytes[out_index] = (uint8_t)((chunk >> 8U) & 0xffU);
+            }
+            out_index += 1U;
+        }
+        if (pad == 0) {
+            if (out_bytes != NULL && out_index < out_capacity) {
+                out_bytes[out_index] = (uint8_t)(chunk & 0xffU);
+            }
+            out_index += 1U;
+        }
+    }
+
+    if (out_bytes != NULL && out_index > out_capacity) {
+        return 0;
+    }
+    *out_length = out_index;
+    return 1;
+}
+
+static int native_bytes_to_base64(
+    const uint8_t* input,
+    size_t input_len,
+    char* out_text,
+    size_t out_capacity)
+{
+    static const char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    size_t i = 0U;
+    size_t out_index = 0U;
+
+    if (out_capacity == 0U) {
+        return 0;
+    }
+    if (input_len == 0U) {
+        if (out_capacity < 1U) {
+            return 0;
+        }
+        out_text[0] = '\0';
+        return 1;
+    }
+    if (input == NULL) {
+        return 0;
+    }
+
+    while (i < input_len) {
+        uint32_t chunk = 0U;
+        size_t remain = input_len - i;
+        size_t bytes_in_chunk = remain >= 3U ? 3U : remain;
+        chunk |= (uint32_t)input[i] << 16U;
+        if (bytes_in_chunk > 1U) {
+            chunk |= (uint32_t)input[i + 1U] << 8U;
+        }
+        if (bytes_in_chunk > 2U) {
+            chunk |= (uint32_t)input[i + 2U];
+        }
+        if (out_index + 4U >= out_capacity) {
+            return 0;
+        }
+        out_text[out_index++] = alphabet[(chunk >> 18U) & 0x3fU];
+        out_text[out_index++] = alphabet[(chunk >> 12U) & 0x3fU];
+        out_text[out_index++] = (bytes_in_chunk > 1U) ? alphabet[(chunk >> 6U) & 0x3fU] : '=';
+        out_text[out_index++] = (bytes_in_chunk > 2U) ? alphabet[chunk & 0x3fU] : '=';
+        i += bytes_in_chunk;
+    }
+    out_text[out_index] = '\0';
+    return 1;
+}
+
+static int native_is_valid_utf8_without_nul(const uint8_t* data, size_t len)
+{
+    size_t i = 0U;
+    if (data == NULL) {
+        return len == 0U;
+    }
+    while (i < len) {
+        uint8_t b0 = data[i];
+        if (b0 == 0U) {
+            return 0;
+        }
+        if (b0 <= 0x7FU) {
+            i += 1U;
+            continue;
+        }
+        if (b0 >= 0xC2U && b0 <= 0xDFU) {
+            if (i + 1U >= len) {
+                return 0;
+            }
+            if ((data[i + 1U] & 0xC0U) != 0x80U) {
+                return 0;
+            }
+            i += 2U;
+            continue;
+        }
+        if (b0 == 0xE0U) {
+            if (i + 2U >= len) {
+                return 0;
+            }
+            if (data[i + 1U] < 0xA0U || data[i + 1U] > 0xBFU) {
+                return 0;
+            }
+            if ((data[i + 2U] & 0xC0U) != 0x80U) {
+                return 0;
+            }
+            i += 3U;
+            continue;
+        }
+        if ((b0 >= 0xE1U && b0 <= 0xECU) || (b0 >= 0xEEU && b0 <= 0xEFU)) {
+            if (i + 2U >= len) {
+                return 0;
+            }
+            if ((data[i + 1U] & 0xC0U) != 0x80U || (data[i + 2U] & 0xC0U) != 0x80U) {
+                return 0;
+            }
+            i += 3U;
+            continue;
+        }
+        if (b0 == 0xEDU) {
+            if (i + 2U >= len) {
+                return 0;
+            }
+            if (data[i + 1U] < 0x80U || data[i + 1U] > 0x9FU) {
+                return 0;
+            }
+            if ((data[i + 2U] & 0xC0U) != 0x80U) {
+                return 0;
+            }
+            i += 3U;
+            continue;
+        }
+        if (b0 == 0xF0U) {
+            if (i + 3U >= len) {
+                return 0;
+            }
+            if (data[i + 1U] < 0x90U || data[i + 1U] > 0xBFU) {
+                return 0;
+            }
+            if ((data[i + 2U] & 0xC0U) != 0x80U || (data[i + 3U] & 0xC0U) != 0x80U) {
+                return 0;
+            }
+            i += 4U;
+            continue;
+        }
+        if (b0 >= 0xF1U && b0 <= 0xF3U) {
+            if (i + 3U >= len) {
+                return 0;
+            }
+            if ((data[i + 1U] & 0xC0U) != 0x80U ||
+                (data[i + 2U] & 0xC0U) != 0x80U ||
+                (data[i + 3U] & 0xC0U) != 0x80U) {
+                return 0;
+            }
+            i += 4U;
+            continue;
+        }
+        if (b0 == 0xF4U) {
+            if (i + 3U >= len) {
+                return 0;
+            }
+            if (data[i + 1U] < 0x80U || data[i + 1U] > 0x8FU) {
+                return 0;
+            }
+            if ((data[i + 2U] & 0xC0U) != 0x80U || (data[i + 3U] & 0xC0U) != 0x80U) {
+                return 0;
+            }
+            i += 4U;
+            continue;
+        }
+        return 0;
+    }
+    return 1;
+}
+
+static int native_syscall_bytes_length(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_BYTES) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_int((int64_t)args[0].bytes_value.length);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_bytes_at(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    size_t index;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 2U || args == NULL || args[0].type != AIVM_VAL_BYTES || args[1].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (args[1].int_value < 0) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    index = (size_t)args[1].int_value;
+    if (index >= args[0].bytes_value.length || args[0].bytes_value.data == NULL) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_int((int64_t)args[0].bytes_value.data[index]);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_bytes_slice(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    size_t start;
+    size_t length;
+    size_t end;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 3U || args == NULL || args[0].type != AIVM_VAL_BYTES || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (args[1].int_value <= 0) {
+        start = 0U;
+    } else if ((uint64_t)args[1].int_value >= (uint64_t)args[0].bytes_value.length) {
+        start = args[0].bytes_value.length;
+    } else {
+        start = (size_t)args[1].int_value;
+    }
+    if (args[2].int_value <= 0) {
+        length = 0U;
+    } else {
+        length = (size_t)args[2].int_value;
+    }
+    end = start + length;
+    if (end < start || end > args[0].bytes_value.length) {
+        end = args[0].bytes_value.length;
+    }
+    if (start >= end || args[0].bytes_value.data == NULL) {
+        *result = aivm_value_bytes(NULL, 0U);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_bytes(&args[0].bytes_value.data[start], end - start);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_bytes_concat(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    size_t left_len;
+    size_t right_len;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 2U || args == NULL || args[0].type != AIVM_VAL_BYTES || args[1].type != AIVM_VAL_BYTES) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    left_len = args[0].bytes_value.length;
+    right_len = args[1].bytes_value.length;
+    if (left_len == 0U && right_len == 0U) {
+        *result = aivm_value_bytes(NULL, 0U);
+        return AIVM_SYSCALL_OK;
+    }
+    if (left_len + right_len > NATIVE_BYTES_SCRATCH_CAPACITY) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (left_len > 0U && args[0].bytes_value.data != NULL) {
+        memcpy(g_native_bytes_scratch, args[0].bytes_value.data, left_len);
+    } else if (left_len > 0U) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (right_len > 0U && args[1].bytes_value.data != NULL) {
+        memcpy(g_native_bytes_scratch + left_len, args[1].bytes_value.data, right_len);
+    } else if (right_len > 0U) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_bytes(g_native_bytes_scratch, left_len + right_len);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_bytes_from_base64(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    size_t out_len = 0U;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (!native_bytes_from_base64(args[0].string_value, NULL, 0U, &out_len)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (out_len == 0U) {
+        *result = aivm_value_bytes(NULL, 0U);
+        return AIVM_SYSCALL_OK;
+    }
+    if (out_len > NATIVE_BYTES_SCRATCH_CAPACITY) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (!native_bytes_from_base64(args[0].string_value, g_native_bytes_scratch, out_len, &out_len)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_bytes(g_native_bytes_scratch, out_len);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_bytes_to_base64(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    size_t in_len;
+    size_t out_len;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_BYTES) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    in_len = args[0].bytes_value.length;
+    out_len = ((in_len + 2U) / 3U) * 4U;
+    if (out_len + 1U > NATIVE_BYTES_SCRATCH_CAPACITY) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (!native_bytes_to_base64(args[0].bytes_value.data, in_len, g_native_base64_scratch, out_len + 1U)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_string(g_native_base64_scratch);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_bytes_to_utf8_string(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    size_t i;
+    size_t in_len;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_BYTES) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    in_len = args[0].bytes_value.length;
+    if (in_len == 0U) {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    if (args[0].bytes_value.data == NULL || in_len + 1U > NATIVE_BYTES_SCRATCH_CAPACITY) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (!native_is_valid_utf8_without_nul(args[0].bytes_value.data, in_len)) {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    for (i = 0U; i < in_len; i += 1U) {
+        g_native_base64_scratch[i] = (char)args[0].bytes_value.data[i];
+    }
+    g_native_base64_scratch[in_len] = '\0';
+    *result = aivm_value_string(g_native_base64_scratch);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_str_from_codepoint(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    uint32_t cp;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (args[0].int_value < 0 || args[0].int_value > 0x10FFFFLL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    cp = (uint32_t)args[0].int_value;
+    if (cp >= 0xD800U && cp <= 0xDFFFU) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (cp <= 0x7FU) {
+        g_native_utf8_scratch[0] = (char)cp;
+        g_native_utf8_scratch[1] = '\0';
+    } else if (cp <= 0x7FFU) {
+        g_native_utf8_scratch[0] = (char)(0xC0U | (cp >> 6U));
+        g_native_utf8_scratch[1] = (char)(0x80U | (cp & 0x3FU));
+        g_native_utf8_scratch[2] = '\0';
+    } else if (cp <= 0xFFFFU) {
+        g_native_utf8_scratch[0] = (char)(0xE0U | (cp >> 12U));
+        g_native_utf8_scratch[1] = (char)(0x80U | ((cp >> 6U) & 0x3FU));
+        g_native_utf8_scratch[2] = (char)(0x80U | (cp & 0x3FU));
+        g_native_utf8_scratch[3] = '\0';
+    } else {
+        g_native_utf8_scratch[0] = (char)(0xF0U | (cp >> 18U));
+        g_native_utf8_scratch[1] = (char)(0x80U | ((cp >> 12U) & 0x3FU));
+        g_native_utf8_scratch[2] = (char)(0x80U | ((cp >> 6U) & 0x3FU));
+        g_native_utf8_scratch[3] = (char)(0x80U | (cp & 0x3FU));
+        g_native_utf8_scratch[4] = '\0';
+    }
+    *result = aivm_value_string(g_native_utf8_scratch);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_str_decode_unicode_hex4(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    const char* text;
+    size_t len;
+    uint32_t cp;
+    char* end_ptr = NULL;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    text = args[0].string_value;
+    len = strlen(text);
+    if (len != 4U) {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    cp = (uint32_t)strtoul(text, &end_ptr, 16);
+    if (end_ptr == NULL || *end_ptr != '\0') {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    if (cp > 0x10FFFFU || (cp >= 0xD800U && cp <= 0xDFFFU)) {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    if (cp <= 0x7FU) {
+        g_native_utf8_scratch[0] = (char)cp;
+        g_native_utf8_scratch[1] = '\0';
+    } else if (cp <= 0x7FFU) {
+        g_native_utf8_scratch[0] = (char)(0xC0U | (cp >> 6U));
+        g_native_utf8_scratch[1] = (char)(0x80U | (cp & 0x3FU));
+        g_native_utf8_scratch[2] = '\0';
+    } else if (cp <= 0xFFFFU) {
+        g_native_utf8_scratch[0] = (char)(0xE0U | (cp >> 12U));
+        g_native_utf8_scratch[1] = (char)(0x80U | ((cp >> 6U) & 0x3FU));
+        g_native_utf8_scratch[2] = (char)(0x80U | (cp & 0x3FU));
+        g_native_utf8_scratch[3] = '\0';
+    } else {
+        g_native_utf8_scratch[0] = (char)(0xF0U | (cp >> 18U));
+        g_native_utf8_scratch[1] = (char)(0x80U | ((cp >> 12U) & 0x3FU));
+        g_native_utf8_scratch[2] = (char)(0x80U | ((cp >> 6U) & 0x3FU));
+        g_native_utf8_scratch[3] = (char)(0x80U | (cp & 0x3FU));
+        g_native_utf8_scratch[4] = '\0';
+    }
+    *result = aivm_value_string(g_native_utf8_scratch);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_str_decode_unicode_surrogate_pair_hex4(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    const char* high_text;
+    const char* low_text;
+    char* end_ptr = NULL;
+    uint32_t high_surrogate;
+    uint32_t low_surrogate;
+    uint32_t cp;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 2U ||
+        args == NULL ||
+        args[0].type != AIVM_VAL_STRING ||
+        args[1].type != AIVM_VAL_STRING ||
+        args[0].string_value == NULL ||
+        args[1].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    high_text = args[0].string_value;
+    low_text = args[1].string_value;
+    if (strlen(high_text) != 4U || strlen(low_text) != 4U) {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    high_surrogate = (uint32_t)strtoul(high_text, &end_ptr, 16);
+    if (end_ptr == NULL || *end_ptr != '\0') {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    low_surrogate = (uint32_t)strtoul(low_text, &end_ptr, 16);
+    if (end_ptr == NULL || *end_ptr != '\0') {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    if (high_surrogate < 0xD800U || high_surrogate > 0xDBFFU ||
+        low_surrogate < 0xDC00U || low_surrogate > 0xDFFFU) {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    cp = 0x10000U + ((high_surrogate - 0xD800U) << 10U) + (low_surrogate - 0xDC00U);
+    g_native_utf8_scratch[0] = (char)(0xF0U | (cp >> 18U));
+    g_native_utf8_scratch[1] = (char)(0x80U | ((cp >> 12U) & 0x3FU));
+    g_native_utf8_scratch[2] = (char)(0x80U | ((cp >> 6U) & 0x3FU));
+    g_native_utf8_scratch[3] = (char)(0x80U | (cp & 0x3FU));
+    g_native_utf8_scratch[4] = '\0';
+    *result = aivm_value_string(g_native_utf8_scratch);
+    return AIVM_SYSCALL_OK;
+}
+
 static int run_native_compiled_program(
     const AivmProgram* program,
     const char* vm_error_message,
     const char* const* process_argv,
     size_t process_argv_count)
 {
-    AivmSyscallBinding bindings[4];
+    AivmSyscallBinding bindings[22];
     AivmCResult result;
 
     if (program == NULL) {
         return 2;
     }
 
-    bindings[0].target = "sys.stdout_writeLine";
+    bindings[0].target = "sys.stdout.writeLine";
     bindings[0].handler = native_syscall_stdout_write_line;
     bindings[1].target = "io.print";
     bindings[1].handler = native_syscall_stdout_write_line;
     bindings[2].target = "io.write";
     bindings[2].handler = native_syscall_stdout_write_line;
-    bindings[3].target = "sys.process_argv";
+    bindings[3].target = "sys.process.args";
     bindings[3].handler = native_syscall_process_argv;
+    bindings[4].target = "sys.bytes.length";
+    bindings[4].handler = native_syscall_bytes_length;
+    bindings[5].target = "sys.bytes.at";
+    bindings[5].handler = native_syscall_bytes_at;
+    bindings[6].target = "sys.bytes.slice";
+    bindings[6].handler = native_syscall_bytes_slice;
+    bindings[7].target = "sys.bytes.concat";
+    bindings[7].handler = native_syscall_bytes_concat;
+    bindings[8].target = "sys.bytes.fromBase64";
+    bindings[8].handler = native_syscall_bytes_from_base64;
+    bindings[9].target = "sys.bytes.toBase64";
+    bindings[9].handler = native_syscall_bytes_to_base64;
+    bindings[10].target = "sys.fs.file.delete";
+    bindings[10].handler = native_syscall_fs_file_delete;
+    bindings[11].target = "sys.fs.dir.delete";
+    bindings[11].handler = native_syscall_fs_dir_delete;
+    bindings[12].target = "sys.process.spawn";
+    bindings[12].handler = native_syscall_process_spawn;
+    bindings[13].target = "sys.process.wait";
+    bindings[13].handler = native_syscall_process_wait;
+    bindings[14].target = "sys.process.kill";
+    bindings[14].handler = native_syscall_process_kill;
+    bindings[15].target = "sys.process.stdout.read";
+    bindings[15].handler = native_syscall_process_stdout_read;
+    bindings[16].target = "sys.process.stderr.read";
+    bindings[16].handler = native_syscall_process_stderr_read;
+    bindings[17].target = "sys.process.poll";
+    bindings[17].handler = native_syscall_process_poll;
+    bindings[18].target = "sys.str.fromCodePoint";
+    bindings[18].handler = native_syscall_str_from_codepoint;
+    bindings[19].target = "sys.str.decodeUnicodeHex4";
+    bindings[19].handler = native_syscall_str_decode_unicode_hex4;
+    bindings[20].target = "sys.str.decodeUnicodeSurrogatePairHex4";
+    bindings[20].handler = native_syscall_str_decode_unicode_surrogate_pair_hex4;
+    bindings[21].target = "sys.bytes.toUtf8String";
+    bindings[21].handler = native_syscall_bytes_to_utf8_string;
     result = aivm_c_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        4U,
+        22U,
         process_argv,
         process_argv_count);
 
@@ -1662,8 +3125,8 @@ static int parse_simple_program_aos_to_program_text(const char* source, AivmProg
             if (!parse_attr_span(node.attrs, "target", target, sizeof(target))) {
                 return simple_fail("call missing target");
             }
-            if (strcmp(target, "io.print") == 0 || strcmp(target, "io.write") == 0 || strcmp(target, "sys.stdout_writeLine") == 0) {
-                mapped = "sys.stdout_writeLine";
+            if (strcmp(target, "io.print") == 0 || strcmp(target, "io.write") == 0 || strcmp(target, "sys.stdout.writeLine") == 0) {
+                mapped = "sys.stdout.writeLine";
             } else {
                 return simple_fail("call unsupported target");
             }
@@ -1802,6 +3265,11 @@ static int write_program_as_aibc1(const AivmProgram* program, const char* out_pa
                 return 0;
             }
             const_payload_size += 1U + 4U + (uint32_t)len;
+        } else if (v.type == AIVM_VAL_BYTES) {
+            if (v.bytes_value.length > 0xffffffffU) {
+                return 0;
+            }
+            const_payload_size += 1U + 4U + (uint32_t)v.bytes_value.length;
         } else {
             const_payload_size += 1U;
         }
@@ -1851,6 +3319,13 @@ static int write_program_as_aibc1(const AivmProgram* program, const char* out_pa
                 write_u32_le(f, len);
                 if (len > 0U) {
                     (void)fwrite(v.string_value, 1U, len, f);
+                }
+            } else if (v.type == AIVM_VAL_BYTES) {
+                uint32_t len = (uint32_t)v.bytes_value.length;
+                (void)fputc(5, f);
+                write_u32_le(f, len);
+                if (len > 0U && v.bytes_value.data != NULL) {
+                    (void)fwrite(v.bytes_value.data, 1U, len, f);
                 }
             } else {
                 (void)fputc(4, f);
@@ -2300,7 +3775,7 @@ static int bench_execute_program_iterations(const AivmProgram* program, int iter
         return 0;
     }
 
-    bindings[0].target = "sys.stdout_writeLine";
+    bindings[0].target = "sys.stdout.writeLine";
     bindings[0].handler = bench_syscall_sink;
     bindings[1].target = "io.print";
     bindings[1].handler = bench_syscall_sink;

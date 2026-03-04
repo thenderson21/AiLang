@@ -8,7 +8,7 @@ Root node must be `Bytecode#...` with required attrs:
 
 - `magic="AIBC"` (container magic)
 - `format="AiBC1"` (encoding family)
-- `version=1` (schema version)
+- `version=2` (schema version)
 - `flags=0` (reserved byte; non-zero reserved for future use)
 
 VM loader requirements:

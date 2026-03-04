@@ -1,0 +1,8 @@
+Program#gjsono_p1 {
+  Import#gjsono_i1(path="./src/std/core.aos")
+  Import#gjsono_i2(path="./src/std/json.aos")
+  Call#gjsono_c1(target=resultValueOr) {
+    Call#gjsono_c2(target=parse) { Lit#gjsono_l1(value="{\"a\":1,\"b\":[true,false,null]}") }
+    Lit#gjsono_l2(value="fallback")
+  }
+}

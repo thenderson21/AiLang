@@ -62,7 +62,7 @@ Program#p1 {
 }
 EOF
     cat > "${TMP_NATIVE_PROJECT_DIR}/main.aos" <<'EOF'
-Bytecode#bc1(magic="AIBC" format="AiBC1" version=1 flags=0) {
+Bytecode#bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {
   Func#f1(name=main params="argv" locals="") {
     Inst#i1(op=HALT)
   }
@@ -78,6 +78,13 @@ fi
 
 mkdir -p "$(dirname "${PARITY_REPORT}")"
 printf 'parity manifest skipped: source-mode dualrun removed in C-only runtime cutover\n' > "${PARITY_REPORT}"
+
+if [[ "${AIVM_MEM_LEAK_GATE:-0}" == "1" ]]; then
+  leak_iterations="${AIVM_LEAK_CHECK_ITERATIONS:-50}"
+  leak_target="${AIVM_LEAK_CHECK_TARGET:-${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos}"
+  AIVM_LEAK_MAX_GROWTH_KB="${AIVM_LEAK_MAX_GROWTH_KB:-2048}" \
+    "${ROOT_DIR}/scripts/aivm-mem-leak-check.sh" "${leak_target}" "${leak_iterations}" >/dev/null
+fi
 
 if [[ "${AIVM_PERF_SMOKE:-0}" == "1" ]]; then
   "${ROOT_DIR}/scripts/aivm-c-perf-smoke.sh" "${AIVM_PERF_RUNS:-10}"

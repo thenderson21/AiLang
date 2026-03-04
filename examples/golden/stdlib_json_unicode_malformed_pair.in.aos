@@ -1,0 +1,17 @@
+Program#gjsonump_p1 {
+  Import#gjsonump_i1(path="./src/std/core.aos")
+  Import#gjsonump_i2(path="./src/std/json.aos")
+  Call#gjsonump_c1(target=AttrValueString) {
+    ChildAt#gjsonump_ca1 {
+      ChildAt#gjsonump_ca2 {
+        Call#gjsonump_c2(target=resultNodeOr) {
+          Call#gjsonump_c3(target=parseNode) { Lit#gjsonump_l1(value="\"x\\uD83D\\u0041y\"") }
+          Call#gjsonump_c4(target=nodeEmpty) { Lit#gjsonump_l2(value="fallback") }
+        }
+        Lit#gjsonump_l3(value=0)
+      }
+      Lit#gjsonump_l4(value=0)
+    }
+    Lit#gjsonump_l5(value=0)
+  }
+}

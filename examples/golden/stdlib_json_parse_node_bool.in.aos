@@ -1,0 +1,14 @@
+Program#gjsonnb_p1 {
+  Import#gjsonnb_i1(path="./src/std/core.aos")
+  Import#gjsonnb_i2(path="./src/std/json.aos")
+  Call#gjsonnb_c1(target=AttrValueBool) {
+    ChildAt#gjsonnb_ca1 {
+      Call#gjsonnb_c2(target=resultNodeOr) {
+        Call#gjsonnb_c3(target=parseNode) { Lit#gjsonnb_l1(value="true") }
+        Call#gjsonnb_c4(target=nodeEmpty) { Lit#gjsonnb_l2(value="fallback") }
+      }
+      Lit#gjsonnb_l3(value=0)
+    }
+    Lit#gjsonnb_l4(value=0)
+  }
+}

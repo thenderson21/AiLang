@@ -84,6 +84,14 @@ A change is complete only if:
 - `SPEC/IL.md`, `SPEC/EVAL.md`, and `SPEC/VALIDATION.md` are language contracts.
 - Semantic changes must update spec docs and matching goldens in the same change.
 
+## Release Contract Policy
+
+- Contract stability is enforced at release-candidate (`rc`) and stable releases only.
+- During `alpha` and `beta`, backward compatibility is not required by default.
+- During `alpha` and `beta`, use explicit contract negotiation/versioning for evolving formats and ABIs.
+- Do not preserve legacy fallback paths solely for pre-`rc` compatibility.
+- At `rc`, remove/close negotiation paths and freeze contracts for release.
+
 ## Documentation policy
 
 - Root `README.md` is human-oriented.
