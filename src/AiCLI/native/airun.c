@@ -1018,7 +1018,7 @@ static int emit_wasm_cli_launchers(const char* out_dir, const char* runtime_name
     return 1;
 }
 
-static int emit_wasm_spa_files(const char* out_dir, const char* runtime_name)
+static int emit_wasm_spa_files(const char* out_dir)
 {
     char index_path[PATH_MAX];
     char main_path[PATH_MAX];
@@ -1026,7 +1026,7 @@ static int emit_wasm_spa_files(const char* out_dir, const char* runtime_name)
     char index_html[2048];
     char main_js[4096];
     char remote_client_js[8192];
-    if (out_dir == NULL || runtime_name == NULL) {
+    if (out_dir == NULL) {
         return 0;
     }
     if (!join_path(out_dir, "index.html", index_path, sizeof(index_path)) ||
@@ -1055,9 +1055,8 @@ static int emit_wasm_spa_files(const char* out_dir, const char* runtime_name)
             "const logs = [];\n"
             "runtime.print = (line) => logs.push(line);\n"
             "runtime.printErr = (line) => logs.push(line);\n"
-            "runtime.callMain(['/%s']);\n"
-            "if (output) output.textContent = logs.join('\\n');\n",
-            runtime_name) >= (int)sizeof(main_js)) {
+            "runtime.callMain(['/app.aibc1']);\n"
+            "if (output) output.textContent = logs.join('\\n');\n") >= (int)sizeof(main_js)) {
         return 0;
     }
     if (snprintf(
@@ -1156,8 +1155,8 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
     if (!ensure_directory(client_dir) || !ensure_directory(server_dir) || !ensure_directory(server_src_dir) || !ensure_directory(server_www_dir)) {
         return 0;
     }
-    if (!emit_wasm_spa_files(client_dir, runtime_name) ||
-        !emit_wasm_spa_files(server_www_dir, runtime_name)) {
+    if (!emit_wasm_spa_files(client_dir) ||
+        !emit_wasm_spa_files(server_www_dir)) {
         return 0;
     }
     if (!join_path(server_dir, "README.md", server_readme_path, sizeof(server_readme_path)) ||
@@ -4342,7 +4341,7 @@ static int handle_publish(int argc, char** argv)
                 !join_path(out_dir, runtime_web_wasm_bin, runtime_web_wasm_dst, sizeof(runtime_web_wasm_dst)) ||
                 !copy_runtime_file(runtime_web_src, runtime_web_dst) ||
                 !copy_runtime_file(runtime_web_wasm_src, runtime_web_wasm_dst) ||
-                !emit_wasm_spa_files(out_dir, publish_runtime_name)) {
+                !emit_wasm_spa_files(out_dir)) {
                 fprintf(stderr,
                     "Err#err1(code=RUN001 message=\"Failed to emit wasm web package files.\" nodeId=publish)\n");
                 return 2;
