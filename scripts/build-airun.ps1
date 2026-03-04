@@ -26,8 +26,8 @@ $sources = @(
   (Join-Path $nativeSrc 'aivm_types.c'),
   (Join-Path $nativeSrc 'aivm_vm.c'),
   (Join-Path $nativeSrc 'aivm_program.c'),
-  (Join-Path $nativeSrc 'aivm_syscall.c'),
-  (Join-Path $nativeSrc 'aivm_syscall_contracts.c'),
+  (Join-Path $nativeSrc 'sys/aivm_syscall.c'),
+  (Join-Path $nativeSrc 'sys/aivm_syscall_contracts.c'),
   (Join-Path $nativeSrc 'aivm_parity.c'),
   (Join-Path $nativeSrc 'aivm_runtime.c'),
   (Join-Path $nativeSrc 'aivm_c_api.c')
