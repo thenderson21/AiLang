@@ -190,9 +190,21 @@ if [[ ! -f "${PUBLISH_SPA_DIR}/index.html" || ! -f "${PUBLISH_SPA_DIR}/main.js" 
   echo "wasm profile mismatch: spa publish did not emit web bootstrap files" >&2
   exit 1
 fi
+if ! cmp -s "${PUBLISH_SPA_DIR}/aivm-runtime-wasm32-web.wasm" "${ROOT_DIR}/.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm"; then
+  echo "wasm profile mismatch: spa publish did not copy web runtime wasm artifact" >&2
+  exit 1
+fi
 
 if [[ ! -f "${PUBLISH_FULLSTACK_DIR}/client/index.html" || ! -f "${PUBLISH_FULLSTACK_DIR}/client/aivm-runtime-wasm32-web.wasm" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/README.md" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/project.aiproj" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/src/app.aos" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/www/index.html" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/www/main.js" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/www/app.aibc1" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/www/aivm-runtime-wasm32-web.wasm" || ! -f "${PUBLISH_FULLSTACK_DIR}/run" || ! -f "${PUBLISH_FULLSTACK_DIR}/run.ps1" ]]; then
   echo "wasm profile mismatch: fullstack publish did not emit AiLang server scaffold layout" >&2
+  exit 1
+fi
+if ! cmp -s "${PUBLISH_FULLSTACK_DIR}/client/aivm-runtime-wasm32-web.wasm" "${ROOT_DIR}/.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm"; then
+  echo "wasm profile mismatch: fullstack client did not copy web runtime wasm artifact" >&2
+  exit 1
+fi
+if ! cmp -s "${PUBLISH_FULLSTACK_DIR}/server/www/aivm-runtime-wasm32-web.wasm" "${ROOT_DIR}/.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm"; then
+  echo "wasm profile mismatch: fullstack server/www did not copy web runtime wasm artifact" >&2
   exit 1
 fi
 if [[ ! -f "${PUBLISH_FULLSTACK_DIR}/server/runtime/${EXPECTED_HOST_RUNTIME_BIN}" ]]; then

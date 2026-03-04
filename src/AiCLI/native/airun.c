@@ -4074,6 +4074,7 @@ static int handle_publish(int argc, char** argv)
     char runtime_src[PATH_MAX];
     char runtime_dst[PATH_MAX];
     char runtime_web_src[PATH_MAX];
+    char runtime_web_wasm_src[PATH_MAX];
     char runtime_web_dst[PATH_MAX];
     char runtime_web_wasm_dst[PATH_MAX];
     char wasm_app_dst[PATH_MAX];
@@ -4300,6 +4301,11 @@ static int handle_publish(int argc, char** argv)
                 "Err#err1(code=RUN001 message=\"Wasm web runtime source path overflow.\" nodeId=publish)\n");
             return 2;
         }
+        if (!join_path(artifact_dir, runtime_web_wasm_bin, runtime_web_wasm_src, sizeof(runtime_web_wasm_src))) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Wasm web runtime binary source path overflow.\" nodeId=publish)\n");
+            return 2;
+        }
         if (snprintf(publish_runtime_name, sizeof(publish_runtime_name), "%s.wasm", publish_app_name) >= (int)sizeof(publish_runtime_name)) {
             fprintf(stderr,
                 "Err#err1(code=RUN001 message=\"Publish wasm runtime name overflow.\" nodeId=publish)\n");
@@ -4335,7 +4341,7 @@ static int handle_publish(int argc, char** argv)
             if (!join_path(out_dir, runtime_web_bin, runtime_web_dst, sizeof(runtime_web_dst)) ||
                 !join_path(out_dir, runtime_web_wasm_bin, runtime_web_wasm_dst, sizeof(runtime_web_wasm_dst)) ||
                 !copy_runtime_file(runtime_web_src, runtime_web_dst) ||
-                !copy_runtime_file(runtime_src, runtime_web_wasm_dst) ||
+                !copy_runtime_file(runtime_web_wasm_src, runtime_web_wasm_dst) ||
                 !emit_wasm_spa_files(out_dir, publish_runtime_name)) {
                 fprintf(stderr,
                     "Err#err1(code=RUN001 message=\"Failed to emit wasm web package files.\" nodeId=publish)\n");
@@ -4409,7 +4415,7 @@ static int handle_publish(int argc, char** argv)
                 !join_path(client_dir, runtime_web_bin, runtime_web_dst, sizeof(runtime_web_dst)) ||
                 !join_path(client_dir, runtime_web_wasm_bin, runtime_web_wasm_dst, sizeof(runtime_web_wasm_dst)) ||
                 !copy_runtime_file(runtime_web_src, runtime_web_dst) ||
-                !copy_runtime_file(runtime_src, runtime_web_wasm_dst) ||
+                !copy_runtime_file(runtime_web_wasm_src, runtime_web_wasm_dst) ||
                 !emit_wasm_fullstack_layout(out_dir, publish_runtime_name, fullstack_host_runtime_bin) ||
                 !join_path(out_dir, "server/www", server_www_dir, sizeof(server_www_dir)) ||
                 !join_path(server_www_dir, "app.aibc1", wasm_app_dst, sizeof(wasm_app_dst)) ||
@@ -4419,7 +4425,7 @@ static int handle_publish(int argc, char** argv)
                 !join_path(server_www_dir, runtime_web_bin, runtime_web_dst, sizeof(runtime_web_dst)) ||
                 !join_path(server_www_dir, runtime_web_wasm_bin, runtime_web_wasm_dst, sizeof(runtime_web_wasm_dst)) ||
                 !copy_runtime_file(runtime_web_src, runtime_web_dst) ||
-                !copy_runtime_file(runtime_src, runtime_web_wasm_dst)) {
+                !copy_runtime_file(runtime_web_wasm_src, runtime_web_wasm_dst)) {
                 fprintf(stderr,
                     "Err#err1(code=RUN001 message=\"Failed to emit wasm fullstack package files.\" nodeId=publish)\n");
                 return 2;
