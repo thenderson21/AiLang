@@ -51,3 +51,9 @@ This operation is intentionally mechanical and exists to verify transport/capabi
 - No application protocol semantics in VM.
 
 Future protocol framing (HELLO/WELCOME/CALL/RESULT/ERROR, optional stream/notify) is layered on top of this syscall surface.
+
+## Current Bridge Runtime
+
+- `aivm_remote_stdio_bridge` is provided as a process-boundary transport bridge using length-prefixed binary frames over stdio.
+- This bridge uses the same deterministic session engine and frame codec as `sys.remote.call` host routing.
+- WebSocket transport can be added as another transport backend without changing frame/session semantics.
