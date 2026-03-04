@@ -86,6 +86,30 @@ export AIVM_REMOTE_CAPS="cap.remote"
 export AIVM_REMOTE_EXPECTED_TOKEN="wasm-golden-token"
 export AIVM_REMOTE_SESSION_TOKEN="wasm-golden-token"
 export EM_CACHE="${EM_CACHE:-${TMP_DIR}/emcc-cache}"
+HAS_RG=0
+if command -v rg >/dev/null 2>&1; then
+  HAS_RG=1
+fi
+
+contains_regex() {
+  local pattern="$1"
+  local path="$2"
+  if [[ "${HAS_RG}" == "1" ]]; then
+    rg -q -- "${pattern}" "${path}"
+  else
+    grep -Eq -- "${pattern}" "${path}"
+  fi
+}
+
+contains_fixed() {
+  local text="$1"
+  local path="$2"
+  if [[ "${HAS_RG}" == "1" ]]; then
+    rg -Fq -- "${text}" "${path}"
+  else
+    grep -Fq -- "${text}" "${path}"
+  fi
+}
 
 if ! command -v wasmtime >/dev/null 2>&1; then
   echo "wasmtime is required to run wasm golden tests" >&2
@@ -200,19 +224,19 @@ for CASE_NAME in "${MALFORMED_CASES[@]}"; do
     echo "wasm publish contract mismatch (${CASE_NAME}): expected deterministic malformed-input publish failure" >&2
     exit 1
   fi
-  if ! rg -q 'Err#err1\(code=DEV008 message="' "${CASE_ERR}"; then
+  if ! contains_regex 'Err#err1\(code=DEV008 message="' "${CASE_ERR}"; then
     echo "wasm publish contract mismatch (${CASE_NAME}): expected DEV008 deterministic malformed-input error" >&2
     exit 1
   fi
   case "${CASE_NAME}" in
     vm_c_execute_src_opcode_unmapped)
-      if ! rg -q 'cannot encode this bytecode AOS shape yet' "${CASE_ERR}"; then
+      if ! contains_regex 'cannot encode this bytecode AOS shape yet' "${CASE_ERR}"; then
         echo "wasm publish contract mismatch (${CASE_NAME}): expected unsupported-opcode-shape reason" >&2
         exit 1
       fi
       ;;
     vm_c_execute_src_parse_error)
-      if ! rg -q 'Publish needs prebuilt \.aibc1 unless source is bytecode-style AOS' "${CASE_ERR}"; then
+      if ! contains_regex 'Publish needs prebuilt \.aibc1 unless source is bytecode-style AOS' "${CASE_ERR}"; then
         echo "wasm publish contract mismatch (${CASE_NAME}): expected non-bytecode-source gate reason" >&2
         exit 1
       fi
@@ -238,35 +262,35 @@ if [[ ! -f "${PUBLISH_SPA_DIR}/index.html" || ! -f "${PUBLISH_SPA_DIR}/main.js" 
   echo "wasm profile mismatch: spa publish did not emit web bootstrap files" >&2
   exit 1
 fi
-if ! rg -Fq 'AIVM_REMOTE_MODE' "${PUBLISH_SPA_DIR}/main.js"; then
+if ! contains_fixed 'AIVM_REMOTE_MODE' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit remote mode switch in main.js" >&2
   exit 1
 fi
-if ! rg -Fq "AIVM_REMOTE_WS_ENDPOINT" "${PUBLISH_SPA_DIR}/main.js"; then
+if ! contains_fixed "AIVM_REMOTE_WS_ENDPOINT" "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit websocket endpoint hook in main.js" >&2
   exit 1
 fi
-if ! rg -Fq "AIVM_REMOTE_MODE=js requires AiLang.remote.call adapter" "${PUBLISH_SPA_DIR}/main.js"; then
+if ! contains_fixed "AIVM_REMOTE_MODE=js requires AiLang.remote.call adapter" "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit deterministic js-mode adapter diagnostic" >&2
   exit 1
 fi
-if ! rg -Fq "RUN101: unsupported AIVM_REMOTE_MODE" "${PUBLISH_SPA_DIR}/main.js"; then
+if ! contains_fixed "RUN101: unsupported AIVM_REMOTE_MODE" "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit deterministic invalid remote-mode diagnostic" >&2
   exit 1
 fi
-if ! rg -Fq 'globalThis.AiLang' "${PUBLISH_SPA_DIR}/main.js"; then
+if ! contains_fixed 'globalThis.AiLang' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit AiLang root bridge in main.js" >&2
   exit 1
 fi
-if ! rg -Fq 'stdin = {' "${PUBLISH_SPA_DIR}/main.js"; then
+if ! contains_fixed 'stdin = {' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit stdin queue API in main.js" >&2
   exit 1
 fi
-if ! rg -Fq '__aivmStdinRead' "${PUBLISH_SPA_DIR}/main.js"; then
+if ! contains_fixed '__aivmStdinRead' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit stdin drain bridge in main.js" >&2
   exit 1
 fi
-if ! rg -Fq 'console.log' "${PUBLISH_SPA_DIR}/main.js" || ! rg -Fq 'console.error' "${PUBLISH_SPA_DIR}/main.js"; then
+if ! contains_fixed 'console.log' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed 'console.error' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit stdout/stderr console mirrors in main.js" >&2
   exit 1
 fi
@@ -279,27 +303,27 @@ if [[ ! -f "${PUBLISH_FULLSTACK_DIR}/README.md" || ! -f "${PUBLISH_FULLSTACK_DIR
   echo "wasm profile mismatch: fullstack publish did not emit root app + www layout" >&2
   exit 1
 fi
-if ! rg -Fq 'AIVM_REMOTE_MODE' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+if ! contains_fixed 'AIVM_REMOTE_MODE' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit remote mode switch in www/main.js" >&2
   exit 1
 fi
-if ! rg -Fq "AIVM_REMOTE_WS_ENDPOINT" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+if ! contains_fixed "AIVM_REMOTE_WS_ENDPOINT" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit websocket endpoint hook in www/main.js" >&2
   exit 1
 fi
-if ! rg -Fq "AIVM_REMOTE_MODE=js requires AiLang.remote.call adapter" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+if ! contains_fixed "AIVM_REMOTE_MODE=js requires AiLang.remote.call adapter" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit deterministic js-mode adapter diagnostic" >&2
   exit 1
 fi
-if ! rg -Fq "RUN101: unsupported AIVM_REMOTE_MODE" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+if ! contains_fixed "RUN101: unsupported AIVM_REMOTE_MODE" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit deterministic invalid remote-mode diagnostic" >&2
   exit 1
 fi
-if ! rg -Fq '__aivmRemoteCall' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+if ! contains_fixed '__aivmRemoteCall' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit remote call bridge in www/main.js" >&2
   exit 1
 fi
-if ! rg -Fq '__aivmStdinRead' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+if ! contains_fixed '__aivmStdinRead' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit stdin drain bridge in www/main.js" >&2
   exit 1
 fi
@@ -337,7 +361,7 @@ if ./tools/airun publish "${MANIFEST_HOST_TARGET_DIR}/project.aiproj" --target w
   echo "wasm manifest host-target mismatch: expected publish failure for invalid publishWasmFullstackHostTarget" >&2
   exit 1
 fi
-if ! rg -q 'Unsupported wasm fullstack host target RID' "${MANIFEST_HOST_TARGET_ERR}"; then
+if ! contains_regex 'Unsupported wasm fullstack host target RID' "${MANIFEST_HOST_TARGET_ERR}"; then
   echo "wasm manifest host-target mismatch: expected deterministic invalid host target error" >&2
   exit 1
 fi
@@ -354,31 +378,31 @@ if [[ ${process_rc} -ne 3 ]]; then
   echo "wasm cli unsupported-capability mismatch: expected exit 3 for sys.process.spawn, got ${process_rc}" >&2
   exit 1
 fi
-if ! rg -q 'Err#err1\(code=RUN001 message="' "${PROCESS_OUT}"; then
+if ! contains_regex 'Err#err1\(code=RUN001 message="' "${PROCESS_OUT}"; then
   echo "wasm cli unsupported-capability mismatch: expected RUN001 wrapper code for failed syscall execution" >&2
   exit 1
 fi
-if ! rg -Fq "Warn#warn1(code=WASM001 message=\"sys.process.spawn is not available on wasm profile 'spa'" "${PROCESS_SPA_WARN}"; then
+if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.process.spawn is not available on wasm profile 'spa'" "${PROCESS_SPA_WARN}"; then
   echo "wasm spa warning mismatch: expected WASM001 warning for sys.process.spawn" >&2
   exit 1
 fi
-if ! rg -Fq "Warn#warn1(code=WASM001 message=\"sys.process.spawn is not available on wasm profile 'fullstack'" "${PROCESS_FULLSTACK_WARN}"; then
+if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.process.spawn is not available on wasm profile 'fullstack'" "${PROCESS_FULLSTACK_WARN}"; then
   echo "wasm fullstack warning mismatch: expected WASM001 warning for sys.process.spawn" >&2
   exit 1
 fi
-if ! rg -Fq "Warn#warn1(code=WASM001 message=\"sys.fs.file.read is not available on wasm profile 'spa'" "${FS_SPA_WARN}"; then
+if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.fs.file.read is not available on wasm profile 'spa'" "${FS_SPA_WARN}"; then
   echo "wasm spa warning mismatch: expected WASM001 warning for sys.fs.file.read" >&2
   exit 1
 fi
-if ! rg -Fq "Warn#warn1(code=WASM001 message=\"sys.fs.file.read is not available on wasm profile 'fullstack'" "${FS_FULLSTACK_WARN}"; then
+if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.fs.file.read is not available on wasm profile 'fullstack'" "${FS_FULLSTACK_WARN}"; then
   echo "wasm fullstack warning mismatch: expected WASM001 warning for sys.fs.file.read" >&2
   exit 1
 fi
-if ! rg -Fq "Warn#warn1(code=WASM001 message=\"sys.net.tcp.connect is not available on wasm profile 'spa'" "${NET_SPA_WARN}"; then
+if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.net.tcp.connect is not available on wasm profile 'spa'" "${NET_SPA_WARN}"; then
   echo "wasm spa warning mismatch: expected WASM001 warning for sys.net.tcp.connect" >&2
   exit 1
 fi
-if ! rg -Fq "Warn#warn1(code=WASM001 message=\"sys.net.tcp.connect is not available on wasm profile 'fullstack'" "${NET_FULLSTACK_WARN}"; then
+if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.net.tcp.connect is not available on wasm profile 'fullstack'" "${NET_FULLSTACK_WARN}"; then
   echo "wasm fullstack warning mismatch: expected WASM001 warning for sys.net.tcp.connect" >&2
   exit 1
 fi
