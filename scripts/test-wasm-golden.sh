@@ -36,7 +36,7 @@ BYTECODE_ONLY_CASES=(
   "vm_c_execute_src_par_fork_unsupported"
   "vm_c_execute_src_par_join_unsupported"
 )
-UNSUPPORTED_CASES=(
+MALFORMED_CASES=(
   "vm_c_execute_src_opcode_unmapped"
   "vm_c_execute_src_parse_error"
 )
@@ -131,17 +131,17 @@ for CASE_NAME in "${BYTECODE_ONLY_CASES[@]}"; do
   fi
 done
 
-for CASE_NAME in "${UNSUPPORTED_CASES[@]}"; do
+for CASE_NAME in "${MALFORMED_CASES[@]}"; do
   CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
   CASE_OUT="${PUBLISH_DIR}/${CASE_NAME}"
   CASE_ERR="${CASE_OUT}/publish.err"
   mkdir -p "${CASE_OUT}"
   if ./tools/airun publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null 2>"${CASE_ERR}"; then
-    echo "wasm publish contract mismatch (${CASE_NAME}): expected deterministic unsupported publish failure" >&2
+    echo "wasm publish contract mismatch (${CASE_NAME}): expected deterministic malformed-input publish failure" >&2
     exit 1
   fi
   if ! rg -q 'Err#err1\(code=DEV008 message="' "${CASE_ERR}"; then
-    echo "wasm publish contract mismatch (${CASE_NAME}): expected DEV008 deterministic unsupported error" >&2
+    echo "wasm publish contract mismatch (${CASE_NAME}): expected DEV008 deterministic malformed-input error" >&2
     exit 1
   fi
   case "${CASE_NAME}" in
@@ -165,7 +165,7 @@ done
 ./tools/airun publish "${PROCESS_CASE}" --target wasm32 --wasm-profile cli --out "${PUBLISH_PROCESS_CLI_DIR}" >"${PROCESS_OUT}" 2>"${PROCESS_ERR}"
 echo "wasm golden corpus: PASS (${#CASES[@]} cases)"
 echo "wasm bytecode-only corpus: PASS (${#BYTECODE_ONLY_CASES[@]} cases)"
-echo "wasm unsupported corpus: PASS (${#UNSUPPORTED_CASES[@]} cases)"
+echo "wasm malformed corpus: PASS (${#MALFORMED_CASES[@]} cases)"
 
 if [[ ! -f "${PUBLISH_SPA_DIR}/index.html" || ! -f "${PUBLISH_SPA_DIR}/main.js" ]]; then
   echo "wasm profile mismatch: spa publish did not emit web bootstrap files" >&2

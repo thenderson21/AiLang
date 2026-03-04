@@ -181,6 +181,7 @@ Rebuild `tools/airun` (native C, host platform):
   - `web` (default): emits `index.html` + `main.js` package files.
   - `cli`: emits `run.sh` + `run.ps1` launcher files.
   - `fullstack`: emits `client/` web package + `server/` AiLang server scaffold (`project.aiproj`, `src/app.aos`, `README.md`).
+  - malformed bytecode/source fixtures are deterministically rejected at publish-time with `DEV008` (contract guard, not runtime drift).
 - wasm client/server capability channel MVP uses `sys.remote.call` (see `SPEC/WASM_REMOTE_CHANNEL.md`).
   - MVP security baseline: `SPEC/WASM_REMOTE_SECURITY.md`.
   - Runtime requires `AIVM_REMOTE_EXPECTED_TOKEN` and `AIVM_REMOTE_SESSION_TOKEN` for `sys.remote.call`.
