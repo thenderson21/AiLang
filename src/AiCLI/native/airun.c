@@ -1687,6 +1687,155 @@ static int native_syscall_process_stderr_read(
     return native_syscall_process_stream_read(target, args, arg_count, result, 0);
 }
 
+#define NATIVE_UI_STATE_NODE_HANDLE 1
+
+static int native_syscall_ui_create_window(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 3U ||
+        args[0].type != AIVM_VAL_STRING ||
+        args[1].type != AIVM_VAL_INT ||
+        args[2].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_int(1);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_ui_void_1(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_ui_draw_rect(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 6U ||
+        args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT ||
+        args[3].type != AIVM_VAL_INT || args[4].type != AIVM_VAL_INT || args[5].type != AIVM_VAL_STRING) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_ui_draw_text(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 6U ||
+        args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT ||
+        args[3].type != AIVM_VAL_STRING || args[4].type != AIVM_VAL_STRING || args[5].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_ui_draw_line(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 7U ||
+        args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT ||
+        args[3].type != AIVM_VAL_INT || args[4].type != AIVM_VAL_INT || args[5].type != AIVM_VAL_STRING ||
+        args[6].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_ui_draw_path(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 4U ||
+        args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_STRING ||
+        args[2].type != AIVM_VAL_STRING || args[3].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_ui_poll_event(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_node(NATIVE_UI_STATE_NODE_HANDLE);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_ui_get_window_size(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    return native_syscall_ui_poll_event(target, args, arg_count, result);
+}
+
 static int native_base64_decode_char(char ch)
 {
     if (ch >= 'A' && ch <= 'Z') {
@@ -2659,7 +2808,7 @@ static int run_native_compiled_program(
     size_t process_argv_count,
     const NativeDebugOptions* debug_options)
 {
-    AivmSyscallBinding bindings[22];
+    AivmSyscallBinding bindings[36];
     AivmVm vm;
     int ok;
     int exit_code = 0;
@@ -2715,10 +2864,38 @@ static int run_native_compiled_program(
     bindings[20].handler = native_syscall_str_decode_unicode_surrogate_pair_hex4;
     bindings[21].target = "sys.bytes.toUtf8String";
     bindings[21].handler = native_syscall_bytes_to_utf8_string;
+    bindings[22].target = "sys.ui.createWindow";
+    bindings[22].handler = native_syscall_ui_create_window;
+    bindings[23].target = "sys.ui.beginFrame";
+    bindings[23].handler = native_syscall_ui_void_1;
+    bindings[24].target = "sys.ui.drawRect";
+    bindings[24].handler = native_syscall_ui_draw_rect;
+    bindings[25].target = "sys.ui.drawText";
+    bindings[25].handler = native_syscall_ui_draw_text;
+    bindings[26].target = "sys.ui.endFrame";
+    bindings[26].handler = native_syscall_ui_void_1;
+    bindings[27].target = "sys.ui.pollEvent";
+    bindings[27].handler = native_syscall_ui_poll_event;
+    bindings[28].target = "sys.ui.present";
+    bindings[28].handler = native_syscall_ui_void_1;
+    bindings[29].target = "sys.ui.closeWindow";
+    bindings[29].handler = native_syscall_ui_void_1;
+    bindings[30].target = "sys.ui.drawLine";
+    bindings[30].handler = native_syscall_ui_draw_line;
+    bindings[31].target = "sys.ui.drawEllipse";
+    bindings[31].handler = native_syscall_ui_draw_rect;
+    bindings[32].target = "sys.ui.drawPath";
+    bindings[32].handler = native_syscall_ui_draw_path;
+    bindings[33].target = "sys.ui.drawImage";
+    bindings[33].handler = native_syscall_ui_draw_rect;
+    bindings[34].target = "sys.ui.getWindowSize";
+    bindings[34].handler = native_syscall_ui_get_window_size;
+    bindings[35].target = "sys.ui.waitFrame";
+    bindings[35].handler = native_syscall_ui_void_1;
     ok = aivm_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        22U,
+        36U,
         process_argv,
         process_argv_count,
         &vm);
