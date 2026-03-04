@@ -1114,9 +1114,13 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
     char server_readme_path[PATH_MAX];
     char server_project_path[PATH_MAX];
     char server_app_path[PATH_MAX];
+    char root_run_path[PATH_MAX];
+    char root_run_ps1_path[PATH_MAX];
     char server_readme[2048];
     char server_project[1024];
     char server_app[2048];
+    char root_run[4096];
+    char root_run_ps1[4096];
     if (out_dir == NULL || runtime_name == NULL) {
         return 0;
     }
@@ -1139,7 +1143,9 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
     }
     if (!join_path(server_dir, "README.md", server_readme_path, sizeof(server_readme_path)) ||
         !join_path(server_dir, "project.aiproj", server_project_path, sizeof(server_project_path)) ||
-        !join_path(server_src_dir, "app.aos", server_app_path, sizeof(server_app_path))) {
+        !join_path(server_src_dir, "app.aos", server_app_path, sizeof(server_app_path)) ||
+        !join_path(out_dir, "run", root_run_path, sizeof(root_run_path)) ||
+        !join_path(out_dir, "run.ps1", root_run_ps1_path, sizeof(root_run_ps1_path))) {
         return 0;
     }
     if (snprintf(
@@ -1173,11 +1179,67 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
             "}\n") >= (int)sizeof(server_app)) {
         return 0;
     }
-    if (!write_text_file(server_readme_path, server_readme) ||
-        !write_text_file(server_project_path, server_project) ||
-        !write_text_file(server_app_path, server_app)) {
+    if (snprintf(
+            root_run,
+            sizeof(root_run),
+            "#!/usr/bin/env bash\n"
+            "set -euo pipefail\n"
+            "DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\n"
+            "PORT=\"${PORT:-8080}\"\n"
+            "AIRUN_BIN=\"${AIRUN_BIN:-}\"\n"
+            "if [[ -z \"${AIRUN_BIN}\" ]]; then\n"
+            "  if [[ -x \"${DIR}/../../tools/airun\" ]]; then AIRUN_BIN=\"${DIR}/../../tools/airun\";\n"
+            "  elif [[ -x \"${DIR}/../tools/airun\" ]]; then AIRUN_BIN=\"${DIR}/../tools/airun\";\n"
+            "  else AIRUN_BIN=\"airun\"; fi\n"
+            "fi\n"
+            "if ! command -v \"${AIRUN_BIN}\" >/dev/null 2>&1 && [[ ! -x \"${AIRUN_BIN}\" ]]; then\n"
+            "  echo \"Err#err1(code=RUN001 message=\\\"airun not found; set AIRUN_BIN.\\\" nodeId=publish)\" >&2\n"
+            "  exit 2\n"
+            "fi\n"
+            "PYTHON_BIN=\"python3\"\n"
+            "if ! command -v \"${PYTHON_BIN}\" >/dev/null 2>&1; then PYTHON_BIN=\"python\"; fi\n"
+            "if ! command -v \"${PYTHON_BIN}\" >/dev/null 2>&1; then\n"
+            "  echo \"Err#err1(code=RUN001 message=\\\"python not found; install python3 to serve server/www.\\\" nodeId=publish)\" >&2\n"
+            "  exit 2\n"
+            "fi\n"
+            "\"${PYTHON_BIN}\" -m http.server \"${PORT}\" --directory \"${DIR}/server/www\" >/dev/null 2>&1 &\n"
+            "STATIC_PID=$!\n"
+            "cleanup() { kill \"${STATIC_PID}\" >/dev/null 2>&1 || true; }\n"
+            "trap cleanup EXIT INT TERM\n"
+            "exec \"${AIRUN_BIN}\" run \"${DIR}/server/project.aiproj\" \"$@\"\n") >= (int)sizeof(root_run)) {
         return 0;
     }
+    if (snprintf(
+            root_run_ps1,
+            sizeof(root_run_ps1),
+            "$ErrorActionPreference = 'Stop'\n"
+            "$dir = Split-Path -Parent $MyInvocation.MyCommand.Path\n"
+            "$port = if ($env:PORT) { $env:PORT } else { '8080' }\n"
+            "$airun = if ($env:AIRUN_BIN) { $env:AIRUN_BIN } elseif (Test-Path (Join-Path $dir '../../tools/airun.exe')) { Join-Path $dir '../../tools/airun.exe' } elseif (Test-Path (Join-Path $dir '../../tools/airun')) { Join-Path $dir '../../tools/airun' } else { 'airun' }\n"
+            "$python = if (Get-Command python3 -ErrorAction SilentlyContinue) { 'python3' } elseif (Get-Command python -ErrorAction SilentlyContinue) { 'python' } else { $null }\n"
+            "if (-not $python) { throw 'python not found; install python3 to serve server/www.' }\n"
+            "$serverWww = Join-Path $dir 'server/www'\n"
+            "$httpArgs = @('-m','http.server',$port,'--directory',$serverWww)\n"
+            "$static = Start-Process -FilePath $python -ArgumentList $httpArgs -PassThru -WindowStyle Hidden\n"
+            "try {\n"
+            "  & $airun run (Join-Path $dir 'server/project.aiproj') @args\n"
+            "} finally {\n"
+            "  if ($static -and -not $static.HasExited) { Stop-Process -Id $static.Id -Force }\n"
+            "}\n") >= (int)sizeof(root_run_ps1)) {
+        return 0;
+    }
+    if (!write_text_file(server_readme_path, server_readme) ||
+        !write_text_file(server_project_path, server_project) ||
+        !write_text_file(server_app_path, server_app) ||
+        !write_text_file(root_run_path, root_run) ||
+        !write_text_file(root_run_ps1_path, root_run_ps1)) {
+        return 0;
+    }
+#ifndef _WIN32
+    if (chmod(root_run_path, 0755) != 0) {
+        return 0;
+    }
+#endif
     return 1;
 }
 

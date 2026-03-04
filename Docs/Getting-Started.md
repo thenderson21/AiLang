@@ -48,7 +48,7 @@ cat examples/golden/run_var.in.aos | ./tools/airun run --vm=ast src/compiler/aic
 - `publish --target wasm32`:
   - default profile `spa` writes `index.html` + `main.js`.
   - `--wasm-profile cli` writes `run.sh` + `run.ps1`.
-  - `--wasm-profile fullstack` writes `client/` wasm web artifacts and `server/` AiLang scaffold (`project.aiproj`, `src/app.aos`, `README.md`).
+  - `--wasm-profile fullstack` writes `client/` wasm web artifacts and `server/` AiLang scaffold (`project.aiproj`, `src/app.aos`, `README.md`) plus root launchers (`run`, `run.ps1`).
   - malformed bytecode/source inputs are rejected deterministically with `DEV008` at publish time.
 
 ## Failure Codes

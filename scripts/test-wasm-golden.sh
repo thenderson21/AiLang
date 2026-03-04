@@ -172,7 +172,7 @@ if [[ ! -f "${PUBLISH_SPA_DIR}/index.html" || ! -f "${PUBLISH_SPA_DIR}/main.js" 
   exit 1
 fi
 
-if [[ ! -f "${PUBLISH_FULLSTACK_DIR}/client/index.html" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/README.md" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/project.aiproj" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/src/app.aos" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/www/index.html" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/www/main.js" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/www/app.aibc1" ]]; then
+if [[ ! -f "${PUBLISH_FULLSTACK_DIR}/client/index.html" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/README.md" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/project.aiproj" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/src/app.aos" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/www/index.html" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/www/main.js" || ! -f "${PUBLISH_FULLSTACK_DIR}/server/www/app.aibc1" || ! -f "${PUBLISH_FULLSTACK_DIR}/run" || ! -f "${PUBLISH_FULLSTACK_DIR}/run.ps1" ]]; then
   echo "wasm profile mismatch: fullstack publish did not emit AiLang server scaffold layout" >&2
   exit 1
 fi
