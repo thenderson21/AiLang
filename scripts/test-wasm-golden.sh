@@ -12,6 +12,9 @@ CASES=(
   "vm_c_execute_src_remote_call_echo_int"
 )
 BYTECODE_ONLY_CASES=(
+  "sys_remove_bad_type"
+  "sys_substring_bad_arity"
+  "sys_utf8_bad_type"
   "vm_c_execute_src_async_call_negative"
   "vm_c_execute_src_async_call_oob"
   "vm_c_execute_src_async_callsys_bad_slot"
@@ -33,9 +36,6 @@ BYTECODE_ONLY_CASES=(
   "vm_c_execute_src_par_join_unsupported"
 )
 UNSUPPORTED_CASES=(
-  "sys_remove_bad_type"
-  "sys_substring_bad_arity"
-  "sys_utf8_bad_type"
   "vm_c_execute_src_node_constant_unsupported"
   "vm_c_execute_src_opcode_unmapped"
   "vm_c_execute_src_parse_error"

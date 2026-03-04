@@ -3338,12 +3338,16 @@ static int parse_simple_program_aos_to_program_text(const char* source, AivmProg
             char target[128];
             const char* mapped = NULL;
             size_t target_idx = 0U;
+            const char* c = NULL;
+            size_t arg_count = 0U;
             SimpleNodeView arg;
             if (!parse_attr_span(node.attrs, "target", target, sizeof(target))) {
                 return simple_fail("call missing target");
             }
             if (strcmp(target, "io.print") == 0 || strcmp(target, "io.write") == 0 || strcmp(target, "sys.stdout.writeLine") == 0) {
                 mapped = "sys.stdout.writeLine";
+            } else if (starts_with(target, "sys.")) {
+                mapped = target;
             } else {
                 return simple_fail("call unsupported target");
             }
@@ -3353,13 +3357,18 @@ static int parse_simple_program_aos_to_program_text(const char* source, AivmProg
             if (!simple_emit_instruction(out_program, AIVM_OP_CONST, (int64_t)target_idx)) {
                 return simple_fail("call target const emit failed");
             }
-            if (!simple_parse_next_node(node.body_start, node.body_end, &arg)) {
-                return simple_fail("call missing argument");
+            c = node.body_start;
+            while (simple_parse_next_node(c, node.body_end, &arg)) {
+                if (!simple_compile_expr_node(&arg, out_program, locals, &local_count)) {
+                    return simple_fail("call argument compile failed");
+                }
+                arg_count += 1U;
+                c = arg.next;
             }
-            if (!simple_compile_expr_node(&arg, out_program, locals, &local_count)) {
-                return simple_fail("call argument compile failed");
+            if (arg_count > AIVM_VM_MAX_SYSCALL_ARGS) {
+                return simple_fail("call has too many arguments");
             }
-            if (!simple_emit_instruction(out_program, AIVM_OP_CALL_SYS, 1) ||
+            if (!simple_emit_instruction(out_program, AIVM_OP_CALL_SYS, (int64_t)arg_count) ||
                 !simple_emit_instruction(out_program, AIVM_OP_POP, 0)) {
                 return simple_fail("call emit failed");
             }
