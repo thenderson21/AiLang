@@ -2738,6 +2738,8 @@ typedef struct {
     const char* next;
 } SimpleNodeView;
 
+static char g_simple_last_error[256];
+
 static int simple_find_matching_brace(const char* open_brace, const char* end, const char** out_close)
 {
     int depth = 0;
@@ -2782,7 +2784,7 @@ static int simple_find_matching_brace(const char* open_brace, const char* end, c
 static int simple_parse_next_node(const char* cursor, const char* end, SimpleNodeView* out_node)
 {
     const char* kstart;
-    const char* khash;
+    const char* kdelim;
     const char* kid_end;
     const char* lparen;
     const char* rparen;
@@ -2801,22 +2803,30 @@ static int simple_parse_next_node(const char* cursor, const char* end, SimpleNod
         return 0;
     }
     kstart = cursor;
-    khash = strchr(kstart, '#');
-    if (khash == NULL || khash >= end) {
+    kdelim = kstart;
+    while (kdelim < end && *kdelim != '\0' &&
+           !isspace((unsigned char)*kdelim) &&
+           *kdelim != '(' && *kdelim != '{' && *kdelim != '#') {
+        kdelim += 1;
+    }
+    if (kdelim <= kstart || kdelim >= end) {
         return 0;
     }
-    kind_len = (size_t)(khash - kstart);
+    kind_len = (size_t)(kdelim - kstart);
     if (kind_len == 0U || kind_len + 1U > sizeof(out_node->kind)) {
         return 0;
     }
     memcpy(out_node->kind, kstart, kind_len);
     out_node->kind[kind_len] = '\0';
 
-    kid_end = khash + 1;
-    while (kid_end < end && *kid_end != '\0' &&
-           !isspace((unsigned char)*kid_end) &&
-           *kid_end != '(' && *kid_end != '{') {
+    kid_end = kdelim;
+    if (*kid_end == '#') {
         kid_end += 1;
+        while (kid_end < end && *kid_end != '\0' &&
+               !isspace((unsigned char)*kid_end) &&
+               *kid_end != '(' && *kid_end != '{') {
+            kid_end += 1;
+        }
     }
 
     lparen = NULL;
@@ -2859,8 +2869,19 @@ static int simple_parse_next_node(const char* cursor, const char* end, SimpleNod
 
 static int simple_fail(const char* message)
 {
-    (void)message;
+    if (message == NULL) {
+        message = "unknown";
+    }
+    (void)snprintf(g_simple_last_error, sizeof(g_simple_last_error), "%s", message);
     return 0;
+}
+
+static const char* simple_last_error(void)
+{
+    if (g_simple_last_error[0] == '\0') {
+        return "unknown";
+    }
+    return g_simple_last_error;
 }
 
 static int simple_emit_instruction(AivmProgram* program, AivmOpcode opcode, int64_t operand_int)
@@ -3001,11 +3022,16 @@ static int parse_simple_program_aos_to_program_text(const char* source, AivmProg
     size_t local_count = 0U;
     int saw_return = 0;
 
+    g_simple_last_error[0] = '\0';
+
     if (source == NULL || out_program == NULL) {
         return simple_fail("missing source/program");
     }
     program_pos = strstr(source, "Program#");
-    if (program_pos == NULL || strstr(source, "Bytecode#") != NULL) {
+    if (program_pos == NULL) {
+        program_pos = strstr(source, "Program");
+    }
+    if (program_pos == NULL || strstr(source, "Bytecode#") != NULL || strstr(source, "Bytecode(") != NULL) {
         return simple_fail("missing Program# or bytecode input");
     }
 
@@ -3027,6 +3053,10 @@ static int parse_simple_program_aos_to_program_text(const char* source, AivmProg
             break;
         }
         if (strcmp(node.kind, "Export") == 0) {
+            p = node.next;
+            continue;
+        }
+        if (strcmp(node.kind, "Import") == 0) {
             p = node.next;
             continue;
         }
@@ -3062,6 +3092,8 @@ static int parse_simple_program_aos_to_program_text(const char* source, AivmProg
             }
             if (strcmp(target, "io.print") == 0 || strcmp(target, "io.write") == 0 || strcmp(target, "sys.stdout.writeLine") == 0) {
                 mapped = "sys.stdout.writeLine";
+            } else if (starts_with(target, "sys.")) {
+                mapped = target;
             } else {
                 return simple_fail("call unsupported target");
             }
@@ -3695,19 +3727,42 @@ static int derive_build_out_dir(const char* program_input, char* out_dir, size_t
     return snprintf(out_dir, out_dir_len, ".") < (int)out_dir_len;
 }
 
+static char g_native_build_error[256];
+
+static void set_native_build_error(const char* message)
+{
+    if (message == NULL) {
+        message = "unknown";
+    }
+    (void)snprintf(g_native_build_error, sizeof(g_native_build_error), "%s", message);
+}
+
+static const char* native_build_error(void)
+{
+    if (g_native_build_error[0] == '\0') {
+        return "unknown";
+    }
+    return g_native_build_error;
+}
+
 static int build_input_to_aibc1(const char* program_input, const char* out_dir, char* out_app_path, size_t out_app_path_len)
 {
     char resolved_program[PATH_MAX];
     char source_aos[PATH_MAX];
     AivmProgram program;
 
+    g_native_build_error[0] = '\0';
+
     if (program_input == NULL || out_dir == NULL || out_app_path == NULL || out_app_path_len == 0U) {
+        set_native_build_error("invalid build arguments");
         return 0;
     }
     if (!ensure_directory(out_dir)) {
+        set_native_build_error("failed to create output directory");
         return 0;
     }
     if (!join_path(out_dir, "app.aibc1", out_app_path, out_app_path_len)) {
+        set_native_build_error("output path overflow");
         return 0;
     }
 
@@ -3715,18 +3770,28 @@ static int build_input_to_aibc1(const char* program_input, const char* out_dir, 
         if (strcmp(resolved_program, out_app_path) == 0) {
             return 1;
         }
-        return copy_file(resolved_program, out_app_path);
+        if (!copy_file(resolved_program, out_app_path)) {
+            set_native_build_error("failed to copy resolved app.aibc1");
+            return 0;
+        }
+        return 1;
     }
 
     if (!resolve_input_to_aos(program_input, source_aos, sizeof(source_aos))) {
+        set_native_build_error("could not resolve source .aos from input");
         return 0;
     }
 
     if (parse_bytecode_aos_to_program_file(source_aos, &program) ||
         parse_simple_program_aos_to_program_file(source_aos, &program)) {
-        return write_program_as_aibc1(&program, out_app_path) ? 1 : 0;
+        if (!write_program_as_aibc1(&program, out_app_path)) {
+            set_native_build_error("failed writing app.aibc1");
+            return 0;
+        }
+        return 1;
     }
 
+    set_native_build_error(simple_last_error());
     return 0;
 }
 
@@ -3776,7 +3841,8 @@ static int handle_build(int argc, char** argv)
         return 0;
     }
     fprintf(stderr,
-        "Err#err1(code=RUN001 message=\"Build failed to emit app.aibc1.\" nodeId=build)\n");
+        "Err#err1(code=RUN001 message=\"Build failed to emit app.aibc1 (%s).\" nodeId=build)\n",
+        native_build_error());
     return 2;
 }
 
