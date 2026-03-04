@@ -15,6 +15,10 @@ MODE_USED="native"
 RUN_TESTS="${AIVM_DOD_RUN_TESTS:-1}"
 RUN_BENCH="${AIVM_DOD_RUN_BENCH:-1}"
 RUN_WASM="${AIVM_DOD_RUN_WASM:-1}"
+HAS_RG=0
+if command -v rg >/dev/null 2>&1; then
+  HAS_RG=1
+fi
 
 mkdir -p "${TMP_DIR}"
 mkdir -p "$(dirname "${REPORT_PATH}")"
@@ -126,7 +130,11 @@ fi
 
 # Zero-C# gate.
 TRACKED_CS_COUNT="$(git ls-files '*.cs' '*.csproj' '*.sln' '*.slnx' | wc -l | tr -d ' ')"
-DOTNET_REF_COUNT="$( (rg -n '\bdotnet\b' .github/workflows scripts 2>/dev/null || true) | wc -l | tr -d ' ')"
+if [[ "${HAS_RG}" == "1" ]]; then
+  DOTNET_REF_COUNT="$( (rg -n '\bdotnet\b' .github/workflows scripts 2>/dev/null || true) | wc -l | tr -d ' ')"
+else
+  DOTNET_REF_COUNT="$( (grep -RInE '\bdotnet\b' .github/workflows scripts 2>/dev/null || true) | wc -l | tr -d ' ')"
+fi
 ZERO_CSHARP_STATUS="FAIL"
 if [[ "${TRACKED_CS_COUNT}" == "0" && "${DOTNET_REF_COUNT}" == "0" ]]; then
   ZERO_CSHARP_STATUS="PASS"
@@ -181,7 +189,14 @@ if [[ "${RUN_BENCH}" == "1" ]]; then
     invalid_baseline_count="$(awk 'BEGIN{c=0} !/^#/ && NF>=2 {if ($2 <= 0) c++} END{print c}' "${BENCH_BASELINE_FILE}")"
     if [[ "${invalid_baseline_count}" == "0" && "${BENCH_RUN_STATUS}" == "pass" ]]; then
       awk 'NR>1 && $2 == "ok" {print $1 "\t" $4}' "${TMP_DIR}/bench.out" > "${TMP_DIR}/bench-current.tsv"
-      BENCH_BASELINE_MISSING_COUNT="$(awk 'BEGIN{c=0} !/^#/ && NF>=2 {print $1}' "${BENCH_BASELINE_FILE}" | while read -r name; do if ! rg -q "^${name}[[:space:]]" "${TMP_DIR}/bench-current.tsv"; then echo 1; fi; done | wc -l | tr -d ' ')"
+      BENCH_BASELINE_MISSING_COUNT="$(
+        awk 'BEGIN{c=0} !/^#/ && NF>=2 {print $1}' "${BENCH_BASELINE_FILE}" |
+          while read -r name; do
+            if ! grep -qE "^${name}[[:space:]]" "${TMP_DIR}/bench-current.tsv"; then
+              echo 1
+            fi
+          done | wc -l | tr -d ' '
+      )"
       BENCH_REGRESSION_COUNT="$(
         awk -v max_pct="${BENCH_ALLOWED_REGRESSION_PCT}" '
           BEGIN {
@@ -229,7 +244,26 @@ SAMPLE_MANIFEST="${ROOT_DIR}/Docs/Sample-Completion-Manifest.md"
 sample_total="$(find "${ROOT_DIR}/samples" -mindepth 1 -maxdepth 2 -name project.aiproj | wc -l | tr -d ' ')"
 sample_complete=0
 if [[ -f "${SAMPLE_MANIFEST}" ]]; then
-  sample_complete="$( (rg -n '\|\s*`samples/.*\|\s*pass\s*\|\s*pass\s*\|\s*pass\s*\|\s*pass\s*\|\s*COMPLETE\s*\|' "${SAMPLE_MANIFEST}" || true) | wc -l | tr -d ' ')"
+  sample_complete="$(
+    awk '
+      {
+        if ($0 ~ /\|/ &&
+            $0 ~ /`samples\// &&
+            $0 ~ /COMPLETE/) {
+          line = $0;
+          pass_count = 0;
+          while (match(line, /pass/)) {
+            pass_count += 1;
+            line = substr(line, RSTART + RLENGTH);
+          }
+          if (pass_count >= 4) {
+            count += 1;
+          }
+        }
+      }
+      END { print count + 0 }
+    ' "${SAMPLE_MANIFEST}"
+  )"
 fi
 if [[ "${sample_total}" != "0" && "${sample_complete}" == "${sample_total}" ]]; then
   SAMPLE_GATE_STATUS="PASS"
@@ -274,10 +308,10 @@ if [[ "${RUN_WASM}" == "1" ]]; then
       WASM_RUN_STATUS="fail"
       WASM_GATE_STATUS="FAIL"
     fi
-    WASM_SOURCE_CASES="$(rg -o 'wasm golden corpus: PASS \([0-9]+ cases\)' "${TMP_DIR}/test-wasm-golden.log" | tail -n1 | rg -o '[0-9]+' | head -n1)"
-    WASM_BYTECODE_CASES="$(rg -o 'wasm bytecode-only corpus: PASS \([0-9]+ cases\)' "${TMP_DIR}/test-wasm-golden.log" | tail -n1 | rg -o '[0-9]+' | head -n1)"
-    WASM_MALFORMED_CASES="$(rg -o 'wasm malformed corpus: PASS \([0-9]+ cases\)' "${TMP_DIR}/test-wasm-golden.log" | tail -n1 | rg -o '[0-9]+' | head -n1)"
-    if rg -q 'wasm golden profiles: PASS \(cli/spa/fullstack\)' "${TMP_DIR}/test-wasm-golden.log"; then
+    WASM_SOURCE_CASES="$(grep -Eo 'wasm golden corpus: PASS \([0-9]+ cases\)' "${TMP_DIR}/test-wasm-golden.log" | tail -n1 | grep -Eo '[0-9]+' | head -n1)"
+    WASM_BYTECODE_CASES="$(grep -Eo 'wasm bytecode-only corpus: PASS \([0-9]+ cases\)' "${TMP_DIR}/test-wasm-golden.log" | tail -n1 | grep -Eo '[0-9]+' | head -n1)"
+    WASM_MALFORMED_CASES="$(grep -Eo 'wasm malformed corpus: PASS \([0-9]+ cases\)' "${TMP_DIR}/test-wasm-golden.log" | tail -n1 | grep -Eo '[0-9]+' | head -n1)"
+    if grep -q 'wasm golden profiles: PASS (cli/spa/fullstack)' "${TMP_DIR}/test-wasm-golden.log"; then
       WASM_PROFILE_STATUS="pass"
     else
       WASM_PROFILE_STATUS="fail"
