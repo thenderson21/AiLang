@@ -65,7 +65,7 @@ Required minimal primitives:
 
 ### 4. net
 
-Current status: partial (`sys.net.listen`, `sys.net.listen.tls`, `sys.net.accept`, `sys.net.write`, `sys.net.tcp.close`).
+Current status: partial (`sys.net.tcp.listen`, `sys.net.tcp.listenTls`, `sys.net.tcp.accept`, `sys.net.tcp.write`, `sys.net.tcp.close`).
 
 Required minimal primitives:
 
