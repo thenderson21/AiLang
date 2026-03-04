@@ -158,7 +158,7 @@ Program#rt_p1 {
             Let#rt_l10(name=event) { Call#rt_c9(target=runtime_make_event) { Var#rt_v12(name=raw) } }
             Let#rt_l11(name=next) { Call#rt_c10(target=runtime.dispatch) { Var#rt_v13(name=state) Var#rt_v14(name=event) } }
             Let#rt_l12(name=nextState) { Call#rt_c11(target=runtime_handle_next) { Var#rt_v15(name=next) Var#rt_v16(name=conn) Var#rt_v17(name=state) } }
-            Call#rt_c12(target=sys.net.close) { Var#rt_v18(name=conn) }
+            Call#rt_c12(target=sys.net.tcp.close) { Var#rt_v18(name=conn) }
             Return#rt_r5 { Call#rt_c13(target=runtime_serve_loop) { Var#rt_v19(name=listener) Var#rt_v20(name=nextState) } }
           }
         }

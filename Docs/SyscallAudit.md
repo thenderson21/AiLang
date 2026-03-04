@@ -45,7 +45,7 @@ Defined `sys.*` targets (dispatcher + contracts):
 | `sys.net.listen.tls` | `(port:int, certPath:string, keyPath:string)` | `int` | Start TLS listener on loopback; returns listener handle or `-1` on cert failure. |
 | `sys.net.accept` | `(listenerHandle:int)` | `int` | Blocking accept; returns connection handle or `-1`. |
 | `sys.net.write` | `(connectionHandle:int, data:bytes)` | `void` | Writes raw bytes to socket stream. |
-| `sys.net.close` | `(handle:int)` | `void` | Closes listener/connection handle. |
+| `sys.net.tcp.close` | `(handle:int)` | `void` | Closes listener/connection handle. |
 | `sys.stdout.writeLine` | `(text:string)` | `void` | Writes line to stdout. |
 | `sys.process.exit` | `(code:int)` | `void` | Raises process-exit exception boundary. |
 | `sys.fs.file.read` | `(path:string)` | `bytes` | Reads full file bytes. |
