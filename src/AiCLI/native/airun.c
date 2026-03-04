@@ -748,6 +748,25 @@ static int resolve_publish_target_from_manifest(const char* program_input, char*
     return 0;
 }
 
+static int resolve_publish_wasm_fullstack_host_target_from_manifest(const char* program_input, char* out_target, size_t out_len)
+{
+    char manifest_path[PATH_MAX];
+    char manifest_text[8192];
+    if (program_input == NULL || out_target == NULL || out_len == 0U) {
+        return 0;
+    }
+    if (!resolve_manifest_path_for_input(program_input, manifest_path, sizeof(manifest_path))) {
+        return 0;
+    }
+    if (!read_text_file(manifest_path, manifest_text, sizeof(manifest_text))) {
+        return 0;
+    }
+    if (!extract_manifest_attr(manifest_text, "publishWasmFullstackHostTarget", out_target, out_len)) {
+        return 0;
+    }
+    return 1;
+}
+
 static const char* host_rid(void)
 {
 #ifdef _WIN32
@@ -831,7 +850,7 @@ static void print_usage(void)
         "  repl\n"
         "  bench [--iterations <n>] [--human]\n"
         "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>]\n"
-        "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--wasm-profile <cli|spa|fullstack>] [--out <dir>]\n"
+        "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--wasm-profile <cli|spa|fullstack>] [--wasm-fullstack-host-target <rid>] [--out <dir>]\n"
         "  version | --version\n"
         "\n"
         "VM selectors:\n"
@@ -1105,7 +1124,7 @@ static int emit_wasm_spa_files(const char* out_dir, const char* runtime_name)
            write_text_file(remote_client_path, remote_client_js);
 }
 
-static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_name)
+static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_name, const char* server_runtime_bin)
 {
     char client_dir[PATH_MAX];
     char server_dir[PATH_MAX];
@@ -1121,7 +1140,7 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
     char server_app[2048];
     char root_run[4096];
     char root_run_ps1[4096];
-    if (out_dir == NULL || runtime_name == NULL) {
+    if (out_dir == NULL || runtime_name == NULL || server_runtime_bin == NULL) {
         return 0;
     }
     if (!join_path(out_dir, "client", client_dir, sizeof(client_dir)) ||
@@ -1188,7 +1207,8 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
             "PORT=\"${PORT:-8080}\"\n"
             "AIRUN_BIN=\"${AIRUN_BIN:-}\"\n"
             "if [[ -z \"${AIRUN_BIN}\" ]]; then\n"
-            "  if [[ -x \"${DIR}/../../tools/airun\" ]]; then AIRUN_BIN=\"${DIR}/../../tools/airun\";\n"
+            "  if [[ -x \"${DIR}/server/runtime/%s\" ]]; then AIRUN_BIN=\"${DIR}/server/runtime/%s\";\n"
+            "  elif [[ -x \"${DIR}/../../tools/airun\" ]]; then AIRUN_BIN=\"${DIR}/../../tools/airun\";\n"
             "  elif [[ -x \"${DIR}/../tools/airun\" ]]; then AIRUN_BIN=\"${DIR}/../tools/airun\";\n"
             "  else AIRUN_BIN=\"airun\"; fi\n"
             "fi\n"
@@ -1206,7 +1226,9 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
             "STATIC_PID=$!\n"
             "cleanup() { kill \"${STATIC_PID}\" >/dev/null 2>&1 || true; }\n"
             "trap cleanup EXIT INT TERM\n"
-            "exec \"${AIRUN_BIN}\" run \"${DIR}/server/project.aiproj\" \"$@\"\n") >= (int)sizeof(root_run)) {
+            "exec \"${AIRUN_BIN}\" run \"${DIR}/server/project.aiproj\" \"$@\"\n",
+            server_runtime_bin,
+            server_runtime_bin) >= (int)sizeof(root_run)) {
         return 0;
     }
     if (snprintf(
@@ -1215,7 +1237,7 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
             "$ErrorActionPreference = 'Stop'\n"
             "$dir = Split-Path -Parent $MyInvocation.MyCommand.Path\n"
             "$port = if ($env:PORT) { $env:PORT } else { '8080' }\n"
-            "$airun = if ($env:AIRUN_BIN) { $env:AIRUN_BIN } elseif (Test-Path (Join-Path $dir '../../tools/airun.exe')) { Join-Path $dir '../../tools/airun.exe' } elseif (Test-Path (Join-Path $dir '../../tools/airun')) { Join-Path $dir '../../tools/airun' } else { 'airun' }\n"
+            "$airun = if ($env:AIRUN_BIN) { $env:AIRUN_BIN } elseif (Test-Path (Join-Path $dir 'server/runtime/%s')) { Join-Path $dir 'server/runtime/%s' } elseif (Test-Path (Join-Path $dir '../../tools/airun.exe')) { Join-Path $dir '../../tools/airun.exe' } elseif (Test-Path (Join-Path $dir '../../tools/airun')) { Join-Path $dir '../../tools/airun' } else { 'airun' }\n"
             "$python = if (Get-Command python3 -ErrorAction SilentlyContinue) { 'python3' } elseif (Get-Command python -ErrorAction SilentlyContinue) { 'python' } else { $null }\n"
             "if (-not $python) { throw 'python not found; install python3 to serve server/www.' }\n"
             "$serverWww = Join-Path $dir 'server/www'\n"
@@ -1225,7 +1247,9 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
             "  & $airun run (Join-Path $dir 'server/project.aiproj') @args\n"
             "} finally {\n"
             "  if ($static -and -not $static.HasExited) { Stop-Process -Id $static.Id -Force }\n"
-            "}\n") >= (int)sizeof(root_run_ps1)) {
+            "}\n",
+            server_runtime_bin,
+            server_runtime_bin) >= (int)sizeof(root_run_ps1)) {
         return 0;
     }
     if (!write_text_file(server_readme_path, server_readme) ||
@@ -4028,6 +4052,7 @@ static int handle_publish(int argc, char** argv)
     const char* target = NULL;
     const char* out_dir = "dist";
     const char* wasm_profile = "spa";
+    const char* wasm_fullstack_host_target_arg = NULL;
     int wasm_profile_explicit = 0;
     char resolved_program[PATH_MAX];
     char source_aos[PATH_MAX];
@@ -4043,6 +4068,8 @@ static int handle_publish(int argc, char** argv)
     char wasm_app_dst[PATH_MAX];
     char app_dst[PATH_MAX];
     char manifest_target[64];
+    char manifest_wasm_fullstack_host_target[64];
+    char wasm_fullstack_host_target[64];
     AivmProgram publish_program;
     int i;
 
@@ -4073,6 +4100,15 @@ static int handle_publish(int argc, char** argv)
             }
             wasm_profile = argv[++i];
             wasm_profile_explicit = 1;
+            continue;
+        }
+        if (strcmp(argv[i], "--wasm-fullstack-host-target") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Missing --wasm-fullstack-host-target value.\" nodeId=argv)\n");
+                return 2;
+            }
+            wasm_fullstack_host_target_arg = argv[++i];
             continue;
         }
         if (program_input == NULL && argv[i][0] != '-') {
@@ -4168,6 +4204,16 @@ static int handle_publish(int argc, char** argv)
     if (wasm_profile_explicit && strcmp(target, "wasm32") != 0) {
         fprintf(stderr,
             "Err#err1(code=RUN001 message=\"--wasm-profile requires --target wasm32.\" nodeId=wasmProfile)\n");
+        return 2;
+    }
+    if (wasm_fullstack_host_target_arg != NULL && strcmp(target, "wasm32") != 0) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"--wasm-fullstack-host-target requires --target wasm32.\" nodeId=wasmFullstackHostTarget)\n");
+        return 2;
+    }
+    if (wasm_fullstack_host_target_arg != NULL && strcmp(wasm_profile, "fullstack") != 0) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"--wasm-fullstack-host-target requires --wasm-profile fullstack.\" nodeId=wasmFullstackHostTarget)\n");
         return 2;
     }
 
@@ -4279,11 +4325,63 @@ static int handle_publish(int argc, char** argv)
             }
         } else if (strcmp(wasm_profile, "fullstack") == 0) {
             char client_dir[PATH_MAX];
+            char server_dir[PATH_MAX];
             char server_www_dir[PATH_MAX];
+            char server_runtime_dir[PATH_MAX];
+            char fullstack_host_artifact_dir[PATH_MAX];
+            char fullstack_host_runtime_bin[64];
+            char fullstack_host_runtime_src[PATH_MAX];
+            char fullstack_host_runtime_dst[PATH_MAX];
+            wasm_fullstack_host_target[0] = '\0';
+            if (wasm_fullstack_host_target_arg != NULL) {
+                if (snprintf(wasm_fullstack_host_target, sizeof(wasm_fullstack_host_target), "%s", wasm_fullstack_host_target_arg) >= (int)sizeof(wasm_fullstack_host_target)) {
+                    fprintf(stderr,
+                        "Err#err1(code=RUN001 message=\"Wasm fullstack host target RID overflow.\" nodeId=wasmFullstackHostTarget)\n");
+                    return 2;
+                }
+            } else if (resolve_publish_wasm_fullstack_host_target_from_manifest(program_input, manifest_wasm_fullstack_host_target, sizeof(manifest_wasm_fullstack_host_target))) {
+                if (snprintf(wasm_fullstack_host_target, sizeof(wasm_fullstack_host_target), "%s", manifest_wasm_fullstack_host_target) >= (int)sizeof(wasm_fullstack_host_target)) {
+                    fprintf(stderr,
+                        "Err#err1(code=RUN001 message=\"Project wasm fullstack host target RID overflow.\" nodeId=project)\n");
+                    return 2;
+                }
+            } else {
+                if (snprintf(wasm_fullstack_host_target, sizeof(wasm_fullstack_host_target), "%s", host_rid()) >= (int)sizeof(wasm_fullstack_host_target)) {
+                    fprintf(stderr,
+                        "Err#err1(code=RUN001 message=\"Host RID overflow.\" nodeId=publish)\n");
+                    return 2;
+                }
+            }
+            if (strcmp(wasm_fullstack_host_target, "wasm32") == 0 ||
+                !parse_target_to_artifact(
+                    wasm_fullstack_host_target,
+                    fullstack_host_artifact_dir,
+                    sizeof(fullstack_host_artifact_dir),
+                    fullstack_host_runtime_bin,
+                    sizeof(fullstack_host_runtime_bin))) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Unsupported wasm fullstack host target RID.\" nodeId=wasmFullstackHostTarget)\n");
+                return 2;
+            }
             if (!join_path(out_dir, "client", client_dir, sizeof(client_dir)) ||
                 !ensure_directory(client_dir)) {
                 fprintf(stderr,
                     "Err#err1(code=RUN001 message=\"Failed to create wasm fullstack client directory.\" nodeId=publish)\n");
+                return 2;
+            }
+            if (!join_path(out_dir, "server", server_dir, sizeof(server_dir)) ||
+                !ensure_directory(server_dir) ||
+                !join_path(server_dir, "runtime", server_runtime_dir, sizeof(server_runtime_dir)) ||
+                !ensure_directory(server_runtime_dir)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Failed to create wasm fullstack server runtime directory.\" nodeId=publish)\n");
+                return 2;
+            }
+            if (!join_path(fullstack_host_artifact_dir, fullstack_host_runtime_bin, fullstack_host_runtime_src, sizeof(fullstack_host_runtime_src)) ||
+                !join_path(server_runtime_dir, fullstack_host_runtime_bin, fullstack_host_runtime_dst, sizeof(fullstack_host_runtime_dst)) ||
+                !copy_runtime_file(fullstack_host_runtime_src, fullstack_host_runtime_dst)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Failed to copy wasm fullstack host runtime for target RID. Build target runtime first.\" nodeId=wasmFullstackHostTarget)\n");
                 return 2;
             }
             if (!join_path(client_dir, "app.aibc1", wasm_app_dst, sizeof(wasm_app_dst)) ||
@@ -4292,7 +4390,7 @@ static int handle_publish(int argc, char** argv)
                 !copy_runtime_file(runtime_src, runtime_dst) ||
                 !join_path(client_dir, runtime_web_bin, runtime_web_dst, sizeof(runtime_web_dst)) ||
                 !copy_runtime_file(runtime_web_src, runtime_web_dst) ||
-                !emit_wasm_fullstack_layout(out_dir, publish_runtime_name) ||
+                !emit_wasm_fullstack_layout(out_dir, publish_runtime_name, fullstack_host_runtime_bin) ||
                 !join_path(out_dir, "server/www", server_www_dir, sizeof(server_www_dir)) ||
                 !join_path(server_www_dir, "app.aibc1", wasm_app_dst, sizeof(wasm_app_dst)) ||
                 !copy_file(app_dst, wasm_app_dst) ||

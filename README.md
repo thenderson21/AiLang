@@ -111,6 +111,9 @@ Publish wasm artifacts (web profile default):
 ```bash
 ./scripts/build-aivm-wasm.sh
 ./tools/airun publish samples/cli-fetch/project.aiproj --target wasm32 --out ./dist-wasm
+
+# wasm fullstack + explicit host runtime target for generated server launcher
+./tools/airun publish samples/cli-fetch/project.aiproj --target wasm32 --wasm-profile fullstack --wasm-fullstack-host-target linux-x64 --out ./dist-wasm-fullstack-linux
 ```
 
 Publish wasm CLI profile:
@@ -181,6 +184,8 @@ Rebuild `tools/airun` (native C, host platform):
   - `web` (default): emits `index.html` + `main.js` package files.
   - `cli`: emits `run.sh` + `run.ps1` launcher files.
   - `fullstack`: emits `client/` web package + `server/` AiLang server scaffold (`project.aiproj`, `src/app.aos`, `README.md`) and root launchers (`run`, `run.ps1`).
+    - bundles host runtime in `server/runtime/` (default host RID, override with `--wasm-fullstack-host-target <rid>`).
+    - project manifest override: `publishWasmFullstackHostTarget="<rid>"`.
   - malformed bytecode/source fixtures are deterministically rejected at publish-time with `DEV008` (contract guard, not runtime drift).
 - wasm client/server capability channel MVP uses `sys.remote.call` (see `SPEC/WASM_REMOTE_CHANNEL.md`).
   - MVP security baseline: `SPEC/WASM_REMOTE_SECURITY.md`.

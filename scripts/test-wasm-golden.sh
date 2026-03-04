@@ -49,6 +49,24 @@ NATIVE_OUT="${TMP_DIR}/native.out"
 WASM_OUT="${TMP_DIR}/wasm.out"
 PROCESS_OUT="${TMP_DIR}/process.out"
 PROCESS_ERR="${TMP_DIR}/process.err"
+MANIFEST_HOST_TARGET_DIR="${TMP_DIR}/manifest-host-target"
+MANIFEST_HOST_TARGET_ERR="${TMP_DIR}/manifest-host-target.err"
+
+case "$(uname -s)" in
+  Darwin)
+    EXPECTED_HOST_RUNTIME_BIN="airun"
+    ;;
+  Linux)
+    EXPECTED_HOST_RUNTIME_BIN="airun"
+    ;;
+  MINGW*|MSYS*|CYGWIN*|Windows_NT)
+    EXPECTED_HOST_RUNTIME_BIN="airun.exe"
+    ;;
+  *)
+    echo "unsupported host OS for wasm golden host runtime assertion" >&2
+    exit 1
+    ;;
+esac
 
 cd "${ROOT_DIR}"
 export AIVM_REMOTE_CAPS="cap.remote"
@@ -72,6 +90,7 @@ mkdir -p "${PUBLISH_DIR}"
 mkdir -p "${PUBLISH_SPA_DIR}"
 mkdir -p "${PUBLISH_FULLSTACK_DIR}"
 mkdir -p "${PUBLISH_PROCESS_CLI_DIR}"
+mkdir -p "${MANIFEST_HOST_TARGET_DIR}"
 
 for CASE_NAME in "${CASES[@]}"; do
   CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
@@ -176,9 +195,34 @@ if [[ ! -f "${PUBLISH_FULLSTACK_DIR}/client/index.html" || ! -f "${PUBLISH_FULLS
   echo "wasm profile mismatch: fullstack publish did not emit AiLang server scaffold layout" >&2
   exit 1
 fi
+if [[ ! -f "${PUBLISH_FULLSTACK_DIR}/server/runtime/${EXPECTED_HOST_RUNTIME_BIN}" ]]; then
+  echo "wasm profile mismatch: fullstack publish did not emit server/runtime/${EXPECTED_HOST_RUNTIME_BIN}" >&2
+  exit 1
+fi
 
 if [[ -f "${PUBLISH_FULLSTACK_DIR}/server/run-remote-ws-bridge.sh" || -f "${PUBLISH_FULLSTACK_DIR}/server/run-remote-ws-bridge.ps1" ]]; then
   echo "wasm profile mismatch: fullstack publish should not emit C bridge run scripts" >&2
+  exit 1
+fi
+
+mkdir -p "${MANIFEST_HOST_TARGET_DIR}/src"
+cp "${PUBLISH_FULLSTACK_DIR}/app.aibc1" "${MANIFEST_HOST_TARGET_DIR}/src/app.aibc1"
+cat > "${MANIFEST_HOST_TARGET_DIR}/src/app.aos" <<'EOF'
+Program#p1 {
+  Let#l1(name=dummy) { Lit#v1(value=1) }
+}
+EOF
+cat > "${MANIFEST_HOST_TARGET_DIR}/project.aiproj" <<'EOF'
+Program#p1 {
+  Project#proj1(name="manifest_host_target" entryFile="src/app.aos" publishWasmFullstackHostTarget="invalid-rid")
+}
+EOF
+if ./tools/airun publish "${MANIFEST_HOST_TARGET_DIR}/project.aiproj" --target wasm32 --wasm-profile fullstack --out "${MANIFEST_HOST_TARGET_DIR}/out" > /dev/null 2>"${MANIFEST_HOST_TARGET_ERR}"; then
+  echo "wasm manifest host-target mismatch: expected publish failure for invalid publishWasmFullstackHostTarget" >&2
+  exit 1
+fi
+if ! rg -q 'Unsupported wasm fullstack host target RID' "${MANIFEST_HOST_TARGET_ERR}"; then
+  echo "wasm manifest host-target mismatch: expected deterministic invalid host target error" >&2
   exit 1
 fi
 
