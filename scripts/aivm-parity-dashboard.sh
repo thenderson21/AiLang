@@ -14,6 +14,7 @@ PARITY_CLI="${BUILD_DIR}/aivm_parity_cli"
 MODE_USED="native"
 RUN_TESTS="${AIVM_DOD_RUN_TESTS:-1}"
 RUN_BENCH="${AIVM_DOD_RUN_BENCH:-1}"
+RUN_WASM="${AIVM_DOD_RUN_WASM:-1}"
 
 mkdir -p "${TMP_DIR}"
 mkdir -p "$(dirname "${REPORT_PATH}")"
@@ -251,13 +252,54 @@ if [[ "${RC_TEST_PRESENT}" == "yes" &&
   MEMORY_GATE_STATUS="PASS"
 fi
 
+# WASM parity gate.
+WASM_GATE_STATUS="PENDING"
+WASM_SOURCE_CASES="0"
+WASM_BYTECODE_CASES="0"
+WASM_MALFORMED_CASES="0"
+WASM_PROFILE_STATUS="unknown"
+WASM_RUN_STATUS="not-run"
+if [[ "${RUN_WASM}" == "1" ]]; then
+  if [[ -x "${ROOT_DIR}/scripts/test-wasm-golden.sh" ]] &&
+     command -v wasmtime >/dev/null 2>&1 &&
+     command -v emcc >/dev/null 2>&1; then
+    set +e
+    ./scripts/test-wasm-golden.sh > "${TMP_DIR}/test-wasm-golden.log" 2>&1
+    wasm_rc=$?
+    set -e
+    if [[ ${wasm_rc} -eq 0 ]]; then
+      WASM_RUN_STATUS="pass"
+      WASM_GATE_STATUS="PASS"
+    else
+      WASM_RUN_STATUS="fail"
+      WASM_GATE_STATUS="FAIL"
+    fi
+    WASM_SOURCE_CASES="$(rg -o 'wasm golden corpus: PASS \([0-9]+ cases\)' "${TMP_DIR}/test-wasm-golden.log" | tail -n1 | rg -o '[0-9]+' | head -n1)"
+    WASM_BYTECODE_CASES="$(rg -o 'wasm bytecode-only corpus: PASS \([0-9]+ cases\)' "${TMP_DIR}/test-wasm-golden.log" | tail -n1 | rg -o '[0-9]+' | head -n1)"
+    WASM_MALFORMED_CASES="$(rg -o 'wasm malformed corpus: PASS \([0-9]+ cases\)' "${TMP_DIR}/test-wasm-golden.log" | tail -n1 | rg -o '[0-9]+' | head -n1)"
+    if rg -q 'wasm golden profiles: PASS \(cli/spa/fullstack\)' "${TMP_DIR}/test-wasm-golden.log"; then
+      WASM_PROFILE_STATUS="pass"
+    else
+      WASM_PROFILE_STATUS="fail"
+      WASM_GATE_STATUS="FAIL"
+    fi
+    if [[ -z "${WASM_SOURCE_CASES}" ]]; then WASM_SOURCE_CASES="0"; fi
+    if [[ -z "${WASM_BYTECODE_CASES}" ]]; then WASM_BYTECODE_CASES="0"; fi
+    if [[ -z "${WASM_MALFORMED_CASES}" ]]; then WASM_MALFORMED_CASES="0"; fi
+  else
+    WASM_GATE_STATUS="FAIL"
+    WASM_RUN_STATUS="missing-tools"
+  fi
+fi
+
 OVERALL_STATUS="FAIL"
 if [[ "${BEHAVIORAL_GATE_STATUS}" == "PASS" &&
       "${ZERO_CSHARP_STATUS}" == "PASS" &&
       "${TEST_GATE_STATUS}" == "PASS" &&
       "${BENCH_GATE_STATUS}" == "PASS" &&
       "${SAMPLE_GATE_STATUS}" == "PASS" &&
-      "${MEMORY_GATE_STATUS}" == "PASS" ]]; then
+      "${MEMORY_GATE_STATUS}" == "PASS" &&
+      "${WASM_GATE_STATUS}" == "PASS" ]]; then
   OVERALL_STATUS="PASS"
 fi
 
@@ -279,6 +321,7 @@ TS_UTC="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
   echo "| Benchmark | ${BENCH_GATE_STATUS} | bench_run=${BENCH_RUN_STATUS}, baseline=${BENCH_BASELINE_STATUS}, threshold=${BENCH_THRESHOLD_STATUS}, regressions=${BENCH_REGRESSION_COUNT}, missing=${BENCH_BASELINE_MISSING_COUNT}, max_pct=${BENCH_ALLOWED_REGRESSION_PCT} |"
   echo "| Samples completion | ${SAMPLE_GATE_STATUS} | complete=${sample_complete}/${sample_total} (manifest=${SAMPLE_MANIFEST##${ROOT_DIR}/}) |"
   echo "| Memory/GC | ${MEMORY_GATE_STATUS} | rc_test=${RC_TEST_PRESENT}, cycle_test=${CYCLE_TEST_PRESENT}, leak_script=${LEAK_SCRIPT_PRESENT}, profile_script=${PROFILE_SCRIPT_PRESENT} |"
+  echo "| WASM parity | ${WASM_GATE_STATUS} | run=${WASM_RUN_STATUS}, source=${WASM_SOURCE_CASES}, bytecode_only=${WASM_BYTECODE_CASES}, malformed=${WASM_MALFORMED_CASES}, profiles=${WASM_PROFILE_STATUS} |"
   echo
   echo "## Behavioral Sub-Gates"
   echo
@@ -296,6 +339,15 @@ TS_UTC="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
   while IFS=$'\t' read -r result name left_status right_status; do
     echo "| ${result} | ${name} | ${left_status} | ${right_status} |"
   done < "${DETAILS_FILE}"
+  echo
+  echo "## WASM Coverage"
+  echo
+  echo "| Metric | Value |"
+  echo "|---|---|"
+  echo "| source corpus | ${WASM_SOURCE_CASES} |"
+  echo "| bytecode-only corpus | ${WASM_BYTECODE_CASES} |"
+  echo "| malformed corpus | ${WASM_MALFORMED_CASES} |"
+  echo "| profiles (cli/spa/fullstack) | ${WASM_PROFILE_STATUS} |"
 } > "${REPORT_PATH}"
 
 echo "parity dashboard: ${PASSED}/${TOTAL} passing (${PARITY_PERCENT}%)"
