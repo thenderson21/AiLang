@@ -11,7 +11,7 @@ Program#std_str_p1 {
     Fn#std_str_f2(params=text,start,length) {
       Block#std_str_b2 {
         Return#std_str_r2 {
-          Call#std_str_c1(target=sys.str_substring) {
+          Call#std_str_c1(target=sys.str.substring) {
             Var#std_str_v3(name=text)
             Var#std_str_v4(name=start)
             Var#std_str_v5(name=length)
@@ -25,7 +25,7 @@ Program#std_str_p1 {
     Fn#std_str_f3(params=text,start,length) {
       Block#std_str_b3 {
         Return#std_str_r3 {
-          Call#std_str_c2(target=sys.str_remove) {
+          Call#std_str_c2(target=sys.str.remove) {
             Var#std_str_v6(name=text)
             Var#std_str_v7(name=start)
             Var#std_str_v8(name=length)

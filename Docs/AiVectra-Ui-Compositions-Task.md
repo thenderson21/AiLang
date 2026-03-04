@@ -9,19 +9,19 @@ Implement high-level UI composition features in `src/AiVectra` using minimal VM 
 VM syscall surface was reduced to primitive/window operations only.
 The following high-level operations were intentionally removed from `sys.*`:
 
-- `sys.ui_drawTextPath`
-- `sys.ui_drawRectPaint`
-- `sys.ui_drawEllipsePaint`
-- `sys.ui_drawPolylinePaint`
-- `sys.ui_drawPolygonPaint`
-- `sys.ui_drawPathPaint`
-- `sys.ui_drawTextPaint`
-- `sys.ui_filterBlur`
-- `sys.ui_groupPush`
-- `sys.ui_groupPop`
-- `sys.ui_translate`
-- `sys.ui_scale`
-- `sys.ui_rotate`
+- `sys.ui.drawTextPath`
+- `sys.ui.drawRectPaint`
+- `sys.ui.drawEllipsePaint`
+- `sys.ui.drawPolylinePaint`
+- `sys.ui.drawPolygonPaint`
+- `sys.ui.drawPathPaint`
+- `sys.ui.drawTextPaint`
+- `sys.ui.filterBlur`
+- `sys.ui.groupPush`
+- `sys.ui.groupPop`
+- `sys.ui.translate`
+- `sys.ui.scale`
+- `sys.ui.rotate`
 
 These should now exist as AiVectra-level composition helpers.
 

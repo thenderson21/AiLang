@@ -137,7 +137,7 @@ Program#std_ui_p1 {
       Block#std_ui_b41 {
         If#std_ui_if18 {
           Eq#std_ui_eq16 {
-            Call#std_ui_c5(target=sys.str_substring) {
+            Call#std_ui_c5(target=sys.str.substring) {
               Var#std_ui_v24(name=text)
               Var#std_ui_v25(name=index)
               Lit#std_ui_i46(value=1)
@@ -177,7 +177,7 @@ Program#std_ui_p1 {
               Block#std_ui_b47 { Return#std_ui_r27 { Var#std_ui_v32(name=text) } }
               Block#std_ui_b48 {
                 Return#std_ui_r28 {
-                  Call#std_ui_c9(target=sys.str_remove) {
+                  Call#std_ui_c9(target=sys.str.remove) {
                     Var#std_ui_v33(name=text)
                     Add#std_ui_a2 { Var#std_ui_v34(name=cursor) Lit#std_ui_i51(value=-1) }
                     Lit#std_ui_i52(value=1)
@@ -193,7 +193,7 @@ Program#std_ui_p1 {
           Block#std_ui_b50 {
             If#std_ui_if22 {
               Eq#std_ui_eq18 {
-                Call#std_ui_c11(target=sys.str_substring) {
+                Call#std_ui_c11(target=sys.str.substring) {
                   Var#std_ui_v36(name=text)
                   Var#std_ui_v37(name=cursor)
                   Lit#std_ui_i54(value=1)
@@ -203,7 +203,7 @@ Program#std_ui_p1 {
               Block#std_ui_b51 { Return#std_ui_r29 { Var#std_ui_v38(name=text) } }
               Block#std_ui_b52 {
                 Return#std_ui_r30 {
-                  Call#std_ui_c12(target=sys.str_remove) {
+                  Call#std_ui_c12(target=sys.str.remove) {
                     Var#std_ui_v39(name=text)
                     Var#std_ui_v40(name=cursor)
                     Lit#std_ui_i56(value=1)
@@ -232,14 +232,14 @@ Program#std_ui_p1 {
           Block#std_ui_b56 { Return#std_ui_r32 { Var#std_ui_v48(name=text) } }
           Block#std_ui_b57 {
             Let#std_ui_l12(name=prefix) {
-              Call#std_ui_c15(target=sys.str_substring) {
+              Call#std_ui_c15(target=sys.str.substring) {
                 Var#std_ui_v49(name=text)
                 Lit#std_ui_i60(value=0)
                 Var#std_ui_v50(name=cursor)
               }
             }
             Let#std_ui_l13(name=suffix) {
-              Call#std_ui_c16(target=sys.str_substring) {
+              Call#std_ui_c16(target=sys.str.substring) {
                 Var#std_ui_v51(name=text)
                 Var#std_ui_v52(name=cursor)
                 Call#std_ui_c27(target=textLength) { Var#std_ui_v102(name=text) }
@@ -279,7 +279,7 @@ Program#std_ui_p1 {
           Block#std_ui_b63 {
             If#std_ui_if28 {
               Eq#std_ui_eq23 {
-                Call#std_ui_c17(target=sys.str_substring) {
+                Call#std_ui_c17(target=sys.str.substring) {
                   Var#std_ui_v60(name=text)
                   Var#std_ui_v61(name=cursor)
                   Lit#std_ui_i68(value=1)

@@ -50,7 +50,7 @@ Program {
           Call(target=httpRequestDone) { Var(name=state) }
           Block {
             Let(name=body) { Call(target=httpRequestResponse) { Var(name=state) } }
-            Let(name=snippet) { Call(target=sys.str_substring) { Var(name=body) Lit(value=0) Lit(value=96) } }
+            Let(name=snippet) { Call(target=sys.str.substring) { Var(name=body) Lit(value=0) Lit(value=96) } }
             Return {
               StrConcat {
                 Var(name=label)
@@ -100,7 +100,7 @@ Program {
             If {
               Call(target=isTerminal) { Var(name=state) }
               Block {
-                Call(target=sys.stdout_writeLine) {
+                Call(target=sys.stdout.writeLine) {
                   StrConcat {
                     Lit(value="[completed tick=")
                     StrConcat {
@@ -134,23 +134,23 @@ Program {
         If {
           Call(target=allTerminal) { Var(name=n1) Var(name=n2) Var(name=n3) }
           Block {
-            Call(target=sys.stdout_writeLine) { Call(target=summaryLine) { Lit(value="[example.com]") Var(name=n1) } }
-            Call(target=sys.stdout_writeLine) { Call(target=summaryLine) { Lit(value="[iana.org]") Var(name=n2) } }
-            Call(target=sys.stdout_writeLine) { Call(target=summaryLine) { Lit(value="[wttr.in]") Var(name=n3) } }
+            Call(target=sys.stdout.writeLine) { Call(target=summaryLine) { Lit(value="[example.com]") Var(name=n1) } }
+            Call(target=sys.stdout.writeLine) { Call(target=summaryLine) { Lit(value="[iana.org]") Var(name=n2) } }
+            Call(target=sys.stdout.writeLine) { Call(target=summaryLine) { Lit(value="[wttr.in]") Var(name=n3) } }
             Return { Lit(value=0) }
           }
           Block {
             If {
               Eq { Var(name=remaining) Lit(value=0) }
               Block {
-                Call(target=sys.stdout_writeLine) { Lit(value="[timeout] requests still pending after max polls") }
-                Call(target=sys.stdout_writeLine) { Call(target=summaryLine) { Lit(value="[example.com]") Var(name=n1) } }
-                Call(target=sys.stdout_writeLine) { Call(target=summaryLine) { Lit(value="[iana.org]") Var(name=n2) } }
-                Call(target=sys.stdout_writeLine) { Call(target=summaryLine) { Lit(value="[wttr.in]") Var(name=n3) } }
+                Call(target=sys.stdout.writeLine) { Lit(value="[timeout] requests still pending after max polls") }
+                Call(target=sys.stdout.writeLine) { Call(target=summaryLine) { Lit(value="[example.com]") Var(name=n1) } }
+                Call(target=sys.stdout.writeLine) { Call(target=summaryLine) { Lit(value="[iana.org]") Var(name=n2) } }
+                Call(target=sys.stdout.writeLine) { Call(target=summaryLine) { Lit(value="[wttr.in]") Var(name=n3) } }
                 Return { Lit(value=1) }
               }
               Block {
-                Call(target=sys.time_sleepMs) { Lit(value=10) }
+                Call(target=sys.time.sleepMs) { Lit(value=10) }
                 Return {
                   Call(target=waitAll) {
                     Var(name=n1)
@@ -174,7 +174,7 @@ Program {
   Let(name=start) {
     Fn(params=args) {
       Block {
-        Call(target=sys.stdout_writeLine) { Lit(value="starting 3 HTTP requests in parallel (non-blocking poll loop)") }
+        Call(target=sys.stdout.writeLine) { Lit(value="starting 3 HTTP requests in parallel (non-blocking poll loop)") }
         Let(name=r1) {
           Call(target=httpRequest) {
             Lit(value="GET")

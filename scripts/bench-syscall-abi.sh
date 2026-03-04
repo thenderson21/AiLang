@@ -35,7 +35,7 @@ Program#p1 {
           Block#b3 {
             Return#r2 {
               Add#a1 {
-                Call#c1(target=sys.str_utf8ByteCount) { Lit#s1(value="abcdefgh") }
+                Call#c1(target=sys.str.utf8ByteCount) { Lit#s1(value="abcdefgh") }
                 Call#c2(target=hot) { Add#a2 { Var#v2(name=n) Lit#i2(value=-1) } }
               }
             }
