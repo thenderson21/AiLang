@@ -1429,10 +1429,10 @@ static int native_syscall_process_wait(
     if (!process->finished) {
         DWORD wait_status = WaitForSingleObject(process->process_handle, INFINITE);
         if (wait_status == WAIT_OBJECT_0) {
-            DWORD exit_code;
+            DWORD process_exit_code;
             process->finished = 1;
-            if (GetExitCodeProcess(process->process_handle, &exit_code) != 0) {
-                process->exit_code = (int)exit_code;
+            if (GetExitCodeProcess(process->process_handle, &process_exit_code) != 0) {
+                process->exit_code = (int)process_exit_code;
             } else {
                 process->exit_code = -1;
             }
