@@ -1,9 +1,3 @@
-#ifndef _WIN32
-#ifndef _POSIX_C_SOURCE
-#define _POSIX_C_SOURCE 200809L
-#endif
-#endif
-
 #include <errno.h>
 #include <ctype.h>
 #include <limits.h>
@@ -13,64 +7,39 @@
 
 #ifdef _WIN32
 #include <direct.h>
+#include <io.h>
 #include <process.h>
 #include <sys/stat.h>
 #include <windows.h>
-#include <io.h>
 #ifndef PATH_MAX
 #define PATH_MAX 260
 #endif
 #define AIVM_PATH_SEP '\\'
 #define AIVM_EXE_EXT ".exe"
-#define aivm_chdir _chdir
-#define aivm_getcwd _getcwd
 #else
+#include <dirent.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <sys/wait.h>
+/* Some test translation units include this file directly without POSIX feature
+   macros, which can hide realpath(3) declaration on glibc. */
+extern char* realpath(const char* path, char* resolved_path);
+extern int lstat(const char* path, struct stat* buffer);
+extern int kill(pid_t pid, int sig);
 #ifndef PATH_MAX
 #define PATH_MAX 4096
 #endif
 #define AIVM_PATH_SEP '/'
 #define AIVM_EXE_EXT ""
-#define aivm_chdir chdir
-#define aivm_getcwd getcwd
 #endif
 
 #include "aivm_c_api.h"
 
 static int join_path(const char* left, const char* right, char* out, size_t out_len);
 static int find_executable_on_path(const char* name, char* out, size_t out_len);
-static int simple_add_string_const(AivmProgram* program, const char* value, size_t* out_idx);
-
-#define NATIVE_PROCESS_MAX 64
-#define NATIVE_PROCESS_STATUS_PENDING 0
-#define NATIVE_PROCESS_STATUS_OK 1
-#define NATIVE_PROCESS_STATUS_FAIL -1
-#define NATIVE_PROCESS_STATUS_CANCELED -2
-#define NATIVE_PROCESS_STATUS_UNKNOWN -3
-
-typedef struct NativeProcessRecord
-{
-    int used;
-    int status;
-    int exit_code;
-    int output_loaded;
-    char stdout_path[PATH_MAX];
-    char stderr_path[PATH_MAX];
-    char* stdout_text;
-    char* stderr_text;
-#ifdef _WIN32
-    HANDLE process_handle;
-#else
-    pid_t pid;
-#endif
-} NativeProcessRecord;
-
-static NativeProcessRecord g_native_process_records[NATIVE_PROCESS_MAX];
 
 static int ends_with(const char* value, const char* suffix)
 {
@@ -184,35 +153,6 @@ static int copy_runtime_file(const char* src, const char* dst)
     if (chmod(dst, 0755) != 0) {
         return 0;
     }
-#endif
-    return 1;
-}
-
-static int write_text_file(const char* path, const char* content, int executable)
-{
-    FILE* out;
-    size_t len;
-    if (path == NULL || content == NULL) {
-        return 0;
-    }
-    out = fopen(path, "wb");
-    if (out == NULL) {
-        return 0;
-    }
-    len = strlen(content);
-    if (len > 0U && fwrite(content, 1U, len, out) != len) {
-        fclose(out);
-        return 0;
-    }
-    if (fclose(out) != 0) {
-        return 0;
-    }
-#ifndef _WIN32
-    if (executable != 0 && chmod(path, 0755) != 0) {
-        return 0;
-    }
-#else
-    (void)executable;
 #endif
     return 1;
 }
@@ -374,30 +314,19 @@ static int resolve_executable_path(const char* argv0, char* out, size_t out_len)
     }
     return GetModuleFileNameA(NULL, out, (DWORD)out_len) > 0U;
 #else
-    char cwd[PATH_MAX];
     if (out != NULL && out_len > 0U) {
         out[0] = '\0';
     }
     if (argv0 == NULL || out == NULL || out_len == 0U) {
         return 0;
     }
-    if (strchr(argv0, '/') != NULL || strchr(argv0, '\\') != NULL) {
-        if (argv0[0] == '/') {
-            if (snprintf(out, out_len, "%s", argv0) < (int)out_len) {
-                return 1;
-            }
-            return 0;
-        }
-        if (aivm_getcwd(cwd, sizeof(cwd)) == NULL) {
-            return 0;
-        }
-        if (snprintf(out, out_len, "%s/%s", cwd, argv0) < (int)out_len) {
+    if (realpath(argv0, out) != NULL) {
+        return 1;
+    }
+    if (strchr(argv0, '/') == NULL && strchr(argv0, '\\') == NULL) {
+        if (find_executable_on_path(argv0, out, out_len)) {
             return 1;
         }
-        return 0;
-    }
-    if (find_executable_on_path(argv0, out, out_len)) {
-        return 1;
     }
     return 0;
 #endif
@@ -437,10 +366,8 @@ static int find_executable_on_path(const char* name, char* out, size_t out_len)
                 candidate[segment_len] = '\0';
                 written = snprintf(candidate + segment_len, sizeof(candidate) - segment_len, "%c%s", AIVM_PATH_SEP, name);
                 if (written > 0 && (size_t)written < (sizeof(candidate) - segment_len) &&
-                    access(candidate, X_OK) == 0) {
-                    if (snprintf(out, out_len, "%s", candidate) < (int)out_len) {
-                        return 1;
-                    }
+                    realpath(candidate, out) != NULL) {
+                    return 1;
                 }
             }
         }
@@ -852,13 +779,6 @@ static int parse_target_to_artifact(const char* rid, char* out_dir, size_t out_d
             return 0;
         }
         n = snprintf(out_bin, out_bin_len, "airun.exe");
-    } else if (strcmp(rid, "wasm32") == 0) {
-        n = snprintf(out_bin, out_bin_len, "aivm-runtime-wasm32.wasm");
-        if (n < 0 || (size_t)n >= out_bin_len) {
-            return 0;
-        }
-        n = snprintf(out_dir, out_dir_len, ".artifacts/aivm-wasm32");
-        return n >= 0 && (size_t)n < out_dir_len;
     } else {
         return 0;
     }
@@ -877,12 +797,11 @@ static void print_usage(void)
         "Usage: airun <command> [options]\n"
         "\n"
         "Commands:\n"
-        "  build <program(.aibc1|.aos|project-dir|project.aiproj)> [--out <dir>]\n"
         "  run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>]\n"
         "  repl\n"
         "  bench [--iterations <n>] [--human]\n"
         "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>]\n"
-        "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--out <dir>] [--wasm-profile <spa|cli|fullstack>]\n"
+        "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--out <dir>]\n"
         "  version | --version\n"
         "\n"
         "VM selectors:\n"
@@ -917,29 +836,192 @@ static int is_reserved_cv_selector(const char* mode)
     return 1;
 }
 
-static int native_host_supports_syscall(const char* target)
+#define NATIVE_PROCESS_CAPACITY 32U
+#define NATIVE_PROCESS_READ_CHUNK 4096U
+
+typedef struct NativeProcessState
 {
-    if (target == NULL) {
+    int used;
+    int finished;
+    int exit_code;
+    int stdout_closed;
+    int stderr_closed;
+#ifdef _WIN32
+    HANDLE process_handle;
+    HANDLE stdout_read;
+    HANDLE stderr_read;
+#else
+    pid_t pid;
+    int stdout_fd;
+    int stderr_fd;
+#endif
+} NativeProcessState;
+
+static NativeProcessState g_native_processes[NATIVE_PROCESS_CAPACITY];
+static uint8_t g_native_process_read_scratch[NATIVE_PROCESS_READ_CHUNK];
+
+static NativeProcessState* native_process_lookup(int64_t handle_value)
+{
+    size_t index;
+    if (handle_value <= 0 || handle_value > (int64_t)NATIVE_PROCESS_CAPACITY) {
+        return NULL;
+    }
+    index = (size_t)(handle_value - 1);
+    if (!g_native_processes[index].used) {
+        return NULL;
+    }
+    return &g_native_processes[index];
+}
+
+static int64_t native_process_allocate_slot(void)
+{
+    size_t index;
+    for (index = 0U; index < NATIVE_PROCESS_CAPACITY; index += 1U) {
+        if (!g_native_processes[index].used) {
+            memset(&g_native_processes[index], 0, sizeof(g_native_processes[index]));
+            g_native_processes[index].used = 1;
+            return (int64_t)(index + 1U);
+        }
+    }
+    return -1;
+}
+
+#ifdef _WIN32
+static int native_delete_dir_recursive_windows(const char* path)
+{
+    char pattern[PATH_MAX];
+    WIN32_FIND_DATAA find_data;
+    HANDLE find_handle;
+
+    if (path == NULL) {
         return 0;
     }
-    if (strcmp(target, "sys.stdout_writeLine") == 0 ||
-        strcmp(target, "io.print") == 0 ||
-        strcmp(target, "io.write") == 0 ||
-        strcmp(target, "sys.process_argv") == 0 ||
-        strcmp(target, "sys.process_cwd") == 0 ||
-        strcmp(target, "sys.process_envGet") == 0 ||
-        strcmp(target, "sys.process_start") == 0 ||
-        strcmp(target, "sys.process_poll") == 0 ||
-        strcmp(target, "sys.process_wait") == 0 ||
-        strcmp(target, "sys.process_stdout") == 0 ||
-        strcmp(target, "sys.process_stderr") == 0 ||
-        strcmp(target, "sys.process_exitCode") == 0 ||
-        strcmp(target, "sys.process_kill") == 0 ||
-        strcmp(target, "sys.capability_has") == 0) {
-        return 1;
+    if (!join_path(path, "*", pattern, sizeof(pattern))) {
+        return 0;
     }
-    return 0;
+
+    find_handle = FindFirstFileA(pattern, &find_data);
+    if (find_handle == INVALID_HANDLE_VALUE) {
+        return RemoveDirectoryA(path) != 0;
+    }
+
+    do {
+        char child[PATH_MAX];
+        if (strcmp(find_data.cFileName, ".") == 0 || strcmp(find_data.cFileName, "..") == 0) {
+            continue;
+        }
+        if (!join_path(path, find_data.cFileName, child, sizeof(child))) {
+            FindClose(find_handle);
+            return 0;
+        }
+        if ((find_data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) != 0U) {
+            if (!native_delete_dir_recursive_windows(child)) {
+                FindClose(find_handle);
+                return 0;
+            }
+        } else {
+            if (!DeleteFileA(child)) {
+                FindClose(find_handle);
+                return 0;
+            }
+        }
+    } while (FindNextFileA(find_handle, &find_data) != 0);
+
+    FindClose(find_handle);
+    return RemoveDirectoryA(path) != 0;
 }
+
+static void native_process_refresh(NativeProcessState* process)
+{
+    DWORD wait_status;
+    DWORD exit_code;
+    if (process == NULL || process->finished || process->process_handle == NULL) {
+        return;
+    }
+    wait_status = WaitForSingleObject(process->process_handle, 0);
+    if (wait_status == WAIT_OBJECT_0) {
+        process->finished = 1;
+        if (GetExitCodeProcess(process->process_handle, &exit_code) != 0) {
+            process->exit_code = (int)exit_code;
+        } else {
+            process->exit_code = -1;
+        }
+    }
+}
+#else
+static void native_process_set_nonblocking(int fd)
+{
+    int flags;
+    if (fd < 0) {
+        return;
+    }
+    flags = fcntl(fd, F_GETFL, 0);
+    if (flags >= 0) {
+        (void)fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    }
+}
+
+static int native_delete_dir_recursive_posix(const char* path)
+{
+    DIR* dir;
+    struct dirent* entry;
+    if (path == NULL) {
+        return 0;
+    }
+    dir = opendir(path);
+    if (dir == NULL) {
+        return 0;
+    }
+    while ((entry = readdir(dir)) != NULL) {
+        char child[PATH_MAX];
+        struct stat st;
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+        if (!join_path(path, entry->d_name, child, sizeof(child))) {
+            (void)closedir(dir);
+            return 0;
+        }
+        if (lstat(child, &st) != 0) {
+            (void)closedir(dir);
+            return 0;
+        }
+        if (S_ISDIR(st.st_mode)) {
+            if (!native_delete_dir_recursive_posix(child)) {
+                (void)closedir(dir);
+                return 0;
+            }
+        } else {
+            if (remove(child) != 0) {
+                (void)closedir(dir);
+                return 0;
+            }
+        }
+    }
+    (void)closedir(dir);
+    return rmdir(path) == 0;
+}
+
+static void native_process_refresh(NativeProcessState* process)
+{
+    int status;
+    pid_t wait_result;
+    if (process == NULL || process->finished) {
+        return;
+    }
+    wait_result = waitpid(process->pid, &status, WNOHANG);
+    if (wait_result == process->pid) {
+        process->finished = 1;
+        if (WIFEXITED(status)) {
+            process->exit_code = WEXITSTATUS(status);
+        } else if (WIFSIGNALED(status)) {
+            process->exit_code = 128 + WTERMSIG(status);
+        } else {
+            process->exit_code = -1;
+        }
+    }
+}
+#endif
 
 static int native_syscall_stdout_write_line(
     const char* target,
@@ -957,429 +1039,6 @@ static int native_syscall_stdout_write_line(
     }
     printf("%s\n", args[0].string_value);
     *result = aivm_value_void();
-    return AIVM_SYSCALL_OK;
-}
-
-static int native_process_decode_exit_status(int status)
-{
-#ifdef _WIN32
-    return status;
-#else
-    if (WIFEXITED(status)) {
-        return WEXITSTATUS(status);
-    }
-    if (WIFSIGNALED(status)) {
-        return 128 + WTERMSIG(status);
-    }
-    return 1;
-#endif
-}
-
-static void native_process_free_record(NativeProcessRecord* record)
-{
-    if (record == NULL) {
-        return;
-    }
-#ifdef _WIN32
-    if (record->process_handle != NULL) {
-        (void)CloseHandle(record->process_handle);
-        record->process_handle = NULL;
-    }
-#endif
-    if (record->stdout_text != NULL) {
-        free(record->stdout_text);
-        record->stdout_text = NULL;
-    }
-    if (record->stderr_text != NULL) {
-        free(record->stderr_text);
-        record->stderr_text = NULL;
-    }
-    if (record->stdout_path[0] != '\0') {
-        (void)remove(record->stdout_path);
-        record->stdout_path[0] = '\0';
-    }
-    if (record->stderr_path[0] != '\0') {
-        (void)remove(record->stderr_path);
-        record->stderr_path[0] = '\0';
-    }
-    record->output_loaded = 0;
-    record->used = 0;
-    record->status = NATIVE_PROCESS_STATUS_UNKNOWN;
-    record->exit_code = -1;
-#ifndef _WIN32
-    record->pid = (pid_t)0;
-#endif
-}
-
-static int native_process_alloc_handle(void)
-{
-    int i;
-    for (i = 0; i < NATIVE_PROCESS_MAX; i += 1) {
-        if (!g_native_process_records[i].used) {
-            g_native_process_records[i].used = 1;
-            g_native_process_records[i].status = NATIVE_PROCESS_STATUS_PENDING;
-            g_native_process_records[i].exit_code = -1;
-            g_native_process_records[i].output_loaded = 0;
-            g_native_process_records[i].stdout_path[0] = '\0';
-            g_native_process_records[i].stderr_path[0] = '\0';
-            g_native_process_records[i].stdout_text = NULL;
-            g_native_process_records[i].stderr_text = NULL;
-#ifdef _WIN32
-            g_native_process_records[i].process_handle = NULL;
-#else
-            g_native_process_records[i].pid = (pid_t)0;
-#endif
-            return i + 1;
-        }
-    }
-    return -1;
-}
-
-static NativeProcessRecord* native_process_lookup(int handle)
-{
-    int index = handle - 1;
-    if (index < 0 || index >= NATIVE_PROCESS_MAX) {
-        return NULL;
-    }
-    if (!g_native_process_records[index].used) {
-        return NULL;
-    }
-    return &g_native_process_records[index];
-}
-
-static int native_process_read_text_alloc(const char* path, char** out_text)
-{
-    FILE* f;
-    long length;
-    char* bytes;
-    size_t read_count;
-    if (path == NULL || out_text == NULL) {
-        return 0;
-    }
-    f = fopen(path, "rb");
-    if (f == NULL) {
-        *out_text = NULL;
-        return 1;
-    }
-    if (fseek(f, 0L, SEEK_END) != 0) {
-        fclose(f);
-        return 0;
-    }
-    length = ftell(f);
-    if (length < 0) {
-        fclose(f);
-        return 0;
-    }
-    if (fseek(f, 0L, SEEK_SET) != 0) {
-        fclose(f);
-        return 0;
-    }
-    bytes = (char*)malloc((size_t)length + 1U);
-    if (bytes == NULL) {
-        fclose(f);
-        return 0;
-    }
-    read_count = fread(bytes, 1U, (size_t)length, f);
-    fclose(f);
-    if (read_count != (size_t)length) {
-        free(bytes);
-        return 0;
-    }
-    bytes[length] = '\0';
-    *out_text = bytes;
-    return 1;
-}
-
-static int native_process_load_output(NativeProcessRecord* record)
-{
-    if (record == NULL) {
-        return 0;
-    }
-    if (record->output_loaded) {
-        return 1;
-    }
-    if (!native_process_read_text_alloc(record->stdout_path, &record->stdout_text)) {
-        return 0;
-    }
-    if (!native_process_read_text_alloc(record->stderr_path, &record->stderr_text)) {
-        return 0;
-    }
-    if (record->stdout_text == NULL) {
-        record->stdout_text = (char*)malloc(1U);
-        if (record->stdout_text == NULL) {
-            return 0;
-        }
-        record->stdout_text[0] = '\0';
-    }
-    if (record->stderr_text == NULL) {
-        record->stderr_text = (char*)malloc(1U);
-        if (record->stderr_text == NULL) {
-            return 0;
-        }
-        record->stderr_text[0] = '\0';
-    }
-    record->output_loaded = 1;
-    return 1;
-}
-
-static int native_process_make_capture_paths(int handle, char* stdout_path, size_t stdout_len, char* stderr_path, size_t stderr_len)
-{
-    int n;
-#ifdef _WIN32
-    const char* temp_dir = getenv("TEMP");
-    if (temp_dir == NULL || temp_dir[0] == '\0') {
-        temp_dir = ".";
-    }
-#else
-    const char* temp_dir = "/tmp";
-#endif
-    n = snprintf(stdout_path, stdout_len, "%s%cairun-proc-%d-out.log", temp_dir, AIVM_PATH_SEP, handle);
-    if (n < 0 || (size_t)n >= stdout_len) {
-        return 0;
-    }
-    n = snprintf(stderr_path, stderr_len, "%s%cairun-proc-%d-err.log", temp_dir, AIVM_PATH_SEP, handle);
-    if (n < 0 || (size_t)n >= stderr_len) {
-        return 0;
-    }
-    return 1;
-}
-
-static int native_process_is_shell_builtin(const char* command)
-{
-    static const char* builtins[] = {
-        "exit",
-        "echo",
-        "cd",
-        "set"
-    };
-    size_t i;
-    if (command == NULL || command[0] == '\0') {
-        return 0;
-    }
-    for (i = 0U; i < (sizeof(builtins) / sizeof(builtins[0])); i += 1U) {
-        if (strcmp(command, builtins[i]) == 0) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
-static int native_process_command_exists(const char* command)
-{
-    if (command == NULL || command[0] == '\0') {
-        return 0;
-    }
-    if (native_process_is_shell_builtin(command)) {
-        return 1;
-    }
-#ifdef _WIN32
-    {
-        DWORD attrs;
-        char full_path[PATH_MAX];
-        DWORD len;
-        if (strchr(command, '\\') != NULL || strchr(command, '/') != NULL || strchr(command, ':') != NULL) {
-            attrs = GetFileAttributesA(command);
-            return attrs != INVALID_FILE_ATTRIBUTES && (attrs & FILE_ATTRIBUTE_DIRECTORY) == 0U;
-        }
-        len = SearchPathA(NULL, command, ".exe", (DWORD)sizeof(full_path), full_path, NULL);
-        if (len > 0U && len < (DWORD)sizeof(full_path)) {
-            return 1;
-        }
-        len = SearchPathA(NULL, command, NULL, (DWORD)sizeof(full_path), full_path, NULL);
-        return len > 0U && len < (DWORD)sizeof(full_path);
-    }
-#else
-    {
-        char resolved[PATH_MAX];
-        if (strchr(command, '/') != NULL || strchr(command, '\\') != NULL) {
-            return access(command, X_OK) == 0 ? 1 : 0;
-        }
-        return find_executable_on_path(command, resolved, sizeof(resolved));
-    }
-#endif
-}
-
-static int native_process_start_command(
-    NativeProcessRecord* record,
-    const char* command_text,
-    const char* cwd_text,
-    const char* env_text)
-{
-    if (record == NULL || command_text == NULL || command_text[0] == '\0') {
-        return 0;
-    }
-    if (env_text != NULL && env_text[0] != '\0') {
-        return 0;
-    }
-#ifdef _WIN32
-    {
-        STARTUPINFOA si;
-        PROCESS_INFORMATION pi;
-        char cmd_line[4096];
-        int n;
-        n = snprintf(cmd_line, sizeof(cmd_line), "cmd.exe /C \"%s 1> \\\"%s\\\" 2> \\\"%s\\\"\"",
-            command_text,
-            record->stdout_path,
-            record->stderr_path);
-        if (n < 0 || (size_t)n >= sizeof(cmd_line)) {
-            return 0;
-        }
-        ZeroMemory(&si, sizeof(si));
-        ZeroMemory(&pi, sizeof(pi));
-        si.cb = sizeof(si);
-        if (!CreateProcessA(
-                NULL,
-                cmd_line,
-                NULL,
-                NULL,
-                FALSE,
-                0U,
-                NULL,
-                (cwd_text != NULL && cwd_text[0] != '\0') ? cwd_text : NULL,
-                &si,
-                &pi)) {
-            return 0;
-        }
-        record->process_handle = pi.hProcess;
-        (void)CloseHandle(pi.hThread);
-        return 1;
-    }
-#else
-    {
-        pid_t pid = fork();
-        if (pid < 0) {
-            return 0;
-        }
-        if (pid == 0) {
-            int fd_out = open(record->stdout_path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
-            int fd_err = open(record->stderr_path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
-            if (cwd_text != NULL && cwd_text[0] != '\0') {
-                if (chdir(cwd_text) != 0) {
-                    _exit(127);
-                }
-            }
-            if (fd_out >= 0) {
-                (void)dup2(fd_out, STDOUT_FILENO);
-                (void)close(fd_out);
-            }
-            if (fd_err >= 0) {
-                (void)dup2(fd_err, STDERR_FILENO);
-                (void)close(fd_err);
-            }
-            (void)execl("/bin/sh", "sh", "-lc", command_text, (char*)NULL);
-            _exit(127);
-        }
-        record->pid = pid;
-        return 1;
-    }
-#endif
-}
-
-static void native_process_cleanup_all(void)
-{
-    int i;
-    for (i = 0; i < NATIVE_PROCESS_MAX; i += 1) {
-        if (g_native_process_records[i].used) {
-            native_process_free_record(&g_native_process_records[i]);
-        }
-    }
-}
-
-static int native_process_refresh_status(NativeProcessRecord* record, int wait_for_completion)
-{
-    if (record == NULL) {
-        return NATIVE_PROCESS_STATUS_UNKNOWN;
-    }
-    if (record->status != NATIVE_PROCESS_STATUS_PENDING) {
-        return record->status;
-    }
-#ifdef _WIN32
-    {
-        DWORD wait_result = WaitForSingleObject(record->process_handle, wait_for_completion ? INFINITE : 0U);
-        if (wait_result == WAIT_TIMEOUT) {
-            return NATIVE_PROCESS_STATUS_PENDING;
-        }
-        if (wait_result == WAIT_FAILED) {
-            record->status = NATIVE_PROCESS_STATUS_FAIL;
-            record->exit_code = 1;
-            return record->status;
-        }
-        {
-            DWORD exit_code = 1U;
-            if (!GetExitCodeProcess(record->process_handle, &exit_code)) {
-                exit_code = 1U;
-            }
-            record->exit_code = (int)exit_code;
-            if (record->status == NATIVE_PROCESS_STATUS_CANCELED) {
-                return record->status;
-            }
-            record->status = (exit_code == 0U) ? NATIVE_PROCESS_STATUS_OK : NATIVE_PROCESS_STATUS_FAIL;
-            return record->status;
-        }
-    }
-#else
-    {
-        int status = 0;
-        pid_t rc = waitpid(record->pid, &status, wait_for_completion ? 0 : WNOHANG);
-        if (rc == 0) {
-            return NATIVE_PROCESS_STATUS_PENDING;
-        }
-        if (rc < 0) {
-            record->status = NATIVE_PROCESS_STATUS_FAIL;
-            record->exit_code = 1;
-            return record->status;
-        }
-        record->exit_code = native_process_decode_exit_status(status);
-        if (record->status == NATIVE_PROCESS_STATUS_CANCELED) {
-            return record->status;
-        }
-        record->status = (record->exit_code == 0) ? NATIVE_PROCESS_STATUS_OK : NATIVE_PROCESS_STATUS_FAIL;
-        return record->status;
-    }
-#endif
-}
-
-static int native_syscall_process_cwd(
-    const char* target,
-    const AivmValue* args,
-    size_t arg_count,
-    AivmValue* result)
-{
-    char cwd[PATH_MAX];
-    (void)target;
-    (void)args;
-    if (result == NULL) {
-        return AIVM_SYSCALL_ERR_NULL_RESULT;
-    }
-    if (arg_count != 0U) {
-        result->type = AIVM_VAL_VOID;
-        return AIVM_SYSCALL_ERR_CONTRACT;
-    }
-    if (aivm_getcwd(cwd, sizeof(cwd)) == NULL) {
-        *result = aivm_value_string("");
-        return AIVM_SYSCALL_OK;
-    }
-    *result = aivm_value_string(cwd);
-    return AIVM_SYSCALL_OK;
-}
-
-static int native_syscall_process_env_get(
-    const char* target,
-    const AivmValue* args,
-    size_t arg_count,
-    AivmValue* result)
-{
-    const char* value;
-    (void)target;
-    if (result == NULL) {
-        return AIVM_SYSCALL_ERR_NULL_RESULT;
-    }
-    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL) {
-        result->type = AIVM_VAL_VOID;
-        return AIVM_SYSCALL_ERR_CONTRACT;
-    }
-    value = getenv(args[0].string_value);
-    *result = aivm_value_string(value == NULL ? "" : value);
     return AIVM_SYSCALL_OK;
 }
 
@@ -1402,12 +1061,13 @@ static int native_syscall_process_argv(
     return AIVM_SYSCALL_OK;
 }
 
-static int native_syscall_capability_has(
+static int native_syscall_fs_file_delete(
     const char* target,
     const AivmValue* args,
     size_t arg_count,
     AivmValue* result)
 {
+    struct stat st;
     (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
@@ -1416,107 +1076,264 @@ static int native_syscall_capability_has(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
-    *result = aivm_value_bool(native_host_supports_syscall(args[0].string_value) ? 1 : 0);
+    if (stat(args[0].string_value, &st) != 0) {
+        *result = aivm_value_bool(0);
+        return AIVM_SYSCALL_OK;
+    }
+#ifdef _WIN32
+    if ((st.st_mode & _S_IFREG) == 0) {
+#else
+    if (!S_ISREG(st.st_mode)) {
+#endif
+        *result = aivm_value_bool(0);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_bool(remove(args[0].string_value) == 0 ? 1 : 0);
     return AIVM_SYSCALL_OK;
 }
 
-static int native_syscall_process_start(
+static int native_syscall_fs_dir_delete(
     const char* target,
     const AivmValue* args,
     size_t arg_count,
     AivmValue* result)
 {
-    int handle;
-    char command_buffer[4096];
-    int n;
-    NativeProcessRecord* record;
-    const char* command;
-    const char* argv_text;
-    const char* cwd_text;
-    const char* env_text;
+    const char* path;
+    int recursive;
     (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
     }
-    if (arg_count != 4U ||
-        args == NULL ||
-        args[0].type != AIVM_VAL_STRING ||
-        args[1].type != AIVM_VAL_STRING ||
-        args[2].type != AIVM_VAL_STRING ||
-        args[3].type != AIVM_VAL_STRING ||
-        args[0].string_value == NULL ||
-        args[1].string_value == NULL ||
-        args[2].string_value == NULL ||
-        args[3].string_value == NULL) {
+    if (arg_count != 2U || args == NULL || args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL || args[1].type != AIVM_VAL_BOOL) {
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
-    command = args[0].string_value;
-    argv_text = args[1].string_value;
-    cwd_text = args[2].string_value;
-    env_text = args[3].string_value;
-    if (command[0] == '\0') {
-        *result = aivm_value_int(-1);
-        return AIVM_SYSCALL_OK;
-    }
-    if (!native_process_command_exists(command)) {
-        *result = aivm_value_int(-1);
-        return AIVM_SYSCALL_OK;
-    }
-    if (argv_text[0] == '\0') {
-        n = snprintf(command_buffer, sizeof(command_buffer), "%s", command);
+    path = args[0].string_value;
+    recursive = args[1].bool_value ? 1 : 0;
+#ifdef _WIN32
+    if (recursive) {
+        *result = aivm_value_bool(native_delete_dir_recursive_windows(path) ? 1 : 0);
     } else {
-        n = snprintf(command_buffer, sizeof(command_buffer), "%s %s", command, argv_text);
+        *result = aivm_value_bool(_rmdir(path) == 0 ? 1 : 0);
     }
-    if (n < 0 || (size_t)n >= sizeof(command_buffer)) {
-        *result = aivm_value_int(-1);
-        return AIVM_SYSCALL_OK;
+#else
+    if (recursive) {
+        *result = aivm_value_bool(native_delete_dir_recursive_posix(path) ? 1 : 0);
+    } else {
+        *result = aivm_value_bool(rmdir(path) == 0 ? 1 : 0);
     }
-    handle = native_process_alloc_handle();
-    if (handle < 0) {
-        *result = aivm_value_int(-1);
-        return AIVM_SYSCALL_OK;
-    }
-    record = native_process_lookup(handle);
-    if (record == NULL) {
-        *result = aivm_value_int(-1);
-        return AIVM_SYSCALL_OK;
-    }
-    if (!native_process_make_capture_paths(handle, record->stdout_path, sizeof(record->stdout_path), record->stderr_path, sizeof(record->stderr_path)) ||
-        !native_process_start_command(record, command_buffer, cwd_text, env_text)) {
-        record->exit_code = 1;
-        record->status = NATIVE_PROCESS_STATUS_FAIL;
-        native_process_free_record(record);
-        *result = aivm_value_int(-1);
-        return AIVM_SYSCALL_OK;
-    }
-    record->status = NATIVE_PROCESS_STATUS_PENDING;
-    *result = aivm_value_int(handle);
+#endif
     return AIVM_SYSCALL_OK;
 }
 
-static int native_syscall_process_poll(
+static int native_syscall_process_spawn(
     const char* target,
     const AivmValue* args,
     size_t arg_count,
     AivmValue* result)
 {
-    NativeProcessRecord* record;
     (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
     }
-    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
+    if (arg_count != 4U || args == NULL ||
+        args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL ||
+        args[1].type != AIVM_VAL_NODE ||
+        args[2].type != AIVM_VAL_STRING || args[2].string_value == NULL ||
+        args[3].type != AIVM_VAL_NODE) {
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
-    record = native_process_lookup((int)args[0].int_value);
-    if (record == NULL) {
-        *result = aivm_value_int(NATIVE_PROCESS_STATUS_UNKNOWN);
+#ifdef _WIN32
+    {
+        SECURITY_ATTRIBUTES security_attributes;
+        HANDLE stdout_read = NULL;
+        HANDLE stdout_write = NULL;
+        HANDLE stderr_read = NULL;
+        HANDLE stderr_write = NULL;
+        PROCESS_INFORMATION process_info;
+        STARTUPINFOA startup_info;
+        int64_t slot_handle;
+        NativeProcessState* process;
+        char* command_line;
+        const char* cwd = NULL;
+
+        memset(&security_attributes, 0, sizeof(security_attributes));
+        security_attributes.nLength = sizeof(security_attributes);
+        security_attributes.bInheritHandle = TRUE;
+        security_attributes.lpSecurityDescriptor = NULL;
+
+        if (!CreatePipe(&stdout_read, &stdout_write, &security_attributes, 0) ||
+            !CreatePipe(&stderr_read, &stderr_write, &security_attributes, 0)) {
+            if (stdout_read != NULL) {
+                CloseHandle(stdout_read);
+            }
+            if (stdout_write != NULL) {
+                CloseHandle(stdout_write);
+            }
+            if (stderr_read != NULL) {
+                CloseHandle(stderr_read);
+            }
+            if (stderr_write != NULL) {
+                CloseHandle(stderr_write);
+            }
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+
+        (void)SetHandleInformation(stdout_read, HANDLE_FLAG_INHERIT, 0);
+        (void)SetHandleInformation(stderr_read, HANDLE_FLAG_INHERIT, 0);
+
+        memset(&startup_info, 0, sizeof(startup_info));
+        memset(&process_info, 0, sizeof(process_info));
+        startup_info.cb = sizeof(startup_info);
+        startup_info.dwFlags = STARTF_USESTDHANDLES;
+        startup_info.hStdInput = GetStdHandle(STD_INPUT_HANDLE);
+        startup_info.hStdOutput = stdout_write;
+        startup_info.hStdError = stderr_write;
+
+        command_line = _strdup(args[0].string_value);
+        if (command_line == NULL) {
+            CloseHandle(stdout_read);
+            CloseHandle(stdout_write);
+            CloseHandle(stderr_read);
+            CloseHandle(stderr_write);
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+        if (args[2].string_value[0] != '\0') {
+            cwd = args[2].string_value;
+        }
+
+        if (!CreateProcessA(
+                NULL,
+                command_line,
+                NULL,
+                NULL,
+                TRUE,
+                CREATE_NO_WINDOW,
+                NULL,
+                cwd,
+                &startup_info,
+                &process_info)) {
+            free(command_line);
+            CloseHandle(stdout_read);
+            CloseHandle(stdout_write);
+            CloseHandle(stderr_read);
+            CloseHandle(stderr_write);
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+
+        free(command_line);
+        CloseHandle(stdout_write);
+        CloseHandle(stderr_write);
+        CloseHandle(process_info.hThread);
+
+        slot_handle = native_process_allocate_slot();
+        if (slot_handle < 0) {
+            (void)TerminateProcess(process_info.hProcess, 1);
+            CloseHandle(process_info.hProcess);
+            CloseHandle(stdout_read);
+            CloseHandle(stderr_read);
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+
+        process = native_process_lookup(slot_handle);
+        if (process == NULL) {
+            (void)TerminateProcess(process_info.hProcess, 1);
+            CloseHandle(process_info.hProcess);
+            CloseHandle(stdout_read);
+            CloseHandle(stderr_read);
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+        process->process_handle = process_info.hProcess;
+        process->stdout_read = stdout_read;
+        process->stderr_read = stderr_read;
+        *result = aivm_value_int(slot_handle);
         return AIVM_SYSCALL_OK;
     }
-    *result = aivm_value_int(native_process_refresh_status(record, 0));
-    return AIVM_SYSCALL_OK;
+#else
+    {
+        int stdout_pipe[2] = { -1, -1 };
+        int stderr_pipe[2] = { -1, -1 };
+        pid_t pid;
+        int64_t slot_handle;
+        NativeProcessState* process;
+        if (pipe(stdout_pipe) != 0 || pipe(stderr_pipe) != 0) {
+            if (stdout_pipe[0] >= 0) {
+                close(stdout_pipe[0]);
+            }
+            if (stdout_pipe[1] >= 0) {
+                close(stdout_pipe[1]);
+            }
+            if (stderr_pipe[0] >= 0) {
+                close(stderr_pipe[0]);
+            }
+            if (stderr_pipe[1] >= 0) {
+                close(stderr_pipe[1]);
+            }
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+
+        pid = fork();
+        if (pid == 0) {
+            if (args[2].string_value[0] != '\0') {
+                if (chdir(args[2].string_value) != 0) {
+                    _exit(126);
+                }
+            }
+            dup2(stdout_pipe[1], STDOUT_FILENO);
+            dup2(stderr_pipe[1], STDERR_FILENO);
+            close(stdout_pipe[0]);
+            close(stdout_pipe[1]);
+            close(stderr_pipe[0]);
+            close(stderr_pipe[1]);
+            execl("/bin/sh", "sh", "-c", args[0].string_value, (char*)NULL);
+            _exit(127);
+        }
+        if (pid < 0) {
+            close(stdout_pipe[0]);
+            close(stdout_pipe[1]);
+            close(stderr_pipe[0]);
+            close(stderr_pipe[1]);
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+
+        slot_handle = native_process_allocate_slot();
+        if (slot_handle < 0) {
+            kill(pid, SIGTERM);
+            close(stdout_pipe[0]);
+            close(stdout_pipe[1]);
+            close(stderr_pipe[0]);
+            close(stderr_pipe[1]);
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+
+        close(stdout_pipe[1]);
+        close(stderr_pipe[1]);
+        process = native_process_lookup(slot_handle);
+        if (process == NULL) {
+            kill(pid, SIGTERM);
+            close(stdout_pipe[0]);
+            close(stderr_pipe[0]);
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+        process->pid = pid;
+        process->stdout_fd = stdout_pipe[0];
+        process->stderr_fd = stderr_pipe[0];
+        native_process_set_nonblocking(process->stdout_fd);
+        native_process_set_nonblocking(process->stderr_fd);
+        *result = aivm_value_int(slot_handle);
+        return AIVM_SYSCALL_OK;
+    }
+#endif
 }
 
 static int native_syscall_process_wait(
@@ -1525,7 +1342,7 @@ static int native_syscall_process_wait(
     size_t arg_count,
     AivmValue* result)
 {
-    NativeProcessRecord* record;
+    NativeProcessState* process;
     (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
@@ -1534,101 +1351,75 @@ static int native_syscall_process_wait(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
-    record = native_process_lookup((int)args[0].int_value);
-    if (record == NULL) {
-        *result = aivm_value_int(NATIVE_PROCESS_STATUS_UNKNOWN);
-        return AIVM_SYSCALL_OK;
-    }
-    *result = aivm_value_int(native_process_refresh_status(record, 1));
-    return AIVM_SYSCALL_OK;
-}
-
-static int native_syscall_process_stdout(
-    const char* target,
-    const AivmValue* args,
-    size_t arg_count,
-    AivmValue* result)
-{
-    (void)target;
-    if (result == NULL) {
-        return AIVM_SYSCALL_ERR_NULL_RESULT;
-    }
-    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
-        result->type = AIVM_VAL_VOID;
-        return AIVM_SYSCALL_ERR_CONTRACT;
-    }
-    if (native_process_lookup((int)args[0].int_value) == NULL) {
-        *result = aivm_value_string("");
-        return AIVM_SYSCALL_OK;
-    }
-    {
-        NativeProcessRecord* record = native_process_lookup((int)args[0].int_value);
-        if (record == NULL) {
-            *result = aivm_value_string("");
-            return AIVM_SYSCALL_OK;
-        }
-        (void)native_process_refresh_status(record, 0);
-        if (!native_process_load_output(record)) {
-            *result = aivm_value_string("");
-            return AIVM_SYSCALL_OK;
-        }
-        *result = aivm_value_string(record->stdout_text == NULL ? "" : record->stdout_text);
-    }
-    return AIVM_SYSCALL_OK;
-}
-
-static int native_syscall_process_stderr(
-    const char* target,
-    const AivmValue* args,
-    size_t arg_count,
-    AivmValue* result)
-{
-    NativeProcessRecord* record;
-    (void)target;
-    if (result == NULL) {
-        return AIVM_SYSCALL_ERR_NULL_RESULT;
-    }
-    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
-        result->type = AIVM_VAL_VOID;
-        return AIVM_SYSCALL_ERR_CONTRACT;
-    }
-    record = native_process_lookup((int)args[0].int_value);
-    if (record == NULL) {
-        *result = aivm_value_string("");
-        return AIVM_SYSCALL_OK;
-    }
-    (void)native_process_refresh_status(record, 0);
-    if (!native_process_load_output(record)) {
-        *result = aivm_value_string("");
-        return AIVM_SYSCALL_OK;
-    }
-    *result = aivm_value_string(record->stderr_text == NULL ? "" : record->stderr_text);
-    return AIVM_SYSCALL_OK;
-}
-
-static int native_syscall_process_exit_code(
-    const char* target,
-    const AivmValue* args,
-    size_t arg_count,
-    AivmValue* result)
-{
-    NativeProcessRecord* record;
-    (void)target;
-    if (result == NULL) {
-        return AIVM_SYSCALL_ERR_NULL_RESULT;
-    }
-    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
-        result->type = AIVM_VAL_VOID;
-        return AIVM_SYSCALL_ERR_CONTRACT;
-    }
-    record = native_process_lookup((int)args[0].int_value);
-    if (record == NULL) {
+    process = native_process_lookup(args[0].int_value);
+    if (process == NULL) {
         *result = aivm_value_int(-1);
         return AIVM_SYSCALL_OK;
     }
-    (void)native_process_refresh_status(record, 0);
-    *result = aivm_value_int(record->exit_code);
+#ifdef _WIN32
+    if (!process->finished) {
+        DWORD wait_status = WaitForSingleObject(process->process_handle, INFINITE);
+        if (wait_status == WAIT_OBJECT_0) {
+            DWORD exit_code;
+            process->finished = 1;
+            if (GetExitCodeProcess(process->process_handle, &exit_code) != 0) {
+                process->exit_code = (int)exit_code;
+            } else {
+                process->exit_code = -1;
+            }
+        }
+    }
+    *result = aivm_value_int((int64_t)process->exit_code);
     return AIVM_SYSCALL_OK;
+#else
+    if (!process->finished) {
+        int status;
+        pid_t wait_result = waitpid(process->pid, &status, 0);
+        if (wait_result == process->pid) {
+            process->finished = 1;
+            if (WIFEXITED(status)) {
+                process->exit_code = WEXITSTATUS(status);
+            } else if (WIFSIGNALED(status)) {
+                process->exit_code = 128 + WTERMSIG(status);
+            } else {
+                process->exit_code = -1;
+            }
+        }
+    }
+    *result = aivm_value_int((int64_t)process->exit_code);
+    return AIVM_SYSCALL_OK;
+#endif
+}
+
+static int native_syscall_process_poll(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeProcessState* process;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    process = native_process_lookup(args[0].int_value);
+    if (process == NULL) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+#ifdef _WIN32
+    native_process_refresh(process);
+    *result = aivm_value_int(process->finished ? 1 : 0);
+    return AIVM_SYSCALL_OK;
+#else
+    native_process_refresh(process);
+    *result = aivm_value_int(process->finished ? 1 : 0);
+    return AIVM_SYSCALL_OK;
+#endif
 }
 
 static int native_syscall_process_kill(
@@ -1637,6 +1428,7 @@ static int native_syscall_process_kill(
     size_t arg_count,
     AivmValue* result)
 {
+    NativeProcessState* process;
     (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
@@ -1645,33 +1437,508 @@ static int native_syscall_process_kill(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
-    if (native_process_lookup((int)args[0].int_value) == NULL) {
+    process = native_process_lookup(args[0].int_value);
+    if (process == NULL) {
         *result = aivm_value_bool(0);
         return AIVM_SYSCALL_OK;
     }
-    {
-        NativeProcessRecord* record = native_process_lookup((int)args[0].int_value);
-        int ok = 0;
-        if (record == NULL) {
-            *result = aivm_value_bool(0);
-            return AIVM_SYSCALL_OK;
-        }
-        if (record->status != NATIVE_PROCESS_STATUS_PENDING) {
-            *result = aivm_value_bool(0);
-            return AIVM_SYSCALL_OK;
-        }
 #ifdef _WIN32
-        ok = TerminateProcess(record->process_handle, 1U) ? 1 : 0;
-#else
-        ok = kill(record->pid, SIGTERM) == 0 ? 1 : 0;
-#endif
-        if (ok) {
-            record->status = NATIVE_PROCESS_STATUS_CANCELED;
-            record->exit_code = 1;
-            (void)native_process_refresh_status(record, 1);
-        }
-        *result = aivm_value_bool(ok);
+    if (process->finished) {
+        *result = aivm_value_bool(0);
+    } else {
+        *result = aivm_value_bool(TerminateProcess(process->process_handle, 1) ? 1 : 0);
     }
+#else
+    if (process->finished) {
+        *result = aivm_value_bool(0);
+    } else {
+        *result = aivm_value_bool(kill(process->pid, SIGTERM) == 0 ? 1 : 0);
+    }
+#endif
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_process_stream_read(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result,
+    int read_stdout)
+{
+    NativeProcessState* process;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    process = native_process_lookup(args[0].int_value);
+    if (process == NULL) {
+        *result = aivm_value_bytes(NULL, 0U);
+        return AIVM_SYSCALL_OK;
+    }
+#ifdef _WIN32
+    {
+        HANDLE stream = read_stdout ? process->stdout_read : process->stderr_read;
+        int* closed_flag = read_stdout ? &process->stdout_closed : &process->stderr_closed;
+        DWORD available = 0;
+        DWORD read_count = 0;
+        if (*closed_flag || stream == NULL) {
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        if (!PeekNamedPipe(stream, NULL, 0, NULL, &available, NULL)) {
+            DWORD err = GetLastError();
+            if (err == ERROR_BROKEN_PIPE) {
+                CloseHandle(stream);
+                if (read_stdout) {
+                    process->stdout_read = NULL;
+                } else {
+                    process->stderr_read = NULL;
+                }
+                *closed_flag = 1;
+                *result = aivm_value_bytes(NULL, 0U);
+                return AIVM_SYSCALL_OK;
+            }
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        if (available == 0) {
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        if (available > (DWORD)NATIVE_PROCESS_READ_CHUNK) {
+            available = (DWORD)NATIVE_PROCESS_READ_CHUNK;
+        }
+        if (!ReadFile(stream, g_native_process_read_scratch, available, &read_count, NULL)) {
+            DWORD err = GetLastError();
+            if (err == ERROR_BROKEN_PIPE) {
+                CloseHandle(stream);
+                if (read_stdout) {
+                    process->stdout_read = NULL;
+                } else {
+                    process->stderr_read = NULL;
+                }
+                *closed_flag = 1;
+            }
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        if (read_count == 0) {
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        *result = aivm_value_bytes(g_native_process_read_scratch, (size_t)read_count);
+        return AIVM_SYSCALL_OK;
+    }
+#else
+    {
+        int fd = read_stdout ? process->stdout_fd : process->stderr_fd;
+        int* closed_flag = read_stdout ? &process->stdout_closed : &process->stderr_closed;
+        ssize_t read_count;
+        if (*closed_flag || fd < 0) {
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        read_count = read(fd, g_native_process_read_scratch, NATIVE_PROCESS_READ_CHUNK);
+        if (read_count > 0) {
+            *result = aivm_value_bytes(g_native_process_read_scratch, (size_t)read_count);
+            return AIVM_SYSCALL_OK;
+        }
+        if (read_count == 0) {
+            close(fd);
+            *closed_flag = 1;
+            if (read_stdout) {
+                process->stdout_fd = -1;
+            } else {
+                process->stderr_fd = -1;
+            }
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        if (errno == EAGAIN || errno == EWOULDBLOCK) {
+            *result = aivm_value_bytes(NULL, 0U);
+            return AIVM_SYSCALL_OK;
+        }
+        *result = aivm_value_bytes(NULL, 0U);
+        return AIVM_SYSCALL_OK;
+    }
+#endif
+}
+
+static int native_syscall_process_stdout_read(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    return native_syscall_process_stream_read(target, args, arg_count, result, 1);
+}
+
+static int native_syscall_process_stderr_read(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    return native_syscall_process_stream_read(target, args, arg_count, result, 0);
+}
+
+static int native_base64_decode_char(char ch)
+{
+    if (ch >= 'A' && ch <= 'Z') {
+        return (int)(ch - 'A');
+    }
+    if (ch >= 'a' && ch <= 'z') {
+        return (int)(ch - 'a') + 26;
+    }
+    if (ch >= '0' && ch <= '9') {
+        return (int)(ch - '0') + 52;
+    }
+    if (ch == '+') {
+        return 62;
+    }
+    if (ch == '/') {
+        return 63;
+    }
+    return -1;
+}
+
+#define NATIVE_BYTES_SCRATCH_CAPACITY 131072U
+static uint8_t g_native_bytes_scratch[NATIVE_BYTES_SCRATCH_CAPACITY];
+static char g_native_base64_scratch[NATIVE_BYTES_SCRATCH_CAPACITY];
+
+static int native_bytes_from_base64(
+    const char* input,
+    uint8_t* out_bytes,
+    size_t out_capacity,
+    size_t* out_length)
+{
+    size_t input_len;
+    size_t i;
+    size_t out_index = 0U;
+    if (out_length == NULL) {
+        return 0;
+    }
+    *out_length = 0U;
+    if (input == NULL) {
+        return 0;
+    }
+    input_len = strlen(input);
+    if (input_len == 0U) {
+        return 1;
+    }
+    if ((input_len % 4U) != 0U) {
+        return 0;
+    }
+
+    for (i = 0U; i < input_len; i += 4U) {
+        int c0 = native_base64_decode_char(input[i]);
+        int c1 = native_base64_decode_char(input[i + 1U]);
+        int c2;
+        int c3;
+        uint32_t chunk;
+        int pad = 0;
+        if (c0 < 0 || c1 < 0) {
+            return 0;
+        }
+        if (input[i + 2U] == '=') {
+            c2 = 0;
+            pad += 1;
+            if (input[i + 3U] != '=') {
+                return 0;
+            }
+            c3 = 0;
+            pad += 1;
+        } else {
+            c2 = native_base64_decode_char(input[i + 2U]);
+            if (c2 < 0) {
+                return 0;
+            }
+            if (input[i + 3U] == '=') {
+                c3 = 0;
+                pad += 1;
+            } else {
+                c3 = native_base64_decode_char(input[i + 3U]);
+                if (c3 < 0) {
+                    return 0;
+                }
+            }
+        }
+        if (pad > 0 && i + 4U != input_len) {
+            return 0;
+        }
+        chunk = ((uint32_t)c0 << 18U) |
+                ((uint32_t)c1 << 12U) |
+                ((uint32_t)c2 << 6U) |
+                (uint32_t)c3;
+
+        if (out_bytes != NULL && out_index < out_capacity) {
+            out_bytes[out_index] = (uint8_t)((chunk >> 16U) & 0xffU);
+        }
+        out_index += 1U;
+        if (pad < 2) {
+            if (out_bytes != NULL && out_index < out_capacity) {
+                out_bytes[out_index] = (uint8_t)((chunk >> 8U) & 0xffU);
+            }
+            out_index += 1U;
+        }
+        if (pad == 0) {
+            if (out_bytes != NULL && out_index < out_capacity) {
+                out_bytes[out_index] = (uint8_t)(chunk & 0xffU);
+            }
+            out_index += 1U;
+        }
+    }
+
+    if (out_bytes != NULL && out_index > out_capacity) {
+        return 0;
+    }
+    *out_length = out_index;
+    return 1;
+}
+
+static int native_bytes_to_base64(
+    const uint8_t* input,
+    size_t input_len,
+    char* out_text,
+    size_t out_capacity)
+{
+    static const char alphabet[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    size_t i = 0U;
+    size_t out_index = 0U;
+
+    if (out_capacity == 0U) {
+        return 0;
+    }
+    if (input_len == 0U) {
+        if (out_capacity < 1U) {
+            return 0;
+        }
+        out_text[0] = '\0';
+        return 1;
+    }
+    if (input == NULL) {
+        return 0;
+    }
+
+    while (i < input_len) {
+        uint32_t chunk = 0U;
+        size_t remain = input_len - i;
+        size_t bytes_in_chunk = remain >= 3U ? 3U : remain;
+        chunk |= (uint32_t)input[i] << 16U;
+        if (bytes_in_chunk > 1U) {
+            chunk |= (uint32_t)input[i + 1U] << 8U;
+        }
+        if (bytes_in_chunk > 2U) {
+            chunk |= (uint32_t)input[i + 2U];
+        }
+        if (out_index + 4U >= out_capacity) {
+            return 0;
+        }
+        out_text[out_index++] = alphabet[(chunk >> 18U) & 0x3fU];
+        out_text[out_index++] = alphabet[(chunk >> 12U) & 0x3fU];
+        out_text[out_index++] = (bytes_in_chunk > 1U) ? alphabet[(chunk >> 6U) & 0x3fU] : '=';
+        out_text[out_index++] = (bytes_in_chunk > 2U) ? alphabet[chunk & 0x3fU] : '=';
+        i += bytes_in_chunk;
+    }
+    out_text[out_index] = '\0';
+    return 1;
+}
+
+static int native_syscall_bytes_length(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_BYTES) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_int((int64_t)args[0].bytes_value.length);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_bytes_at(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    size_t index;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 2U || args == NULL || args[0].type != AIVM_VAL_BYTES || args[1].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (args[1].int_value < 0) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    index = (size_t)args[1].int_value;
+    if (index >= args[0].bytes_value.length || args[0].bytes_value.data == NULL) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_int((int64_t)args[0].bytes_value.data[index]);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_bytes_slice(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    size_t start;
+    size_t length;
+    size_t end;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 3U || args == NULL || args[0].type != AIVM_VAL_BYTES || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (args[1].int_value <= 0) {
+        start = 0U;
+    } else if ((uint64_t)args[1].int_value >= (uint64_t)args[0].bytes_value.length) {
+        start = args[0].bytes_value.length;
+    } else {
+        start = (size_t)args[1].int_value;
+    }
+    if (args[2].int_value <= 0) {
+        length = 0U;
+    } else {
+        length = (size_t)args[2].int_value;
+    }
+    end = start + length;
+    if (end < start || end > args[0].bytes_value.length) {
+        end = args[0].bytes_value.length;
+    }
+    if (start >= end || args[0].bytes_value.data == NULL) {
+        *result = aivm_value_bytes(NULL, 0U);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_bytes(&args[0].bytes_value.data[start], end - start);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_bytes_concat(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    size_t left_len;
+    size_t right_len;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 2U || args == NULL || args[0].type != AIVM_VAL_BYTES || args[1].type != AIVM_VAL_BYTES) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    left_len = args[0].bytes_value.length;
+    right_len = args[1].bytes_value.length;
+    if (left_len == 0U && right_len == 0U) {
+        *result = aivm_value_bytes(NULL, 0U);
+        return AIVM_SYSCALL_OK;
+    }
+    if (left_len + right_len > NATIVE_BYTES_SCRATCH_CAPACITY) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (left_len > 0U && args[0].bytes_value.data != NULL) {
+        memcpy(g_native_bytes_scratch, args[0].bytes_value.data, left_len);
+    } else if (left_len > 0U) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (right_len > 0U && args[1].bytes_value.data != NULL) {
+        memcpy(g_native_bytes_scratch + left_len, args[1].bytes_value.data, right_len);
+    } else if (right_len > 0U) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_bytes(g_native_bytes_scratch, left_len + right_len);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_bytes_from_base64(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    size_t out_len = 0U;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (!native_bytes_from_base64(args[0].string_value, NULL, 0U, &out_len)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (out_len == 0U) {
+        *result = aivm_value_bytes(NULL, 0U);
+        return AIVM_SYSCALL_OK;
+    }
+    if (out_len > NATIVE_BYTES_SCRATCH_CAPACITY) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (!native_bytes_from_base64(args[0].string_value, g_native_bytes_scratch, out_len, &out_len)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_bytes(g_native_bytes_scratch, out_len);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_bytes_to_base64(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    size_t in_len;
+    size_t out_len;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_BYTES) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    in_len = args[0].bytes_value.length;
+    out_len = ((in_len + 2U) / 3U) * 4U;
+    if (out_len + 1U > NATIVE_BYTES_SCRATCH_CAPACITY) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (!native_bytes_to_base64(args[0].bytes_value.data, in_len, g_native_base64_scratch, out_len + 1U)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_string(g_native_base64_scratch);
     return AIVM_SYSCALL_OK;
 }
 
@@ -1681,64 +1948,68 @@ static int run_native_compiled_program(
     const char* const* process_argv,
     size_t process_argv_count)
 {
-    AivmSyscallBinding bindings[14];
+    AivmSyscallBinding bindings[18];
     AivmCResult result;
 
     if (program == NULL) {
         return 2;
     }
 
-    bindings[0].target = "sys.stdout_writeLine";
+    bindings[0].target = "sys.stdout.writeLine";
     bindings[0].handler = native_syscall_stdout_write_line;
     bindings[1].target = "io.print";
     bindings[1].handler = native_syscall_stdout_write_line;
     bindings[2].target = "io.write";
     bindings[2].handler = native_syscall_stdout_write_line;
-    bindings[3].target = "sys.process_argv";
+    bindings[3].target = "sys.process.args";
     bindings[3].handler = native_syscall_process_argv;
-    bindings[4].target = "sys.process_cwd";
-    bindings[4].handler = native_syscall_process_cwd;
-    bindings[5].target = "sys.process_envGet";
-    bindings[5].handler = native_syscall_process_env_get;
-    bindings[6].target = "sys.process_start";
-    bindings[6].handler = native_syscall_process_start;
-    bindings[7].target = "sys.process_poll";
-    bindings[7].handler = native_syscall_process_poll;
-    bindings[8].target = "sys.process_wait";
-    bindings[8].handler = native_syscall_process_wait;
-    bindings[9].target = "sys.process_stdout";
-    bindings[9].handler = native_syscall_process_stdout;
-    bindings[10].target = "sys.process_stderr";
-    bindings[10].handler = native_syscall_process_stderr;
-    bindings[11].target = "sys.process_exitCode";
-    bindings[11].handler = native_syscall_process_exit_code;
-    bindings[12].target = "sys.process_kill";
-    bindings[12].handler = native_syscall_process_kill;
-    bindings[13].target = "sys.capability_has";
-    bindings[13].handler = native_syscall_capability_has;
+    bindings[4].target = "sys.bytes.length";
+    bindings[4].handler = native_syscall_bytes_length;
+    bindings[5].target = "sys.bytes.at";
+    bindings[5].handler = native_syscall_bytes_at;
+    bindings[6].target = "sys.bytes.slice";
+    bindings[6].handler = native_syscall_bytes_slice;
+    bindings[7].target = "sys.bytes.concat";
+    bindings[7].handler = native_syscall_bytes_concat;
+    bindings[8].target = "sys.bytes.fromBase64";
+    bindings[8].handler = native_syscall_bytes_from_base64;
+    bindings[9].target = "sys.bytes.toBase64";
+    bindings[9].handler = native_syscall_bytes_to_base64;
+    bindings[10].target = "sys.fs.file.delete";
+    bindings[10].handler = native_syscall_fs_file_delete;
+    bindings[11].target = "sys.fs.dir.delete";
+    bindings[11].handler = native_syscall_fs_dir_delete;
+    bindings[12].target = "sys.process.spawn";
+    bindings[12].handler = native_syscall_process_spawn;
+    bindings[13].target = "sys.process.wait";
+    bindings[13].handler = native_syscall_process_wait;
+    bindings[14].target = "sys.process.kill";
+    bindings[14].handler = native_syscall_process_kill;
+    bindings[15].target = "sys.process.stdout.read";
+    bindings[15].handler = native_syscall_process_stdout_read;
+    bindings[16].target = "sys.process.stderr.read";
+    bindings[16].handler = native_syscall_process_stderr_read;
+    bindings[17].target = "sys.process.poll";
+    bindings[17].handler = native_syscall_process_poll;
     result = aivm_c_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        14U,
+        18U,
         process_argv,
         process_argv_count);
 
     if (!result.loaded || result.load_status != AIVM_PROGRAM_OK) {
-        native_process_cleanup_all();
         fprintf(stderr, "Err#err1(code=RUN001 message=\"Failed to load native program.\" nodeId=program)\n");
         return 2;
     }
     if (!result.ok || result.status == AIVM_VM_STATUS_ERROR) {
-        native_process_cleanup_all();
         fprintf(stderr, "Err#err1(code=RUN001 message=\"%s\" nodeId=vm)\n", vm_error_message);
         return 3;
     }
     if (result.has_exit_code) {
         printf("Ok#ok1(type=int value=%d)\n", result.exit_code);
-        native_process_cleanup_all();
         return result.exit_code;
     }
-    native_process_cleanup_all();
     return 0;
 }
 
@@ -1944,11 +2215,6 @@ static int opcode_from_text(const char* op_text, AivmOpcode* out_opcode)
 static int parse_bytecode_aos_to_program_text(const char* source, AivmProgram* out_program)
 {
     const char* p;
-    const char* bytecode_decl;
-    const char* decl_lparen;
-    const char* decl_rparen;
-    char decl_attrs[512];
-    size_t decl_len;
 
     if (source == NULL || out_program == NULL) {
         return 0;
@@ -1956,56 +2222,12 @@ static int parse_bytecode_aos_to_program_text(const char* source, AivmProgram* o
     if (strstr(source, "Bytecode#") == NULL) {
         return 0;
     }
-    bytecode_decl = strstr(source, "Bytecode#");
-    if (bytecode_decl == NULL) {
-        return 0;
-    }
-    decl_lparen = strchr(bytecode_decl, '(');
-    decl_rparen = decl_lparen == NULL ? NULL : strchr(decl_lparen, ')');
-    if (decl_lparen == NULL || decl_rparen == NULL || decl_rparen <= decl_lparen) {
-        return 0;
-    }
-    decl_len = (size_t)(decl_rparen - (decl_lparen + 1));
-    if (decl_len + 1U > sizeof(decl_attrs)) {
-        return 0;
-    }
-    memcpy(decl_attrs, decl_lparen + 1, decl_len);
-    decl_attrs[decl_len] = '\0';
 
     aivm_program_clear(out_program);
     out_program->instructions = out_program->instruction_storage;
     out_program->constants = out_program->constant_storage;
-    out_program->format_version = 2U;
+    out_program->format_version = 1U;
     out_program->format_flags = 0U;
-    if (has_attr_key(decl_attrs, "version")) {
-        int64_t declared_version = 0;
-        if (!parse_attr_int64(decl_attrs, "version", &declared_version) || declared_version != 2) {
-            return 0;
-        }
-    }
-    if (has_attr_key(decl_attrs, "flags")) {
-        int64_t declared_flags = 0;
-        if (!parse_attr_int64(decl_attrs, "flags", &declared_flags) ||
-            declared_flags < 0 ||
-            declared_flags > (int64_t)UINT32_MAX) {
-            return 0;
-        }
-        out_program->format_flags = (uint32_t)declared_flags;
-    }
-    if (has_attr_key(decl_attrs, "magic")) {
-        char declared_magic[16];
-        if (!parse_attr_span(decl_attrs, "magic", declared_magic, sizeof(declared_magic)) ||
-            strcmp(declared_magic, "AIBC") != 0) {
-            return 0;
-        }
-    }
-    if (has_attr_key(decl_attrs, "format")) {
-        char declared_format[16];
-        if (!parse_attr_span(decl_attrs, "format", declared_format, sizeof(declared_format)) ||
-            strcmp(declared_format, "AiBC1") != 0) {
-            return 0;
-        }
-    }
 
     p = source;
     while ((p = strstr(p, "Const#")) != NULL) {
@@ -2076,12 +2298,9 @@ static int parse_bytecode_aos_to_program_text(const char* source, AivmProgram* o
         const char* rparen;
         char attrs[512];
         char op[64];
-        char s_value[512];
         int64_t a = 0;
-        int64_t b = 0;
         AivmOpcode opcode;
         size_t n;
-        int64_t s_index = -1;
 
         if (out_program->instruction_count >= AIVM_PROGRAM_MAX_INSTRUCTIONS || lparen == NULL) {
             return 0;
@@ -2100,35 +2319,13 @@ static int parse_bytecode_aos_to_program_text(const char* source, AivmProgram* o
         if (!parse_attr_span(attrs, "op", op, sizeof(op)) || !opcode_from_text(op, &opcode)) {
             return 0;
         }
+        if (has_attr_key(attrs, "b") || has_attr_key(attrs, "s")) {
+            return 0;
+        }
         (void)parse_attr_int64(attrs, "a", &a);
-        if (has_attr_key(attrs, "b")) {
-            if (!parse_attr_int64(attrs, "b", &b)) {
-                return 0;
-            }
-        }
-        if (has_attr_key(attrs, "s")) {
-            if (!parse_attr_span(attrs, "s", s_value, sizeof(s_value))) {
-                return 0;
-            }
-            if (s_value[0] != '\0') {
-                char s_unescaped[512];
-                size_t s_const_index = 0U;
-                if (!unescape_string(s_value, s_unescaped, sizeof(s_unescaped))) {
-                    return 0;
-                }
-                if (!simple_add_string_const(out_program, s_unescaped, &s_const_index)) {
-                    return 0;
-                }
-                s_index = (int64_t)s_const_index;
-            } else {
-                s_index = -1;
-            }
-        }
 
         out_program->instruction_storage[out_program->instruction_count].opcode = opcode;
         out_program->instruction_storage[out_program->instruction_count].operand_int = a;
-        out_program->instruction_storage[out_program->instruction_count].operand_secondary = b;
-        out_program->instruction_storage[out_program->instruction_count].operand_string_constant_index = s_index;
         out_program->instruction_count += 1U;
         p = rparen + 1;
     }
@@ -2447,7 +2644,7 @@ static int parse_simple_program_aos_to_program_text(const char* source, AivmProg
     aivm_program_clear(out_program);
     out_program->instructions = out_program->instruction_storage;
     out_program->constants = out_program->constant_storage;
-    out_program->format_version = 2U;
+    out_program->format_version = 1U;
     out_program->format_flags = 0U;
 
     p = first_open + 1;
@@ -2484,30 +2681,30 @@ static int parse_simple_program_aos_to_program_text(const char* source, AivmProg
         }
         if (strcmp(node.kind, "Call") == 0) {
             char target[128];
+            const char* mapped = NULL;
             size_t target_idx = 0U;
-            size_t arg_count = 0U;
-            const char* c = node.body_start;
+            SimpleNodeView arg;
             if (!parse_attr_span(node.attrs, "target", target, sizeof(target))) {
                 return simple_fail("call missing target");
             }
-            if (!simple_add_string_const(out_program, target, &target_idx)) {
+            if (strcmp(target, "io.print") == 0 || strcmp(target, "io.write") == 0 || strcmp(target, "sys.stdout.writeLine") == 0) {
+                mapped = "sys.stdout.writeLine";
+            } else {
+                return simple_fail("call unsupported target");
+            }
+            if (!simple_add_string_const(out_program, mapped, &target_idx)) {
                 return simple_fail("call target const add failed");
             }
             if (!simple_emit_instruction(out_program, AIVM_OP_CONST, (int64_t)target_idx)) {
                 return simple_fail("call target const emit failed");
             }
-            while (c < node.body_end) {
-                SimpleNodeView arg;
-                if (!simple_parse_next_node(c, node.body_end, &arg)) {
-                    break;
-                }
-                if (!simple_compile_expr_node(&arg, out_program, locals, &local_count)) {
-                    return simple_fail("call argument compile failed");
-                }
-                arg_count += 1U;
-                c = arg.next;
+            if (!simple_parse_next_node(node.body_start, node.body_end, &arg)) {
+                return simple_fail("call missing argument");
             }
-            if (!simple_emit_instruction(out_program, AIVM_OP_CALL_SYS, (int64_t)arg_count) ||
+            if (!simple_compile_expr_node(&arg, out_program, locals, &local_count)) {
+                return simple_fail("call argument compile failed");
+            }
+            if (!simple_emit_instruction(out_program, AIVM_OP_CALL_SYS, 1) ||
                 !simple_emit_instruction(out_program, AIVM_OP_POP, 0)) {
                 return simple_fail("call emit failed");
             }
@@ -2546,6 +2743,20 @@ static int parse_simple_program_aos_to_program_file(const char* aos_path, AivmPr
         return 0;
     }
     return parse_simple_program_aos_to_program_text(source, out_program);
+}
+
+static int run_native_simple_program_aos(const char* aos_path, const char* const* process_argv, size_t process_argv_count)
+{
+    AivmProgram program;
+
+    if (!parse_simple_program_aos_to_program_file(aos_path, &program)) {
+        return -1;
+    }
+    return run_native_compiled_program(
+        &program,
+        "Native simple source execution failed.",
+        process_argv,
+        process_argv_count);
 }
 
 static int run_native_bytecode_aos(const char* aos_path, const char* const* process_argv, size_t process_argv_count)
@@ -2595,7 +2806,6 @@ static void write_i64_le(FILE* f, int64_t value)
 static int write_program_as_aibc1(const AivmProgram* program, const char* out_path)
 {
     FILE* f;
-    const uint32_t format_version = 2U;
     uint32_t section_count = 1U;
     uint32_t inst_payload_size;
     uint32_t const_payload_size = 4U;
@@ -2617,6 +2827,11 @@ static int write_program_as_aibc1(const AivmProgram* program, const char* out_pa
                 return 0;
             }
             const_payload_size += 1U + 4U + (uint32_t)len;
+        } else if (v.type == AIVM_VAL_BYTES) {
+            if (v.bytes_value.length > 0xffffffffU) {
+                return 0;
+            }
+            const_payload_size += 1U + 4U + (uint32_t)v.bytes_value.length;
         } else {
             const_payload_size += 1U;
         }
@@ -2625,10 +2840,10 @@ static int write_program_as_aibc1(const AivmProgram* program, const char* out_pa
         section_count = 2U;
     }
 
-    if (program->instruction_count > (size_t)((0xffffffffU - 4U) / 28U)) {
+    if (program->instruction_count > (size_t)((0xffffffffU - 4U) / 12U)) {
         return 0;
     }
-    inst_payload_size = 4U + (uint32_t)(program->instruction_count * 28U);
+    inst_payload_size = 4U + (uint32_t)(program->instruction_count * 12U);
 
     f = fopen(out_path, "wb");
     if (f == NULL) {
@@ -2636,7 +2851,7 @@ static int write_program_as_aibc1(const AivmProgram* program, const char* out_pa
     }
 
     (void)fwrite("AIBC", 1U, 4U, f);
-    write_u32_le(f, format_version);
+    write_u32_le(f, 1U);
     write_u32_le(f, 0U);
     write_u32_le(f, section_count);
 
@@ -2646,8 +2861,6 @@ static int write_program_as_aibc1(const AivmProgram* program, const char* out_pa
     for (i = 0U; i < program->instruction_count; i += 1U) {
         write_u32_le(f, (uint32_t)program->instruction_storage[i].opcode);
         write_i64_le(f, program->instruction_storage[i].operand_int);
-        write_i64_le(f, program->instruction_storage[i].operand_secondary);
-        write_i64_le(f, program->instruction_storage[i].operand_string_constant_index);
     }
 
     if (section_count == 2U) {
@@ -2669,6 +2882,13 @@ static int write_program_as_aibc1(const AivmProgram* program, const char* out_pa
                 if (len > 0U) {
                     (void)fwrite(v.string_value, 1U, len, f);
                 }
+            } else if (v.type == AIVM_VAL_BYTES) {
+                uint32_t len = (uint32_t)v.bytes_value.length;
+                (void)fputc(5, f);
+                write_u32_le(f, len);
+                if (len > 0U && v.bytes_value.data != NULL) {
+                    (void)fwrite(v.bytes_value.data, 1U, len, f);
+                }
             } else {
                 (void)fputc(4, f);
             }
@@ -2676,138 +2896,6 @@ static int write_program_as_aibc1(const AivmProgram* program, const char* out_pa
     }
 
     if (fclose(f) != 0) {
-        return 0;
-    }
-    return 1;
-}
-
-static int wasm_profile_supports_syscall(const char* wasm_profile, const char* syscall_target)
-{
-    if (wasm_profile == NULL || syscall_target == NULL) {
-        return 0;
-    }
-    if (strcmp(syscall_target, "sys.stdout_writeLine") == 0 ||
-        strcmp(syscall_target, "io.print") == 0 ||
-        strcmp(syscall_target, "io.write") == 0 ||
-        strcmp(syscall_target, "sys.process_argv") == 0 ||
-        strcmp(syscall_target, "sys.capability_has") == 0) {
-        return 1;
-    }
-    return 0;
-}
-
-static void emit_wasm_profile_capability_warnings(const char* aibc1_path, const char* wasm_profile)
-{
-    unsigned char* bytes = NULL;
-    size_t byte_count = 0U;
-    AivmProgram program;
-    AivmProgramLoadResult load_result;
-    const char* warned_targets[64];
-    size_t warned_count = 0U;
-    size_t i;
-    size_t j;
-
-    if (aibc1_path == NULL || wasm_profile == NULL) {
-        return;
-    }
-    if (!read_binary_file(aibc1_path, &bytes, &byte_count)) {
-        return;
-    }
-    load_result = aivm_program_load_aibc1(bytes, byte_count, &program);
-    free(bytes);
-    if (load_result.status != AIVM_PROGRAM_OK) {
-        return;
-    }
-    for (i = 0U; i < program.constant_count; i += 1U) {
-        const char* target;
-        int seen = 0;
-        if (program.constants[i].type != AIVM_VAL_STRING || program.constants[i].string_value == NULL) {
-            continue;
-        }
-        target = program.constants[i].string_value;
-        if (!(starts_with(target, "sys.") || starts_with(target, "io."))) {
-            continue;
-        }
-        if (wasm_profile_supports_syscall(wasm_profile, target)) {
-            continue;
-        }
-        for (j = 0U; j < warned_count; j += 1U) {
-            if (strcmp(warned_targets[j], target) == 0) {
-                seen = 1;
-                break;
-            }
-        }
-        if (seen != 0) {
-            continue;
-        }
-        if (warned_count < (sizeof(warned_targets) / sizeof(warned_targets[0]))) {
-            warned_targets[warned_count++] = target;
-        }
-        fprintf(stderr,
-            "Warn#warn1(code=WASM001 message=\"%s is not available on wasm profile '%s'; runtime will raise RUN101 if executed.\" nodeId=publish)\n",
-            target,
-            wasm_profile);
-    }
-}
-
-static int compile_input_to_aibc1(const char* program_input, const char* out_dir, char* out_aibc1, size_t out_aibc1_len)
-{
-    char resolved_program[PATH_MAX];
-    char source_aos[PATH_MAX];
-    char app_dst[PATH_MAX];
-    AivmProgram program;
-
-    if (program_input == NULL || out_dir == NULL || out_aibc1 == NULL || out_aibc1_len == 0U) {
-        return 0;
-    }
-    if (!ensure_directory(out_dir)) {
-        fprintf(stderr,
-            "Err#err1(code=RUN001 message=\"Failed to create build output directory.\" nodeId=outDir)\n");
-        return 0;
-    }
-    if (!join_path(out_dir, "app.aibc1", app_dst, sizeof(app_dst))) {
-        fprintf(stderr,
-            "Err#err1(code=RUN001 message=\"Build output path overflow.\" nodeId=build)\n");
-        return 0;
-    }
-
-    if (resolve_input_to_aibc1(program_input, resolved_program, sizeof(resolved_program))) {
-        if (!copy_file(resolved_program, app_dst)) {
-            fprintf(stderr,
-                "Err#err1(code=RUN001 message=\"Failed to copy app bytecode for build.\" nodeId=build)\n");
-            return 0;
-        }
-    } else if (resolve_input_to_aos(program_input, source_aos, sizeof(source_aos))) {
-        if (parse_bytecode_aos_to_program_file(source_aos, &program)) {
-            if (!write_program_as_aibc1(&program, app_dst)) {
-                fprintf(stderr,
-                    "Err#err1(code=RUN001 message=\"Failed to emit native AiBC1 for build.\" nodeId=build)\n");
-                return 0;
-            }
-        } else if (parse_simple_program_aos_to_program_file(source_aos, &program)) {
-            if (!write_program_as_aibc1(&program, app_dst)) {
-                fprintf(stderr,
-                    "Err#err1(code=RUN001 message=\"Failed to emit native AiBC1 for build.\" nodeId=build)\n");
-                return 0;
-            }
-        } else if (source_file_looks_like_bytecode_aos(source_aos)) {
-            fprintf(stderr,
-                "Err#err1(code=DEV008 message=\"Native build cannot encode this bytecode AOS shape yet. Build precompiled .aibc1.\" nodeId=program)\n");
-            return 0;
-        } else {
-            fprintf(stderr,
-                "Err#err1(code=DEV008 message=\"Build needs prebuilt .aibc1 unless source is supported Program#/Bytecode# AOS.\" nodeId=program)\n");
-            return 0;
-        }
-    } else {
-        fprintf(stderr,
-            "Err#err1(code=DEV008 message=\"Build needs prebuilt .aibc1 unless source is supported Program#/Bytecode# AOS.\" nodeId=program)\n");
-        return 0;
-    }
-
-    if (snprintf(out_aibc1, out_aibc1_len, "%s", app_dst) >= (int)out_aibc1_len) {
-        fprintf(stderr,
-            "Err#err1(code=RUN001 message=\"Build output path overflow.\" nodeId=build)\n");
         return 0;
     }
     return 1;
@@ -2874,8 +2962,6 @@ static int run_via_resolved_input(const char* input, const char* const* process_
 {
     char resolved[PATH_MAX];
     char source_aos[PATH_MAX];
-    char build_out[PATH_MAX];
-    char built_aibc1[PATH_MAX];
     if (input != NULL && ends_with(input, ".aibundle") && file_exists(input)) {
         int rc = run_native_bundle(input, process_argv, process_argv_count);
         if (rc >= 0) {
@@ -2889,59 +2975,23 @@ static int run_via_resolved_input(const char* input, const char* const* process_
         return run_native_aibc1(resolved, process_argv, process_argv_count);
     }
     if (resolve_input_to_aos(input, source_aos, sizeof(source_aos))) {
-        (void)source_aos;
-    }
-    if (!join_path(".tmp", "airun-build-run", build_out, sizeof(build_out))) {
-        fprintf(stderr,
-            "Err#err1(code=RUN001 message=\"Build temp path overflow.\" nodeId=run)\n");
-        return 2;
-    }
-    if (compile_input_to_aibc1(input, build_out, built_aibc1, sizeof(built_aibc1))) {
-        return run_native_aibc1(built_aibc1, process_argv, process_argv_count);
+        int rc = run_native_bytecode_aos(source_aos, process_argv, process_argv_count);
+        if (rc >= 0) {
+            return rc;
+        }
+        if (source_file_looks_like_bytecode_aos(source_aos)) {
+            fprintf(stderr,
+                "Err#err1(code=DEV008 message=\"Native bytecode AOS input uses unsupported fields. Build precompiled .aibc1 or use supported instruction attributes.\" nodeId=program)\n");
+            return 2;
+        }
+        rc = run_native_simple_program_aos(source_aos, process_argv, process_argv_count);
+        if (rc >= 0) {
+            return rc;
+        }
     }
     fprintf(stderr,
-        "Err#err1(code=DEV008 message=\"Native C runtime cannot build this source/project shape yet. Provide .aibc1 or supported Program#/Bytecode# AOS.\" nodeId=program)\n");
+        "Err#err1(code=DEV008 message=\"Native C runtime cannot compile this source/project shape yet. Provide .aibc1 or supported Program#/Bytecode# AOS.\" nodeId=program)\n");
     return 2;
-}
-
-static int handle_build(int argc, char** argv)
-{
-    const char* program_input = NULL;
-    const char* out_dir = "dist";
-    char built_aibc1[PATH_MAX];
-    int i;
-
-    for (i = 2; i < argc; i++) {
-        if (strcmp(argv[i], "--out") == 0) {
-            if (i + 1 >= argc) {
-                fprintf(stderr,
-                    "Err#err1(code=RUN001 message=\"Missing --out value.\" nodeId=argv)\n");
-                return 2;
-            }
-            out_dir = argv[++i];
-            continue;
-        }
-        if (program_input == NULL && argv[i][0] != '-') {
-            program_input = argv[i];
-            continue;
-        }
-        fprintf(stderr,
-            "Err#err1(code=RUN001 message=\"Unsupported build argument.\" nodeId=argv)\n");
-        return 2;
-    }
-
-    if (program_input == NULL) {
-        fprintf(stderr,
-            "Err#err1(code=RUN001 message=\"Missing build program path.\" nodeId=argv)\n");
-        return 2;
-    }
-
-    if (!compile_input_to_aibc1(program_input, out_dir, built_aibc1, sizeof(built_aibc1))) {
-        return 2;
-    }
-
-    printf("Ok#ok1(type=string value=\"build-complete\")\n");
-    return 0;
 }
 
 static int handle_run(int argc, char** argv)
@@ -3059,7 +3109,7 @@ static int bench_execute_program_iterations(const AivmProgram* program, int iter
         return 0;
     }
 
-    bindings[0].target = "sys.stdout_writeLine";
+    bindings[0].target = "sys.stdout.writeLine";
     bindings[0].handler = bench_syscall_sink;
     bindings[1].target = "io.print";
     bindings[1].handler = bench_syscall_sink;
@@ -3103,7 +3153,7 @@ static int handle_bench(int argc, char** argv)
         "  Call#c1(target=io.print) { Var#v1(name=message) }\n"
         "}";
     static const char* bytecode_bench_source =
-        "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=2 flags=0) {\n"
+        "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=1 flags=0) {\n"
         "  Const#k0(kind=string value=\"hello\")\n"
         "  Func#f1(name=main params=\"argv\" locals=\"\") {\n"
         "    Inst#i1(op=HALT)\n"
@@ -3126,7 +3176,7 @@ static int handle_bench(int argc, char** argv)
         "  Call#c2(target=io.print) { Var#v2(name=out) }\n"
         "}";
     static const char* app_bundle_source =
-        "Bytecode#bc1(flags=0 format=\"AiBC1\" magic=\"AIBC\" version=2) {\n"
+        "Bytecode#bc1(flags=0 format=\"AiBC1\" magic=\"AIBC\" version=1) {\n"
         "  Const#k0(kind=int value=0)\n"
         "  Func#f_main(locals=\"argv,start\" name=main params=\"argv\") {\n"
         "    Inst#i0(a=0 op=CONST)\n"
@@ -3240,31 +3290,15 @@ static int handle_publish(int argc, char** argv)
     const char* program_input = NULL;
     const char* target = NULL;
     const char* out_dir = "dist";
-    const char* wasm_profile = "spa";
-    int wasm_profile_set = 0;
-    char built_aibc1[PATH_MAX];
+    char resolved_program[PATH_MAX];
+    char source_aos[PATH_MAX];
     char artifact_dir[PATH_MAX];
     char runtime_bin[64];
     char publish_app_name[128];
     char publish_runtime_name[160];
     char runtime_src[PATH_MAX];
     char runtime_dst[PATH_MAX];
-    char wasm_readme[PATH_MAX];
-    char wasm_run_sh[PATH_MAX];
-    char wasm_run_ps1[PATH_MAX];
-    char wasm_index_html[PATH_MAX];
-    char wasm_main_js[PATH_MAX];
-    char wasm_web_module_src[PATH_MAX];
-    char wasm_web_module_dst[PATH_MAX];
-    char wasm_web_wasm_src[PATH_MAX];
-    char wasm_web_wasm_dst[PATH_MAX];
-    char wasm_web_module_name[160];
-    char wasm_web_wasm_name[160];
-    char wasm_client_dir[PATH_MAX];
-    char wasm_server_dir[PATH_MAX];
-    char wasm_server_readme[PATH_MAX];
-    char wasm_runtime_out_dir[PATH_MAX];
-    char client_aibc1_dst[PATH_MAX];
+    char app_dst[PATH_MAX];
     char manifest_target[64];
     int i;
 
@@ -3287,26 +3321,6 @@ static int handle_publish(int argc, char** argv)
             out_dir = argv[++i];
             continue;
         }
-        if (strcmp(argv[i], "--wasm-profile") == 0) {
-            if (i + 1 >= argc) {
-                fprintf(stderr,
-                    "Err#err1(code=RUN001 message=\"Missing --wasm-profile value.\" nodeId=argv)\n");
-                return 2;
-            }
-            wasm_profile = argv[++i];
-            wasm_profile_set = 1;
-            if (strcmp(wasm_profile, "web") == 0) {
-                wasm_profile = "spa";
-            }
-            if (strcmp(wasm_profile, "spa") != 0 &&
-                strcmp(wasm_profile, "cli") != 0 &&
-                strcmp(wasm_profile, "fullstack") != 0) {
-                fprintf(stderr,
-                    "Err#err1(code=RUN001 message=\"Unsupported --wasm-profile value. Use spa, cli, or fullstack.\" nodeId=argv)\n");
-                return 2;
-            }
-            continue;
-        }
         if (program_input == NULL && argv[i][0] != '-') {
             program_input = argv[i];
             continue;
@@ -3322,8 +3336,59 @@ static int handle_publish(int argc, char** argv)
         return 2;
     }
 
-    if (!compile_input_to_aibc1(program_input, out_dir, built_aibc1, sizeof(built_aibc1))) {
-        return 2;
+    if (!resolve_input_to_aibc1(program_input, resolved_program, sizeof(resolved_program))) {
+        if (resolve_input_to_aos(program_input, source_aos, sizeof(source_aos))) {
+            AivmProgram program;
+            if (parse_bytecode_aos_to_program_file(source_aos, &program)) {
+                if (!ensure_directory(out_dir)) {
+                    fprintf(stderr,
+                        "Err#err1(code=RUN001 message=\"Failed to create publish output directory.\" nodeId=outDir)\n");
+                    return 2;
+                }
+                if (!join_path(out_dir, "app.aibc1", app_dst, sizeof(app_dst))) {
+                    fprintf(stderr,
+                        "Err#err1(code=RUN001 message=\"App destination path overflow.\" nodeId=publish)\n");
+                    return 2;
+                }
+                if (!write_program_as_aibc1(&program, app_dst)) {
+                    fprintf(stderr,
+                        "Err#err1(code=RUN001 message=\"Failed to emit native AiBC1 for publish.\" nodeId=publish)\n");
+                    return 2;
+                }
+                resolved_program[0] = '\0';
+            } else {
+                if (parse_simple_program_aos_to_program_file(source_aos, &program)) {
+                    if (!ensure_directory(out_dir)) {
+                        fprintf(stderr,
+                            "Err#err1(code=RUN001 message=\"Failed to create publish output directory.\" nodeId=outDir)\n");
+                        return 2;
+                    }
+                    if (!join_path(out_dir, "app.aibc1", app_dst, sizeof(app_dst))) {
+                        fprintf(stderr,
+                            "Err#err1(code=RUN001 message=\"App destination path overflow.\" nodeId=publish)\n");
+                        return 2;
+                    }
+                    if (!write_program_as_aibc1(&program, app_dst)) {
+                        fprintf(stderr,
+                            "Err#err1(code=RUN001 message=\"Failed to emit native AiBC1 for publish.\" nodeId=publish)\n");
+                        return 2;
+                    }
+                    resolved_program[0] = '\0';
+                } else if (source_file_looks_like_bytecode_aos(source_aos)) {
+                    fprintf(stderr,
+                        "Err#err1(code=DEV008 message=\"Native publish cannot encode this bytecode AOS shape yet. Build precompiled .aibc1.\" nodeId=program)\n");
+                    return 2;
+                } else {
+                    fprintf(stderr,
+                        "Err#err1(code=DEV008 message=\"Publish needs prebuilt .aibc1 unless source is bytecode-style AOS.\" nodeId=program)\n");
+                    return 2;
+                }
+            }
+        } else {
+            fprintf(stderr,
+                "Err#err1(code=DEV008 message=\"Publish needs prebuilt .aibc1 unless source is bytecode-style AOS.\" nodeId=program)\n");
+            return 2;
+        }
     }
 
     if (target == NULL) {
@@ -3345,33 +3410,22 @@ static int handle_publish(int argc, char** argv)
             "Err#err1(code=RUN001 message=\"Unsupported publish target RID.\" nodeId=target)\n");
         return 2;
     }
-    if (wasm_profile_set != 0 && strcmp(target, "wasm32") != 0) {
-        fprintf(stderr,
-            "Err#err1(code=RUN001 message=\"--wasm-profile is only valid with --target wasm32.\" nodeId=argv)\n");
-        return 2;
-    }
     if (!derive_publish_app_name(program_input, publish_app_name, sizeof(publish_app_name))) {
         fprintf(stderr,
             "Err#err1(code=RUN001 message=\"Failed to derive publish app name.\" nodeId=publish)\n");
         return 2;
     }
-    if (strcmp(target, "wasm32") == 0) {
-        emit_wasm_profile_capability_warnings(built_aibc1, wasm_profile);
-    }
-    {
-        const char* runtime_ext = strrchr(runtime_bin, '.');
-        if (runtime_ext != NULL) {
-            if (snprintf(publish_runtime_name, sizeof(publish_runtime_name), "%s%s", publish_app_name, runtime_ext) >= (int)sizeof(publish_runtime_name)) {
-                fprintf(stderr,
-                    "Err#err1(code=RUN001 message=\"Publish app name overflow.\" nodeId=publish)\n");
-                return 2;
-            }
-        } else {
-            if (snprintf(publish_runtime_name, sizeof(publish_runtime_name), "%s", publish_app_name) >= (int)sizeof(publish_runtime_name)) {
-                fprintf(stderr,
-                    "Err#err1(code=RUN001 message=\"Publish app name overflow.\" nodeId=publish)\n");
-                return 2;
-            }
+    if (strstr(runtime_bin, ".exe") != NULL) {
+        if (snprintf(publish_runtime_name, sizeof(publish_runtime_name), "%s.exe", publish_app_name) >= (int)sizeof(publish_runtime_name)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Publish app name overflow.\" nodeId=publish)\n");
+            return 2;
+        }
+    } else {
+        if (snprintf(publish_runtime_name, sizeof(publish_runtime_name), "%s", publish_app_name) >= (int)sizeof(publish_runtime_name)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Publish app name overflow.\" nodeId=publish)\n");
+            return 2;
         }
     }
 
@@ -3381,169 +3435,33 @@ static int handle_publish(int argc, char** argv)
         return 2;
     }
 
-    if (strcmp(target, "wasm32") == 0 && strcmp(wasm_profile, "fullstack") == 0) {
-        if (!join_path(out_dir, "client", wasm_client_dir, sizeof(wasm_client_dir)) ||
-            !join_path(out_dir, "server", wasm_server_dir, sizeof(wasm_server_dir)) ||
-            !ensure_directory(wasm_client_dir) ||
-            !ensure_directory(wasm_server_dir) ||
-            !join_path(wasm_client_dir, "app.aibc1", client_aibc1_dst, sizeof(client_aibc1_dst)) ||
-            !copy_file(built_aibc1, client_aibc1_dst)) {
-            fprintf(stderr,
-                "Err#err1(code=RUN001 message=\"Failed to initialize wasm fullstack layout.\" nodeId=publish)\n");
-            return 2;
-        }
-        if (!join_path(wasm_server_dir, "README.md", wasm_server_readme, sizeof(wasm_server_readme)) ||
-            !write_text_file(
-                wasm_server_readme,
-                "# server (AiLang native)\n\nThis directory is intentionally non-wasm.\nPublish your server project with a native target (osx/linux/windows).\n",
-                0)) {
-            fprintf(stderr,
-                "Err#err1(code=RUN001 message=\"Failed to write fullstack server guidance.\" nodeId=publish)\n");
-            return 2;
-        }
-        if (snprintf(wasm_runtime_out_dir, sizeof(wasm_runtime_out_dir), "%s", wasm_client_dir) >= (int)sizeof(wasm_runtime_out_dir)) {
-            fprintf(stderr,
-                "Err#err1(code=RUN001 message=\"Wasm runtime output path overflow.\" nodeId=publish)\n");
-            return 2;
-        }
-    } else {
-        if (snprintf(wasm_runtime_out_dir, sizeof(wasm_runtime_out_dir), "%s", out_dir) >= (int)sizeof(wasm_runtime_out_dir)) {
-            fprintf(stderr,
-                "Err#err1(code=RUN001 message=\"Wasm runtime output path overflow.\" nodeId=publish)\n");
-            return 2;
-        }
-    }
-
     if (!join_path(artifact_dir, runtime_bin, runtime_src, sizeof(runtime_src))) {
         fprintf(stderr,
             "Err#err1(code=RUN001 message=\"Runtime source path overflow.\" nodeId=publish)\n");
         return 2;
     }
-    if (!join_path(wasm_runtime_out_dir, publish_runtime_name, runtime_dst, sizeof(runtime_dst))) {
+    if (!join_path(out_dir, publish_runtime_name, runtime_dst, sizeof(runtime_dst))) {
         fprintf(stderr,
             "Err#err1(code=RUN001 message=\"Runtime destination path overflow.\" nodeId=publish)\n");
         return 2;
     }
+    if (resolved_program[0] != '\0') {
+        if (!join_path(out_dir, "app.aibc1", app_dst, sizeof(app_dst))) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"App destination path overflow.\" nodeId=publish)\n");
+            return 2;
+        }
+        if (!copy_file(resolved_program, app_dst)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Failed to copy app bytecode for publish.\" nodeId=publish)\n");
+            return 2;
+        }
+    }
+
     if (!copy_runtime_file(runtime_src, runtime_dst)) {
         fprintf(stderr,
             "Err#err1(code=RUN001 message=\"Failed to copy runtime for target RID. Build target runtime first.\" nodeId=publish)\n");
         return 2;
-    }
-
-    if (strcmp(target, "wasm32") == 0) {
-        char readme_content[1024];
-        if (snprintf(readme_content, sizeof(readme_content),
-                "# %s (wasm32)\n\n"
-                "Artifacts:\n"
-                "- `%s/%s`\n"
-                "- `app.aibc1`\n\n"
-                "Profile: %s\n",
-                publish_app_name,
-                (strcmp(wasm_profile, "fullstack") == 0) ? "client" : ".",
-                publish_runtime_name,
-                wasm_profile) >= (int)sizeof(readme_content)) {
-            fprintf(stderr,
-                "Err#err1(code=RUN001 message=\"Wasm README content overflow.\" nodeId=publish)\n");
-            return 2;
-        }
-        if (!join_path(out_dir, "README.md", wasm_readme, sizeof(wasm_readme)) ||
-            !write_text_file(wasm_readme, readme_content, 0)) {
-            fprintf(stderr,
-                "Err#err1(code=RUN001 message=\"Failed to write wasm publish README.\" nodeId=publish)\n");
-            return 2;
-        }
-
-        if (strcmp(wasm_profile, "cli") == 0) {
-            char run_sh_content[512];
-            char run_ps1_content[512];
-            if (snprintf(run_sh_content, sizeof(run_sh_content),
-                    "#!/usr/bin/env bash\nset -euo pipefail\nwasmtime run -C cache=n \"./%s\" - \"$@\" < \"./app.aibc1\"\n",
-                    publish_runtime_name) >= (int)sizeof(run_sh_content) ||
-                snprintf(run_ps1_content, sizeof(run_ps1_content),
-                    "$ErrorActionPreference = 'Stop'\nGet-Content -Encoding Byte -ReadCount 0 \".\\app.aibc1\" | & wasmtime run -C cache=n \".\\%s\" \"-\" @args\nexit $LASTEXITCODE\n",
-                    publish_runtime_name) >= (int)sizeof(run_ps1_content)) {
-                fprintf(stderr,
-                    "Err#err1(code=RUN001 message=\"Wasm launcher content overflow.\" nodeId=publish)\n");
-                return 2;
-            }
-            if (!join_path(wasm_runtime_out_dir, "run.sh", wasm_run_sh, sizeof(wasm_run_sh)) ||
-                !join_path(wasm_runtime_out_dir, "run.ps1", wasm_run_ps1, sizeof(wasm_run_ps1)) ||
-                !write_text_file(wasm_run_sh, run_sh_content, 1) ||
-                !write_text_file(wasm_run_ps1, run_ps1_content, 0)) {
-                fprintf(stderr,
-                    "Err#err1(code=RUN001 message=\"Failed to write wasm CLI launcher files.\" nodeId=publish)\n");
-                return 2;
-            }
-        } else if (strcmp(wasm_profile, "spa") == 0 || strcmp(wasm_profile, "fullstack") == 0) {
-            if (snprintf(wasm_web_module_name, sizeof(wasm_web_module_name), "%s.mjs", publish_app_name) >= (int)sizeof(wasm_web_module_name) ||
-                snprintf(wasm_web_wasm_name, sizeof(wasm_web_wasm_name), "%s.web.wasm", publish_app_name) >= (int)sizeof(wasm_web_wasm_name)) {
-                fprintf(stderr,
-                    "Err#err1(code=RUN001 message=\"Wasm web runtime name overflow.\" nodeId=publish)\n");
-                return 2;
-            }
-            if (!join_path(artifact_dir, "aivm-runtime-wasm32-web.mjs", wasm_web_module_src, sizeof(wasm_web_module_src)) ||
-                !join_path(artifact_dir, "aivm-runtime-wasm32-web.wasm", wasm_web_wasm_src, sizeof(wasm_web_wasm_src)) ||
-                !join_path(wasm_runtime_out_dir, wasm_web_module_name, wasm_web_module_dst, sizeof(wasm_web_module_dst)) ||
-                !join_path(wasm_runtime_out_dir, wasm_web_wasm_name, wasm_web_wasm_dst, sizeof(wasm_web_wasm_dst)) ||
-                !copy_runtime_file(wasm_web_module_src, wasm_web_module_dst) ||
-                !copy_runtime_file(wasm_web_wasm_src, wasm_web_wasm_dst)) {
-                fprintf(stderr,
-                    "Err#err1(code=RUN001 message=\"Failed to copy wasm web runtime. Build wasm runtime first.\" nodeId=publish)\n");
-                return 2;
-            }
-
-            const char* index_html =
-                "<!doctype html>\n"
-                "<html lang=\"en\">\n"
-                "  <head><meta charset=\"utf-8\"><title>AiLang wasm app</title></head>\n"
-                "  <body>\n"
-                "    <h1>AiLang wasm app</h1>\n"
-                "    <pre id=\"log\"></pre>\n"
-                "    <script type=\"module\" src=\"./main.js\"></script>\n"
-                "  </body>\n"
-                "</html>\n";
-            char main_js[4096];
-            if (snprintf(main_js, sizeof(main_js),
-                    "import createRuntime from './%s';\n"
-                    "const log = document.getElementById('log');\n"
-                    "const append = (line) => { log.textContent += String(line) + '\\n'; };\n"
-                    "const boot = async () => {\n"
-                    "  const appResp = await fetch('./app.aibc1');\n"
-                    "  if (!appResp.ok) {\n"
-                    "    throw new Error('Failed to fetch app.aibc1');\n"
-                    "  }\n"
-                    "  const appBytes = new Uint8Array(await appResp.arrayBuffer());\n"
-                    "  const runtime = await createRuntime({\n"
-                    "    noInitialRun: true,\n"
-                    "    locateFile: (path) => (path.endsWith('.wasm') ? './%s' : path),\n"
-                    "    print: append,\n"
-                    "    printErr: append\n"
-                    "  });\n"
-                    "  runtime.FS.writeFile('/app.aibc1', appBytes);\n"
-                    "  runtime.callMain(['/app.aibc1']);\n"
-                    "};\n"
-                    "boot().catch((err) => {\n"
-                    "  append('Err#err1(code=RUN001 message=\"' + err.message + '\" nodeId=wasm)');\n"
-                    "});\n",
-                    wasm_web_module_name,
-                    wasm_web_wasm_name) >= (int)sizeof(main_js)) {
-                fprintf(stderr,
-                    "Err#err1(code=RUN001 message=\"Wasm web bootstrap content overflow.\" nodeId=publish)\n");
-                return 2;
-            }
-            if (!join_path(wasm_runtime_out_dir, "index.html", wasm_index_html, sizeof(wasm_index_html)) ||
-                !join_path(wasm_runtime_out_dir, "main.js", wasm_main_js, sizeof(wasm_main_js)) ||
-                !write_text_file(wasm_index_html, index_html, 0) ||
-                !write_text_file(wasm_main_js, main_js, 0)) {
-                fprintf(stderr,
-                    "Err#err1(code=RUN001 message=\"Failed to write wasm web files.\" nodeId=publish)\n");
-                return 2;
-            }
-        } else {
-            fprintf(stderr,
-                "Err#err1(code=RUN001 message=\"Unsupported wasm profile.\" nodeId=publish)\n");
-            return 2;
-        }
     }
 
     printf("Ok#ok1(type=string value=\"publish-complete\")\n");
@@ -3585,9 +3503,6 @@ int main(int argc, char** argv)
     }
     if (strcmp(argv[1], "run") == 0) {
         return handle_run(argc, argv);
-    }
-    if (strcmp(argv[1], "build") == 0) {
-        return handle_build(argc, argv);
     }
     if (strcmp(argv[1], "serve") == 0) {
         return handle_serve(argc, argv);

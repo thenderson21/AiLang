@@ -6,7 +6,7 @@ Pattern used:
 
 - Start all requests with `httpRequest(...)`.
 - Advance each request with `httpRequestPoll(...)`.
-- Sleep briefly between poll rounds (`sys.time_sleepMs(10)`) to avoid a tight busy-spin.
+- Sleep briefly between poll rounds (`sys.time.sleepMs(10)`) to avoid a tight busy-spin.
 - Recurse until all requests are terminal (`done` or `error`).
 
 Run:

@@ -37,7 +37,7 @@ awk 'NR>1 && $2 == "ok" {print $1 "\t" $4}' "${BENCH_OUT}" > "${CURRENT_TSV}"
 
 MISSING_COUNT="$(
   awk 'BEGIN{c=0} !/^#/ && NF>=2 {print $1}' "${BASELINE_FILE}" | while read -r name; do
-    if ! rg -q "^${name}[[:space:]]" "${CURRENT_TSV}"; then
+    if ! awk -v target="${name}" '$1 == target { found = 1; exit 0 } END { exit(found ? 0 : 1) }' "${CURRENT_TSV}"; then
       echo 1
     fi
   done | wc -l | tr -d ' '

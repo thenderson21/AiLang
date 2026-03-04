@@ -43,7 +43,7 @@ Each debug run writes one directory with deterministic files:
 - `vm_trace.toml`: step trace (`nodeId`, `op`, `function`, `pc`)
 - `state_snapshots.toml`: stack/locals/env snapshots
 - `syscalls.toml`: syscall args/results
-- `events.toml`: lifecycle/input events (includes `sys.ui_pollEvent`)
+- `events.toml`: lifecycle/input events (includes `sys.ui.pollEvent`)
 - `diagnostics.toml`: deterministic diagnostics captured during run
 
 ## Scenario Fixture Format

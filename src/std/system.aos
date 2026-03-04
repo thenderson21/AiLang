@@ -18,7 +18,7 @@ Program#std_system_p1 {
   Let#std_system_l3(name=osVersion) {
     Fn#std_system_f3(params=_) {
       Block#std_system_b3 {
-        Return#std_system_r3 { Call#std_system_c3(target=sys.os_version) }
+        Return#std_system_r3 { Call#std_system_c3(target=sys.os.version) }
       }
     }
   }

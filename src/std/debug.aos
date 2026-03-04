@@ -3,7 +3,7 @@ Program#std_debug_p1 {
     Fn#std_debug_f1(params=channel,payload) {
       Block#std_debug_b1 {
         Return#std_debug_r1 {
-          Call#std_debug_c1(target=sys.debug_emit) {
+          Call#std_debug_c1(target=sys.debug.emit) {
             Var#std_debug_v1(name=channel)
             Var#std_debug_v2(name=payload)
           }
@@ -16,7 +16,7 @@ Program#std_debug_p1 {
     Fn#std_debug_f2(params=_) {
       Block#std_debug_b2 {
         Return#std_debug_r2 {
-          Call#std_debug_c2(target=sys.debug_mode) { }
+          Call#std_debug_c2(target=sys.debug.mode) { }
         }
       }
     }
@@ -26,7 +26,7 @@ Program#std_debug_p1 {
     Fn#std_debug_f3(params=frameId,width,height) {
       Block#std_debug_b3 {
         Return#std_debug_r3 {
-          Call#std_debug_c3(target=sys.debug_captureFrameBegin) {
+          Call#std_debug_c3(target=sys.debug.captureFrameBegin) {
             Var#std_debug_v3(name=frameId)
             Var#std_debug_v4(name=width)
             Var#std_debug_v5(name=height)
@@ -40,7 +40,7 @@ Program#std_debug_p1 {
     Fn#std_debug_f4(params=frameId) {
       Block#std_debug_b4 {
         Return#std_debug_r4 {
-          Call#std_debug_c4(target=sys.debug_captureFrameEnd) {
+          Call#std_debug_c4(target=sys.debug.captureFrameEnd) {
             Var#std_debug_v6(name=frameId)
           }
         }
@@ -52,7 +52,7 @@ Program#std_debug_p1 {
     Fn#std_debug_f5(params=op,args) {
       Block#std_debug_b5 {
         Return#std_debug_r5 {
-          Call#std_debug_c5(target=sys.debug_captureDraw) {
+          Call#std_debug_c5(target=sys.debug.captureDraw) {
             Var#std_debug_v7(name=op)
             Var#std_debug_v8(name=args)
           }
@@ -65,7 +65,7 @@ Program#std_debug_p1 {
     Fn#std_debug_f6(params=eventPayload) {
       Block#std_debug_b6 {
         Return#std_debug_r6 {
-          Call#std_debug_c6(target=sys.debug_captureInput) {
+          Call#std_debug_c6(target=sys.debug.captureInput) {
             Var#std_debug_v9(name=eventPayload)
           }
         }
@@ -77,7 +77,7 @@ Program#std_debug_p1 {
     Fn#std_debug_f7(params=key,valuePayload) {
       Block#std_debug_b7 {
         Return#std_debug_r7 {
-          Call#std_debug_c7(target=sys.debug_captureState) {
+          Call#std_debug_c7(target=sys.debug.captureState) {
             Var#std_debug_v10(name=key)
             Var#std_debug_v11(name=valuePayload)
           }
@@ -90,7 +90,7 @@ Program#std_debug_p1 {
     Fn#std_debug_f8(params=path) {
       Block#std_debug_b8 {
         Return#std_debug_r8 {
-          Call#std_debug_c8(target=sys.debug_replayLoad) {
+          Call#std_debug_c8(target=sys.debug.replayLoad) {
             Var#std_debug_v12(name=path)
           }
         }
@@ -102,7 +102,7 @@ Program#std_debug_p1 {
     Fn#std_debug_f9(params=handle) {
       Block#std_debug_b9 {
         Return#std_debug_r9 {
-          Call#std_debug_c9(target=sys.debug_replayNext) {
+          Call#std_debug_c9(target=sys.debug.replayNext) {
             Var#std_debug_v13(name=handle)
           }
         }
@@ -114,7 +114,7 @@ Program#std_debug_p1 {
     Fn#std_debug_f10(params=cond,code,message) {
       Block#std_debug_b10 {
         Return#std_debug_r10 {
-          Call#std_debug_c10(target=sys.debug_assert) {
+          Call#std_debug_c10(target=sys.debug.assert) {
             Var#std_debug_v14(name=cond)
             Var#std_debug_v15(name=code)
             Var#std_debug_v16(name=message)
@@ -128,7 +128,7 @@ Program#std_debug_p1 {
     Fn#std_debug_f11(params=path,text) {
       Block#std_debug_b11 {
         Return#std_debug_r11 {
-          Call#std_debug_c11(target=sys.debug_artifactWrite) {
+          Call#std_debug_c11(target=sys.debug.artifactWrite) {
             Var#std_debug_v17(name=path)
             Var#std_debug_v18(name=text)
           }
@@ -141,7 +141,7 @@ Program#std_debug_p1 {
     Fn#std_debug_f12(params=opId,phase,detail) {
       Block#std_debug_b12 {
         Return#std_debug_r12 {
-          Call#std_debug_c12(target=sys.debug_traceAsync) {
+          Call#std_debug_c12(target=sys.debug.traceAsync) {
             Var#std_debug_v19(name=opId)
             Var#std_debug_v20(name=phase)
             Var#std_debug_v21(name=detail)

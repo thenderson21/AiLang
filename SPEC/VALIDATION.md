@@ -35,7 +35,7 @@ This file is normative for semantic validation used by `aic check` (default path
 
 ## UI Event Payload Rules
 
-- `sys.ui_pollEvent` contract is canonical and deterministic:
+- `sys.ui.pollEvent` contract is canonical and deterministic:
 - return value is a `UiEvent` node as defined by `SPEC/IL.md`.
 - `type` must be one of `none`, `closed`, `click`, `key`.
 - `modifiers` tokens must be unique, sorted (`StringComparer.Ordinal`), and drawn from `alt,ctrl,meta,shift`.
@@ -45,65 +45,67 @@ This file is normative for semantic validation used by `aic check` (default path
 - These constraints are semantic runtime contract requirements and must not be delegated to host-specific UI behavior.
 - Host adapters may normalize transport payloads (key token naming, printable text extraction), but semantic editing behavior remains library-owned.
 
-- `sys.ui_getWindowSize` contract is canonical and deterministic:
+- `sys.ui.getWindowSize` contract is canonical and deterministic:
 - return value is a `UiWindowSize` node as defined by `SPEC/IL.md`.
 - `width` and `height` must be integers; `-1` is reserved for unavailable/invalid handles.
 
-- `sys.ui_waitFrame` contract is deterministic:
+- `sys.ui.waitFrame` contract is deterministic:
 - arguments are `(int windowHandle)`.
 - return value is `void`; host may block until next frame/tick opportunity.
-- UI libraries should prefer `sys.ui_waitFrame` to `sys.time_sleepMs` for frame pacing when host support exists.
+- UI libraries should prefer `sys.ui.waitFrame` to `sys.time.sleepMs` for frame pacing when host support exists.
 
-- `sys.ui_drawImage` contract is deterministic:
+- `sys.ui.drawImage` contract is deterministic:
 - arguments are `(int windowHandle, int x, int y, int width, int height, string rgbaBase64)`.
 - payload is raw RGBA8 bytes encoded as base64; semantic interpretation stays in libraries.
 
-- `sys.str_substring(text,start,length)` and `sys.str_remove(text,start,length)` are deterministic UTF-8 text-edit helpers:
+- `sys.str.substring(text,start,length)` and `sys.str.remove(text,start,length)` are deterministic UTF-8 text-edit helpers:
 - indexing is by Unicode scalar sequence (not bytes).
 - `start` is clamped to valid range, `length <= 0` is a no-op (`""` for substring, original string for remove).
 - out-of-range inputs must not throw.
 
-- `sys.worker_start(taskName,payload)` contract:
+- `sys.bytes.length(data)` contract:
+- args are `(bytes)` and returns int length.
+- `sys.bytes.at(data,index)` contract:
+- args are `(bytes, int)` and returns int (`0..255`, or `-1` when out of range).
+- `sys.bytes.slice(data,start,length)` contract:
+- args are `(bytes, int, int)` and returns bytes.
+- `sys.bytes.concat(left,right)` contract:
+- args are `(bytes, bytes)` and returns bytes.
+- `sys.bytes.fromBase64(text)` contract:
+- args are `(string)` and returns bytes.
+- `sys.bytes.toBase64(data)` contract:
+- args are `(bytes)` and returns string.
+
+- `sys.worker.start(taskName,payload)` contract:
 - args are `(string, string)` and return int worker handle.
-- `sys.worker_poll(workerHandle)` contract:
+- `sys.worker.poll(workerHandle)` contract:
 - args are `(int)` and return status int (`0,1,-1,-2,-3`).
-- `sys.worker_result(workerHandle)` and `sys.worker_error(workerHandle)` return strings.
-- `sys.worker_cancel(workerHandle)` returns bool.
+- `sys.worker.result(workerHandle)` and `sys.worker.error(workerHandle)` return strings.
+- `sys.worker.cancel(workerHandle)` returns bool.
 
-- `sys.process_start(command,argvText,cwd,envText)` contract:
-- args are `(string, string, string, string)` and return int process handle.
-- `sys.process_poll(processHandle)` and `sys.process_wait(processHandle)` contract:
-- args are `(int)` and return int status (`0,1,-1,-2,-3`).
-- `sys.process_stdout(processHandle)` and `sys.process_stderr(processHandle)` contract:
-- args are `(int)` and return string payloads.
-- `sys.process_exitCode(processHandle)` contract:
-- args are `(int)` and return int exit code.
-- `sys.process_kill(processHandle)` contract:
-- args are `(int)` and return bool.
-
-- `sys.debug_emit(channel,payload)` contract:
+- `sys.debug.emit(channel,payload)` contract:
 - args are `(string, string)`.
-- `sys.debug_mode()` contract:
+- `sys.debug.mode()` contract:
 - no args; returns string mode.
-- `sys.debug_captureFrameBegin(frameId,width,height)` contract:
+- `sys.debug.captureFrameBegin(frameId,width,height)` contract:
 - args are `(int, int, int)`.
-- `sys.debug_captureFrameEnd(frameId)` contract:
+- `sys.debug.captureFrameEnd(frameId)` contract:
 - args are `(int)`.
-- `sys.debug_captureDraw(op,args)` contract:
+- `sys.debug.captureDraw(op,args)` contract:
 - args are `(string, string)`.
-- `sys.debug_captureInput(eventPayload)` contract:
+- `sys.debug.captureInput(eventPayload)` contract:
 - args are `(string)`.
-- `sys.debug_captureState(key,valuePayload)` contract:
+- `sys.debug.captureState(key,valuePayload)` contract:
 - args are `(string, string)`.
-- `sys.debug_replayLoad(path)` contract:
+- `sys.debug.replayLoad(path)` contract:
 - args are `(string)` and returns int replay handle.
-- `sys.debug_replayNext(handle)` contract:
+- `sys.debug.replayNext(handle)` contract:
 - args are `(int)` and returns string.
-- `sys.debug_assert(cond,code,message)` contract:
+- `sys.debug.assert(cond,code,message)` contract:
 - args are `(bool, string, string)`.
-- `sys.debug_artifactWrite(path,text)` contract:
+- `sys.debug.artifactWrite(path,text)` contract:
 - args are `(string, string)` and returns bool.
-- `sys.debug_traceAsync(opId,phase,detail)` contract:
+- `sys.debug.traceAsync(opId,phase,detail)` contract:
 - args are `(int, string, string)`.
 
 ## Async Safety Rules
@@ -114,22 +116,20 @@ This file is normative for semantic validation used by `aic check` (default path
 - `sys.*` calls are rejected in compute-only `Par` branches (`VAL169`).
 - Blocking calls are rejected in lifecycle `update` context (`VAL340`).
 - Current blocking target set includes:
-- `sys.net_asyncAwait`
-- `sys.net_accept`
-- `sys.net_tcpAccept`
-- `sys.net_tcpConnect`
-- `sys.net_tcpConnectTls`
-- `sys.net_tcpRead`
-- `sys.net_tcpWrite`
-- `sys.net_udpRecv`
-- `sys.time_sleepMs`
-- `sys.fs_readFile`
-- `sys.fs_readDir`
-- `sys.fs_stat`
-- `sys.console_readLine`
-- `sys.console_readAllStdin`
-- `sys.process_start`
-- `sys.process_wait`
+- `sys.net.async.await`
+- `sys.net.accept`
+- `sys.net.tcp.accept`
+- `sys.net.tcp.connect`
+- `sys.net.tcp.connectTls`
+- `sys.net.tcp.read`
+- `sys.net.tcp.write`
+- `sys.net.udp.recv`
+- `sys.time.sleepMs`
+- `sys.fs.file.read`
+- `sys.fs.dir.list`
+- `sys.fs.path.stat`
+- `sys.console.readLine`
+- `sys.console.readAllStdin`
 - `io.readLine`
 - `io.readAllStdin`
 - `io.readFile`
@@ -142,7 +142,7 @@ This file is normative for semantic validation used by `aic check` (default path
 - Blocking waits in update paths remain invalid (`VAL340` set above), including `httpRequestAwait`.
 - Runtime contract requirements (normative, host-enforced):
 - `*Start` syscalls must not block on operation completion.
-- `sys.net_asyncPoll`/`sys.net_asyncResult*`/`sys.net_asyncError` must be non-blocking.
+- `sys.net.async.poll`/`sys.net.asyncResult*`/`sys.net.async.error` must be non-blocking.
 - Host worker threads may execute effectful work, but VM state mutation is owner-thread only and must occur via deterministic evaluator steps.
 
 ## Contracts for `aic check`
