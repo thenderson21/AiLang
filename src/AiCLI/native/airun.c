@@ -40,6 +40,8 @@ extern int kill(pid_t pid, int sig);
 
 static int join_path(const char* left, const char* right, char* out, size_t out_len);
 static int find_executable_on_path(const char* name, char* out, size_t out_len);
+static int resolve_executable_path(const char* argv0, char* out, size_t out_len);
+static int dirname_of(const char* path, char* out, size_t out_len);
 
 static int ends_with(const char* value, const char* suffix)
 {
@@ -335,10 +337,16 @@ static int resolve_executable_path(const char* argv0, char* out, size_t out_len)
 static int find_executable_on_path(const char* name, char* out, size_t out_len)
 {
 #ifdef _WIN32
-    (void)name;
-    (void)out;
-    (void)out_len;
-    return 0;
+    char full[PATH_MAX];
+    DWORD found;
+    if (name == NULL || out == NULL || out_len == 0U) {
+        return 0;
+    }
+    found = SearchPathA(NULL, name, NULL, (DWORD)sizeof(full), full, NULL);
+    if (found == 0U || found >= (DWORD)sizeof(full)) {
+        return 0;
+    }
+    return snprintf(out, out_len, "%s", full) < (int)out_len;
 #else
     const char* path_env;
     const char* segment;
@@ -420,6 +428,7 @@ static int resolve_input_to_aibc1(const char* input, char* out_path, size_t out_
     char manifest_path[PATH_MAX];
     char manifest_text[8192];
     char project_dir[PATH_MAX];
+    char project_app_aibc1[PATH_MAX];
     char entry_file[PATH_MAX];
     char entry_aos[PATH_MAX];
 
@@ -461,6 +470,11 @@ static int resolve_input_to_aibc1(const char* input, char* out_path, size_t out_
 
     if (!file_exists(manifest_path) || !read_text_file(manifest_path, manifest_text, sizeof(manifest_text))) {
         return 0;
+    }
+
+    if (join_path(project_dir, "app.aibc1", project_app_aibc1, sizeof(project_app_aibc1)) &&
+        file_exists(project_app_aibc1)) {
+        return snprintf(out_path, out_len, "%s", project_app_aibc1) < (int)out_len;
     }
 
     if (!extract_manifest_attr(manifest_text, "entryFile", entry_file, sizeof(entry_file))) {
@@ -798,6 +812,7 @@ static void print_usage(void)
         "\n"
         "Commands:\n"
         "  run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>]\n"
+        "  build <program(.aibc1|.aos|project-dir|project.aiproj)> [--out <dir>]\n"
         "  repl\n"
         "  bench [--iterations <n>] [--human]\n"
         "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>]\n"
@@ -3265,6 +3280,9 @@ typedef struct {
     int app_arg_count;
 } RunTarget;
 
+static int derive_build_out_dir(const char* program_input, char* out_dir, size_t out_dir_len);
+static int build_input_to_aibc1(const char* program_input, const char* out_dir, char* out_app_path, size_t out_app_path_len);
+
 static int parse_run_target(int argc, char** argv, int start_index, RunTarget* out_target)
 {
     int i;
@@ -3356,9 +3374,27 @@ static int handle_run(int argc, char** argv)
 {
     RunTarget target;
     int parse_rc = parse_run_target(argc, argv, 2, &target);
+    char out_dir[PATH_MAX];
+    char app_path[PATH_MAX];
+    int build_rc;
     if (parse_rc != 0) {
         return parse_rc;
     }
+
+    if (target.program_path != NULL &&
+        !ends_with(target.program_path, ".aibc1") &&
+        !ends_with(target.program_path, ".aibundle")) {
+        if (derive_build_out_dir(target.program_path, out_dir, sizeof(out_dir))) {
+            build_rc = build_input_to_aibc1(target.program_path, out_dir, app_path, sizeof(app_path));
+            if (build_rc == 1) {
+                return run_native_aibc1(
+                    app_path,
+                    (const char* const*)&argv[target.app_arg_start],
+                    (size_t)target.app_arg_count);
+            }
+        }
+    }
+
     return run_via_resolved_input(
         target.program_path,
         (const char* const*)&argv[target.app_arg_start],
@@ -3643,6 +3679,107 @@ static int handle_bench(int argc, char** argv)
     return 0;
 }
 
+static int derive_build_out_dir(const char* program_input, char* out_dir, size_t out_dir_len)
+{
+    if (program_input == NULL || out_dir == NULL || out_dir_len == 0U) {
+        return 0;
+    }
+    if (directory_exists(program_input)) {
+        return snprintf(out_dir, out_dir_len, "%s", program_input) < (int)out_dir_len;
+    }
+    if (ends_with(program_input, "project.aiproj") ||
+        ends_with(program_input, ".aos") ||
+        ends_with(program_input, ".aibc1")) {
+        return dirname_of(program_input, out_dir, out_dir_len);
+    }
+    return snprintf(out_dir, out_dir_len, ".") < (int)out_dir_len;
+}
+
+static int build_input_to_aibc1(const char* program_input, const char* out_dir, char* out_app_path, size_t out_app_path_len)
+{
+    char resolved_program[PATH_MAX];
+    char source_aos[PATH_MAX];
+    AivmProgram program;
+
+    if (program_input == NULL || out_dir == NULL || out_app_path == NULL || out_app_path_len == 0U) {
+        return 0;
+    }
+    if (!ensure_directory(out_dir)) {
+        return 0;
+    }
+    if (!join_path(out_dir, "app.aibc1", out_app_path, out_app_path_len)) {
+        return 0;
+    }
+
+    if (resolve_input_to_aibc1(program_input, resolved_program, sizeof(resolved_program))) {
+        if (strcmp(resolved_program, out_app_path) == 0) {
+            return 1;
+        }
+        return copy_file(resolved_program, out_app_path);
+    }
+
+    if (!resolve_input_to_aos(program_input, source_aos, sizeof(source_aos))) {
+        return 0;
+    }
+
+    if (parse_bytecode_aos_to_program_file(source_aos, &program) ||
+        parse_simple_program_aos_to_program_file(source_aos, &program)) {
+        return write_program_as_aibc1(&program, out_app_path) ? 1 : 0;
+    }
+
+    return 0;
+}
+
+static int handle_build(int argc, char** argv)
+{
+    const char* program_input = NULL;
+    const char* out_dir = NULL;
+    char default_out[PATH_MAX];
+    char app_path[PATH_MAX];
+    int i;
+    int build_rc;
+
+    for (i = 2; i < argc; i += 1) {
+        if (strcmp(argv[i], "--out") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Missing --out value.\" nodeId=argv)\n");
+                return 2;
+            }
+            out_dir = argv[++i];
+            continue;
+        }
+        if (program_input == NULL && argv[i][0] != '-') {
+            program_input = argv[i];
+            continue;
+        }
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Unsupported build argument.\" nodeId=argv)\n");
+        return 2;
+    }
+
+    if (program_input == NULL) {
+        program_input = ".";
+    }
+    if (out_dir == NULL) {
+        if (!derive_build_out_dir(program_input, default_out, sizeof(default_out))) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Failed to derive build output directory.\" nodeId=outDir)\n");
+            return 2;
+        }
+        out_dir = default_out;
+    }
+
+    build_rc = build_input_to_aibc1(program_input, out_dir, app_path, sizeof(app_path));
+    if (build_rc == 1) {
+        printf("Ok#ok1(type=string value=\"%s\")\n", app_path);
+        return 0;
+    }
+    fprintf(stderr,
+        "Err#err1(code=RUN001 message=\"Build failed to emit app.aibc1.\" nodeId=build)\n");
+    return 2;
+}
+
 static int handle_publish(int argc, char** argv)
 {
     const char* program_input = NULL;
@@ -3732,11 +3869,12 @@ static int handle_publish(int argc, char** argv)
                         return 2;
                     }
                     resolved_program[0] = '\0';
-                } else if (source_file_looks_like_bytecode_aos(source_aos)) {
-                    fprintf(stderr,
-                        "Err#err1(code=DEV008 message=\"Native publish cannot encode this bytecode AOS shape yet. Build precompiled .aibc1.\" nodeId=program)\n");
-                    return 2;
                 } else {
+                    if (source_file_looks_like_bytecode_aos(source_aos)) {
+                        fprintf(stderr,
+                            "Err#err1(code=DEV008 message=\"Native publish cannot encode this bytecode AOS shape yet. Build precompiled .aibc1.\" nodeId=program)\n");
+                        return 2;
+                    }
                     fprintf(stderr,
                         "Err#err1(code=DEV008 message=\"Publish needs prebuilt .aibc1 unless source is bytecode-style AOS.\" nodeId=program)\n");
                     return 2;
@@ -3861,6 +3999,9 @@ int main(int argc, char** argv)
     }
     if (strcmp(argv[1], "run") == 0) {
         return handle_run(argc, argv);
+    }
+    if (strcmp(argv[1], "build") == 0) {
+        return handle_build(argc, argv);
     }
     if (strcmp(argv[1], "serve") == 0) {
         return handle_serve(argc, argv);
