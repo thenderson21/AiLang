@@ -1123,7 +1123,7 @@ static int emit_wasm_spa_files(const char* out_dir)
            write_text_file(remote_client_path, remote_client_js);
 }
 
-static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_name, const char* server_runtime_bin)
+static int emit_wasm_fullstack_layout(const char* out_dir, const char* server_runtime_bin)
 {
     char client_dir[PATH_MAX];
     char server_dir[PATH_MAX];
@@ -1139,7 +1139,7 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
     char server_app[2048];
     char root_run[4096];
     char root_run_ps1[4096];
-    if (out_dir == NULL || runtime_name == NULL || server_runtime_bin == NULL) {
+    if (out_dir == NULL || server_runtime_bin == NULL) {
         return 0;
     }
     if (!join_path(out_dir, "client", client_dir, sizeof(client_dir)) ||
@@ -1203,20 +1203,14 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
             "#!/usr/bin/env bash\n"
             "set -euo pipefail\n"
             "DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\n"
-            "AIRUN_BIN=\"${AIRUN_BIN:-}\"\n"
-            "if [[ -z \"${AIRUN_BIN}\" ]]; then\n"
-            "  if [[ -x \"${DIR}/server/runtime/%s\" ]]; then AIRUN_BIN=\"${DIR}/server/runtime/%s\";\n"
-            "  elif [[ -x \"${DIR}/../../tools/airun\" ]]; then AIRUN_BIN=\"${DIR}/../../tools/airun\";\n"
-            "  elif [[ -x \"${DIR}/../tools/airun\" ]]; then AIRUN_BIN=\"${DIR}/../tools/airun\";\n"
-            "  else AIRUN_BIN=\"airun\"; fi\n"
-            "fi\n"
-            "if ! command -v \"${AIRUN_BIN}\" >/dev/null 2>&1 && [[ ! -x \"${AIRUN_BIN}\" ]]; then\n"
-            "  echo \"Err#err1(code=RUN001 message=\\\"airun not found; set AIRUN_BIN.\\\" nodeId=publish)\" >&2\n"
+            "APP_BIN=\"${DIR}/%s\"\n"
+            "if [[ ! -x \"${APP_BIN}\" ]]; then\n"
+            "  echo \"Err#err1(code=RUN001 message=\\\"Published app binary missing: %s\\\" nodeId=publish)\" >&2\n"
             "  exit 2\n"
             "fi\n"
-            "echo \"[fullstack] starting AiLang server app: ${DIR}/server/project.aiproj\" >&2\n"
+            "echo \"[fullstack] starting self-contained app binary: ${APP_BIN}\" >&2\n"
             "echo \"[fullstack] app must self-host client assets from ${DIR}/server/www\" >&2\n"
-            "exec \"${AIRUN_BIN}\" run \"${DIR}/server/project.aiproj\" \"$@\"\n",
+            "exec \"${APP_BIN}\" \"$@\"\n",
             server_runtime_bin,
             server_runtime_bin) >= (int)sizeof(root_run)) {
         return 0;
@@ -1226,10 +1220,11 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
             sizeof(root_run_ps1),
             "$ErrorActionPreference = 'Stop'\n"
             "$dir = Split-Path -Parent $MyInvocation.MyCommand.Path\n"
-            "$airun = if ($env:AIRUN_BIN) { $env:AIRUN_BIN } elseif (Test-Path (Join-Path $dir 'server/runtime/%s')) { Join-Path $dir 'server/runtime/%s' } elseif (Test-Path (Join-Path $dir '../../tools/airun.exe')) { Join-Path $dir '../../tools/airun.exe' } elseif (Test-Path (Join-Path $dir '../../tools/airun')) { Join-Path $dir '../../tools/airun' } else { 'airun' }\n"
-            "Write-Host \"[fullstack] starting AiLang server app: $(Join-Path $dir 'server/project.aiproj')\"\n"
+            "$app = Join-Path $dir '%s'\n"
+            "if (-not (Test-Path $app)) { throw \"Err#err1(code=RUN001 message=\\\"Published app binary missing: %s\\\" nodeId=publish)\" }\n"
+            "Write-Host \"[fullstack] starting self-contained app binary: $app\"\n"
             "Write-Host \"[fullstack] app must self-host client assets from $(Join-Path $dir 'server/www')\"\n"
-            "& $airun run (Join-Path $dir 'server/project.aiproj') @args\n",
+            "& $app @args\n",
             server_runtime_bin,
             server_runtime_bin) >= (int)sizeof(root_run_ps1)) {
         return 0;
@@ -4327,8 +4322,11 @@ static int handle_publish(int argc, char** argv)
             char server_runtime_dir[PATH_MAX];
             char fullstack_host_artifact_dir[PATH_MAX];
             char fullstack_host_runtime_bin[64];
+            char fullstack_host_runtime_name[160];
             char fullstack_host_runtime_src[PATH_MAX];
             char fullstack_host_runtime_dst[PATH_MAX];
+            char fullstack_host_runtime_root_dst[PATH_MAX];
+            char fullstack_runtime_app_dst[PATH_MAX];
             wasm_fullstack_host_target[0] = '\0';
             if (wasm_fullstack_host_target_arg != NULL) {
                 if (snprintf(wasm_fullstack_host_target, sizeof(wasm_fullstack_host_target), "%s", wasm_fullstack_host_target_arg) >= (int)sizeof(wasm_fullstack_host_target)) {
@@ -4360,6 +4358,19 @@ static int handle_publish(int argc, char** argv)
                     "Err#err1(code=RUN001 message=\"Unsupported wasm fullstack host target RID.\" nodeId=wasmFullstackHostTarget)\n");
                 return 2;
             }
+            if (strstr(fullstack_host_runtime_bin, ".exe") != NULL) {
+                if (snprintf(fullstack_host_runtime_name, sizeof(fullstack_host_runtime_name), "%s.exe", publish_app_name) >= (int)sizeof(fullstack_host_runtime_name)) {
+                    fprintf(stderr,
+                        "Err#err1(code=RUN001 message=\"Wasm fullstack runtime name overflow.\" nodeId=publish)\n");
+                    return 2;
+                }
+            } else {
+                if (snprintf(fullstack_host_runtime_name, sizeof(fullstack_host_runtime_name), "%s", publish_app_name) >= (int)sizeof(fullstack_host_runtime_name)) {
+                    fprintf(stderr,
+                        "Err#err1(code=RUN001 message=\"Wasm fullstack runtime name overflow.\" nodeId=publish)\n");
+                    return 2;
+                }
+            }
             if (!join_path(out_dir, "client", client_dir, sizeof(client_dir)) ||
                 !ensure_directory(client_dir)) {
                 fprintf(stderr,
@@ -4375,8 +4386,12 @@ static int handle_publish(int argc, char** argv)
                 return 2;
             }
             if (!join_path(fullstack_host_artifact_dir, fullstack_host_runtime_bin, fullstack_host_runtime_src, sizeof(fullstack_host_runtime_src)) ||
-                !join_path(server_runtime_dir, fullstack_host_runtime_bin, fullstack_host_runtime_dst, sizeof(fullstack_host_runtime_dst)) ||
-                !copy_runtime_file(fullstack_host_runtime_src, fullstack_host_runtime_dst)) {
+                !join_path(server_runtime_dir, fullstack_host_runtime_name, fullstack_host_runtime_dst, sizeof(fullstack_host_runtime_dst)) ||
+                !join_path(out_dir, fullstack_host_runtime_name, fullstack_host_runtime_root_dst, sizeof(fullstack_host_runtime_root_dst)) ||
+                !join_path(server_runtime_dir, "app.aibc1", fullstack_runtime_app_dst, sizeof(fullstack_runtime_app_dst)) ||
+                !copy_runtime_file(fullstack_host_runtime_src, fullstack_host_runtime_dst) ||
+                !copy_runtime_file(fullstack_host_runtime_src, fullstack_host_runtime_root_dst) ||
+                !copy_file(app_dst, fullstack_runtime_app_dst)) {
                 fprintf(stderr,
                     "Err#err1(code=RUN001 message=\"Failed to copy wasm fullstack host runtime for target RID. Build target runtime first.\" nodeId=wasmFullstackHostTarget)\n");
                 return 2;
@@ -4389,7 +4404,7 @@ static int handle_publish(int argc, char** argv)
                 !join_path(client_dir, runtime_web_wasm_bin, runtime_web_wasm_dst, sizeof(runtime_web_wasm_dst)) ||
                 !copy_runtime_file(runtime_web_src, runtime_web_dst) ||
                 !copy_runtime_file(runtime_web_wasm_src, runtime_web_wasm_dst) ||
-                !emit_wasm_fullstack_layout(out_dir, publish_runtime_name, fullstack_host_runtime_bin) ||
+                !emit_wasm_fullstack_layout(out_dir, fullstack_host_runtime_name) ||
                 !join_path(out_dir, "server/www", server_www_dir, sizeof(server_www_dir)) ||
                 !join_path(server_www_dir, "app.aibc1", wasm_app_dst, sizeof(wasm_app_dst)) ||
                 !copy_file(app_dst, wasm_app_dst) ||

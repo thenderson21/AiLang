@@ -54,19 +54,20 @@ MANIFEST_HOST_TARGET_ERR="${TMP_DIR}/manifest-host-target.err"
 
 case "$(uname -s)" in
   Darwin)
-    EXPECTED_HOST_RUNTIME_BIN="airun"
+    EXPECTED_HOST_RUNTIME_EXT=""
     ;;
   Linux)
-    EXPECTED_HOST_RUNTIME_BIN="airun"
+    EXPECTED_HOST_RUNTIME_EXT=""
     ;;
   MINGW*|MSYS*|CYGWIN*|Windows_NT)
-    EXPECTED_HOST_RUNTIME_BIN="airun.exe"
+    EXPECTED_HOST_RUNTIME_EXT=".exe"
     ;;
   *)
     echo "unsupported host OS for wasm golden host runtime assertion" >&2
     exit 1
     ;;
 esac
+EXPECTED_FULLSTACK_APP_BIN="vm_c_execute_src_main_params${EXPECTED_HOST_RUNTIME_EXT}"
 
 cd "${ROOT_DIR}"
 export AIVM_REMOTE_CAPS="cap.remote"
@@ -207,8 +208,12 @@ if ! cmp -s "${PUBLISH_FULLSTACK_DIR}/server/www/aivm-runtime-wasm32-web.wasm" "
   echo "wasm profile mismatch: fullstack server/www did not copy web runtime wasm artifact" >&2
   exit 1
 fi
-if [[ ! -f "${PUBLISH_FULLSTACK_DIR}/server/runtime/${EXPECTED_HOST_RUNTIME_BIN}" ]]; then
-  echo "wasm profile mismatch: fullstack publish did not emit server/runtime/${EXPECTED_HOST_RUNTIME_BIN}" >&2
+if [[ ! -f "${PUBLISH_FULLSTACK_DIR}/server/runtime/${EXPECTED_FULLSTACK_APP_BIN}" ]]; then
+  echo "wasm profile mismatch: fullstack publish did not emit server/runtime/${EXPECTED_FULLSTACK_APP_BIN}" >&2
+  exit 1
+fi
+if [[ ! -f "${PUBLISH_FULLSTACK_DIR}/${EXPECTED_FULLSTACK_APP_BIN}" ]]; then
+  echo "wasm profile mismatch: fullstack publish did not emit root app binary ${EXPECTED_FULLSTACK_APP_BIN}" >&2
   exit 1
 fi
 
