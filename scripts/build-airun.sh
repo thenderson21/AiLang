@@ -72,6 +72,8 @@ fi
   "${NATIVE_SRC_DIR}/aivm_parity.c" \
   "${NATIVE_SRC_DIR}/aivm_runtime.c" \
   "${NATIVE_SRC_DIR}/aivm_c_api.c" \
+  "${NATIVE_SRC_DIR}/remote/aivm_remote_channel.c" \
+  "${NATIVE_SRC_DIR}/remote/aivm_remote_session.c" \
   -o "${WRAPPER_PATH}"
 chmod +x "${WRAPPER_PATH}"
 

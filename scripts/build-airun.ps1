@@ -30,7 +30,9 @@ $sources = @(
   (Join-Path $nativeSrc 'sys/aivm_syscall_contracts.c'),
   (Join-Path $nativeSrc 'aivm_parity.c'),
   (Join-Path $nativeSrc 'aivm_runtime.c'),
-  (Join-Path $nativeSrc 'aivm_c_api.c')
+  (Join-Path $nativeSrc 'aivm_c_api.c'),
+  (Join-Path $nativeSrc 'remote/aivm_remote_channel.c'),
+  (Join-Path $nativeSrc 'remote/aivm_remote_session.c')
 )
 
 $clArgs = @('/nologo', '/O2', '/W4', '/WX', '/std:c11', '/D_CRT_SECURE_NO_WARNINGS', "/I$nativeInclude", "/Fe:$wrapperPath") + $sources

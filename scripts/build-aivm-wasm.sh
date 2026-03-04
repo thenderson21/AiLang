@@ -26,6 +26,8 @@ emcc -O2 -std=c17 -Wall -Wextra -Werror \
   "${NATIVE_SRC_DIR}/sys/aivm_syscall_contracts.c" \
   "${NATIVE_SRC_DIR}/aivm_runtime.c" \
   "${NATIVE_SRC_DIR}/aivm_c_api.c" \
+  "${NATIVE_SRC_DIR}/remote/aivm_remote_channel.c" \
+  "${NATIVE_SRC_DIR}/remote/aivm_remote_session.c" \
   -s STANDALONE_WASM=1 \
   -s FILESYSTEM=1 \
   -s STACK_SIZE=262144 \
@@ -42,6 +44,8 @@ emcc -O2 -std=c17 -Wall -Wextra -Werror \
   "${NATIVE_SRC_DIR}/sys/aivm_syscall_contracts.c" \
   "${NATIVE_SRC_DIR}/aivm_runtime.c" \
   "${NATIVE_SRC_DIR}/aivm_c_api.c" \
+  "${NATIVE_SRC_DIR}/remote/aivm_remote_channel.c" \
+  "${NATIVE_SRC_DIR}/remote/aivm_remote_session.c" \
   -s MODULARIZE=1 \
   -s EXPORT_ES6=1 \
   -s ENVIRONMENT=web \

@@ -37,6 +37,8 @@ extern int kill(pid_t pid, int sig);
 #endif
 
 #include "aivm_c_api.h"
+#include "remote/aivm_remote_channel.h"
+#include "remote/aivm_remote_session.h"
 
 static int join_path(const char* left, const char* right, char* out, size_t out_len);
 static int find_executable_on_path(const char* name, char* out, size_t out_len);
@@ -1800,31 +1802,48 @@ static int native_syscall_process_stream_read(
 #endif
 }
 
-static int remote_cap_granted(const char* cap)
+static AivmRemoteServerConfig g_remote_server_config;
+static AivmRemoteServerSession g_remote_server_session;
+static uint32_t g_remote_next_request_id = 1U;
+static int g_remote_session_ready = 0;
+
+static int remote_parse_caps_csv(
+    const char* csv,
+    char out_caps[AIVM_REMOTE_MAX_CAPS][AIVM_REMOTE_MAX_TEXT + 1],
+    uint32_t* out_count)
 {
-    const char* caps_env;
     const char* cursor;
-    size_t cap_len;
-    if (cap == NULL) {
+    uint32_t count = 0U;
+    if (out_caps == NULL || out_count == NULL) {
         return 0;
     }
-    caps_env = getenv("AIVM_REMOTE_CAPS");
-    if (caps_env == NULL || *caps_env == '\0') {
-        return 0;
+    if (csv == NULL || *csv == '\0') {
+        *out_count = 0U;
+        return 1;
     }
-    cap_len = strlen(cap);
-    cursor = caps_env;
+    cursor = csv;
     while (*cursor != '\0') {
         const char* end = cursor;
+        size_t len;
+        if (count >= AIVM_REMOTE_MAX_CAPS) {
+            return 0;
+        }
         while (*end != '\0' && *end != ',') {
             end += 1;
         }
-        if ((size_t)(end - cursor) == cap_len && strncmp(cursor, cap, cap_len) == 0) {
-            return 1;
+        len = (size_t)(end - cursor);
+        if (len > AIVM_REMOTE_MAX_TEXT) {
+            return 0;
+        }
+        if (len > 0U) {
+            memcpy(out_caps[count], cursor, len);
+            out_caps[count][len] = '\0';
+            count += 1U;
         }
         cursor = (*end == ',') ? (end + 1) : end;
     }
-    return 0;
+    *out_count = count;
+    return 1;
 }
 
 static int remote_token_authorized(void)
@@ -1845,6 +1864,161 @@ static int remote_token_authorized(void)
         return 0;
     }
     return strcmp(expected, provided) == 0;
+}
+
+static int remote_session_ensure_ready(void)
+{
+    uint8_t request_bytes[1024];
+    uint8_t response_bytes[1024];
+    size_t request_len = 0U;
+    size_t response_len = 0U;
+    AivmRemoteHello hello;
+    AivmRemoteWelcome welcome;
+    uint32_t response_id = 0U;
+    AivmRemoteCodecStatus codec_status;
+    AivmRemoteSessionStatus session_status;
+    uint32_t i;
+    const char* caps_env;
+
+    if (g_remote_session_ready) {
+        return 1;
+    }
+
+    memset(&g_remote_server_config, 0, sizeof(g_remote_server_config));
+    g_remote_server_config.proto_version = 1U;
+    caps_env = getenv("AIVM_REMOTE_CAPS");
+    if (!remote_parse_caps_csv(
+            caps_env,
+            g_remote_server_config.allowed_caps,
+            &g_remote_server_config.allowed_caps_count)) {
+        return 0;
+    }
+
+    aivm_remote_server_session_init(&g_remote_server_session);
+    memset(&hello, 0, sizeof(hello));
+    hello.proto_version = 1U;
+    (void)snprintf(hello.client_name, sizeof(hello.client_name), "%s", "airun-native");
+    hello.requested_caps_count = g_remote_server_config.allowed_caps_count;
+    for (i = 0U; i < hello.requested_caps_count; i += 1U) {
+        (void)snprintf(
+            hello.requested_caps[i],
+            sizeof(hello.requested_caps[i]),
+            "%s",
+            g_remote_server_config.allowed_caps[i]);
+    }
+
+    codec_status = aivm_remote_encode_hello(
+        1U,
+        &hello,
+        request_bytes,
+        sizeof(request_bytes),
+        &request_len);
+    if (codec_status != AIVM_REMOTE_CODEC_OK) {
+        return 0;
+    }
+    session_status = aivm_remote_server_process_frame(
+        &g_remote_server_config,
+        &g_remote_server_session,
+        request_bytes,
+        request_len,
+        response_bytes,
+        sizeof(response_bytes),
+        &response_len);
+    if (session_status != AIVM_REMOTE_SESSION_OK) {
+        return 0;
+    }
+    memset(&welcome, 0, sizeof(welcome));
+    codec_status = aivm_remote_decode_welcome(
+        response_bytes,
+        response_len,
+        &response_id,
+        &welcome);
+    if (codec_status != AIVM_REMOTE_CODEC_OK || response_id != 1U) {
+        return 0;
+    }
+    g_remote_session_ready = 1;
+    return 1;
+}
+
+static int remote_session_invoke_call(
+    const char* cap,
+    const char* op,
+    int64_t value,
+    AivmValue* result)
+{
+    uint8_t request_bytes[1024];
+    uint8_t response_bytes[1024];
+    size_t request_len = 0U;
+    size_t response_len = 0U;
+    uint32_t request_id;
+    uint32_t response_id = 0U;
+    AivmRemoteCall call;
+    AivmRemoteResult call_result;
+    AivmRemoteError call_error;
+    AivmRemoteCodecStatus codec_status;
+    AivmRemoteSessionStatus session_status;
+
+    if (cap == NULL || op == NULL || result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (!remote_session_ensure_ready()) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
+    }
+
+    memset(&call, 0, sizeof(call));
+    (void)snprintf(call.cap, sizeof(call.cap), "%s", cap);
+    (void)snprintf(call.op, sizeof(call.op), "%s", op);
+    call.value = value;
+    request_id = g_remote_next_request_id++;
+    if (g_remote_next_request_id == 0U) {
+        g_remote_next_request_id = 1U;
+    }
+
+    codec_status = aivm_remote_encode_call(
+        request_id,
+        &call,
+        request_bytes,
+        sizeof(request_bytes),
+        &request_len);
+    if (codec_status != AIVM_REMOTE_CODEC_OK) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    session_status = aivm_remote_server_process_frame(
+        &g_remote_server_config,
+        &g_remote_server_session,
+        request_bytes,
+        request_len,
+        response_bytes,
+        sizeof(response_bytes),
+        &response_len);
+    if (session_status != AIVM_REMOTE_SESSION_OK) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
+    }
+
+    codec_status = aivm_remote_decode_result(
+        response_bytes,
+        response_len,
+        &response_id,
+        &call_result);
+    if (codec_status == AIVM_REMOTE_CODEC_OK && response_id == request_id) {
+        *result = aivm_value_int(call_result.value);
+        return AIVM_SYSCALL_OK;
+    }
+    codec_status = aivm_remote_decode_error(
+        response_bytes,
+        response_len,
+        &response_id,
+        &call_error);
+    if (codec_status == AIVM_REMOTE_CODEC_OK && response_id == request_id) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
+    }
+
+    result->type = AIVM_VAL_VOID;
+    return AIVM_SYSCALL_ERR_INVALID;
 }
 
 static int native_syscall_remote_call(
@@ -1879,16 +2053,7 @@ static int native_syscall_remote_call(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_NOT_FOUND;
     }
-    if (!remote_cap_granted(cap)) {
-        result->type = AIVM_VAL_VOID;
-        return AIVM_SYSCALL_ERR_NOT_FOUND;
-    }
-    if (strcmp(cap, "cap.remote") == 0 && strcmp(op, "echoInt") == 0) {
-        *result = aivm_value_int(args[2].int_value);
-        return AIVM_SYSCALL_OK;
-    }
-    result->type = AIVM_VAL_VOID;
-    return AIVM_SYSCALL_ERR_NOT_FOUND;
+    return remote_session_invoke_call(cap, op, args[2].int_value, result);
 }
 
 static int native_syscall_process_stdout_read(
