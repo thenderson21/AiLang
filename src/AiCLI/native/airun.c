@@ -1234,59 +1234,54 @@ static int wasm_syscall_unavailable_for_profile(const char* profile, const char*
                strcmp(target, "sys.process.stderr.read") == 0 ||
                strcmp(target, "sys.process.poll") == 0;
     }
-    return 0;
-}
-
-static int program_uses_syscall_target(const AivmProgram* program, const char* target)
-{
-    size_t i;
-    if (program == NULL || target == NULL) {
-        return 0;
-    }
-    for (i = 0U; i < program->instruction_count; i += 1U) {
-        const AivmInstruction* inst = &program->instructions[i];
-        size_t slot;
-        if (inst->opcode != AIVM_OP_CALL_SYS && inst->opcode != AIVM_OP_ASYNC_CALL_SYS) {
-            continue;
-        }
-        if (inst->operand_int < 0) {
-            continue;
-        }
-        slot = (size_t)inst->operand_int;
-        if (slot >= program->constant_count) {
-            continue;
-        }
-        if (program->constants[slot].type != AIVM_VAL_STRING || program->constants[slot].string_value == NULL) {
-            continue;
-        }
-        if (strcmp(program->constants[slot].string_value, target) == 0) {
-            return 1;
-        }
+    if (strcmp(profile, "spa") == 0 || strcmp(profile, "fullstack") == 0) {
+        return strcmp(target, "sys.process.spawn") == 0 ||
+               strcmp(target, "sys.process.wait") == 0 ||
+               strcmp(target, "sys.process.kill") == 0 ||
+               strcmp(target, "sys.process.stdout.read") == 0 ||
+               strcmp(target, "sys.process.stderr.read") == 0 ||
+               strcmp(target, "sys.process.poll") == 0 ||
+               strncmp(target, "sys.net.", 8U) == 0 ||
+               strncmp(target, "sys.fs.", 7U) == 0;
     }
     return 0;
 }
 
 static void emit_wasm_profile_warnings(const char* profile, const AivmProgram* program)
 {
-    static const char* cli_targets[] = {
-        "sys.process.spawn",
-        "sys.process.wait",
-        "sys.process.kill",
-        "sys.process.stdout.read",
-        "sys.process.stderr.read",
-        "sys.process.poll"
-    };
     size_t i;
     if (profile == NULL || program == NULL) {
         return;
     }
-    if (strcmp(profile, "cli") != 0) {
-        return;
-    }
-    for (i = 0U; i < (sizeof(cli_targets) / sizeof(cli_targets[0])); i += 1U) {
-        const char* target = cli_targets[i];
-        if (wasm_syscall_unavailable_for_profile(profile, target) &&
-            program_uses_syscall_target(program, target)) {
+    for (i = 0U; i < program->constant_count; i += 1U) {
+        const char* target = NULL;
+        size_t j;
+        int already_reported = 0;
+        if (program->constants[i].type != AIVM_VAL_STRING || program->constants[i].string_value == NULL) {
+            continue;
+        }
+        target = program->constants[i].string_value;
+        if (strncmp(target, "sys.", 4U) != 0) {
+            continue;
+        }
+        if (!wasm_syscall_unavailable_for_profile(profile, target)) {
+            continue;
+        }
+        for (j = 0U; j < i; j += 1U) {
+            const char* prior_target;
+            if (program->constants[j].type != AIVM_VAL_STRING || program->constants[j].string_value == NULL) {
+                continue;
+            }
+            prior_target = program->constants[j].string_value;
+            if (strncmp(prior_target, "sys.", 4U) != 0) {
+                continue;
+            }
+            if (strcmp(prior_target, target) == 0) {
+                already_reported = 1;
+                break;
+            }
+        }
+        if (!already_reported) {
             fprintf(
                 stderr,
                 "Warn#warn1(code=WASM001 message=\"%s is not available on wasm profile '%s'; runtime will raise RUN101 if executed.\" nodeId=publish)\n",

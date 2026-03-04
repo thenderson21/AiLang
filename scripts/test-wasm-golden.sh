@@ -53,6 +53,8 @@ NATIVE_OUT="${TMP_DIR}/native.out"
 WASM_OUT="${TMP_DIR}/wasm.out"
 PROCESS_OUT="${TMP_DIR}/process.out"
 PROCESS_ERR="${TMP_DIR}/process.err"
+PROCESS_SPA_WARN="${TMP_DIR}/process-spa.warn"
+PROCESS_FULLSTACK_WARN="${TMP_DIR}/process-fullstack.warn"
 MANIFEST_HOST_TARGET_DIR="${TMP_DIR}/manifest-host-target"
 MANIFEST_HOST_TARGET_ERR="${TMP_DIR}/manifest-host-target.err"
 
@@ -215,6 +217,8 @@ done
 ./tools/airun publish "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --target wasm32 --wasm-profile spa --out "${PUBLISH_SPA_DIR}" >/dev/null
 ./tools/airun publish "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --target wasm32 --wasm-profile fullstack --out "${PUBLISH_FULLSTACK_DIR}" >/dev/null
 ./tools/airun publish "${PROCESS_CASE}" --target wasm32 --wasm-profile cli --out "${PUBLISH_PROCESS_CLI_DIR}" >"${PROCESS_OUT}" 2>"${PROCESS_ERR}"
+./tools/airun publish "${PROCESS_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/process-spa" >/dev/null 2>"${PROCESS_SPA_WARN}"
+./tools/airun publish "${PROCESS_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/process-fullstack" >/dev/null 2>"${PROCESS_FULLSTACK_WARN}"
 echo "wasm golden corpus: PASS (${#CASES[@]} cases)"
 echo "wasm bytecode-only corpus: PASS (${#BYTECODE_ONLY_CASES[@]} cases)"
 echo "wasm stdin EOF corpus: PASS (${#WASM_STDIN_EOF_CASES[@]} cases)"
@@ -342,6 +346,14 @@ if [[ ${process_rc} -ne 3 ]]; then
 fi
 if ! rg -q 'Err#err1\(code=RUN001 message="' "${PROCESS_OUT}"; then
   echo "wasm cli unsupported-capability mismatch: expected RUN001 wrapper code for failed syscall execution" >&2
+  exit 1
+fi
+if ! rg -Fq "Warn#warn1(code=WASM001 message=\"sys.process.spawn is not available on wasm profile 'spa'" "${PROCESS_SPA_WARN}"; then
+  echo "wasm spa warning mismatch: expected WASM001 warning for sys.process.spawn" >&2
+  exit 1
+fi
+if ! rg -Fq "Warn#warn1(code=WASM001 message=\"sys.process.spawn is not available on wasm profile 'fullstack'" "${PROCESS_FULLSTACK_WARN}"; then
+  echo "wasm fullstack warning mismatch: expected WASM001 warning for sys.process.spawn" >&2
   exit 1
 fi
 
