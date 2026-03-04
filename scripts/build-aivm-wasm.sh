@@ -49,6 +49,7 @@ emcc -O2 -std=c17 -Wall -Wextra -Werror \
   -s MODULARIZE=1 \
   -s EXPORT_ES6=1 \
   -s ENVIRONMENT=web \
+  -s INVOKE_RUN=0 \
   -s EXPORTED_RUNTIME_METHODS=FS,callMain \
   -s ASYNCIFY \
   -s STACK_SIZE=262144 \
