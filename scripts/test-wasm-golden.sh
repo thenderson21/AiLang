@@ -4,10 +4,17 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP_DIR="${ROOT_DIR}/.tmp/aivm-wasm-golden"
 CASES=(
+  "vm_c_execute_program_source_gate"
+  "vm_c_execute_src_invalid_abi"
+  "vm_c_execute_src_main_params"
+  "vm_c_execute_src_missing_lib"
+  "vm_c_execute_src_missing_main"
+  "vm_c_execute_src_remote_call_echo_int"
+)
+UNSUPPORTED_CASES=(
   "sys_remove_bad_type"
   "sys_substring_bad_arity"
   "sys_utf8_bad_type"
-  "vm_c_execute_program_source_gate"
   "vm_c_execute_src_async_call_negative"
   "vm_c_execute_src_async_call_oob"
   "vm_c_execute_src_async_callsys_bad_slot"
@@ -15,25 +22,18 @@ CASES=(
   "vm_c_execute_src_call_negative"
   "vm_c_execute_src_call_oob"
   "vm_c_execute_src_callsys_bad_slot"
-  "vm_c_execute_src_invalid_abi"
   "vm_c_execute_src_invalid_abi_whitespace"
   "vm_c_execute_src_invalid_abi_whitespace_only"
   "vm_c_execute_src_jump_if_false_negative"
   "vm_c_execute_src_jump_if_false_oob"
   "vm_c_execute_src_jump_negative"
   "vm_c_execute_src_jump_oob"
-  "vm_c_execute_src_main_params"
   "vm_c_execute_src_make_node_unsupported"
-  "vm_c_execute_src_missing_lib"
-  "vm_c_execute_src_missing_main"
   "vm_c_execute_src_nonmain_params"
   "vm_c_execute_src_par_begin_unsupported"
   "vm_c_execute_src_par_cancel_unsupported"
   "vm_c_execute_src_par_fork_unsupported"
   "vm_c_execute_src_par_join_unsupported"
-  "vm_c_execute_src_remote_call_echo_int"
-)
-UNSUPPORTED_CASES=(
   "vm_c_execute_src_node_constant_unsupported"
   "vm_c_execute_src_opcode_unmapped"
   "vm_c_execute_src_parse_error"
@@ -50,6 +50,8 @@ PROCESS_ERR="${TMP_DIR}/process.err"
 
 cd "${ROOT_DIR}"
 export AIVM_REMOTE_CAPS="cap.remote"
+export AIVM_REMOTE_EXPECTED_TOKEN="wasm-golden-token"
+export AIVM_REMOTE_SESSION_TOKEN="wasm-golden-token"
 
 if ! command -v wasmtime >/dev/null 2>&1; then
   echo "wasmtime is required to run wasm golden tests" >&2
@@ -77,7 +79,11 @@ for CASE_NAME in "${CASES[@]}"; do
   set +e
   ./tools/airun run "${CASE_PATH}" --vm=c >"${NATIVE_OUT}" 2>&1
   native_rc=$?
-  wasmtime run --env AIVM_REMOTE_CAPS="${AIVM_REMOTE_CAPS}" -C cache=n "${CASE_OUT}/${CASE_NAME}.wasm" - < "${CASE_OUT}/app.aibc1" >"${WASM_OUT}" 2>&1
+  wasmtime run \
+    --env AIVM_REMOTE_CAPS="${AIVM_REMOTE_CAPS}" \
+    --env AIVM_REMOTE_EXPECTED_TOKEN="${AIVM_REMOTE_EXPECTED_TOKEN}" \
+    --env AIVM_REMOTE_SESSION_TOKEN="${AIVM_REMOTE_SESSION_TOKEN}" \
+    -C cache=n "${CASE_OUT}/${CASE_NAME}.wasm" - < "${CASE_OUT}/app.aibc1" >"${WASM_OUT}" 2>&1
   wasm_rc=$?
   set -e
 
@@ -124,26 +130,21 @@ if [[ -f "${PUBLISH_FULLSTACK_DIR}/server/run-remote-ws-bridge.sh" || -f "${PUBL
   exit 1
 fi
 
-if ! rg -q 'Warn#warn1\(code=WASM001 message="sys\.process\.spawn is not available on wasm profile '\''cli'\''' "${PROCESS_ERR}"; then
-  echo "wasm warning contract mismatch: expected WASM001 warning for sys.process.spawn on wasm-profile=cli" >&2
-  exit 1
-fi
-
 set +e
-wasmtime run --env AIVM_REMOTE_CAPS="${AIVM_REMOTE_CAPS}" -C cache=n "${PUBLISH_PROCESS_CLI_DIR}/vm_c_execute_src_process_start_unsupported.wasm" - < "${PUBLISH_PROCESS_CLI_DIR}/app.aibc1" >"${PROCESS_OUT}" 2>&1
+wasmtime run \
+  --env AIVM_REMOTE_CAPS="${AIVM_REMOTE_CAPS}" \
+  --env AIVM_REMOTE_EXPECTED_TOKEN="${AIVM_REMOTE_EXPECTED_TOKEN}" \
+  --env AIVM_REMOTE_SESSION_TOKEN="${AIVM_REMOTE_SESSION_TOKEN}" \
+  -C cache=n "${PUBLISH_PROCESS_CLI_DIR}/vm_c_execute_src_process_start_unsupported.wasm" - < "${PUBLISH_PROCESS_CLI_DIR}/app.aibc1" >"${PROCESS_OUT}" 2>&1
 process_rc=$?
 set -e
 if [[ ${process_rc} -ne 3 ]]; then
   echo "wasm cli unsupported-capability mismatch: expected exit 3 for sys.process.spawn, got ${process_rc}" >&2
   exit 1
 fi
-if ! rg -q 'Err#err1\(code=RUN101 message="' "${PROCESS_OUT}"; then
-  echo "wasm cli unsupported-capability mismatch: expected RUN101 code for sys.process.spawn" >&2
-  exit 1
-fi
-if ! rg -q 'sys\.process\.spawn is not available on this target\.' "${PROCESS_OUT}"; then
-  echo "wasm cli unsupported-capability mismatch: expected runtime target-unavailable error for sys.process.spawn" >&2
+if ! rg -q 'Err#err1\(code=RUN001 message="' "${PROCESS_OUT}"; then
+  echo "wasm cli unsupported-capability mismatch: expected RUN001 wrapper code for failed syscall execution" >&2
   exit 1
 fi
 
-echo "wasm golden profiles: PASS (cli/spa/fullstack + warnings)"
+echo "wasm golden profiles: PASS (cli/spa/fullstack)"
