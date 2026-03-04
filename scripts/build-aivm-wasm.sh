@@ -22,8 +22,8 @@ emcc -O2 -std=c17 -Wall -Wextra -Werror \
   "${NATIVE_SRC_DIR}/aivm_types.c" \
   "${NATIVE_SRC_DIR}/aivm_vm.c" \
   "${NATIVE_SRC_DIR}/aivm_program.c" \
-  "${NATIVE_SRC_DIR}/aivm_syscall.c" \
-  "${NATIVE_SRC_DIR}/aivm_syscall_contracts.c" \
+  "${NATIVE_SRC_DIR}/sys/aivm_syscall.c" \
+  "${NATIVE_SRC_DIR}/sys/aivm_syscall_contracts.c" \
   "${NATIVE_SRC_DIR}/aivm_runtime.c" \
   "${NATIVE_SRC_DIR}/aivm_c_api.c" \
   -s STANDALONE_WASM=1 \
@@ -38,8 +38,8 @@ emcc -O2 -std=c17 -Wall -Wextra -Werror \
   "${NATIVE_SRC_DIR}/aivm_types.c" \
   "${NATIVE_SRC_DIR}/aivm_vm.c" \
   "${NATIVE_SRC_DIR}/aivm_program.c" \
-  "${NATIVE_SRC_DIR}/aivm_syscall.c" \
-  "${NATIVE_SRC_DIR}/aivm_syscall_contracts.c" \
+  "${NATIVE_SRC_DIR}/sys/aivm_syscall.c" \
+  "${NATIVE_SRC_DIR}/sys/aivm_syscall_contracts.c" \
   "${NATIVE_SRC_DIR}/aivm_runtime.c" \
   "${NATIVE_SRC_DIR}/aivm_c_api.c" \
   -s MODULARIZE=1 \

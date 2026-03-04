@@ -117,8 +117,8 @@ if [[ ! -f "${PUBLISH_FULLSTACK_DIR}/client/index.html" || ! -f "${PUBLISH_FULLS
   exit 1
 fi
 
-if ! rg -q 'Warn#warn1\(code=WASM001 message="sys\.process_start is not available on wasm profile '\''cli'\''' "${PROCESS_ERR}"; then
-  echo "wasm warning contract mismatch: expected WASM001 warning for sys.process_start on wasm-profile=cli" >&2
+if ! rg -q 'Warn#warn1\(code=WASM001 message="sys\.process\.spawn is not available on wasm profile '\''cli'\''' "${PROCESS_ERR}"; then
+  echo "wasm warning contract mismatch: expected WASM001 warning for sys.process.spawn on wasm-profile=cli" >&2
   exit 1
 fi
 
@@ -127,15 +127,15 @@ wasmtime run -C cache=n "${PUBLISH_PROCESS_CLI_DIR}/vm_c_execute_src_process_sta
 process_rc=$?
 set -e
 if [[ ${process_rc} -ne 3 ]]; then
-  echo "wasm cli unsupported-capability mismatch: expected exit 3 for sys.process_start, got ${process_rc}" >&2
+  echo "wasm cli unsupported-capability mismatch: expected exit 3 for sys.process.spawn, got ${process_rc}" >&2
   exit 1
 fi
 if ! rg -q 'Err#err1\(code=RUN101 message="' "${PROCESS_OUT}"; then
-  echo "wasm cli unsupported-capability mismatch: expected RUN101 code for sys.process_start" >&2
+  echo "wasm cli unsupported-capability mismatch: expected RUN101 code for sys.process.spawn" >&2
   exit 1
 fi
-if ! rg -q 'sys\.process_start is not available on this target\.' "${PROCESS_OUT}"; then
-  echo "wasm cli unsupported-capability mismatch: expected runtime target-unavailable error for sys.process_start" >&2
+if ! rg -q 'sys\.process\.spawn is not available on this target\.' "${PROCESS_OUT}"; then
+  echo "wasm cli unsupported-capability mismatch: expected runtime target-unavailable error for sys.process.spawn" >&2
   exit 1
 fi
 

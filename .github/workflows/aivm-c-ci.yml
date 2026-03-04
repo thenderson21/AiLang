@@ -57,9 +57,9 @@ jobs:
         if: runner.os != 'Windows'
         run: ./scripts/test-aivm-c.sh
 
-      - name: Verify process host lifecycle test (Unix)
+      - name: Verify bytes host syscall test (Unix)
         if: runner.os != 'Windows'
-        run: ctest --test-dir .tmp/aivm-c-build-native -R aivm_test_process_host --output-on-failure
+        run: ctest --test-dir .tmp/aivm-c-build-native -R aivm_test_bytes_host --output-on-failure
 
       - name: Perf smoke (Linux)
         if: runner.os == 'Linux'
@@ -77,11 +77,11 @@ jobs:
         run: |
           ./scripts/test-aivm-c.ps1
 
-      - name: Verify process host lifecycle test (Windows)
+      - name: Verify bytes host syscall test (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          ctest --test-dir .tmp/aivm-c-build-native -R aivm_test_process_host --output-on-failure
+          ctest --test-dir .tmp/aivm-c-build-native -R aivm_test_bytes_host --output-on-failure
 
       - name: Upload parity report
         if: always()
