@@ -112,12 +112,151 @@ contains_fixed() {
   fi
 }
 
+run_web_runtime_js_mode_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ "${label}" == "fullstack" ]]; then
+    app_fetch_path="./app.aibc1"
+  fi
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for runtime execution check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for runtime execution check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: {
+      writeFile(path, bytes) {
+        globalThis.__aivmWriteFile = { path, size: bytes.length };
+      }
+    },
+    print: null,
+    printErr: null,
+    callMain(argv) {
+      globalThis.__aivmCallMainArgv = argv.slice();
+      if (typeof this.print === "function") {
+        this.print("main-ok");
+      }
+      if (typeof this.printErr === "function") {
+        this.printErr("main-err");
+      }
+    }
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm check missing required environment values');
+}
+
+const logs = [];
+const errs = [];
+const remoteCalls = [];
+
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = {
+  log(value) { logs.push(String(value)); },
+  error(value) { errs.push(String(value)); }
+};
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) {
+    throw new Error(`unexpected fetch path: ${String(url)}`);
+  }
+  return {
+    async arrayBuffer() {
+      return new Uint8Array([0x41, 0x69, 0x42, 0x43, 0x31]).buffer;
+    }
+  };
+};
+globalThis.AIVM_REMOTE_MODE = 'js';
+globalThis.AiLang = {
+  remote: {
+    async call(cap, op, value) {
+      remoteCalls.push({ cap, op, value });
+      return 1337;
+    }
+  }
+};
+
+await import(pathToFileURL(mainJsPath).href);
+
+if (!globalThis.AiLang || !globalThis.AiLang.stdin) {
+  throw new Error('AiLang stdin bridge missing after web bootstrap');
+}
+globalThis.AiLang.stdin.push('first');
+globalThis.AiLang.stdin.push('second');
+if (globalThis.__aivmStdinRead() !== 'first') {
+  throw new Error('stdin FIFO mismatch at first value');
+}
+if (globalThis.__aivmStdinRead() !== 'second') {
+  throw new Error('stdin FIFO mismatch at second value');
+}
+if (globalThis.__aivmStdinRead() !== '') {
+  throw new Error('stdin open-empty must yield empty string');
+}
+globalThis.AiLang.stdin.close();
+if (globalThis.__aivmStdinRead() !== null) {
+  throw new Error('stdin closed-empty must yield null');
+}
+
+const remoteResult = await globalThis.__aivmRemoteCall('cap.remote', 'echo', 42);
+if (remoteResult !== 1337) {
+  throw new Error(`remote call result mismatch: ${String(remoteResult)}`);
+}
+if (remoteCalls.length !== 1 ||
+    remoteCalls[0].cap !== 'cap.remote' ||
+    remoteCalls[0].op !== 'echo' ||
+    remoteCalls[0].value !== 42) {
+  throw new Error('remote call wiring mismatch in js mode');
+}
+
+if (!globalThis.__aivmWriteFile ||
+    globalThis.__aivmWriteFile.path !== '/app.aibc1' ||
+    globalThis.__aivmWriteFile.size <= 0) {
+  throw new Error('runtime writeFile wiring mismatch');
+}
+if (!globalThis.__aivmCallMainArgv ||
+    globalThis.__aivmCallMainArgv.length !== 1 ||
+    globalThis.__aivmCallMainArgv[0] !== '/app.aibc1') {
+  throw new Error('runtime callMain argv mismatch');
+}
+if (!logs.includes('main-ok')) {
+  throw new Error('runtime print mirror mismatch');
+}
+if (!errs.includes('main-err')) {
+  throw new Error('runtime printErr mirror mismatch');
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
 if ! command -v wasmtime >/dev/null 2>&1; then
   echo "wasmtime is required to run wasm golden tests" >&2
   exit 1
 fi
 if ! command -v emcc >/dev/null 2>&1; then
   echo "emcc is required to build wasm runtime artifact for golden tests" >&2
+  exit 1
+fi
+if ! command -v node >/dev/null 2>&1; then
+  echo "node is required to run web runtime wasm profile checks" >&2
   exit 1
 fi
 
@@ -349,6 +488,9 @@ if [[ -f "${PUBLISH_FULLSTACK_DIR}/run" || -f "${PUBLISH_FULLSTACK_DIR}/run.ps1"
   echo "wasm profile mismatch: fullstack publish must not emit legacy root run launchers" >&2
   exit 1
 fi
+
+run_web_runtime_js_mode_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_js_mode_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
 
 mkdir -p "${MANIFEST_HOST_TARGET_DIR}/src"
 cp "${PUBLISH_FULLSTACK_DIR}/app.aibc1" "${MANIFEST_HOST_TARGET_DIR}/src/app.aibc1"
