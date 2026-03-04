@@ -185,6 +185,7 @@ Rebuild `tools/airun` (native C, host platform):
   - `cli`: emits `run.sh` + `run.ps1` launcher files.
   - `fullstack`: emits root app binary + `www/` web package (`index.html`, `main.js`, `remote-client.js`, `app.aibc1`, wasm runtime artifacts).
     - bundles host runtime as root app binary (default host RID, override with `--wasm-fullstack-host-target <rid>`).
+    - running `./<appname>` starts native static hosting for `www/` on `http://localhost:8080` (set `PORT` to override).
     - emits a self-contained root app binary (`./<appname>` or `.<\\appname>.exe`) for published-package execution.
     - project manifest override: `publishWasmFullstackHostTarget="<rid>"`.
     - AiLang app must self-host `www/` assets.

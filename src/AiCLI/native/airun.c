@@ -9,6 +9,8 @@
 #include <direct.h>
 #include <io.h>
 #include <process.h>
+#include <winsock2.h>
+#include <ws2tcpip.h>
 #include <sys/stat.h>
 #include <windows.h>
 #ifndef PATH_MAX
@@ -17,9 +19,12 @@
 #define AIVM_PATH_SEP '\\'
 #define AIVM_EXE_EXT ".exe"
 #else
+#include <arpa/inet.h>
 #include <dirent.h>
 #include <fcntl.h>
+#include <netinet/in.h>
 #include <signal.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -44,6 +49,17 @@ static int join_path(const char* left, const char* right, char* out, size_t out_
 static int find_executable_on_path(const char* name, char* out, size_t out_len);
 static int write_text_file(const char* path, const char* text);
 static int remove_file_if_exists(const char* path);
+static int run_native_fullstack_server(const char* www_dir);
+
+#ifdef _WIN32
+typedef SOCKET NativeSocket;
+#define NATIVE_INVALID_SOCKET INVALID_SOCKET
+#define native_socket_close closesocket
+#else
+typedef int NativeSocket;
+#define NATIVE_INVALID_SOCKET (-1)
+#define native_socket_close close
+#endif
 
 static int ends_with(const char* value, const char* suffix)
 {
@@ -170,6 +186,272 @@ static int remove_file_if_exists(const char* path)
         return 1;
     }
     return remove(path) == 0;
+}
+
+static volatile int g_fullstack_stop = 0;
+
+#ifdef _WIN32
+static BOOL WINAPI fullstack_ctrl_handler(DWORD ctrl_type)
+{
+    if (ctrl_type == CTRL_C_EVENT || ctrl_type == CTRL_BREAK_EVENT || ctrl_type == CTRL_CLOSE_EVENT) {
+        g_fullstack_stop = 1;
+        return TRUE;
+    }
+    return FALSE;
+}
+#else
+static void fullstack_signal_handler(int signo)
+{
+    (void)signo;
+    g_fullstack_stop = 1;
+}
+#endif
+
+static int native_send_all(NativeSocket fd, const char* bytes, size_t length)
+{
+    size_t sent = 0U;
+    while (sent < length) {
+#ifdef _WIN32
+        int n = send(fd, bytes + sent, (int)(length - sent), 0);
+#else
+        ssize_t n = send(fd, bytes + sent, length - sent, 0);
+#endif
+        if (n <= 0) {
+            return 0;
+        }
+        sent += (size_t)n;
+    }
+    return 1;
+}
+
+static const char* fullstack_mime_type(const char* path)
+{
+    if (path == NULL) {
+        return "application/octet-stream";
+    }
+    if (ends_with(path, ".html")) {
+        return "text/html; charset=utf-8";
+    }
+    if (ends_with(path, ".js") || ends_with(path, ".mjs")) {
+        return "text/javascript; charset=utf-8";
+    }
+    if (ends_with(path, ".wasm")) {
+        return "application/wasm";
+    }
+    if (ends_with(path, ".aibc1")) {
+        return "application/octet-stream";
+    }
+    return "application/octet-stream";
+}
+
+static int fullstack_send_error(NativeSocket client, int code, const char* message)
+{
+    char body[256];
+    char header[512];
+    int body_len;
+    int header_len;
+    if (message == NULL) {
+        message = "error";
+    }
+    body_len = snprintf(body, sizeof(body), "%d %s\n", code, message);
+    if (body_len < 0 || (size_t)body_len >= sizeof(body)) {
+        return 0;
+    }
+    header_len = snprintf(
+        header,
+        sizeof(header),
+        "HTTP/1.1 %d %s\r\n"
+        "Content-Type: text/plain; charset=utf-8\r\n"
+        "Content-Length: %d\r\n"
+        "Connection: close\r\n\r\n",
+        code,
+        message,
+        body_len);
+    if (header_len < 0 || (size_t)header_len >= sizeof(header)) {
+        return 0;
+    }
+    return native_send_all(client, header, (size_t)header_len) &&
+           native_send_all(client, body, (size_t)body_len);
+}
+
+static int fullstack_serve_request(NativeSocket client, const char* www_dir)
+{
+    char request[4096];
+    char method[16];
+    char target[1024];
+    char file_path[PATH_MAX];
+    char relative[1024];
+    char header[512];
+    struct stat st;
+    FILE* file;
+    size_t n;
+    int request_len;
+    int i;
+    const char* mime;
+    int header_len;
+    char buffer[4096];
+
+    if (www_dir == NULL) {
+        return fullstack_send_error(client, 500, "server error");
+    }
+
+#ifdef _WIN32
+    request_len = recv(client, request, (int)(sizeof(request) - 1U), 0);
+#else
+    request_len = (int)recv(client, request, sizeof(request) - 1U, 0);
+#endif
+    if (request_len <= 0) {
+        return 0;
+    }
+    request[request_len] = '\0';
+
+    if (sscanf(request, "%15s %1023s", method, target) != 2) {
+        return fullstack_send_error(client, 400, "bad request");
+    }
+    if (strcmp(method, "GET") != 0) {
+        return fullstack_send_error(client, 405, "method not allowed");
+    }
+    for (i = 0; target[i] != '\0'; i += 1) {
+        if (target[i] == '?') {
+            target[i] = '\0';
+            break;
+        }
+    }
+    if (strstr(target, "..") != NULL) {
+        return fullstack_send_error(client, 403, "forbidden");
+    }
+    if (strcmp(target, "/") == 0) {
+        if (snprintf(relative, sizeof(relative), "index.html") >= (int)sizeof(relative)) {
+            return fullstack_send_error(client, 500, "path overflow");
+        }
+    } else {
+        const char* rel = target;
+        if (target[0] == '/') {
+            rel = target + 1;
+        }
+        if (snprintf(relative, sizeof(relative), "%s", rel) >= (int)sizeof(relative)) {
+            return fullstack_send_error(client, 500, "path overflow");
+        }
+    }
+    if (!join_path(www_dir, relative, file_path, sizeof(file_path))) {
+        return fullstack_send_error(client, 500, "path overflow");
+    }
+    if (stat(file_path, &st) != 0) {
+        return fullstack_send_error(client, 404, "not found");
+    }
+#ifdef _WIN32
+    if ((st.st_mode & _S_IFREG) == 0) {
+#else
+    if (!S_ISREG(st.st_mode)) {
+#endif
+        return fullstack_send_error(client, 404, "not found");
+    }
+
+    file = fopen(file_path, "rb");
+    if (file == NULL) {
+        return fullstack_send_error(client, 404, "not found");
+    }
+    mime = fullstack_mime_type(file_path);
+    header_len = snprintf(
+        header,
+        sizeof(header),
+        "HTTP/1.1 200 OK\r\n"
+        "Content-Type: %s\r\n"
+        "Content-Length: %lld\r\n"
+        "Connection: close\r\n\r\n",
+        mime,
+        (long long)st.st_size);
+    if (header_len < 0 || (size_t)header_len >= sizeof(header)) {
+        fclose(file);
+        return fullstack_send_error(client, 500, "header overflow");
+    }
+    if (!native_send_all(client, header, (size_t)header_len)) {
+        fclose(file);
+        return 0;
+    }
+    while ((n = fread(buffer, 1U, sizeof(buffer), file)) > 0U) {
+        if (!native_send_all(client, buffer, n)) {
+            fclose(file);
+            return 0;
+        }
+    }
+    fclose(file);
+    return 1;
+}
+
+static int run_native_fullstack_server(const char* www_dir)
+{
+    NativeSocket listener = NATIVE_INVALID_SOCKET;
+    struct sockaddr_in addr;
+    const char* port_env;
+    int port = 8080;
+    int reuse = 1;
+
+    if (www_dir == NULL) {
+        return 2;
+    }
+    port_env = getenv("PORT");
+    if (port_env != NULL && port_env[0] != '\0') {
+        int parsed = atoi(port_env);
+        if (parsed > 0 && parsed <= 65535) {
+            port = parsed;
+        }
+    }
+
+#ifdef _WIN32
+    {
+        WSADATA wsa_data;
+        if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
+            fprintf(stderr, "Err#err1(code=RUN001 message=\"WSAStartup failed.\" nodeId=publish)\n");
+            return 2;
+        }
+    }
+    SetConsoleCtrlHandler(fullstack_ctrl_handler, TRUE);
+#else
+    signal(SIGINT, fullstack_signal_handler);
+    signal(SIGTERM, fullstack_signal_handler);
+#endif
+
+    listener = socket(AF_INET, SOCK_STREAM, 0);
+    if (listener == NATIVE_INVALID_SOCKET) {
+        fprintf(stderr, "Err#err1(code=RUN001 message=\"Failed to create fullstack listener socket.\" nodeId=publish)\n");
+#ifdef _WIN32
+        WSACleanup();
+#endif
+        return 2;
+    }
+    (void)setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuse, sizeof(reuse));
+    memset(&addr, 0, sizeof(addr));
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    addr.sin_port = htons((uint16_t)port);
+    if (bind(listener, (struct sockaddr*)&addr, sizeof(addr)) != 0 || listen(listener, 16) != 0) {
+        fprintf(stderr, "Err#err1(code=RUN001 message=\"Failed to bind/listen fullstack server socket.\" nodeId=publish)\n");
+        native_socket_close(listener);
+#ifdef _WIN32
+        WSACleanup();
+#endif
+        return 2;
+    }
+
+    printf("[fullstack] serving static client from %s at http://localhost:%d\n", www_dir, port);
+    printf("[fullstack] press Ctrl+C to stop\n");
+    fflush(stdout);
+
+    while (!g_fullstack_stop) {
+        NativeSocket client = accept(listener, NULL, NULL);
+        if (client == NATIVE_INVALID_SOCKET) {
+            continue;
+        }
+        (void)fullstack_serve_request(client, www_dir);
+        native_socket_close(client);
+    }
+
+    native_socket_close(listener);
+#ifdef _WIN32
+    WSACleanup();
+#endif
+    return 0;
 }
 
 static int read_binary_file(const char* path, unsigned char** out_bytes, size_t* out_size)
@@ -4731,6 +5013,8 @@ int main(int argc, char** argv)
     char exe_path[PATH_MAX];
     char exe_dir[PATH_MAX];
     char bundled_aibc1[PATH_MAX];
+    char bundled_www_dir[PATH_MAX];
+    char bundled_www_index[PATH_MAX];
     const char* exe_base;
 
     if (argv != NULL &&
@@ -4740,6 +5024,11 @@ int main(int argc, char** argv)
         file_exists(bundled_aibc1)) {
         exe_base = path_basename_ptr(exe_path);
         if (exe_base != NULL && strcmp(exe_base, "airun") != 0 && strcmp(exe_base, "airun.exe") != 0) {
+            if (join_path(exe_dir, "www", bundled_www_dir, sizeof(bundled_www_dir)) &&
+                join_path(bundled_www_dir, "index.html", bundled_www_index, sizeof(bundled_www_index)) &&
+                file_exists(bundled_www_index)) {
+                return run_native_fullstack_server(bundled_www_dir);
+            }
             const char* const* app_argv = (argc > 1) ? (const char* const*)&argv[1] : NULL;
             size_t app_argc = (argc > 1) ? (size_t)(argc - 1) : 0U;
             return run_native_aibc1(bundled_aibc1, app_argv, app_argc);

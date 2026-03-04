@@ -52,7 +52,7 @@ cat examples/golden/run_var.in.aos | ./tools/airun run --vm=ast src/compiler/aic
     - also emits a self-contained root app binary (`./<appname>` or `.<\\appname>.exe`) for published-package execution.
     - optional override: `--wasm-fullstack-host-target <rid>`
     - project manifest override: `publishWasmFullstackHostTarget="<rid>"`
-    - the AiLang app is responsible for self-hosting `www/`.
+    - running the root app binary serves `www/` at `http://localhost:8080` (override with `PORT`).
   - malformed bytecode/source inputs are rejected deterministically with `DEV008` at publish time.
 
 ## Failure Codes
