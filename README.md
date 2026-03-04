@@ -180,6 +180,8 @@ Rebuild `tools/airun` (native C, host platform):
 - `wasm32` publish supports profiles:
   - `web` (default): emits `index.html` + `main.js` package files.
   - `cli`: emits `run.sh` + `run.ps1` launcher files.
+  - `fullstack`: emits `client/` web package + `server/README.md` native server scaffold notes.
+- wasm client/server capability channel MVP uses `sys.remote.call` (see `SPEC/WASM_REMOTE_CHANNEL.md`).
 - Build flag: `AosDevMode=false` creates a production runtime build with AST mode disabled.
 - HTTP body parsing boundary: `std.json.parse` is a constrained HTTP integration helper that converts JSON request body text into canonical AOS nodes. It does not introduce JSON as a runtime value model.
 

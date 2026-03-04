@@ -15,6 +15,10 @@ Current:
 - `.aibundle` runtime execution is native-only (Bytecode# bundle shape).
 - Native `Bytecode#...` `.aos` inputs run directly in C VM without backend fallback.
 - Native `publish` can emit `app.aibc1` from supported `Program#...`/`Bytecode#...` `.aos`; unsupported source/project compile shapes return deterministic `DEV008`.
+- Native `publish --target wasm32` emits wasm runtime package outputs:
+  - profile `spa`/`web` (default): `<app>.wasm`, `app.aibc1`, `aivm-runtime-wasm32-web.mjs`, `index.html`, `main.js`
+  - profile `cli`: `<app>.wasm`, `app.aibc1`, `run.sh`, `run.ps1`
+  - profile `fullstack`: root wasm payload plus `client/` web package and `server/README.md`
 - Native `Program#...`/`Bytecode#...` supported subsets run/publish without backend fallback.
 - `serve` is intentionally not part of native runtime surface; native runtime returns deterministic `DEV008` for `serve`.
 - `publish` writes a ready-to-run app executable named from project/app input (run as `./<appname>`), plus `app.aibc1`.

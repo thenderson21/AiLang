@@ -31,6 +31,7 @@ CASES=(
   "vm_c_execute_src_par_cancel_unsupported"
   "vm_c_execute_src_par_fork_unsupported"
   "vm_c_execute_src_par_join_unsupported"
+  "vm_c_execute_src_remote_call_echo_int"
 )
 UNSUPPORTED_CASES=(
   "vm_c_execute_src_node_constant_unsupported"
@@ -48,6 +49,7 @@ PROCESS_OUT="${TMP_DIR}/process.out"
 PROCESS_ERR="${TMP_DIR}/process.err"
 
 cd "${ROOT_DIR}"
+export AIVM_REMOTE_CAPS="cap.remote"
 
 if ! command -v wasmtime >/dev/null 2>&1; then
   echo "wasmtime is required to run wasm golden tests" >&2
@@ -75,7 +77,7 @@ for CASE_NAME in "${CASES[@]}"; do
   set +e
   ./tools/airun run "${CASE_PATH}" --vm=c >"${NATIVE_OUT}" 2>&1
   native_rc=$?
-  wasmtime run -C cache=n "${CASE_OUT}/${CASE_NAME}.wasm" - < "${CASE_OUT}/app.aibc1" >"${WASM_OUT}" 2>&1
+  wasmtime run --env AIVM_REMOTE_CAPS="${AIVM_REMOTE_CAPS}" -C cache=n "${CASE_OUT}/${CASE_NAME}.wasm" - < "${CASE_OUT}/app.aibc1" >"${WASM_OUT}" 2>&1
   wasm_rc=$?
   set -e
 
@@ -123,7 +125,7 @@ if ! rg -q 'Warn#warn1\(code=WASM001 message="sys\.process\.spawn is not availab
 fi
 
 set +e
-wasmtime run -C cache=n "${PUBLISH_PROCESS_CLI_DIR}/vm_c_execute_src_process_start_unsupported.wasm" - < "${PUBLISH_PROCESS_CLI_DIR}/app.aibc1" >"${PROCESS_OUT}" 2>&1
+wasmtime run --env AIVM_REMOTE_CAPS="${AIVM_REMOTE_CAPS}" -C cache=n "${PUBLISH_PROCESS_CLI_DIR}/vm_c_execute_src_process_start_unsupported.wasm" - < "${PUBLISH_PROCESS_CLI_DIR}/app.aibc1" >"${PROCESS_OUT}" 2>&1
 process_rc=$?
 set -e
 if [[ ${process_rc} -ne 3 ]]; then

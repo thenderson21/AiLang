@@ -40,6 +40,7 @@ extern int kill(pid_t pid, int sig);
 
 static int join_path(const char* left, const char* right, char* out, size_t out_len);
 static int find_executable_on_path(const char* name, char* out, size_t out_len);
+static int write_text_file(const char* path, const char* text);
 
 static int ends_with(const char* value, const char* suffix)
 {
@@ -222,6 +223,26 @@ static int read_text_file(const char* path, char* out, size_t out_len)
     n = fread(out, 1U, out_len - 1U, f);
     fclose(f);
     out[n] = '\0';
+    return 1;
+}
+
+static int write_text_file(const char* path, const char* text)
+{
+    FILE* f;
+    size_t len;
+    if (path == NULL || text == NULL) {
+        return 0;
+    }
+    f = fopen(path, "wb");
+    if (f == NULL) {
+        return 0;
+    }
+    len = strlen(text);
+    if (len > 0U && fwrite(text, 1U, len, f) != len) {
+        fclose(f);
+        return 0;
+    }
+    fclose(f);
     return 1;
 }
 
@@ -779,6 +800,13 @@ static int parse_target_to_artifact(const char* rid, char* out_dir, size_t out_d
             return 0;
         }
         n = snprintf(out_bin, out_bin_len, "airun.exe");
+    } else if (strcmp(rid, "wasm32") == 0) {
+        n = snprintf(out_bin, out_bin_len, "aivm-runtime-wasm32.wasm");
+        if (n < 0 || (size_t)n >= out_bin_len) {
+            return 0;
+        }
+        n = snprintf(out_dir, out_dir_len, ".artifacts/aivm-wasm32");
+        return n >= 0 && (size_t)n < out_dir_len;
     } else {
         return 0;
     }
@@ -801,7 +829,7 @@ static void print_usage(void)
         "  repl\n"
         "  bench [--iterations <n>] [--human]\n"
         "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>]\n"
-        "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--out <dir>]\n"
+        "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--wasm-profile <cli|spa|fullstack>] [--out <dir>]\n"
         "  version | --version\n"
         "\n"
         "VM selectors:\n"
@@ -834,6 +862,210 @@ static int is_reserved_cv_selector(const char* mode)
         }
     }
     return 1;
+}
+
+static int wasm_profile_is_valid(const char* profile)
+{
+    if (profile == NULL) {
+        return 0;
+    }
+    return strcmp(profile, "cli") == 0 ||
+           strcmp(profile, "spa") == 0 ||
+           strcmp(profile, "web") == 0 ||
+           strcmp(profile, "fullstack") == 0;
+}
+
+static const char* wasm_profile_normalize(const char* profile)
+{
+    if (profile == NULL || strcmp(profile, "web") == 0) {
+        return "spa";
+    }
+    return profile;
+}
+
+static int wasm_syscall_unavailable_for_profile(const char* profile, const char* target)
+{
+    if (profile == NULL || target == NULL) {
+        return 0;
+    }
+    if (strcmp(profile, "cli") == 0) {
+        return strcmp(target, "sys.process.spawn") == 0 ||
+               strcmp(target, "sys.process.wait") == 0 ||
+               strcmp(target, "sys.process.kill") == 0 ||
+               strcmp(target, "sys.process.stdout.read") == 0 ||
+               strcmp(target, "sys.process.stderr.read") == 0 ||
+               strcmp(target, "sys.process.poll") == 0;
+    }
+    return 0;
+}
+
+static int program_uses_syscall_target(const AivmProgram* program, const char* target)
+{
+    size_t i;
+    if (program == NULL || target == NULL) {
+        return 0;
+    }
+    for (i = 0U; i < program->instruction_count; i += 1U) {
+        const AivmInstruction* inst = &program->instructions[i];
+        size_t slot;
+        if (inst->opcode != AIVM_OP_CALL_SYS && inst->opcode != AIVM_OP_ASYNC_CALL_SYS) {
+            continue;
+        }
+        if (inst->operand_int < 0) {
+            continue;
+        }
+        slot = (size_t)inst->operand_int;
+        if (slot >= program->constant_count) {
+            continue;
+        }
+        if (program->constants[slot].type != AIVM_VAL_STRING || program->constants[slot].string_value == NULL) {
+            continue;
+        }
+        if (strcmp(program->constants[slot].string_value, target) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+static void emit_wasm_profile_warnings(const char* profile, const AivmProgram* program)
+{
+    static const char* cli_targets[] = {
+        "sys.process.spawn",
+        "sys.process.wait",
+        "sys.process.kill",
+        "sys.process.stdout.read",
+        "sys.process.stderr.read",
+        "sys.process.poll"
+    };
+    size_t i;
+    if (profile == NULL || program == NULL) {
+        return;
+    }
+    if (strcmp(profile, "cli") != 0) {
+        return;
+    }
+    for (i = 0U; i < (sizeof(cli_targets) / sizeof(cli_targets[0])); i += 1U) {
+        const char* target = cli_targets[i];
+        if (wasm_syscall_unavailable_for_profile(profile, target) &&
+            program_uses_syscall_target(program, target)) {
+            fprintf(
+                stderr,
+                "Warn#warn1(code=WASM001 message=\"%s is not available on wasm profile '%s'; runtime will raise RUN101 if executed.\" nodeId=publish)\n",
+                target,
+                profile);
+        }
+    }
+}
+
+static int emit_wasm_cli_launchers(const char* out_dir, const char* runtime_name, const char* app_name)
+{
+    char run_sh_path[PATH_MAX];
+    char run_ps1_path[PATH_MAX];
+    char run_sh[1024];
+    char run_ps1[1024];
+    if (out_dir == NULL || runtime_name == NULL || app_name == NULL) {
+        return 0;
+    }
+    if (!join_path(out_dir, "run.sh", run_sh_path, sizeof(run_sh_path)) ||
+        !join_path(out_dir, "run.ps1", run_ps1_path, sizeof(run_ps1_path))) {
+        return 0;
+    }
+    if (snprintf(
+            run_sh,
+            sizeof(run_sh),
+            "#!/usr/bin/env bash\nset -euo pipefail\nDIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\nexec wasmtime run -C cache=n \"${DIR}/%s\" - < \"${DIR}/app.aibc1\"\n",
+            runtime_name) >= (int)sizeof(run_sh)) {
+        return 0;
+    }
+    if (snprintf(
+            run_ps1,
+            sizeof(run_ps1),
+            "$ErrorActionPreference = 'Stop'\n$dir = Split-Path -Parent $MyInvocation.MyCommand.Path\nwasmtime run -C cache=n \"$dir/%s\" - < \"$dir/app.aibc1\"\n",
+            runtime_name) >= (int)sizeof(run_ps1)) {
+        return 0;
+    }
+    if (!write_text_file(run_sh_path, run_sh) || !write_text_file(run_ps1_path, run_ps1)) {
+        return 0;
+    }
+#ifndef _WIN32
+    if (chmod(run_sh_path, 0755) != 0) {
+        return 0;
+    }
+#endif
+    (void)app_name;
+    return 1;
+}
+
+static int emit_wasm_spa_files(const char* out_dir, const char* runtime_name)
+{
+    char index_path[PATH_MAX];
+    char main_path[PATH_MAX];
+    char index_html[2048];
+    char main_js[2048];
+    if (out_dir == NULL || runtime_name == NULL) {
+        return 0;
+    }
+    if (!join_path(out_dir, "index.html", index_path, sizeof(index_path)) ||
+        !join_path(out_dir, "main.js", main_path, sizeof(main_path))) {
+        return 0;
+    }
+    if (snprintf(
+            index_html,
+            sizeof(index_html),
+            "<!doctype html>\n<html lang=\"en\">\n<head><meta charset=\"utf-8\"><title>AiLang wasm app</title></head>\n<body>\n  <pre id=\"output\"></pre>\n  <script type=\"module\" src=\"./main.js\"></script>\n</body>\n</html>\n") >= (int)sizeof(index_html)) {
+        return 0;
+    }
+    if (snprintf(
+            main_js,
+            sizeof(main_js),
+            "import createRuntime from './aivm-runtime-wasm32-web.mjs';\n"
+            "const output = document.getElementById('output');\n"
+            "const runtime = await createRuntime();\n"
+            "const bytes = await (await fetch('./app.aibc1')).arrayBuffer();\n"
+            "runtime.FS.writeFile('/app.aibc1', new Uint8Array(bytes));\n"
+            "const logs = [];\n"
+            "runtime.print = (line) => logs.push(line);\n"
+            "runtime.printErr = (line) => logs.push(line);\n"
+            "runtime.callMain(['/%s']);\n"
+            "if (output) output.textContent = logs.join('\\n');\n",
+            runtime_name) >= (int)sizeof(main_js)) {
+        return 0;
+    }
+    return write_text_file(index_path, index_html) && write_text_file(main_path, main_js);
+}
+
+static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_name)
+{
+    char client_dir[PATH_MAX];
+    char server_dir[PATH_MAX];
+    char server_readme_path[PATH_MAX];
+    char server_readme[2048];
+    if (out_dir == NULL || runtime_name == NULL) {
+        return 0;
+    }
+    if (!join_path(out_dir, "client", client_dir, sizeof(client_dir)) ||
+        !join_path(out_dir, "server", server_dir, sizeof(server_dir))) {
+        return 0;
+    }
+    if (!ensure_directory(client_dir) || !ensure_directory(server_dir)) {
+        return 0;
+    }
+    if (!emit_wasm_spa_files(client_dir, runtime_name)) {
+        return 0;
+    }
+    if (!join_path(server_dir, "README.md", server_readme_path, sizeof(server_readme_path))) {
+        return 0;
+    }
+    if (snprintf(
+            server_readme,
+            sizeof(server_readme),
+            "# AiLang wasm fullstack package\n\n"
+            "This folder is reserved for the native AiLang server component.\n"
+            "The client wasm package is in `../client/` and can call server routes exposed by an AiLang server process.\n") >= (int)sizeof(server_readme)) {
+        return 0;
+    }
+    return write_text_file(server_readme_path, server_readme);
 }
 
 #define NATIVE_PROCESS_CAPACITY 32U
@@ -1568,6 +1800,69 @@ static int native_syscall_process_stream_read(
 #endif
 }
 
+static int remote_cap_granted(const char* cap)
+{
+    const char* caps_env;
+    const char* cursor;
+    size_t cap_len;
+    if (cap == NULL) {
+        return 0;
+    }
+    caps_env = getenv("AIVM_REMOTE_CAPS");
+    if (caps_env == NULL || *caps_env == '\0') {
+        return 0;
+    }
+    cap_len = strlen(cap);
+    cursor = caps_env;
+    while (*cursor != '\0') {
+        const char* end = cursor;
+        while (*end != '\0' && *end != ',') {
+            end += 1;
+        }
+        if ((size_t)(end - cursor) == cap_len && strncmp(cursor, cap, cap_len) == 0) {
+            return 1;
+        }
+        cursor = (*end == ',') ? (end + 1) : end;
+    }
+    return 0;
+}
+
+static int native_syscall_remote_call(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    const char* cap;
+    const char* op;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 3U ||
+        args == NULL ||
+        args[0].type != AIVM_VAL_STRING ||
+        args[1].type != AIVM_VAL_STRING ||
+        args[2].type != AIVM_VAL_INT ||
+        args[0].string_value == NULL ||
+        args[1].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    cap = args[0].string_value;
+    op = args[1].string_value;
+    if (!remote_cap_granted(cap)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
+    }
+    if (strcmp(cap, "cap.remote") == 0 && strcmp(op, "echoInt") == 0) {
+        *result = aivm_value_int(args[2].int_value);
+        return AIVM_SYSCALL_OK;
+    }
+    result->type = AIVM_VAL_VOID;
+    return AIVM_SYSCALL_ERR_NOT_FOUND;
+}
+
 static int native_syscall_process_stdout_read(
     const char* target,
     const AivmValue* args,
@@ -1948,7 +2243,7 @@ static int run_native_compiled_program(
     const char* const* process_argv,
     size_t process_argv_count)
 {
-    AivmSyscallBinding bindings[18];
+    AivmSyscallBinding bindings[19];
     AivmCResult result;
 
     if (program == NULL) {
@@ -1991,10 +2286,12 @@ static int run_native_compiled_program(
     bindings[16].handler = native_syscall_process_stderr_read;
     bindings[17].target = "sys.process.poll";
     bindings[17].handler = native_syscall_process_poll;
+    bindings[18].target = "sys.remote.call";
+    bindings[18].handler = native_syscall_remote_call;
     result = aivm_c_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        18U,
+        19U,
         process_argv,
         process_argv_count);
 
@@ -3290,16 +3587,23 @@ static int handle_publish(int argc, char** argv)
     const char* program_input = NULL;
     const char* target = NULL;
     const char* out_dir = "dist";
+    const char* wasm_profile = "spa";
+    int wasm_profile_explicit = 0;
     char resolved_program[PATH_MAX];
     char source_aos[PATH_MAX];
     char artifact_dir[PATH_MAX];
     char runtime_bin[64];
+    char runtime_web_bin[64];
     char publish_app_name[128];
     char publish_runtime_name[160];
     char runtime_src[PATH_MAX];
     char runtime_dst[PATH_MAX];
+    char runtime_web_src[PATH_MAX];
+    char runtime_web_dst[PATH_MAX];
+    char wasm_app_dst[PATH_MAX];
     char app_dst[PATH_MAX];
     char manifest_target[64];
+    AivmProgram publish_program;
     int i;
 
     for (i = 2; i < argc; i++) {
@@ -3319,6 +3623,16 @@ static int handle_publish(int argc, char** argv)
                 return 2;
             }
             out_dir = argv[++i];
+            continue;
+        }
+        if (strcmp(argv[i], "--wasm-profile") == 0) {
+            if (i + 1 >= argc) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Missing --wasm-profile value.\" nodeId=argv)\n");
+                return 2;
+            }
+            wasm_profile = argv[++i];
+            wasm_profile_explicit = 1;
             continue;
         }
         if (program_input == NULL && argv[i][0] != '-') {
@@ -3405,6 +3719,18 @@ static int handle_publish(int argc, char** argv)
         }
     }
 
+    wasm_profile = wasm_profile_normalize(wasm_profile);
+    if (!wasm_profile_is_valid(wasm_profile)) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Unsupported wasm profile.\" nodeId=wasmProfile)\n");
+        return 2;
+    }
+    if (wasm_profile_explicit && strcmp(target, "wasm32") != 0) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"--wasm-profile requires --target wasm32.\" nodeId=wasmProfile)\n");
+        return 2;
+    }
+
     if (!parse_target_to_artifact(target, artifact_dir, sizeof(artifact_dir), runtime_bin, sizeof(runtime_bin))) {
         fprintf(stderr,
             "Err#err1(code=RUN001 message=\"Unsupported publish target RID.\" nodeId=target)\n");
@@ -3435,16 +3761,6 @@ static int handle_publish(int argc, char** argv)
         return 2;
     }
 
-    if (!join_path(artifact_dir, runtime_bin, runtime_src, sizeof(runtime_src))) {
-        fprintf(stderr,
-            "Err#err1(code=RUN001 message=\"Runtime source path overflow.\" nodeId=publish)\n");
-        return 2;
-    }
-    if (!join_path(out_dir, publish_runtime_name, runtime_dst, sizeof(runtime_dst))) {
-        fprintf(stderr,
-            "Err#err1(code=RUN001 message=\"Runtime destination path overflow.\" nodeId=publish)\n");
-        return 2;
-    }
     if (resolved_program[0] != '\0') {
         if (!join_path(out_dir, "app.aibc1", app_dst, sizeof(app_dst))) {
             fprintf(stderr,
@@ -3456,6 +3772,105 @@ static int handle_publish(int argc, char** argv)
                 "Err#err1(code=RUN001 message=\"Failed to copy app bytecode for publish.\" nodeId=publish)\n");
             return 2;
         }
+    }
+
+    if (!join_path(out_dir, "app.aibc1", app_dst, sizeof(app_dst))) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"App destination path overflow.\" nodeId=publish)\n");
+        return 2;
+    }
+
+    if (strcmp(target, "wasm32") == 0) {
+        unsigned char* app_bytes = NULL;
+        size_t app_size = 0U;
+        if (!join_path(artifact_dir, runtime_bin, runtime_src, sizeof(runtime_src))) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Runtime source path overflow.\" nodeId=publish)\n");
+            return 2;
+        }
+        if (snprintf(runtime_web_bin, sizeof(runtime_web_bin), "aivm-runtime-wasm32-web.mjs") >= (int)sizeof(runtime_web_bin)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Wasm runtime metadata overflow.\" nodeId=publish)\n");
+            return 2;
+        }
+        if (!join_path(artifact_dir, runtime_web_bin, runtime_web_src, sizeof(runtime_web_src))) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Wasm web runtime source path overflow.\" nodeId=publish)\n");
+            return 2;
+        }
+        if (snprintf(publish_runtime_name, sizeof(publish_runtime_name), "%s.wasm", publish_app_name) >= (int)sizeof(publish_runtime_name)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Publish wasm runtime name overflow.\" nodeId=publish)\n");
+            return 2;
+        }
+        if (!join_path(out_dir, publish_runtime_name, runtime_dst, sizeof(runtime_dst))) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Runtime destination path overflow.\" nodeId=publish)\n");
+            return 2;
+        }
+        if (!copy_runtime_file(runtime_src, runtime_dst)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Failed to copy runtime for target RID. Build target runtime first.\" nodeId=publish)\n");
+            return 2;
+        }
+        if (!read_binary_file(app_dst, &app_bytes, &app_size) ||
+            aivm_program_load_aibc1(app_bytes, app_size, &publish_program).status != AIVM_PROGRAM_OK) {
+            free(app_bytes);
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Failed to inspect published wasm app bytecode.\" nodeId=publish)\n");
+            return 2;
+        }
+        free(app_bytes);
+        emit_wasm_profile_warnings(wasm_profile, &publish_program);
+
+        if (strcmp(wasm_profile, "cli") == 0) {
+            if (!emit_wasm_cli_launchers(out_dir, publish_runtime_name, publish_app_name)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Failed to emit wasm cli launchers.\" nodeId=publish)\n");
+                return 2;
+            }
+        } else if (strcmp(wasm_profile, "spa") == 0) {
+            if (!join_path(out_dir, runtime_web_bin, runtime_web_dst, sizeof(runtime_web_dst)) ||
+                !copy_runtime_file(runtime_web_src, runtime_web_dst) ||
+                !emit_wasm_spa_files(out_dir, publish_runtime_name)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Failed to emit wasm web package files.\" nodeId=publish)\n");
+                return 2;
+            }
+        } else if (strcmp(wasm_profile, "fullstack") == 0) {
+            char client_dir[PATH_MAX];
+            if (!join_path(out_dir, "client", client_dir, sizeof(client_dir)) ||
+                !ensure_directory(client_dir)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Failed to create wasm fullstack client directory.\" nodeId=publish)\n");
+                return 2;
+            }
+            if (!join_path(client_dir, "app.aibc1", wasm_app_dst, sizeof(wasm_app_dst)) ||
+                !copy_file(app_dst, wasm_app_dst) ||
+                !join_path(client_dir, publish_runtime_name, runtime_dst, sizeof(runtime_dst)) ||
+                !copy_runtime_file(runtime_src, runtime_dst) ||
+                !join_path(client_dir, runtime_web_bin, runtime_web_dst, sizeof(runtime_web_dst)) ||
+                !copy_runtime_file(runtime_web_src, runtime_web_dst) ||
+                !emit_wasm_fullstack_layout(out_dir, publish_runtime_name)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Failed to emit wasm fullstack package files.\" nodeId=publish)\n");
+                return 2;
+            }
+        }
+
+        printf("Ok#ok1(type=string value=\"publish-complete\")\n");
+        return 0;
+    }
+
+    if (!join_path(artifact_dir, runtime_bin, runtime_src, sizeof(runtime_src))) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Runtime source path overflow.\" nodeId=publish)\n");
+        return 2;
+    }
+    if (!join_path(out_dir, publish_runtime_name, runtime_dst, sizeof(runtime_dst))) {
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Runtime destination path overflow.\" nodeId=publish)\n");
+        return 2;
     }
 
     if (!copy_runtime_file(runtime_src, runtime_dst)) {
