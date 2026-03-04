@@ -860,6 +860,50 @@ typedef struct NativeProcessState
 static NativeProcessState g_native_processes[NATIVE_PROCESS_CAPACITY];
 static uint8_t g_native_process_read_scratch[NATIVE_PROCESS_READ_CHUNK];
 
+static void native_process_init_slot(NativeProcessState* process)
+{
+    if (process == NULL) {
+        return;
+    }
+    memset(process, 0, sizeof(*process));
+#ifndef _WIN32
+    process->pid = (pid_t)-1;
+    process->stdout_fd = -1;
+    process->stderr_fd = -1;
+#endif
+}
+
+static void native_process_release_slot(NativeProcessState* process)
+{
+    if (process == NULL || !process->used) {
+        return;
+    }
+#ifdef _WIN32
+    if (process->process_handle != NULL) {
+        CloseHandle(process->process_handle);
+        process->process_handle = NULL;
+    }
+    if (process->stdout_read != NULL) {
+        CloseHandle(process->stdout_read);
+        process->stdout_read = NULL;
+    }
+    if (process->stderr_read != NULL) {
+        CloseHandle(process->stderr_read);
+        process->stderr_read = NULL;
+    }
+#else
+    if (process->stdout_fd >= 0) {
+        close(process->stdout_fd);
+        process->stdout_fd = -1;
+    }
+    if (process->stderr_fd >= 0) {
+        close(process->stderr_fd);
+        process->stderr_fd = -1;
+    }
+#endif
+    native_process_init_slot(process);
+}
+
 static NativeProcessState* native_process_lookup(int64_t handle_value)
 {
     size_t index;
@@ -878,7 +922,7 @@ static int64_t native_process_allocate_slot(void)
     size_t index;
     for (index = 0U; index < NATIVE_PROCESS_CAPACITY; index += 1U) {
         if (!g_native_processes[index].used) {
-            memset(&g_native_processes[index], 0, sizeof(g_native_processes[index]));
+            native_process_init_slot(&g_native_processes[index]);
             g_native_processes[index].used = 1;
             return (int64_t)(index + 1U);
         }
@@ -1343,6 +1387,7 @@ static int native_syscall_process_wait(
     AivmValue* result)
 {
     NativeProcessState* process;
+    int exit_code;
     (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
@@ -1369,7 +1414,9 @@ static int native_syscall_process_wait(
             }
         }
     }
-    *result = aivm_value_int((int64_t)process->exit_code);
+    exit_code = process->exit_code;
+    *result = aivm_value_int((int64_t)exit_code);
+    native_process_release_slot(process);
     return AIVM_SYSCALL_OK;
 #else
     if (!process->finished) {
@@ -1386,7 +1433,9 @@ static int native_syscall_process_wait(
             }
         }
     }
-    *result = aivm_value_int((int64_t)process->exit_code);
+    exit_code = process->exit_code;
+    *result = aivm_value_int((int64_t)exit_code);
+    native_process_release_slot(process);
     return AIVM_SYSCALL_OK;
 #endif
 }

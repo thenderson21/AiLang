@@ -172,6 +172,15 @@ jobs:
           set -euo pipefail
           "./dist/${{ matrix.airun }}" run ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos --vm=c >/dev/null
 
+      - name: Memory leak gate (Unix)
+        if: matrix.platform != 'windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          AIVM_LEAK_CHECK_ITERATIONS=20 \
+          AIVM_LEAK_MAX_GROWTH_KB=4096 \
+          ./scripts/aivm-mem-leak-check.sh ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos
+
       - name: Runtime smoke (Windows)
         if: matrix.platform == 'windows'
         shell: pwsh
