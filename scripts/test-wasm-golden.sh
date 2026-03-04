@@ -86,7 +86,7 @@ cd "${ROOT_DIR}"
 export AIVM_REMOTE_CAPS="cap.remote"
 export AIVM_REMOTE_EXPECTED_TOKEN="wasm-golden-token"
 export AIVM_REMOTE_SESSION_TOKEN="wasm-golden-token"
-export EM_CACHE="${EM_CACHE:-${TMP_DIR}/emcc-cache}"
+export EM_CACHE="${EM_CACHE:-${TMP_ROOT}/emcc-cache}"
 HAS_RG=0
 if command -v rg >/dev/null 2>&1; then
   HAS_RG=1
