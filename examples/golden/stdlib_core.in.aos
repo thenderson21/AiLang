@@ -1,0 +1,6 @@
+Program#gcore_p1 {
+  Import#gcore_i1(path="./src/std/core.aos")
+  Call#gcore_c1(target=resultIsOk) {
+    Call#gcore_c2(target=resultOkString) { Lit#gcore_l1(value="x") }
+  }
+}

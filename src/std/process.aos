@@ -1,0 +1,99 @@
+Program#std_process_p1 {
+  Let#std_process_l1(name=args) {
+    Fn#std_process_f1(params=_) {
+      Block#std_process_b1 {
+        Return#std_process_r1 { Call#std_process_c1(target=sys.process.args) }
+      }
+    }
+  }
+
+  Let#std_process_l2(name=cwd) {
+    Fn#std_process_f2(params=_) {
+      Block#std_process_b2 {
+        Return#std_process_r2 { Call#std_process_c2(target=sys.process.cwd) }
+      }
+    }
+  }
+
+  Let#std_process_l3(name=envGet) {
+    Fn#std_process_f3(params=name) {
+      Block#std_process_b3 {
+        Return#std_process_r3 { Call#std_process_c3(target=sys.process.env.get) { Var#std_process_v1(name=name) } }
+      }
+    }
+  }
+
+  Let#std_process_l4(name=spawn) {
+    Fn#std_process_f4(params=cmd,args,cwdPath,env) {
+      Block#std_process_b4 {
+        Return#std_process_r4 {
+          Call#std_process_c4(target=sys.process.spawn) {
+            Var#std_process_v2(name=cmd)
+            Var#std_process_v3(name=args)
+            Var#std_process_v4(name=cwdPath)
+            Var#std_process_v5(name=env)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_process_l5(name=wait) {
+    Fn#std_process_f5(params=handle) {
+      Block#std_process_b5 {
+        Return#std_process_r5 { Call#std_process_c5(target=sys.process.wait) { Var#std_process_v6(name=handle) } }
+      }
+    }
+  }
+
+  Let#std_process_l6(name=poll) {
+    Fn#std_process_f6(params=handle) {
+      Block#std_process_b6 {
+        Return#std_process_r6 { Call#std_process_c6(target=sys.process.poll) { Var#std_process_v7(name=handle) } }
+      }
+    }
+  }
+
+  Let#std_process_l7(name=kill) {
+    Fn#std_process_f7(params=handle) {
+      Block#std_process_b7 {
+        Return#std_process_r7 { Call#std_process_c7(target=sys.process.kill) { Var#std_process_v8(name=handle) } }
+      }
+    }
+  }
+
+  Let#std_process_l8(name=stdoutRead) {
+    Fn#std_process_f8(params=handle) {
+      Block#std_process_b8 {
+        Return#std_process_r8 { Call#std_process_c8(target=sys.process.stdout.read) { Var#std_process_v9(name=handle) } }
+      }
+    }
+  }
+
+  Let#std_process_l9(name=stderrRead) {
+    Fn#std_process_f9(params=handle) {
+      Block#std_process_b9 {
+        Return#std_process_r9 { Call#std_process_c9(target=sys.process.stderr.read) { Var#std_process_v10(name=handle) } }
+      }
+    }
+  }
+
+  Let#std_process_l10(name=exit) {
+    Fn#std_process_f10(params=code) {
+      Block#std_process_b10 {
+        Return#std_process_r10 { Call#std_process_c10(target=sys.process.exit) { Var#std_process_v11(name=code) } }
+      }
+    }
+  }
+
+  Export#std_process_e1(name=args)
+  Export#std_process_e2(name=cwd)
+  Export#std_process_e3(name=envGet)
+  Export#std_process_e4(name=spawn)
+  Export#std_process_e5(name=wait)
+  Export#std_process_e6(name=poll)
+  Export#std_process_e7(name=kill)
+  Export#std_process_e8(name=stdoutRead)
+  Export#std_process_e9(name=stderrRead)
+  Export#std_process_e10(name=exit)
+}

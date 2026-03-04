@@ -1,0 +1,337 @@
+Program#std_core_p1 {
+  Let#std_core_l1(name=assert) {
+    Fn#std_core_f1(params=condition,code,message) {
+      Block#std_core_b1 {
+        Call#std_core_c1(target=sys.debug.assert) {
+          Var#std_core_v1(name=condition)
+          Var#std_core_v2(name=code)
+          Var#std_core_v3(name=message)
+        }
+        Return#std_core_r1 { Var#std_core_v4(name=condition) }
+      }
+    }
+  }
+
+  Let#std_core_l2(name=resultOkString) {
+    Fn#std_core_f2(params=value) {
+      Block#std_core_b2 {
+        Let#std_core_l3(name=base) { MakeBlock#std_core_mb1 { Lit#std_core_i1(value="result") } }
+        Let#std_core_l4(name=withOk) {
+          AppendChild#std_core_ap1 {
+            Var#std_core_v5(name=base)
+            MakeLitBool#std_core_mlb1 { Lit#std_core_i2(value="ok") Lit#std_core_i3(value=true) }
+          }
+        }
+        Return#std_core_r2 {
+          AppendChild#std_core_ap2 {
+            Var#std_core_v6(name=withOk)
+            MakeLitString#std_core_mls1 { Lit#std_core_i4(value="value") Var#std_core_v7(name=value) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l22(name=resultOkInt) {
+    Fn#std_core_f14(params=value) {
+      Block#std_core_b18 {
+        Let#std_core_l23(name=base) { MakeBlock#std_core_mb6 { Lit#std_core_i25(value="result") } }
+        Let#std_core_l24(name=withOk) {
+          AppendChild#std_core_ap12 {
+            Var#std_core_v35(name=base)
+            MakeLitBool#std_core_mlb6 { Lit#std_core_i26(value="ok") Lit#std_core_i27(value=true) }
+          }
+        }
+        Return#std_core_r16 {
+          AppendChild#std_core_ap13 {
+            Var#std_core_v36(name=withOk)
+            MakeLitInt#std_core_mli2 { Lit#std_core_i28(value="value") Var#std_core_v37(name=value) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l25(name=resultOkBool) {
+    Fn#std_core_f15(params=value) {
+      Block#std_core_b19 {
+        Let#std_core_l26(name=base) { MakeBlock#std_core_mb7 { Lit#std_core_i29(value="result") } }
+        Let#std_core_l27(name=withOk) {
+          AppendChild#std_core_ap14 {
+            Var#std_core_v38(name=base)
+            MakeLitBool#std_core_mlb7 { Lit#std_core_i30(value="ok") Lit#std_core_i31(value=true) }
+          }
+        }
+        Return#std_core_r17 {
+          AppendChild#std_core_ap15 {
+            Var#std_core_v39(name=withOk)
+            MakeLitBool#std_core_mlb8 { Lit#std_core_i32(value="value") Var#std_core_v40(name=value) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l30(name=resultOkNode) {
+    Fn#std_core_f18(params=valueNode) {
+      Block#std_core_b26 {
+        Let#std_core_l31(name=base) { MakeBlock#std_core_mb8 { Lit#std_core_i37(value="result") } }
+        Let#std_core_l32(name=withOk) {
+          AppendChild#std_core_ap16 {
+            Var#std_core_v47(name=base)
+            MakeLitBool#std_core_mlb9 { Lit#std_core_i38(value="ok") Lit#std_core_i39(value=true) }
+          }
+        }
+        Return#std_core_r22 { AppendChild#std_core_ap17 { Var#std_core_v48(name=withOk) Var#std_core_v49(name=valueNode) } }
+      }
+    }
+  }
+
+  Let#std_core_l5(name=resultErr) {
+    Fn#std_core_f3(params=code,message) {
+      Block#std_core_b3 {
+        Let#std_core_l6(name=base) { MakeBlock#std_core_mb2 { Lit#std_core_i5(value="result") } }
+        Let#std_core_l7(name=withOk) {
+          AppendChild#std_core_ap3 {
+            Var#std_core_v8(name=base)
+            MakeLitBool#std_core_mlb2 { Lit#std_core_i6(value="ok") Lit#std_core_i7(value=false) }
+          }
+        }
+        Let#std_core_l8(name=withCode) {
+          AppendChild#std_core_ap4 {
+            Var#std_core_v9(name=withOk)
+            MakeLitString#std_core_mls2 { Lit#std_core_i8(value="code") Var#std_core_v10(name=code) }
+          }
+        }
+        Return#std_core_r3 {
+          AppendChild#std_core_ap5 {
+            Var#std_core_v11(name=withCode)
+            MakeLitString#std_core_mls3 { Lit#std_core_i9(value="message") Var#std_core_v12(name=message) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l9(name=resultIsOk) {
+    Fn#std_core_f4(params=resultNode) {
+      Block#std_core_b4 {
+        Return#std_core_r4 {
+          AttrValueBool#std_core_avb1 {
+            ChildAt#std_core_ca1 { Var#std_core_v13(name=resultNode) Lit#std_core_i10(value=0) }
+            Lit#std_core_i11(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l10(name=resultValueOr) {
+    Fn#std_core_f5(params=resultNode,fallback) {
+      Block#std_core_b5 {
+        If#std_core_if1 {
+          Call#std_core_c2(target=resultIsOk) { Var#std_core_v14(name=resultNode) }
+          Block#std_core_b6 {
+            Return#std_core_r5 {
+              AttrValueString#std_core_avs1 {
+                ChildAt#std_core_ca2 { Var#std_core_v15(name=resultNode) Lit#std_core_i12(value=1) }
+                Lit#std_core_i13(value=0)
+              }
+            }
+          }
+          Block#std_core_b7 { Return#std_core_r6 { Var#std_core_v16(name=fallback) } }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l28(name=resultCodeOr) {
+    Fn#std_core_f16(params=resultNode,fallback) {
+      Block#std_core_b20 {
+        If#std_core_if3 {
+          Call#std_core_c7(target=resultIsOk) { Var#std_core_v41(name=resultNode) }
+          Block#std_core_b21 { Return#std_core_r18 { Var#std_core_v42(name=fallback) } }
+          Block#std_core_b22 {
+            Return#std_core_r19 {
+              AttrValueString#std_core_avs3 {
+                ChildAt#std_core_ca5 { Var#std_core_v43(name=resultNode) Lit#std_core_i33(value=1) }
+                Lit#std_core_i34(value=0)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l29(name=resultMessageOr) {
+    Fn#std_core_f17(params=resultNode,fallback) {
+      Block#std_core_b23 {
+        If#std_core_if4 {
+          Call#std_core_c8(target=resultIsOk) { Var#std_core_v44(name=resultNode) }
+          Block#std_core_b24 { Return#std_core_r20 { Var#std_core_v45(name=fallback) } }
+          Block#std_core_b25 {
+            Return#std_core_r21 {
+              AttrValueString#std_core_avs4 {
+                ChildAt#std_core_ca6 { Var#std_core_v46(name=resultNode) Lit#std_core_i35(value=2) }
+                Lit#std_core_i36(value=0)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l33(name=resultNodeOr) {
+    Fn#std_core_f19(params=resultNode,fallback) {
+      Block#std_core_b27 {
+        If#std_core_if5 {
+          Call#std_core_c9(target=resultIsOk) { Var#std_core_v50(name=resultNode) }
+          Block#std_core_b28 { Return#std_core_r23 { ChildAt#std_core_ca7 { Var#std_core_v51(name=resultNode) Lit#std_core_i40(value=1) } } }
+          Block#std_core_b29 { Return#std_core_r24 { Var#std_core_v52(name=fallback) } }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l11(name=optionSomeString) {
+    Fn#std_core_f6(params=value) {
+      Block#std_core_b8 {
+        Let#std_core_l12(name=base) { MakeBlock#std_core_mb3 { Lit#std_core_i14(value="option") } }
+        Let#std_core_l13(name=withHas) {
+          AppendChild#std_core_ap6 {
+            Var#std_core_v17(name=base)
+            MakeLitBool#std_core_mlb3 { Lit#std_core_i15(value="has") Lit#std_core_i16(value=true) }
+          }
+        }
+        Return#std_core_r7 {
+          AppendChild#std_core_ap7 {
+            Var#std_core_v18(name=withHas)
+            MakeLitString#std_core_mls4 { Lit#std_core_i17(value="value") Var#std_core_v19(name=value) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l14(name=optionNone) {
+    Fn#std_core_f7(params=_) {
+      Block#std_core_b9 {
+        Let#std_core_l15(name=base) { MakeBlock#std_core_mb4 { Lit#std_core_i18(value="option") } }
+        Return#std_core_r8 {
+          AppendChild#std_core_ap8 {
+            Var#std_core_v20(name=base)
+            MakeLitBool#std_core_mlb4 { Lit#std_core_i19(value="has") Lit#std_core_i20(value=false) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l16(name=optionHas) {
+    Fn#std_core_f8(params=optionNode) {
+      Block#std_core_b10 {
+        Return#std_core_r9 {
+          AttrValueBool#std_core_avb2 {
+            ChildAt#std_core_ca3 { Var#std_core_v21(name=optionNode) Lit#std_core_i21(value=0) }
+            Lit#std_core_i22(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l17(name=optionValueOr) {
+    Fn#std_core_f9(params=optionNode,fallback) {
+      Block#std_core_b11 {
+        If#std_core_if2 {
+          Call#std_core_c3(target=optionHas) { Var#std_core_v22(name=optionNode) }
+          Block#std_core_b12 {
+            Return#std_core_r10 {
+              AttrValueString#std_core_avs2 {
+                ChildAt#std_core_ca4 { Var#std_core_v23(name=optionNode) Lit#std_core_i23(value=1) }
+                Lit#std_core_i24(value=0)
+              }
+            }
+          }
+          Block#std_core_b13 { Return#std_core_r11 { Var#std_core_v24(name=fallback) } }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l18(name=nodeEmpty) {
+    Fn#std_core_f10(params=kind) {
+      Block#std_core_b14 { Return#std_core_r12 { MakeBlock#std_core_mb5 { Var#std_core_v25(name=kind) } } }
+    }
+  }
+
+  Let#std_core_l19(name=nodeWithString) {
+    Fn#std_core_f11(params=kind,key,value) {
+      Block#std_core_b15 {
+        Return#std_core_r13 {
+          AppendChild#std_core_ap9 {
+            Call#std_core_c4(target=nodeEmpty) { Var#std_core_v26(name=kind) }
+            MakeLitString#std_core_mls5 {
+              Var#std_core_v27(name=key)
+              Var#std_core_v28(name=value)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l20(name=nodeWithInt) {
+    Fn#std_core_f12(params=kind,key,value) {
+      Block#std_core_b16 {
+        Return#std_core_r14 {
+          AppendChild#std_core_ap10 {
+            Call#std_core_c5(target=nodeEmpty) { Var#std_core_v29(name=kind) }
+            MakeLitInt#std_core_mli1 {
+              Var#std_core_v30(name=key)
+              Var#std_core_v31(name=value)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_core_l21(name=nodeWithBool) {
+    Fn#std_core_f13(params=kind,key,value) {
+      Block#std_core_b17 {
+        Return#std_core_r15 {
+          AppendChild#std_core_ap11 {
+            Call#std_core_c6(target=nodeEmpty) { Var#std_core_v32(name=kind) }
+            MakeLitBool#std_core_mlb5 {
+              Var#std_core_v33(name=key)
+              Var#std_core_v34(name=value)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Export#std_core_e1(name=assert)
+  Export#std_core_e2(name=resultOkString)
+  Export#std_core_e14(name=resultOkInt)
+  Export#std_core_e15(name=resultOkBool)
+  Export#std_core_e18(name=resultOkNode)
+  Export#std_core_e3(name=resultErr)
+  Export#std_core_e4(name=resultIsOk)
+  Export#std_core_e5(name=resultValueOr)
+  Export#std_core_e16(name=resultCodeOr)
+  Export#std_core_e17(name=resultMessageOr)
+  Export#std_core_e19(name=resultNodeOr)
+  Export#std_core_e6(name=optionSomeString)
+  Export#std_core_e7(name=optionNone)
+  Export#std_core_e8(name=optionHas)
+  Export#std_core_e9(name=optionValueOr)
+  Export#std_core_e10(name=nodeEmpty)
+  Export#std_core_e11(name=nodeWithString)
+  Export#std_core_e12(name=nodeWithInt)
+  Export#std_core_e13(name=nodeWithBool)
+}

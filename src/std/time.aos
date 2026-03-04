@@ -1,0 +1,29 @@
+Program#std_time_p1 {
+  Let#std_time_l1(name=nowUnixMs) {
+    Fn#std_time_f1(params=_) {
+      Block#std_time_b1 {
+        Return#std_time_r1 { Call#std_time_c1(target=sys.time.nowUnixMs) }
+      }
+    }
+  }
+
+  Let#std_time_l2(name=monotonicMs) {
+    Fn#std_time_f2(params=_) {
+      Block#std_time_b2 {
+        Return#std_time_r2 { Call#std_time_c2(target=sys.time.monotonicMs) }
+      }
+    }
+  }
+
+  Let#std_time_l3(name=sleepMs) {
+    Fn#std_time_f3(params=durationMs) {
+      Block#std_time_b3 {
+        Return#std_time_r3 { Call#std_time_c3(target=sys.time.sleepMs) { Var#std_time_v1(name=durationMs) } }
+      }
+    }
+  }
+
+  Export#std_time_e1(name=nowUnixMs)
+  Export#std_time_e2(name=monotonicMs)
+  Export#std_time_e3(name=sleepMs)
+}

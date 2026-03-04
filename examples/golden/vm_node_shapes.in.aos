@@ -1,5 +1,5 @@
 Program#p1 {
-  Let#l1(name=evt) { Event#Message(type="http.request" payload="GET /health") }
+  Let#l1(name=evt) { Event#Message(type="net.request" payload="GET /health") }
   Let#l2(name=cmd) { Command#Print(text="ok") }
   Let#l3(name=req) { HttpRequest#h1(method="GET" path="/health") }
   Let#l4(name=route) { Route#r1(path="/health" handler="health") }

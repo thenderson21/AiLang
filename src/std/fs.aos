@@ -1,0 +1,93 @@
+Program#std_fs_p1 {
+  Let#std_fs_l1(name=fileRead) {
+    Fn#std_fs_f1(params=path) {
+      Block#std_fs_b1 {
+        Return#std_fs_r1 { Call#std_fs_c1(target=sys.fs.file.read) { Var#std_fs_v1(name=path) } }
+      }
+    }
+  }
+
+  Let#std_fs_l2(name=fileWrite) {
+    Fn#std_fs_f2(params=path,data) {
+      Block#std_fs_b2 {
+        Return#std_fs_r2 {
+          Call#std_fs_c2(target=sys.fs.file.write) {
+            Var#std_fs_v2(name=path)
+            Var#std_fs_v3(name=data)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_fs_l3(name=fileExists) {
+    Fn#std_fs_f3(params=path) {
+      Block#std_fs_b3 {
+        Return#std_fs_r3 { Call#std_fs_c3(target=sys.fs.file.exists) { Var#std_fs_v4(name=path) } }
+      }
+    }
+  }
+
+  Let#std_fs_l4(name=fileDelete) {
+    Fn#std_fs_f4(params=path) {
+      Block#std_fs_b4 {
+        Return#std_fs_r4 { Call#std_fs_c4(target=sys.fs.file.delete) { Var#std_fs_v5(name=path) } }
+      }
+    }
+  }
+
+  Let#std_fs_l5(name=dirCreate) {
+    Fn#std_fs_f5(params=path) {
+      Block#std_fs_b5 {
+        Return#std_fs_r5 { Call#std_fs_c5(target=sys.fs.dir.create) { Var#std_fs_v6(name=path) } }
+      }
+    }
+  }
+
+  Let#std_fs_l6(name=dirList) {
+    Fn#std_fs_f6(params=path) {
+      Block#std_fs_b6 {
+        Return#std_fs_r6 { Call#std_fs_c6(target=sys.fs.dir.list) { Var#std_fs_v7(name=path) } }
+      }
+    }
+  }
+
+  Let#std_fs_l7(name=dirDelete) {
+    Fn#std_fs_f7(params=path,recursive) {
+      Block#std_fs_b7 {
+        Return#std_fs_r7 {
+          Call#std_fs_c7(target=sys.fs.dir.delete) {
+            Var#std_fs_v8(name=path)
+            Var#std_fs_v9(name=recursive)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_fs_l8(name=pathExists) {
+    Fn#std_fs_f8(params=path) {
+      Block#std_fs_b8 {
+        Return#std_fs_r8 { Call#std_fs_c8(target=sys.fs.path.exists) { Var#std_fs_v10(name=path) } }
+      }
+    }
+  }
+
+  Let#std_fs_l9(name=pathStat) {
+    Fn#std_fs_f9(params=path) {
+      Block#std_fs_b9 {
+        Return#std_fs_r9 { Call#std_fs_c9(target=sys.fs.path.stat) { Var#std_fs_v11(name=path) } }
+      }
+    }
+  }
+
+  Export#std_fs_e1(name=fileRead)
+  Export#std_fs_e2(name=fileWrite)
+  Export#std_fs_e3(name=fileExists)
+  Export#std_fs_e4(name=fileDelete)
+  Export#std_fs_e5(name=dirCreate)
+  Export#std_fs_e6(name=dirList)
+  Export#std_fs_e7(name=dirDelete)
+  Export#std_fs_e8(name=pathExists)
+  Export#std_fs_e9(name=pathStat)
+}

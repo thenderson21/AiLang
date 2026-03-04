@@ -1,0 +1,20 @@
+Program#gjsonkd_p1 {
+  Import#gjsonkd_i1(path="./src/std/core.aos")
+  Import#gjsonkd_i2(path="./src/std/json.aos")
+  Call#gjsonkd_c1(target=AttrValueString) {
+    ChildAt#gjsonkd_ca1 {
+      ChildAt#gjsonkd_ca2 {
+        ChildAt#gjsonkd_ca3 {
+          Call#gjsonkd_c2(target=resultNodeOr) {
+            Call#gjsonkd_c3(target=parseNode) { Lit#gjsonkd_l1(value="{\"a\\n\":1}") }
+            Call#gjsonkd_c4(target=nodeEmpty) { Lit#gjsonkd_l2(value="fallback") }
+          }
+          Lit#gjsonkd_l3(value=0)
+        }
+        Lit#gjsonkd_l4(value=0)
+      }
+      Lit#gjsonkd_l5(value=0)
+    }
+    Lit#gjsonkd_l6(value=0)
+  }
+}

@@ -1,0 +1,6 @@
+Program#gbytesutf8_p1 {
+  Import#gbytesutf8_i1(path="./src/std/bytes.aos")
+  Call#gbytesutf8_c1(target=toUtf8String) {
+    Call#gbytesutf8_c2(target=fromBase64) { Lit#gbytesutf8_l1(value="aGVsbG8=") }
+  }
+}

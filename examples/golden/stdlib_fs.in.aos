@@ -1,0 +1,4 @@
+Program#gfs_p1 {
+  Import#gfs_i1(path="./src/std/fs.aos")
+  Call#gfs_c1(target=fileExists) { Lit#gfs_l1(value="__AIVM_STD_FS_MISSING_D82FC3__.tmp") }
+}

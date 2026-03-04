@@ -1,0 +1,16 @@
+Program#gjsontv_p1 {
+  Import#gjsontv_i1(path="./src/std/core.aos")
+  Import#gjsontv_i2(path="./src/std/json.aos")
+  Call#gjsontv_c1(target=NodeKind) {
+    ChildAt#gjsontv_ca1 {
+      ChildAt#gjsontv_ca2 {
+        Call#gjsontv_c2(target=resultNodeOr) {
+          Call#gjsontv_c3(target=parseNode) { Lit#gjsontv_l1(value="{\"a\":[1]}") }
+          Call#gjsontv_c4(target=nodeEmpty) { Lit#gjsontv_l2(value="fallback") }
+        }
+        Lit#gjsontv_l3(value=0)
+      }
+      Lit#gjsontv_l4(value=0)
+    }
+  }
+}

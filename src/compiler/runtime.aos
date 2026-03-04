@@ -100,7 +100,12 @@ Program#rt_p1 {
             Block#rt_b95 {
               If#rt_if39 {
                 Eq#rt_eq36 { Var#rt_v164(name=tlsKeyPath) Lit#rt_i113(value="") }
-                Block#rt_b96 { Call#rt_c4(target=sys.net.listen) { Var#rt_v5(name=port) } }
+                Block#rt_b96 {
+                  Call#rt_c4(target=sys.net.tcp.listen) {
+                    Lit#rt_i500(value="127.0.0.1")
+                    Var#rt_v5(name=port)
+                  }
+                }
                 Block#rt_b97 { MakeErr#rt_me1 { Lit#rt_i114(value="runtime_err") Lit#rt_i115(value="TLS001") Lit#rt_i116(value="--tls-key requires --tls-cert.") Lit#rt_i117(value="serve") } }
               }
             }
@@ -108,7 +113,14 @@ Program#rt_p1 {
               If#rt_if40 {
                 Eq#rt_eq37 { Var#rt_v165(name=tlsKeyPath) Lit#rt_i118(value="") }
                 Block#rt_b99 { MakeErr#rt_me2 { Lit#rt_i119(value="runtime_err") Lit#rt_i120(value="TLS002") Lit#rt_i121(value="--tls-cert requires --tls-key.") Lit#rt_i122(value="serve") } }
-                Block#rt_b100 { Call#rt_c72(target=sys.net.listen.tls) { Var#rt_v166(name=port) Var#rt_v167(name=tlsCertPath) Var#rt_v168(name=tlsKeyPath) } }
+                Block#rt_b100 {
+                  Call#rt_c72(target=sys.net.tcp.listenTls) {
+                    Lit#rt_i501(value="127.0.0.1")
+                    Var#rt_v166(name=port)
+                    Var#rt_v167(name=tlsCertPath)
+                    Var#rt_v168(name=tlsKeyPath)
+                  }
+                }
               }
             }
           }
@@ -149,16 +161,23 @@ Program#rt_p1 {
   Let#rt_l7(name=runtime_serve_loop) {
     Fn#rt_f3(params=listener,state) {
       Block#rt_b5 {
-        Let#rt_l8(name=conn) { Call#rt_c7(target=sys.net.accept) { Var#rt_v9(name=listener) } }
+        Let#rt_l8(name=conn) { Call#rt_c7(target=sys.net.tcp.accept) { Var#rt_v9(name=listener) } }
         If#rt_if2 {
           Eq#rt_eq2 { Var#rt_v10(name=conn) Lit#rt_i5(value=-1) }
           Block#rt_b6 { Return#rt_r4 { Lit#rt_i6(value=0) } }
           Block#rt_b7 {
-            Let#rt_l9(name=raw) { Call#rt_c8(target=sys.net.readHeaders) { Var#rt_v11(name=conn) } }
+            Let#rt_l9(name=rawBytes) {
+              Call#rt_c8b(target=runtime_read_request_bytes) {
+                Var#rt_v11(name=conn)
+                Call#rt_c8c(target=sys.bytes.fromBase64) { Lit#rt_i9005(value="") }
+                Lit#rt_i9004(value=16)
+              }
+            }
+            Let#rt_l9002(name=raw) { Call#rt_c9002(target=sys.bytes.toUtf8String) { Var#rt_v9003(name=rawBytes) } }
             Let#rt_l10(name=event) { Call#rt_c9(target=runtime_make_event) { Var#rt_v12(name=raw) } }
             Let#rt_l11(name=next) { Call#rt_c10(target=runtime.dispatch) { Var#rt_v13(name=state) Var#rt_v14(name=event) } }
             Let#rt_l12(name=nextState) { Call#rt_c11(target=runtime_handle_next) { Var#rt_v15(name=next) Var#rt_v16(name=conn) Var#rt_v17(name=state) } }
-            Call#rt_c12(target=sys.net.close) { Var#rt_v18(name=conn) }
+            Call#rt_c12(target=sys.net.tcp.close) { Var#rt_v18(name=conn) }
             Return#rt_r5 { Call#rt_c13(target=runtime_serve_loop) { Var#rt_v19(name=listener) Var#rt_v20(name=nextState) } }
           }
         }
@@ -172,12 +191,46 @@ Program#rt_p1 {
     }
   }
 
+  Let#rt_l13b(name=runtime_read_request_bytes) {
+    Fn#rt_f4b(params=conn,acc,remainingReads) {
+      Block#rt_b8b {
+        If#rt_if2b {
+          Eq#rt_eq2b { Var#rt_v10b(name=remainingReads) Lit#rt_i6b(value=0) }
+          Block#rt_b6b { Return#rt_r4b { Var#rt_v20b(name=acc) } }
+          Block#rt_b7b {
+            Let#rt_l9b(name=chunk) {
+              Call#rt_c8d(target=sys.net.tcp.read) {
+                Var#rt_v11b(name=conn)
+                Lit#rt_i9006(value=8192)
+              }
+            }
+            Let#rt_l9c(name=combined) { Call#rt_c8e(target=sys.bytes.concat) { Var#rt_v11c(name=acc) Var#rt_v11d(name=chunk) } }
+            Let#rt_l9d(name=chunkLen) { Call#rt_c8f(target=sys.bytes.length) { Var#rt_v11e(name=chunk) } }
+            If#rt_if2c {
+              Eq#rt_eq2c { Var#rt_v10c(name=chunkLen) Lit#rt_i6c(value=8192) }
+              Block#rt_b6c {
+                Return#rt_r4c {
+                  Call#rt_c8g(target=runtime_read_request_bytes) {
+                    Var#rt_v20c(name=conn)
+                    Var#rt_v20d(name=combined)
+                    Add#rt_a9002 { Var#rt_v20e(name=remainingReads) Lit#rt_i9007(value=-1) }
+                  }
+                }
+              }
+              Block#rt_b7c { Return#rt_r4d { Var#rt_v20f(name=combined) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
   Let#rt_l14(name=runtime_make_event) {
     Fn#rt_f5(params=payload) {
       Block#rt_b9 {
         Let#rt_l15(name=programText) {
           StrConcat#rt_s1 {
-            Lit#rt_i7(value="Program#rt_event_p1 { Event#Message(type=\"http.request\" payload=\"")
+            Lit#rt_i7(value="Program#rt_event_p1 { Event#Message(type=\"net.request\" payload=\"")
             StrConcat#rt_s2 {
               StrEscape#rt_se1 { Var#rt_v23(name=payload) }
               Lit#rt_i8(value="\") }")
@@ -189,7 +242,7 @@ Program#rt_p1 {
           Eq#rt_eq3 { NodeKind#rt_nk1 { Var#rt_v25(name=parsed) } Lit#rt_i9(value="Program") }
           Block#rt_b10 { Return#rt_r7 { ChildAt#rt_ca1 { Var#rt_v26(name=parsed) Lit#rt_i10(value=0) } } }
           Block#rt_b11 {
-            Let#rt_l17(name=fallback) { Call#rt_c16(target=compiler.parse) { Lit#rt_i11(value="Program#rt_event_p2 { Event#Message(type=\"http.request\" payload=\"\") }") } }
+            Let#rt_l17(name=fallback) { Call#rt_c16(target=compiler.parse) { Lit#rt_i11(value="Program#rt_event_p2 { Event#Message(type=\"net.request\" payload=\"\") }") } }
             Return#rt_r8 { ChildAt#rt_ca2 { Var#rt_v27(name=fallback) Lit#rt_i12(value=0) } }
           }
         }
@@ -206,7 +259,7 @@ Program#rt_p1 {
             If#rt_if5 {
               Eq#rt_eq5 { ChildCount#rt_cc1 { Var#rt_v29(name=next) } Lit#rt_i14(value=0) }
               Block#rt_b14 {
-                Call#rt_c17(target=sys.net.write) { Var#rt_v30(name=conn) Call#rt_c18(target=runtime_http_204) { Lit#rt_i15(value=0) } }
+                Call#rt_c17(target=sys.net.tcp.write) { Var#rt_v30(name=conn) Call#rt_c18(target=runtime_http_204) { Lit#rt_i15(value=0) } }
                 Return#rt_r9 { Var#rt_v31(name=currentState) }
               }
               Block#rt_b15 {
@@ -216,7 +269,7 @@ Program#rt_p1 {
                   Var#rt_v35(name=didWrite)
                   Block#rt_b16 { Return#rt_r10 { Var#rt_v36(name=newState) } }
                   Block#rt_b17 {
-                    Call#rt_c20(target=sys.net.write) { Var#rt_v37(name=conn) Call#rt_c21(target=runtime_http_204) { Lit#rt_i19(value=0) } }
+                    Call#rt_c20(target=sys.net.tcp.write) { Var#rt_v37(name=conn) Call#rt_c21(target=runtime_http_204) { Lit#rt_i19(value=0) } }
                     Return#rt_r11 { Var#rt_v38(name=newState) }
                   }
                 }
@@ -224,7 +277,7 @@ Program#rt_p1 {
             }
           }
           Block#rt_b18 {
-            Call#rt_c22(target=sys.net.write) { Var#rt_v39(name=conn) Call#rt_c23(target=runtime_http_204) { Lit#rt_i20(value=0) } }
+            Call#rt_c22(target=sys.net.tcp.write) { Var#rt_v39(name=conn) Call#rt_c23(target=runtime_http_204) { Lit#rt_i20(value=0) } }
             Return#rt_r12 { Var#rt_v40(name=next) }
           }
         }
@@ -263,7 +316,7 @@ Program#rt_p1 {
                         If#rt_if12 {
                           Eq#rt_eq11 { Var#rt_v55(name=emitType) Lit#rt_i32(value="http.response") }
                           Block#rt_b28 {
-                            Call#rt_c29(target=sys.net.write) { Var#rt_v56(name=conn) Call#rt_c30(target=runtime_http_200) { Var#rt_v57(name=emitPayload) } }
+                            Call#rt_c29(target=sys.net.tcp.write) { Var#rt_v56(name=conn) Call#rt_c30(target=runtime_http_200) { Var#rt_v57(name=emitPayload) } }
                             Return#rt_r15 {
                               Call#rt_c31(target=runtime_handle_commands) {
                                 Var#rt_v58(name=block)
@@ -278,7 +331,7 @@ Program#rt_p1 {
                         If#rt_if120 {
                           Eq#rt_eq110 { Var#rt_v550(name=emitType) Lit#rt_i320(value="http.raw") }
                           Block#rt_b280 {
-                            Call#rt_c290(target=sys.net.write) { Var#rt_v560(name=conn) Var#rt_v570(name=emitPayload) }
+                            Call#rt_c290(target=sys.net.tcp.write) { Var#rt_v560(name=conn) Var#rt_v570(name=emitPayload) }
                             Return#rt_r150 {
                               Call#rt_c310(target=runtime_handle_commands) {
                                 Var#rt_v580(name=block)

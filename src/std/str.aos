@@ -35,7 +35,39 @@ Program#std_str_p1 {
     }
   }
 
+  Let#std_str_l4(name=fromCodePoint) {
+    Fn#std_str_f4(params=codePoint) {
+      Block#std_str_b4 {
+        Return#std_str_r4 { Call#std_str_c3(target=sys.str.fromCodePoint) { Var#std_str_v9(name=codePoint) } }
+      }
+    }
+  }
+
+  Let#std_str_l5(name=decodeUnicodeHex4) {
+    Fn#std_str_f5(params=hex4) {
+      Block#std_str_b5 {
+        Return#std_str_r5 { Call#std_str_c4(target=sys.str.decodeUnicodeHex4) { Var#std_str_v10(name=hex4) } }
+      }
+    }
+  }
+
+  Let#std_str_l6(name=decodeUnicodeSurrogatePairHex4) {
+    Fn#std_str_f6(params=highHex4,lowHex4) {
+      Block#std_str_b6 {
+        Return#std_str_r6 {
+          Call#std_str_c5(target=sys.str.decodeUnicodeSurrogatePairHex4) {
+            Var#std_str_v11(name=highHex4)
+            Var#std_str_v12(name=lowHex4)
+          }
+        }
+      }
+    }
+  }
+
   Export#std_str_e1(name=concat)
   Export#std_str_e2(name=substring)
   Export#std_str_e3(name=remove)
+  Export#std_str_e4(name=fromCodePoint)
+  Export#std_str_e5(name=decodeUnicodeHex4)
+  Export#std_str_e6(name=decodeUnicodeSurrogatePairHex4)
 }

@@ -534,7 +534,7 @@ Program#std_http_p1 {
               Eq#std_http_eq81 { Var#std_http_v160(name=remaining) Lit#std_http_i129(value=0) }
               Block#std_http_b72 {
                 Call#std_http_c85(target=sys.net.async.cancel) { Var#std_http_v161(name=op) }
-                Call#std_http_c86(target=sys.net.close) { Var#std_http_v162(name=connection) }
+                Call#std_http_c86(target=sys.net.tcp.close) { Var#std_http_v162(name=connection) }
                 Return#std_http_r48 {
                   Call#std_http_c87(target=httpMakeRequestState) {
                     Lit#std_http_i130(value="error")
@@ -569,7 +569,7 @@ Program#std_http_p1 {
               Eq#std_http_eq69 { Var#std_http_v101(name=status) Lit#std_http_i81(value=1) }
               Block#std_http_b44 { Lit#std_http_i82(value=0) }
               Block#std_http_b45 {
-                Call#std_http_c33(target=sys.net.close) { Var#std_http_v102(name=connection) }
+                Call#std_http_c33(target=sys.net.tcp.close) { Var#std_http_v102(name=connection) }
                 Return#std_http_r30 {
                   Call#std_http_c34(target=httpMakeRequestState) {
                     Lit#std_http_i83(value="error")
@@ -622,7 +622,7 @@ Program#std_http_p1 {
               Eq#std_http_eq82 { Var#std_http_v172(name=remaining) Lit#std_http_i141(value=0) }
               Block#std_http_b74 {
                 Call#std_http_c97(target=sys.net.async.cancel) { Var#std_http_v173(name=op) }
-                Call#std_http_c98(target=sys.net.close) { Var#std_http_v174(name=connection) }
+                Call#std_http_c98(target=sys.net.tcp.close) { Var#std_http_v174(name=connection) }
                 Return#std_http_r50 {
                   Call#std_http_c99(target=httpMakeRequestState) {
                     Lit#std_http_i142(value="error")
@@ -657,7 +657,7 @@ Program#std_http_p1 {
               Eq#std_http_eq71 { Var#std_http_v116(name=status) Lit#std_http_i92(value=1) }
               Block#std_http_b49 { Lit#std_http_i93(value=0) }
               Block#std_http_b50 {
-                Call#std_http_c45(target=sys.net.close) { Var#std_http_v117(name=connection) }
+                Call#std_http_c45(target=sys.net.tcp.close) { Var#std_http_v117(name=connection) }
                 Return#std_http_r33 {
                   Call#std_http_c46(target=httpMakeRequestState) {
                     Lit#std_http_i94(value="error")
@@ -673,7 +673,7 @@ Program#std_http_p1 {
               }
             }
             Let#std_http_l50(name=response) { Call#std_http_c49(target=sys.net.async.resultBytes) { Var#std_http_v120(name=op) } }
-            Call#std_http_c50(target=sys.net.close) { Var#std_http_v121(name=connection) }
+            Call#std_http_c50(target=sys.net.tcp.close) { Var#std_http_v121(name=connection) }
             Return#std_http_r34 {
               Call#std_http_c51(target=httpMakeRequestState) {
                 Lit#std_http_i99(value="done")

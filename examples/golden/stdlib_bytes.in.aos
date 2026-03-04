@@ -1,0 +1,9 @@
+Program#gbytes_p1 {
+  Import#gbytes_i1(path="./src/std/bytes.aos")
+  Call#gbytes_c1(target=toBase64) {
+    Call#gbytes_c2(target=concat) {
+      Call#gbytes_c3(target=fromBase64) { Lit#gbytes_l1(value="YQ==") }
+      Call#gbytes_c4(target=fromBase64) { Lit#gbytes_l2(value="Yg==") }
+    }
+  }
+}
