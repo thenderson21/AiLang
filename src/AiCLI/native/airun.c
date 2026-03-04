@@ -1003,13 +1003,16 @@ static int emit_wasm_spa_files(const char* out_dir, const char* runtime_name)
 {
     char index_path[PATH_MAX];
     char main_path[PATH_MAX];
+    char remote_client_path[PATH_MAX];
     char index_html[2048];
-    char main_js[2048];
+    char main_js[4096];
+    char remote_client_js[8192];
     if (out_dir == NULL || runtime_name == NULL) {
         return 0;
     }
     if (!join_path(out_dir, "index.html", index_path, sizeof(index_path)) ||
-        !join_path(out_dir, "main.js", main_path, sizeof(main_path))) {
+        !join_path(out_dir, "main.js", main_path, sizeof(main_path)) ||
+        !join_path(out_dir, "remote-client.js", remote_client_path, sizeof(remote_client_path))) {
         return 0;
     }
     if (snprintf(
@@ -1022,7 +1025,11 @@ static int emit_wasm_spa_files(const char* out_dir, const char* runtime_name)
             main_js,
             sizeof(main_js),
             "import createRuntime from './aivm-runtime-wasm32-web.mjs';\n"
+            "import { createAivmRemoteClient } from './remote-client.js';\n"
             "const output = document.getElementById('output');\n"
+            "const endpoint = globalThis.AIVM_REMOTE_WS_ENDPOINT || (`ws://${location.hostname}:8765`);\n"
+            "const remoteClient = createAivmRemoteClient({ endpoint });\n"
+            "globalThis.__aivmRemoteCall = (cap, op, value) => remoteClient.call(cap, op, value);\n"
             "const runtime = await createRuntime();\n"
             "const bytes = await (await fetch('./app.aibc1')).arrayBuffer();\n"
             "runtime.FS.writeFile('/app.aibc1', new Uint8Array(bytes));\n"
@@ -1034,7 +1041,68 @@ static int emit_wasm_spa_files(const char* out_dir, const char* runtime_name)
             runtime_name) >= (int)sizeof(main_js)) {
         return 0;
     }
-    return write_text_file(index_path, index_html) && write_text_file(main_path, main_js);
+    if (snprintf(
+            remote_client_js,
+            sizeof(remote_client_js),
+            "function encodeText(text) { return new TextEncoder().encode(text); }\n"
+            "function decodeText(bytes) { return new TextDecoder().decode(bytes); }\n"
+            "function writeU16LE(arr, off, v) { arr[off]=v&255; arr[off+1]=(v>>8)&255; }\n"
+            "function writeU32LE(arr, off, v) { arr[off]=v&255; arr[off+1]=(v>>8)&255; arr[off+2]=(v>>16)&255; arr[off+3]=(v>>24)&255; }\n"
+            "function readU16LE(arr, off) { return arr[off] | (arr[off+1] << 8); }\n"
+            "function readU32LE(arr, off) { return (arr[off] | (arr[off+1] << 8) | (arr[off+2] << 16) | (arr[off+3] << 24)) >>> 0; }\n"
+            "function encodeStr(s) { const b = encodeText(s); const out = new Uint8Array(2 + b.length); writeU16LE(out, 0, b.length); out.set(b, 2); return out; }\n"
+            "function decodeStr(arr, off) { const n = readU16LE(arr, off); const start = off + 2; return { value: decodeText(arr.slice(start, start + n)), next: start + n }; }\n"
+            "function join(parts) { const len = parts.reduce((a,b)=>a+b.length,0); const out = new Uint8Array(len); let i=0; for (const p of parts) { out.set(p, i); i += p.length; } return out; }\n"
+            "function encodeCall(id, cap, op, value) {\n"
+            "  const capB = encodeStr(cap); const opB = encodeStr(op);\n"
+            "  const payload = new Uint8Array(capB.length + opB.length + 8);\n"
+            "  payload.set(capB, 0); payload.set(opB, capB.length);\n"
+            "  const dv = new DataView(payload.buffer); dv.setBigInt64(capB.length + opB.length, BigInt(value), true);\n"
+            "  const frame = new Uint8Array(9 + payload.length); frame[0] = 0x10; writeU32LE(frame, 1, id); writeU32LE(frame, 5, payload.length); frame.set(payload, 9); return frame;\n"
+            "}\n"
+            "function decodeFrame(arr) { return { type: arr[0], id: readU32LE(arr,1), payload: arr.slice(9) }; }\n"
+            "function decodeResult(payload) { const dv = new DataView(payload.buffer, payload.byteOffset, payload.byteLength); return Number(dv.getBigInt64(0, true)); }\n"
+            "function decodeError(payload) { const code = readU32LE(payload, 0); const msg = decodeStr(payload, 4).value; return { code, message: msg }; }\n"
+            "function encodeHello(id, caps) {\n"
+            "  const clientName = encodeStr('aivm-web-client');\n"
+            "  const capParts = caps.map((c)=>encodeStr(c));\n"
+            "  const header = new Uint8Array(2 + 4); writeU16LE(header, 0, 1); writeU32LE(header, 2, caps.length);\n"
+            "  const payload = join([clientName, header, ...capParts]);\n"
+            "  const frame = new Uint8Array(9 + payload.length); frame[0]=0x01; writeU32LE(frame,1,id); writeU32LE(frame,5,payload.length); frame.set(payload,9); return frame;\n"
+            "}\n"
+            "export function createAivmRemoteClient({ endpoint }) {\n"
+            "  let ws = null; let nextId = 2; const pending = new Map(); let ready = null;\n"
+            "  function ensureSocket() {\n"
+            "    if (ws && ws.readyState === WebSocket.OPEN) return Promise.resolve();\n"
+            "    if (ready) return ready;\n"
+            "    ready = new Promise((resolve, reject) => {\n"
+            "      ws = new WebSocket(endpoint); ws.binaryType = 'arraybuffer';\n"
+            "      ws.onopen = () => { ws.send(encodeHello(1, ['cap.remote'])); };\n"
+            "      ws.onmessage = (ev) => {\n"
+            "        const arr = new Uint8Array(ev.data); const frame = decodeFrame(arr);\n"
+            "        if (frame.type === 0x02 && frame.id === 1) { resolve(); return; }\n"
+            "        const p = pending.get(frame.id); if (!p) return;\n"
+            "        if (frame.type === 0x11) { pending.delete(frame.id); p.resolve(decodeResult(frame.payload)); return; }\n"
+            "        if (frame.type === 0x12) { const err = decodeError(frame.payload); pending.delete(frame.id); p.reject(new Error(`remote ${err.code}: ${err.message}`)); }\n"
+            "      };\n"
+            "      ws.onerror = () => reject(new Error('remote websocket error'));\n"
+            "      ws.onclose = () => { ready = null; ws = null; };\n"
+            "    });\n"
+            "    return ready;\n"
+            "  }\n"
+            "  return {\n"
+            "    async call(cap, op, value) {\n"
+            "      await ensureSocket();\n"
+            "      const id = nextId++;\n"
+            "      return new Promise((resolve, reject) => { pending.set(id, { resolve, reject }); ws.send(encodeCall(id, cap, op, value)); });\n"
+            "    }\n"
+            "  };\n"
+            "}\n") >= (int)sizeof(remote_client_js)) {
+        return 0;
+    }
+    return write_text_file(index_path, index_html) &&
+           write_text_file(main_path, main_js) &&
+           write_text_file(remote_client_path, remote_client_js);
 }
 
 static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_name)
@@ -1042,7 +1110,11 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
     char client_dir[PATH_MAX];
     char server_dir[PATH_MAX];
     char server_readme_path[PATH_MAX];
+    char server_run_sh_path[PATH_MAX];
+    char server_run_ps1_path[PATH_MAX];
     char server_readme[2048];
+    char server_run_sh[2048];
+    char server_run_ps1[2048];
     if (out_dir == NULL || runtime_name == NULL) {
         return 0;
     }
@@ -1059,15 +1131,43 @@ static int emit_wasm_fullstack_layout(const char* out_dir, const char* runtime_n
     if (!join_path(server_dir, "README.md", server_readme_path, sizeof(server_readme_path))) {
         return 0;
     }
+    if (!join_path(server_dir, "run-remote-ws-bridge.sh", server_run_sh_path, sizeof(server_run_sh_path)) ||
+        !join_path(server_dir, "run-remote-ws-bridge.ps1", server_run_ps1_path, sizeof(server_run_ps1_path))) {
+        return 0;
+    }
     if (snprintf(
             server_readme,
             sizeof(server_readme),
             "# AiLang wasm fullstack package\n\n"
-            "This folder is reserved for the native AiLang server component.\n"
-            "The client wasm package is in `../client/` and can call server routes exposed by an AiLang server process.\n") >= (int)sizeof(server_readme)) {
+            "This folder contains launch helpers for the native websocket remote bridge.\n"
+            "The client wasm package is in `../client/` and calls websocket endpoint `ws://<host>:8765` by default.\n"
+            "Set `AIVM_REMOTE_WS_ENDPOINT` in browser page to override endpoint.\n"
+            "Set `AIVM_REMOTE_CAPS` (example: `cap.remote`) before starting bridge.\n") >= (int)sizeof(server_readme)) {
         return 0;
     }
-    return write_text_file(server_readme_path, server_readme);
+    if (snprintf(
+            server_run_sh,
+            sizeof(server_run_sh),
+            "#!/usr/bin/env bash\nset -euo pipefail\n: \"${AIVM_REMOTE_CAPS:=cap.remote}\"\nexec ./aivm_remote_ws_bridge\n") >= (int)sizeof(server_run_sh)) {
+        return 0;
+    }
+    if (snprintf(
+            server_run_ps1,
+            sizeof(server_run_ps1),
+            "$ErrorActionPreference = 'Stop'\nif (-not $env:AIVM_REMOTE_CAPS) { $env:AIVM_REMOTE_CAPS = 'cap.remote' }\n./aivm_remote_ws_bridge.exe\n") >= (int)sizeof(server_run_ps1)) {
+        return 0;
+    }
+    if (!write_text_file(server_readme_path, server_readme) ||
+        !write_text_file(server_run_sh_path, server_run_sh) ||
+        !write_text_file(server_run_ps1_path, server_run_ps1)) {
+        return 0;
+    }
+#ifndef _WIN32
+    if (chmod(server_run_sh_path, 0755) != 0) {
+        return 0;
+    }
+#endif
+    return 1;
 }
 
 #define NATIVE_PROCESS_CAPACITY 32U
