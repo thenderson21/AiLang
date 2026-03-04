@@ -2813,6 +2813,38 @@ static int opcode_from_text(const char* op_text, AivmOpcode* out_opcode)
     return 0;
 }
 
+static int bytecode_add_string_const(AivmProgram* program, const char* value, int64_t* out_idx)
+{
+    size_t i;
+    size_t len;
+    size_t base;
+    if (program == NULL || value == NULL || out_idx == NULL) {
+        return 0;
+    }
+    for (i = 0U; i < program->constant_count; i += 1U) {
+        if (program->constant_storage[i].type == AIVM_VAL_STRING &&
+            program->constant_storage[i].string_value != NULL &&
+            strcmp(program->constant_storage[i].string_value, value) == 0) {
+            *out_idx = (int64_t)i;
+            return 1;
+        }
+    }
+    if (program->constant_count >= AIVM_PROGRAM_MAX_CONSTANTS) {
+        return 0;
+    }
+    len = strlen(value);
+    base = program->string_storage_used;
+    if (base + len + 1U > AIVM_PROGRAM_MAX_STRING_BYTES) {
+        return 0;
+    }
+    memcpy(&program->string_storage[base], value, len + 1U);
+    program->string_storage_used += (len + 1U);
+    program->constant_storage[program->constant_count] = aivm_value_string(&program->string_storage[base]);
+    *out_idx = (int64_t)program->constant_count;
+    program->constant_count += 1U;
+    return 1;
+}
+
 static int parse_bytecode_aos_to_program_text(
     const char* source,
     AivmProgram* out_program,
@@ -2902,6 +2934,7 @@ static int parse_bytecode_aos_to_program_text(
         const char* rparen;
         char attrs[512];
         char op[64];
+        char syscall_target[512];
         int64_t a = 0;
         AivmOpcode opcode;
         size_t n;
@@ -2923,8 +2956,17 @@ static int parse_bytecode_aos_to_program_text(
         if (!parse_attr_span(attrs, "op", op, sizeof(op)) || !opcode_from_text(op, &opcode)) {
             return 0;
         }
-        if (has_attr_key(attrs, "s")) {
-            return 0;
+        if (parse_attr_span(attrs, "s", syscall_target, sizeof(syscall_target))) {
+            int64_t target_const_idx = 0;
+            if (!allow_legacy_zero_b ||
+                (opcode != AIVM_OP_CALL_SYS && opcode != AIVM_OP_ASYNC_CALL_SYS) ||
+                !bytecode_add_string_const(out_program, syscall_target, &target_const_idx) ||
+                out_program->instruction_count >= AIVM_PROGRAM_MAX_INSTRUCTIONS) {
+                return 0;
+            }
+            out_program->instruction_storage[out_program->instruction_count].opcode = AIVM_OP_CONST;
+            out_program->instruction_storage[out_program->instruction_count].operand_int = target_const_idx;
+            out_program->instruction_count += 1U;
         }
         if (has_attr_key(attrs, "b")) {
             int64_t b = 0;
