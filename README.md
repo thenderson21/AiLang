@@ -183,11 +183,11 @@ Rebuild `tools/airun` (native C, host platform):
 - `wasm32` publish supports profiles:
   - `web` (default): emits `index.html` + `main.js` package files.
   - `cli`: emits `run.sh` + `run.ps1` launcher files.
-  - `fullstack`: emits `client/` web package + `server/` AiLang server scaffold (`project.aiproj`, `src/app.aos`, `README.md`).
-    - bundles host runtime in `server/runtime/` (default host RID, override with `--wasm-fullstack-host-target <rid>`).
+  - `fullstack`: emits root app binary + `www/` web package (`index.html`, `main.js`, `remote-client.js`, `app.aibc1`, wasm runtime artifacts).
+    - bundles host runtime as root app binary (default host RID, override with `--wasm-fullstack-host-target <rid>`).
     - emits a self-contained root app binary (`./<appname>` or `.<\\appname>.exe`) for published-package execution.
     - project manifest override: `publishWasmFullstackHostTarget="<rid>"`.
-    - AiLang app must self-host `server/www` assets.
+    - AiLang app must self-host `www/` assets.
   - malformed bytecode/source fixtures are deterministically rejected at publish-time with `DEV008` (contract guard, not runtime drift).
 - wasm client/server capability channel MVP uses `sys.remote.call` (see `SPEC/WASM_REMOTE_CHANNEL.md`).
   - MVP security baseline: `SPEC/WASM_REMOTE_SECURITY.md`.

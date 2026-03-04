@@ -1137,75 +1137,34 @@ static int emit_wasm_spa_files(const char* out_dir)
 
 static int emit_wasm_fullstack_layout(const char* out_dir)
 {
-    char client_dir[PATH_MAX];
-    char server_dir[PATH_MAX];
-    char server_src_dir[PATH_MAX];
-    char server_www_dir[PATH_MAX];
-    char server_readme_path[PATH_MAX];
-    char server_project_path[PATH_MAX];
-    char server_app_path[PATH_MAX];
-    char server_readme[2048];
-    char server_project[1024];
-    char server_app[2048];
+    char www_dir[PATH_MAX];
+    char readme_path[PATH_MAX];
+    char readme[1024];
     if (out_dir == NULL) {
         return 0;
     }
-    if (!join_path(out_dir, "client", client_dir, sizeof(client_dir)) ||
-        !join_path(out_dir, "server", server_dir, sizeof(server_dir))) {
+    if (!join_path(out_dir, "www", www_dir, sizeof(www_dir))) {
         return 0;
     }
-    if (!join_path(server_dir, "src", server_src_dir, sizeof(server_src_dir))) {
+    if (!ensure_directory(www_dir)) {
         return 0;
     }
-    if (!join_path(server_dir, "www", server_www_dir, sizeof(server_www_dir))) {
-        return 0;
-    }
-    if (!ensure_directory(client_dir) || !ensure_directory(server_dir) || !ensure_directory(server_src_dir) || !ensure_directory(server_www_dir)) {
-        return 0;
-    }
-    if (!emit_wasm_spa_files(client_dir) ||
-        !emit_wasm_spa_files(server_www_dir)) {
-        return 0;
-    }
-    if (!join_path(server_dir, "README.md", server_readme_path, sizeof(server_readme_path)) ||
-        !join_path(server_dir, "project.aiproj", server_project_path, sizeof(server_project_path)) ||
-        !join_path(server_src_dir, "app.aos", server_app_path, sizeof(server_app_path))) {
+    if (!emit_wasm_spa_files(www_dir)) {
         return 0;
     }
     if (snprintf(
-            server_readme,
-            sizeof(server_readme),
+            readme,
+            sizeof(readme),
             "# AiLang wasm fullstack package\n\n"
-            "This folder contains an AiLang server scaffold.\n"
-            "Client web assets are colocated in `www/` and also mirrored in `../client/`.\n"
-            "The app binary in package root is responsible for serving `www/` and websocket endpoint `ws://<host>:8765`.\n"
-            "Set `AIVM_REMOTE_WS_ENDPOINT` in browser page to override endpoint.\n"
-            "Implement remote capability routing in `src/app.aos` using AiLang `sys.net.*` primitives and the channel contract in `SPEC/WASM_REMOTE_CHANNEL.md`.\n") >= (int)sizeof(server_readme)) {
+            "This package contains a self-contained app binary and `www/` client assets.\n"
+            "The app binary is responsible for serving `www/` and websocket endpoint `ws://<host>:8765`.\n"
+            "Set `AIVM_REMOTE_WS_ENDPOINT` in browser page to override endpoint.\n") >= (int)sizeof(readme)) {
         return 0;
     }
-    if (snprintf(
-            server_project,
-            sizeof(server_project),
-            "Program#p1 {\n"
-            "  Project#proj1(name=\"aivm_remote_server\" entryFile=\"src/app.aos\" entryExport=\"main\")\n"
-            "}\n") >= (int)sizeof(server_project)) {
+    if (!join_path(out_dir, "README.md", readme_path, sizeof(readme_path))) {
         return 0;
     }
-    if (snprintf(
-            server_app,
-            sizeof(server_app),
-            "Bytecode#bc1(magic=\"AIBC\" format=\"AiBC1\" version=2 flags=0) {\n"
-            "  Const#k0(kind=string value=\"AiLang fullstack server scaffold\")\n"
-            "  Func#f_main(name=main params=\"argv\" locals=\"\") {\n"
-            "    Inst#i0(op=CONST a=0)\n"
-            "    Inst#i1(op=HALT)\n"
-            "  }\n"
-            "}\n") >= (int)sizeof(server_app)) {
-        return 0;
-    }
-    if (!write_text_file(server_readme_path, server_readme) ||
-        !write_text_file(server_project_path, server_project) ||
-        !write_text_file(server_app_path, server_app)) {
+    if (!write_text_file(readme_path, readme)) {
         return 0;
     }
     return 1;
@@ -4283,19 +4242,16 @@ static int handle_publish(int argc, char** argv)
                 return 2;
             }
         } else if (strcmp(wasm_profile, "fullstack") == 0) {
-            char client_dir[PATH_MAX];
-            char server_dir[PATH_MAX];
-            char server_www_dir[PATH_MAX];
-            char server_runtime_dir[PATH_MAX];
+            char www_dir[PATH_MAX];
             char fullstack_host_artifact_dir[PATH_MAX];
             char fullstack_host_runtime_bin[64];
             char fullstack_host_runtime_name[160];
             char fullstack_host_runtime_src[PATH_MAX];
-            char fullstack_host_runtime_dst[PATH_MAX];
             char fullstack_host_runtime_root_dst[PATH_MAX];
-            char fullstack_runtime_app_dst[PATH_MAX];
             char legacy_run_dst[PATH_MAX];
             char legacy_run_ps1_dst[PATH_MAX];
+            char legacy_client_dir[PATH_MAX];
+            char legacy_server_dir[PATH_MAX];
             wasm_fullstack_host_target[0] = '\0';
             if (wasm_fullstack_host_target_arg != NULL) {
                 if (snprintf(wasm_fullstack_host_target, sizeof(wasm_fullstack_host_target), "%s", wasm_fullstack_host_target_arg) >= (int)sizeof(wasm_fullstack_host_target)) {
@@ -4340,53 +4296,42 @@ static int handle_publish(int argc, char** argv)
                     return 2;
                 }
             }
-            if (!join_path(out_dir, "client", client_dir, sizeof(client_dir)) ||
-                !ensure_directory(client_dir)) {
+            if (!join_path(out_dir, "www", www_dir, sizeof(www_dir)) ||
+                !ensure_directory(www_dir)) {
                 fprintf(stderr,
-                    "Err#err1(code=RUN001 message=\"Failed to create wasm fullstack client directory.\" nodeId=publish)\n");
-                return 2;
-            }
-            if (!join_path(out_dir, "server", server_dir, sizeof(server_dir)) ||
-                !ensure_directory(server_dir) ||
-                !join_path(server_dir, "runtime", server_runtime_dir, sizeof(server_runtime_dir)) ||
-                !ensure_directory(server_runtime_dir)) {
-                fprintf(stderr,
-                    "Err#err1(code=RUN001 message=\"Failed to create wasm fullstack server runtime directory.\" nodeId=publish)\n");
+                    "Err#err1(code=RUN001 message=\"Failed to create wasm fullstack www directory.\" nodeId=publish)\n");
                 return 2;
             }
             if (!join_path(fullstack_host_artifact_dir, fullstack_host_runtime_bin, fullstack_host_runtime_src, sizeof(fullstack_host_runtime_src)) ||
-                !join_path(server_runtime_dir, fullstack_host_runtime_name, fullstack_host_runtime_dst, sizeof(fullstack_host_runtime_dst)) ||
                 !join_path(out_dir, fullstack_host_runtime_name, fullstack_host_runtime_root_dst, sizeof(fullstack_host_runtime_root_dst)) ||
-                !join_path(server_runtime_dir, "app.aibc1", fullstack_runtime_app_dst, sizeof(fullstack_runtime_app_dst)) ||
                 !join_path(out_dir, "run", legacy_run_dst, sizeof(legacy_run_dst)) ||
                 !join_path(out_dir, "run.ps1", legacy_run_ps1_dst, sizeof(legacy_run_ps1_dst)) ||
-                !copy_runtime_file(fullstack_host_runtime_src, fullstack_host_runtime_dst) ||
+                !join_path(out_dir, "client", legacy_client_dir, sizeof(legacy_client_dir)) ||
+                !join_path(out_dir, "server", legacy_server_dir, sizeof(legacy_server_dir)) ||
                 !copy_runtime_file(fullstack_host_runtime_src, fullstack_host_runtime_root_dst) ||
-                !copy_file(app_dst, fullstack_runtime_app_dst) ||
                 !remove_file_if_exists(legacy_run_dst) ||
-                !remove_file_if_exists(legacy_run_ps1_dst)) {
+                !remove_file_if_exists(legacy_run_ps1_dst)
+#ifdef _WIN32
+                || (directory_exists(legacy_client_dir) && !native_delete_dir_recursive_windows(legacy_client_dir))
+                || (directory_exists(legacy_server_dir) && !native_delete_dir_recursive_windows(legacy_server_dir))
+#else
+                || (directory_exists(legacy_client_dir) && !native_delete_dir_recursive_posix(legacy_client_dir))
+                || (directory_exists(legacy_server_dir) && !native_delete_dir_recursive_posix(legacy_server_dir))
+#endif
+                ) {
                 fprintf(stderr,
-                    "Err#err1(code=RUN001 message=\"Failed to copy wasm fullstack host runtime for target RID. Build target runtime first.\" nodeId=wasmFullstackHostTarget)\n");
+                    "Err#err1(code=RUN001 message=\"Failed to prepare wasm fullstack package layout.\" nodeId=publish)\n");
                 return 2;
             }
-            if (!join_path(client_dir, "app.aibc1", wasm_app_dst, sizeof(wasm_app_dst)) ||
+            if (!join_path(www_dir, "app.aibc1", wasm_app_dst, sizeof(wasm_app_dst)) ||
                 !copy_file(app_dst, wasm_app_dst) ||
-                !join_path(client_dir, publish_runtime_name, runtime_dst, sizeof(runtime_dst)) ||
+                !join_path(www_dir, publish_runtime_name, runtime_dst, sizeof(runtime_dst)) ||
                 !copy_runtime_file(runtime_src, runtime_dst) ||
-                !join_path(client_dir, runtime_web_bin, runtime_web_dst, sizeof(runtime_web_dst)) ||
-                !join_path(client_dir, runtime_web_wasm_bin, runtime_web_wasm_dst, sizeof(runtime_web_wasm_dst)) ||
+                !join_path(www_dir, runtime_web_bin, runtime_web_dst, sizeof(runtime_web_dst)) ||
+                !join_path(www_dir, runtime_web_wasm_bin, runtime_web_wasm_dst, sizeof(runtime_web_wasm_dst)) ||
                 !copy_runtime_file(runtime_web_src, runtime_web_dst) ||
                 !copy_runtime_file(runtime_web_wasm_src, runtime_web_wasm_dst) ||
-                !emit_wasm_fullstack_layout(out_dir) ||
-                !join_path(out_dir, "server/www", server_www_dir, sizeof(server_www_dir)) ||
-                !join_path(server_www_dir, "app.aibc1", wasm_app_dst, sizeof(wasm_app_dst)) ||
-                !copy_file(app_dst, wasm_app_dst) ||
-                !join_path(server_www_dir, publish_runtime_name, runtime_dst, sizeof(runtime_dst)) ||
-                !copy_runtime_file(runtime_src, runtime_dst) ||
-                !join_path(server_www_dir, runtime_web_bin, runtime_web_dst, sizeof(runtime_web_dst)) ||
-                !join_path(server_www_dir, runtime_web_wasm_bin, runtime_web_wasm_dst, sizeof(runtime_web_wasm_dst)) ||
-                !copy_runtime_file(runtime_web_src, runtime_web_dst) ||
-                !copy_runtime_file(runtime_web_wasm_src, runtime_web_wasm_dst)) {
+                !emit_wasm_fullstack_layout(out_dir)) {
                 fprintf(stderr,
                     "Err#err1(code=RUN001 message=\"Failed to emit wasm fullstack package files.\" nodeId=publish)\n");
                 return 2;
