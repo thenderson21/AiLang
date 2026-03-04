@@ -134,11 +134,36 @@ done
 for CASE_NAME in "${UNSUPPORTED_CASES[@]}"; do
   CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
   CASE_OUT="${PUBLISH_DIR}/${CASE_NAME}"
+  CASE_ERR="${CASE_OUT}/publish.err"
   mkdir -p "${CASE_OUT}"
-  if ./tools/airun publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null 2>&1; then
+  if ./tools/airun publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null 2>"${CASE_ERR}"; then
     echo "wasm publish contract mismatch (${CASE_NAME}): expected deterministic unsupported publish failure" >&2
     exit 1
   fi
+  if ! rg -q 'Err#err1\(code=DEV008 message="' "${CASE_ERR}"; then
+    echo "wasm publish contract mismatch (${CASE_NAME}): expected DEV008 deterministic unsupported error" >&2
+    exit 1
+  fi
+  case "${CASE_NAME}" in
+    vm_c_execute_src_node_constant_unsupported)
+      if ! rg -q 'cannot encode this bytecode AOS shape yet' "${CASE_ERR}"; then
+        echo "wasm publish contract mismatch (${CASE_NAME}): expected unsupported-bytecode-shape reason" >&2
+        exit 1
+      fi
+      ;;
+    vm_c_execute_src_opcode_unmapped)
+      if ! rg -q 'cannot encode this bytecode AOS shape yet' "${CASE_ERR}"; then
+        echo "wasm publish contract mismatch (${CASE_NAME}): expected unsupported-opcode-shape reason" >&2
+        exit 1
+      fi
+      ;;
+    vm_c_execute_src_parse_error)
+      if ! rg -q 'Publish needs prebuilt \.aibc1 unless source is bytecode-style AOS' "${CASE_ERR}"; then
+        echo "wasm publish contract mismatch (${CASE_NAME}): expected non-bytecode-source gate reason" >&2
+        exit 1
+      fi
+      ;;
+  esac
 done
 
 ./tools/airun publish "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --target wasm32 --wasm-profile spa --out "${PUBLISH_SPA_DIR}" >/dev/null
