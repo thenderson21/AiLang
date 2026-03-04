@@ -1341,7 +1341,7 @@ static int emit_wasm_spa_files(const char* out_dir)
     char main_path[PATH_MAX];
     char remote_client_path[PATH_MAX];
     char index_html[2048];
-    char main_js[4096];
+    char main_js[12288];
     char remote_client_js[8192];
     if (out_dir == NULL) {
         return 0;
@@ -1364,14 +1364,36 @@ static int emit_wasm_spa_files(const char* out_dir)
             "import { createAivmRemoteClient } from './remote-client.js';\n"
             "const output = document.getElementById('output');\n"
             "const endpoint = globalThis.AIVM_REMOTE_WS_ENDPOINT || (`ws://${location.hostname}:8765`);\n"
-            "const remoteClient = createAivmRemoteClient({ endpoint });\n"
-            "globalThis.__aivmRemoteCall = (cap, op, value) => remoteClient.call(cap, op, value);\n"
+            "const aiLangRoot = globalThis.AiLang || (globalThis.AiLang = {});\n"
+            "const remoteMode = globalThis.AIVM_REMOTE_MODE || 'ws';\n"
+            "const stdinQueue = [];\n"
+            "let stdinClosed = false;\n"
+            "aiLangRoot.stdin = {\n"
+            "  push(text) { stdinQueue.push(String(text ?? '')); },\n"
+            "  close() { stdinClosed = true; },\n"
+            "  _drain() { if (stdinQueue.length > 0) return stdinQueue.shift(); return stdinClosed ? null : ''; }\n"
+            "};\n"
+            "aiLangRoot.remote = aiLangRoot.remote || {};\n"
+            "let remoteCallImpl = null;\n"
+            "if (remoteMode === 'js' && typeof aiLangRoot.remote.call === 'function') {\n"
+            "  remoteCallImpl = (cap, op, value) => aiLangRoot.remote.call(cap, op, value);\n"
+            "} else if (remoteMode === 'js') {\n"
+            "  remoteCallImpl = () => Promise.reject(new Error('AIVM_REMOTE_MODE=js requires AiLang.remote.call adapter'));\n"
+            "} else {\n"
+            "  const remoteClient = createAivmRemoteClient({ endpoint });\n"
+            "  remoteCallImpl = (cap, op, value) => remoteClient.call(cap, op, value);\n"
+            "}\n"
+            "if (remoteMode !== 'js' || typeof aiLangRoot.remote.call !== 'function') {\n"
+            "  aiLangRoot.remote.call = remoteCallImpl;\n"
+            "}\n"
+            "globalThis.__aivmRemoteCall = (cap, op, value) => remoteCallImpl(cap, op, value);\n"
+            "globalThis.__aivmStdinRead = () => aiLangRoot.stdin._drain();\n"
             "const runtime = await createRuntime();\n"
             "const bytes = await (await fetch('./app.aibc1')).arrayBuffer();\n"
             "runtime.FS.writeFile('/app.aibc1', new Uint8Array(bytes));\n"
             "const logs = [];\n"
-            "runtime.print = (line) => logs.push(line);\n"
-            "runtime.printErr = (line) => logs.push(line);\n"
+            "runtime.print = (line) => { const s = String(line); logs.push(s); console.log(s); };\n"
+            "runtime.printErr = (line) => { const s = String(line); logs.push(s); console.error(s); };\n"
             "runtime.callMain(['/app.aibc1']);\n"
             "if (output) output.textContent = logs.join('\\n');\n") >= (int)sizeof(main_js)) {
         return 0;

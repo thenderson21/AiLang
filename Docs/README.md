@@ -27,6 +27,8 @@ If a doc in `Docs/` conflicts with `SPEC/`, follow `SPEC/`.
 - [Agent Debug Workflow](./Agent-Debug-Workflow.md)
 - [C VM Test/Profile/Benchmark Workflow](./C-VM-Performance-Workflow.md)
 - [Production Memory Readiness](./Production-Memory-Readiness.md)
+- [WASM Remote Transport and Fullstack Stdio Task](./Wasm-Remote-Transport-And-Stdio-Task.md)
+- [WASM Limitations and Matrix](./Wasm-Limitations-And-Matrix.md)
 - [CLI Wrapper Contract](./CLI-Wrapper-Contract.md)
 - [Branching and Release Policy](./Branching-Release-Policy.md)
 - [Versioning](./Versioning.md)
