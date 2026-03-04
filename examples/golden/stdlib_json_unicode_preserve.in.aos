@@ -5,7 +5,7 @@ Program#gjsonup_p1 {
     ChildAt#gjsonup_ca1 {
       ChildAt#gjsonup_ca2 {
         Call#gjsonup_c2(target=resultNodeOr) {
-          Call#gjsonup_c3(target=parseNode) { Lit#gjsonup_l1(value="\"x\\u263Ay\"") }
+          Call#gjsonup_c3(target=parseNode) { Lit#gjsonup_l1(value="\"x\\uD83Dy\"") }
           Call#gjsonup_c4(target=nodeEmpty) { Lit#gjsonup_l2(value="fallback") }
         }
         Lit#gjsonup_l3(value=0)

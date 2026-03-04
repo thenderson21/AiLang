@@ -1,0 +1,7 @@
+Program#gstrcp_p1 {
+  Import#gstrcp_i1(path="./src/std/str.aos")
+  Call#gstrcp_c1(target=concat) {
+    Call#gstrcp_c2(target=fromCodePoint) { Lit#gstrcp_l1(value=128578) }
+    Lit#gstrcp_l2(value="!")
+  }
+}

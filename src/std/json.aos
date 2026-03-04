@@ -848,55 +848,69 @@ Program#std_json_p1 {
   Let#std_json_l38bb(name=decodeUnicodeHex4) {
     Fn#std_json_f15bb(params=hex4) {
       Block#std_json_b153bb {
-        If#std_json_if70bb {
-          Eq#std_json_eq55bb { Var#std_json_v313bb(name=hex4) Lit#std_json_i208bb(value="0022") }
-          Block#std_json_b154bb { Return#std_json_r76bb { Lit#std_json_i209bb(value="\"") } }
-          Block#std_json_b155bb { Lit#std_json_i210bb(value=0) }
+        Return#std_json_r76bb { Call#std_json_c162(target=sys.str.decodeUnicodeHex4) { Var#std_json_v313bb(name=hex4) } }
+      }
+    }
+  }
+
+  Let#std_json_l38bc(name=decodeUnicodeSurrogatePairHex4) {
+    Fn#std_json_f15bc(params=highHex4,lowHex4) {
+      Block#std_json_b153bc {
+        Return#std_json_r76bc {
+          Call#std_json_c162b(target=sys.str.decodeUnicodeSurrogatePairHex4) {
+            Var#std_json_v313bc(name=highHex4)
+            Var#std_json_v314bc(name=lowHex4)
+          }
         }
-        If#std_json_if71bb {
-          Eq#std_json_eq56bb { Var#std_json_v314bb(name=hex4) Lit#std_json_i211bb(value="005C") }
-          Block#std_json_b156bb { Return#std_json_r77bb { Lit#std_json_i212bb(value="\\") } }
-          Block#std_json_b157bb { Lit#std_json_i213bb(value=0) }
+      }
+    }
+  }
+
+  Let#std_json_l38bd(name=isHighSurrogateHex4) {
+    Fn#std_json_f15bd(params=hex4) {
+      Block#std_json_b153bd {
+        Let#std_json_l38be(name=first) { Call#std_json_c162c(target=charAt) { Var#std_json_v313bd(name=hex4) Lit#std_json_i208bd(value=0) } }
+        Let#std_json_l38bf(name=second) { Call#std_json_c162d(target=charAt) { Var#std_json_v314bd(name=hex4) Lit#std_json_i209bd(value=1) } }
+        If#std_json_if70bd {
+          Eq#std_json_eq55bd { Var#std_json_v315bd(name=first) Lit#std_json_i210bd(value="D") }
+          Block#std_json_b154bd { Lit#std_json_i211bd(value=0) }
+          Block#std_json_b155bd {
+            If#std_json_if71bd {
+              Eq#std_json_eq56bd { Var#std_json_v315bd(name=first) Lit#std_json_i212bd(value="d") }
+              Block#std_json_b156bd { Lit#std_json_i213bd(value=0) }
+              Block#std_json_b157bd { Return#std_json_r77bd { Lit#std_json_i214bd(value=false) } }
+            }
+          }
         }
-        If#std_json_if71bbc {
-          Eq#std_json_eq56bbc { Var#std_json_v314bbc(name=hex4) Lit#std_json_i211bbc(value="005c") }
-          Block#std_json_b156bbc { Return#std_json_r77bbc { Lit#std_json_i212bbc(value="\\") } }
-          Block#std_json_b157bbc { Lit#std_json_i213bbc(value=0) }
+        If#std_json_if72bd {
+          Eq#std_json_eq57bd { Var#std_json_v316bd(name=second) Lit#std_json_i215bd(value="8") }
+          Block#std_json_b158bd { Return#std_json_r78bd { Lit#std_json_i216bd(value=true) } }
+          Block#std_json_b159bd { Lit#std_json_i217bd(value=0) }
         }
-        If#std_json_if72bb {
-          Eq#std_json_eq57bb { Var#std_json_v315bb(name=hex4) Lit#std_json_i214bb(value="002F") }
-          Block#std_json_b158bb { Return#std_json_r78bb { Lit#std_json_i215bb(value="/") } }
-          Block#std_json_b159bb { Lit#std_json_i216bb(value=0) }
+        If#std_json_if73bd {
+          Eq#std_json_eq58bd { Var#std_json_v316bd(name=second) Lit#std_json_i218bd(value="9") }
+          Block#std_json_b160bd { Return#std_json_r79bd { Lit#std_json_i219bd(value=true) } }
+          Block#std_json_b161bd { Lit#std_json_i220bd(value=0) }
         }
-        If#std_json_if72bbc {
-          Eq#std_json_eq57bbc { Var#std_json_v315bbc(name=hex4) Lit#std_json_i214bbc(value="002f") }
-          Block#std_json_b158bbc { Return#std_json_r78bbc { Lit#std_json_i215bbc(value="/") } }
-          Block#std_json_b159bbc { Lit#std_json_i216bbc(value=0) }
+        If#std_json_if74bd {
+          Eq#std_json_eq59bd { Var#std_json_v316bd(name=second) Lit#std_json_i221bd(value="A") }
+          Block#std_json_b162bd { Return#std_json_r80bd { Lit#std_json_i222bd(value=true) } }
+          Block#std_json_b163bd { Lit#std_json_i223bd(value=0) }
         }
-        If#std_json_if73bb {
-          Eq#std_json_eq58bb { Var#std_json_v316bb(name=hex4) Lit#std_json_i217bb(value="000A") }
-          Block#std_json_b160bb { Return#std_json_r79bb { Lit#std_json_i218bb(value="\n") } }
-          Block#std_json_b161bb { Lit#std_json_i219bb(value=0) }
+        If#std_json_if75bd {
+          Eq#std_json_eq60bd { Var#std_json_v316bd(name=second) Lit#std_json_i224bd(value="B") }
+          Block#std_json_b164bd { Return#std_json_r81bd { Lit#std_json_i225bd(value=true) } }
+          Block#std_json_b165bd { Lit#std_json_i226bd(value=0) }
         }
-        If#std_json_if73bbc {
-          Eq#std_json_eq58bbc { Var#std_json_v316bbc(name=hex4) Lit#std_json_i217bbc(value="000a") }
-          Block#std_json_b160bbc { Return#std_json_r79bbc { Lit#std_json_i218bbc(value="\n") } }
-          Block#std_json_b161bbc { Lit#std_json_i219bbc(value=0) }
+        If#std_json_if76bd {
+          Eq#std_json_eq61bd { Var#std_json_v316bd(name=second) Lit#std_json_i227bd(value="a") }
+          Block#std_json_b166bd { Return#std_json_r82bd { Lit#std_json_i228bd(value=true) } }
+          Block#std_json_b167bd { Lit#std_json_i229bd(value=0) }
         }
-        If#std_json_if74bb {
-          Eq#std_json_eq59bb { Var#std_json_v317bb(name=hex4) Lit#std_json_i220bb(value="000D") }
-          Block#std_json_b162bb { Return#std_json_r80bb { Lit#std_json_i221bb(value="\r") } }
-          Block#std_json_b163bb { Lit#std_json_i222bb(value=0) }
-        }
-        If#std_json_if74bbc {
-          Eq#std_json_eq59bbc { Var#std_json_v317bbc(name=hex4) Lit#std_json_i220bbc(value="000d") }
-          Block#std_json_b162bbc { Return#std_json_r80bbc { Lit#std_json_i221bbc(value="\r") } }
-          Block#std_json_b163bbc { Lit#std_json_i222bbc(value=0) }
-        }
-        If#std_json_if75bb {
-          Eq#std_json_eq60bb { Var#std_json_v318bb(name=hex4) Lit#std_json_i223bb(value="0009") }
-          Block#std_json_b164bb { Return#std_json_r81bb { Lit#std_json_i224bb(value="\t") } }
-          Block#std_json_b165bb { Return#std_json_r82bb { Lit#std_json_i225bb(value="") } }
+        If#std_json_if77bd {
+          Eq#std_json_eq62bd { Var#std_json_v316bd(name=second) Lit#std_json_i230bd(value="b") }
+          Block#std_json_b168bd { Return#std_json_r83bd { Lit#std_json_i231bd(value=true) } }
+          Block#std_json_b169bd { Return#std_json_r84bd { Lit#std_json_i232bd(value=false) } }
         }
       }
     }
@@ -931,6 +945,71 @@ Program#std_json_p1 {
                     If#std_json_if75c {
                       Eq#std_json_eq59c { Var#std_json_v342d(name=decoded) Lit#std_json_i225d(value="") }
                       Block#std_json_b162d {
+                        If#std_json_if75d {
+                          Call#std_json_c91e(target=isHighSurrogateHex4) { Var#std_json_v347d(name=hex4) }
+                          Block#std_json_b162e {
+                            Let#std_json_l38i(name=tail) {
+                              Call#std_json_c91f(target=sys.str.substring) {
+                                Var#std_json_v348e(name=text)
+                                Add#std_json_a47d { Var#std_json_v349e(name=index) Lit#std_json_i233e(value=5) }
+                                Lit#std_json_i234e(value=6)
+                              }
+                            }
+                            If#std_json_if76d {
+                              Eq#std_json_eq60d { Call#std_json_c91g(target=textLength) { Var#std_json_v350e(name=tail) } Lit#std_json_i235e(value=6) }
+                              Block#std_json_b163e {
+                                If#std_json_if77d {
+                                  Eq#std_json_eq61d { Call#std_json_c91h(target=charAt) { Var#std_json_v351e(name=tail) Lit#std_json_i236e(value=0) } Lit#std_json_i237e(value="\\") }
+                                  Block#std_json_b164e {
+                                    If#std_json_if78d {
+                                      Eq#std_json_eq62d { Call#std_json_c91i(target=charAt) { Var#std_json_v352e(name=tail) Lit#std_json_i238e(value=1) } Lit#std_json_i239e(value="u") }
+                                      Block#std_json_b165e {
+                                        Let#std_json_l38j(name=lowHex4) {
+                                          Call#std_json_c91j(target=sys.str.substring) {
+                                            Var#std_json_v353e(name=text)
+                                            Add#std_json_a48d { Var#std_json_v354e(name=index) Lit#std_json_i240e(value=7) }
+                                            Lit#std_json_i241e(value=4)
+                                          }
+                                        }
+                                        If#std_json_if79d {
+                                          Eq#std_json_eq63d { Call#std_json_c91k(target=textLength) { Var#std_json_v355e(name=lowHex4) } Lit#std_json_i242e(value=4) }
+                                          Block#std_json_b166e {
+                                            Let#std_json_l38k(name=pairDecoded) {
+                                              Call#std_json_c91l(target=decodeUnicodeSurrogatePairHex4) {
+                                                Var#std_json_v356e(name=hex4)
+                                                Var#std_json_v357e(name=lowHex4)
+                                              }
+                                            }
+                                            If#std_json_if80d {
+                                              Eq#std_json_eq64d { Var#std_json_v358e(name=pairDecoded) Lit#std_json_i243e(value="") }
+                                              Block#std_json_b167e { Lit#std_json_i244e(value=0) }
+                                              Block#std_json_b168e {
+                                                Return#std_json_r80e {
+                                                  Call#std_json_c91m(target=decodeStringBody) {
+                                                    Var#std_json_v359e(name=text)
+                                                    Add#std_json_a49d { Var#std_json_v360e(name=index) Lit#std_json_i245e(value=11) }
+                                                    Var#std_json_v361e(name=endExclusive)
+                                                    Lit#std_json_i246e(value=false)
+                                                    StrConcat#std_json_s21d { Var#std_json_v362e(name=acc) Var#std_json_v358e(name=pairDecoded) }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                          Block#std_json_b169e { Lit#std_json_i247e(value=0) }
+                                        }
+                                      }
+                                      Block#std_json_b170e { Lit#std_json_i248e(value=0) }
+                                    }
+                                  }
+                                  Block#std_json_b171e { Lit#std_json_i249e(value=0) }
+                                }
+                              }
+                              Block#std_json_b172e { Lit#std_json_i250e(value=0) }
+                            }
+                          }
+                          Block#std_json_b173e { Lit#std_json_i251e(value=0) }
+                        }
                         Return#std_json_r80d {
                           Call#std_json_c92d(target=decodeStringBody) {
                             Var#std_json_v343d(name=text)
@@ -1306,7 +1385,7 @@ Program#std_json_p1 {
           Call#std_json_c138(target=resultIsOk) { Var#std_json_v436(name=valueParsed) }
           Block#std_json_b220 {
             Let#std_json_l66(name=keyToken) { Call#std_json_c139(target=collectTokenRange) { Var#std_json_v437(name=text) Var#std_json_v438(name=at) Add#std_json_a58 { Var#std_json_v439(name=keyClose) Lit#std_json_i323(value=1) } Lit#std_json_i324(value="") } }
-            Let#std_json_l66b(name=decodedKey) { Call#std_json_c162(target=decodeJsonStringToken) { Var#std_json_v476(name=keyToken) } }
+            Let#std_json_l66b(name=decodedKey) { Call#std_json_c163(target=decodeJsonStringToken) { Var#std_json_v476(name=keyToken) } }
             Let#std_json_l67(name=valueNode) { Call#std_json_c140(target=resultNodeOr) { Var#std_json_v440(name=valueParsed) Call#std_json_c141(target=nodeEmpty) { Lit#std_json_i325(value="JsonInvalid") } } }
             Let#std_json_l68(name=fieldNode) { Call#std_json_c142(target=nodeWithString) { Lit#std_json_i326(value="JsonField") Lit#std_json_i327(value="key") Var#std_json_v477(name=decodedKey) } }
             Let#std_json_l69(name=fieldWithValue) { AppendChild#std_json_ap2 { Var#std_json_v442(name=fieldNode) Var#std_json_v443(name=valueNode) } }

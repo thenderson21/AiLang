@@ -37,7 +37,7 @@ This defines the minimum supported stdlib surface for the `0.0.1` baseline.
   - string decode in `parseNode` supports `\\`, `\"`, `\/`, `\n`, `\r`, `\t`
   - unknown escapes are preserved losslessly (for example `\q` -> `\q`), and `\b`/`\f` are preserved as `\b`/`\f`
   - unicode escape handling in `parseNode`:
-    - supported decode subset: `\u0022`, `\u005C`, `\u002F`, `\u000A`, `\u000D`, `\u0009`
-    - hex digit case for supported subset is accepted (`A-F` or `a-f`)
-    - unknown `\uXXXX` sequences are preserved verbatim in decoded value
+    - decodes valid `\uXXXX` BMP codepoints to UTF-8 (hex case-insensitive)
+    - decodes valid surrogate pairs (`\uD83D\uDE42`) to UTF-8
+    - invalid/unsupported code units (for example unmatched surrogate halves) are preserved as `\uXXXX`
   - unsupported forms return deterministic `resultErr("JSON_UNSUPPORTED", ...)`

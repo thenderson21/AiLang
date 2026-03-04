@@ -1658,6 +1658,7 @@ static int native_base64_decode_char(char ch)
 #define NATIVE_BYTES_SCRATCH_CAPACITY 131072U
 static uint8_t g_native_bytes_scratch[NATIVE_BYTES_SCRATCH_CAPACITY];
 static char g_native_base64_scratch[NATIVE_BYTES_SCRATCH_CAPACITY];
+static char g_native_utf8_scratch[8];
 
 static int native_bytes_from_base64(
     const char* input,
@@ -1991,13 +1992,172 @@ static int native_syscall_bytes_to_base64(
     return AIVM_SYSCALL_OK;
 }
 
+static int native_syscall_str_from_codepoint(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    uint32_t cp;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (args[0].int_value < 0 || args[0].int_value > 0x10FFFFLL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    cp = (uint32_t)args[0].int_value;
+    if (cp >= 0xD800U && cp <= 0xDFFFU) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (cp <= 0x7FU) {
+        g_native_utf8_scratch[0] = (char)cp;
+        g_native_utf8_scratch[1] = '\0';
+    } else if (cp <= 0x7FFU) {
+        g_native_utf8_scratch[0] = (char)(0xC0U | (cp >> 6U));
+        g_native_utf8_scratch[1] = (char)(0x80U | (cp & 0x3FU));
+        g_native_utf8_scratch[2] = '\0';
+    } else if (cp <= 0xFFFFU) {
+        g_native_utf8_scratch[0] = (char)(0xE0U | (cp >> 12U));
+        g_native_utf8_scratch[1] = (char)(0x80U | ((cp >> 6U) & 0x3FU));
+        g_native_utf8_scratch[2] = (char)(0x80U | (cp & 0x3FU));
+        g_native_utf8_scratch[3] = '\0';
+    } else {
+        g_native_utf8_scratch[0] = (char)(0xF0U | (cp >> 18U));
+        g_native_utf8_scratch[1] = (char)(0x80U | ((cp >> 12U) & 0x3FU));
+        g_native_utf8_scratch[2] = (char)(0x80U | ((cp >> 6U) & 0x3FU));
+        g_native_utf8_scratch[3] = (char)(0x80U | (cp & 0x3FU));
+        g_native_utf8_scratch[4] = '\0';
+    }
+    *result = aivm_value_string(g_native_utf8_scratch);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_str_decode_unicode_hex4(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    const char* text;
+    size_t len;
+    uint32_t cp;
+    char* end_ptr = NULL;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    text = args[0].string_value;
+    len = strlen(text);
+    if (len != 4U) {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    cp = (uint32_t)strtoul(text, &end_ptr, 16);
+    if (end_ptr == NULL || *end_ptr != '\0') {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    if (cp > 0x10FFFFU || (cp >= 0xD800U && cp <= 0xDFFFU)) {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    if (cp <= 0x7FU) {
+        g_native_utf8_scratch[0] = (char)cp;
+        g_native_utf8_scratch[1] = '\0';
+    } else if (cp <= 0x7FFU) {
+        g_native_utf8_scratch[0] = (char)(0xC0U | (cp >> 6U));
+        g_native_utf8_scratch[1] = (char)(0x80U | (cp & 0x3FU));
+        g_native_utf8_scratch[2] = '\0';
+    } else if (cp <= 0xFFFFU) {
+        g_native_utf8_scratch[0] = (char)(0xE0U | (cp >> 12U));
+        g_native_utf8_scratch[1] = (char)(0x80U | ((cp >> 6U) & 0x3FU));
+        g_native_utf8_scratch[2] = (char)(0x80U | (cp & 0x3FU));
+        g_native_utf8_scratch[3] = '\0';
+    } else {
+        g_native_utf8_scratch[0] = (char)(0xF0U | (cp >> 18U));
+        g_native_utf8_scratch[1] = (char)(0x80U | ((cp >> 12U) & 0x3FU));
+        g_native_utf8_scratch[2] = (char)(0x80U | ((cp >> 6U) & 0x3FU));
+        g_native_utf8_scratch[3] = (char)(0x80U | (cp & 0x3FU));
+        g_native_utf8_scratch[4] = '\0';
+    }
+    *result = aivm_value_string(g_native_utf8_scratch);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_str_decode_unicode_surrogate_pair_hex4(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    const char* high_text;
+    const char* low_text;
+    char* end_ptr = NULL;
+    uint32_t high_surrogate;
+    uint32_t low_surrogate;
+    uint32_t cp;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 2U ||
+        args == NULL ||
+        args[0].type != AIVM_VAL_STRING ||
+        args[1].type != AIVM_VAL_STRING ||
+        args[0].string_value == NULL ||
+        args[1].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    high_text = args[0].string_value;
+    low_text = args[1].string_value;
+    if (strlen(high_text) != 4U || strlen(low_text) != 4U) {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    high_surrogate = (uint32_t)strtoul(high_text, &end_ptr, 16);
+    if (end_ptr == NULL || *end_ptr != '\0') {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    low_surrogate = (uint32_t)strtoul(low_text, &end_ptr, 16);
+    if (end_ptr == NULL || *end_ptr != '\0') {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    if (high_surrogate < 0xD800U || high_surrogate > 0xDBFFU ||
+        low_surrogate < 0xDC00U || low_surrogate > 0xDFFFU) {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    cp = 0x10000U + ((high_surrogate - 0xD800U) << 10U) + (low_surrogate - 0xDC00U);
+    g_native_utf8_scratch[0] = (char)(0xF0U | (cp >> 18U));
+    g_native_utf8_scratch[1] = (char)(0x80U | ((cp >> 12U) & 0x3FU));
+    g_native_utf8_scratch[2] = (char)(0x80U | ((cp >> 6U) & 0x3FU));
+    g_native_utf8_scratch[3] = (char)(0x80U | (cp & 0x3FU));
+    g_native_utf8_scratch[4] = '\0';
+    *result = aivm_value_string(g_native_utf8_scratch);
+    return AIVM_SYSCALL_OK;
+}
+
 static int run_native_compiled_program(
     const AivmProgram* program,
     const char* vm_error_message,
     const char* const* process_argv,
     size_t process_argv_count)
 {
-    AivmSyscallBinding bindings[18];
+    AivmSyscallBinding bindings[21];
     AivmCResult result;
 
     if (program == NULL) {
@@ -2040,10 +2200,16 @@ static int run_native_compiled_program(
     bindings[16].handler = native_syscall_process_stderr_read;
     bindings[17].target = "sys.process.poll";
     bindings[17].handler = native_syscall_process_poll;
+    bindings[18].target = "sys.str.fromCodePoint";
+    bindings[18].handler = native_syscall_str_from_codepoint;
+    bindings[19].target = "sys.str.decodeUnicodeHex4";
+    bindings[19].handler = native_syscall_str_decode_unicode_hex4;
+    bindings[20].target = "sys.str.decodeUnicodeSurrogatePairHex4";
+    bindings[20].handler = native_syscall_str_decode_unicode_surrogate_pair_hex4;
     result = aivm_c_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        18U,
+        21U,
         process_argv,
         process_argv_count);
 
