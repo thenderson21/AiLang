@@ -48,6 +48,86 @@ extern int kill(pid_t pid, int sig);
 #include "remote/aivm_remote_channel.h"
 #include "remote/aivm_remote_session.h"
 #include "aivm_runtime.h"
+#include "airun_ui_host.h"
+
+#ifndef AIRUN_UI_HOST_EXTERNAL
+void native_host_ui_reset(void) {}
+void native_host_ui_shutdown(void) {}
+int native_host_ui_create_window(const char* title, int width, int height, int64_t* out_handle)
+{
+    (void)title;
+    (void)width;
+    (void)height;
+    if (out_handle != NULL) {
+        *out_handle = 0;
+    }
+    return 0;
+}
+int native_host_ui_close_window(int64_t handle) { (void)handle; return 0; }
+int native_host_ui_begin_frame(int64_t handle) { (void)handle; return 0; }
+int native_host_ui_end_frame(int64_t handle) { (void)handle; return 0; }
+int native_host_ui_present(int64_t handle) { (void)handle; return 0; }
+int native_host_ui_wait_frame(int64_t handle) { (void)handle; return 0; }
+int native_host_ui_draw_rect(int64_t handle, int x, int y, int width, int height, const char* color)
+{
+    (void)handle;
+    (void)x;
+    (void)y;
+    (void)width;
+    (void)height;
+    (void)color;
+    return 0;
+}
+int native_host_ui_draw_text(int64_t handle, int x, int y, const char* text, const char* color, int font_size)
+{
+    (void)handle;
+    (void)x;
+    (void)y;
+    (void)text;
+    (void)color;
+    (void)font_size;
+    return 0;
+}
+int native_host_ui_draw_line(int64_t handle, int x1, int y1, int x2, int y2, const char* color, int stroke_width)
+{
+    (void)handle;
+    (void)x1;
+    (void)y1;
+    (void)x2;
+    (void)y2;
+    (void)color;
+    (void)stroke_width;
+    return 0;
+}
+int native_host_ui_draw_path(int64_t handle, const char* path, const char* color, int stroke_width)
+{
+    (void)handle;
+    (void)path;
+    (void)color;
+    (void)stroke_width;
+    return 0;
+}
+int native_host_ui_poll_event(int64_t handle, NativeHostUiEvent* out_event)
+{
+    (void)handle;
+    if (out_event != NULL) {
+        memset(out_event, 0, sizeof(*out_event));
+        (void)snprintf(out_event->type, sizeof(out_event->type), "none");
+    }
+    return 0;
+}
+int native_host_ui_get_window_size(int64_t handle, int* out_width, int* out_height)
+{
+    (void)handle;
+    if (out_width != NULL) {
+        *out_width = 0;
+    }
+    if (out_height != NULL) {
+        *out_height = 0;
+    }
+    return 0;
+}
+#endif
 
 static int join_path(const char* left, const char* right, char* out, size_t out_len);
 static int find_executable_on_path(const char* name, char* out, size_t out_len);
@@ -3187,7 +3267,170 @@ static int native_syscall_worker_cancel(
     return AIVM_SYSCALL_OK;
 }
 
-#define NATIVE_UI_STATE_NODE_HANDLE 1
+static AivmVm* g_native_active_vm = NULL;
+static char g_native_ui_event_type[16] = "none";
+static char g_native_ui_event_key[48] = "";
+static char g_native_ui_event_text[128] = "";
+static char g_native_ui_event_target_id[48] = "";
+
+enum {
+    NATIVE_UI_EVENT_ATTR_TYPE = 0,
+    NATIVE_UI_EVENT_ATTR_X = 1,
+    NATIVE_UI_EVENT_ATTR_Y = 2,
+    NATIVE_UI_EVENT_ATTR_KEY = 3,
+    NATIVE_UI_EVENT_ATTR_TEXT = 4,
+    NATIVE_UI_EVENT_ATTR_TARGET_ID = 5,
+    NATIVE_UI_EVENT_ATTR_MODIFIERS = 6,
+    NATIVE_UI_EVENT_ATTR_REPEAT = 7
+};
+
+static int native_vm_append_host_node(
+    AivmVm* vm,
+    const char* kind,
+    const char* id,
+    const AivmNodeAttr* attrs,
+    size_t attr_count,
+    int64_t* out_handle)
+{
+    AivmNodeRecord* node;
+    size_t i;
+    size_t node_index;
+    if (vm == NULL || kind == NULL || id == NULL || out_handle == NULL) {
+        return 0;
+    }
+    if (vm->node_count >= AIVM_VM_NODE_CAPACITY || vm->node_attr_count + attr_count > AIVM_VM_NODE_ATTR_CAPACITY) {
+        return 0;
+    }
+    node_index = vm->node_count;
+    node = &vm->nodes[node_index];
+    node->kind = kind;
+    node->id = id;
+    node->attr_start = vm->node_attr_count;
+    node->attr_count = attr_count;
+    node->child_start = vm->node_child_count;
+    node->child_count = 0U;
+    for (i = 0U; i < attr_count; i += 1U) {
+        vm->node_attrs[vm->node_attr_count + i] = attrs[i];
+    }
+    vm->node_count += 1U;
+    vm->node_attr_count += attr_count;
+    if (vm->node_count > vm->node_high_water) {
+        vm->node_high_water = vm->node_count;
+    }
+    if (vm->node_attr_count > vm->node_attr_high_water) {
+        vm->node_attr_high_water = vm->node_attr_count;
+    }
+    *out_handle = (int64_t)vm->node_count;
+    return 1;
+}
+
+static int native_ui_ensure_event_node(AivmVm* vm, int64_t* out_handle)
+{
+    AivmNodeAttr attrs[8];
+    if (out_handle == NULL) {
+        return 0;
+    }
+    if (vm->ui_empty_event_node_handle > 0 &&
+        vm->ui_empty_event_node_handle <= (int64_t)vm->node_count) {
+        *out_handle = vm->ui_empty_event_node_handle;
+        return 1;
+    }
+    attrs[0].key = "type";
+    attrs[0].kind = AIVM_NODE_ATTR_STRING;
+    attrs[0].string_value = g_native_ui_event_type;
+    attrs[1].key = "x";
+    attrs[1].kind = AIVM_NODE_ATTR_INT;
+    attrs[1].int_value = 0;
+    attrs[2].key = "y";
+    attrs[2].kind = AIVM_NODE_ATTR_INT;
+    attrs[2].int_value = 0;
+    attrs[3].key = "key";
+    attrs[3].kind = AIVM_NODE_ATTR_STRING;
+    attrs[3].string_value = g_native_ui_event_key;
+    attrs[4].key = "text";
+    attrs[4].kind = AIVM_NODE_ATTR_STRING;
+    attrs[4].string_value = g_native_ui_event_text;
+    attrs[5].key = "targetId";
+    attrs[5].kind = AIVM_NODE_ATTR_STRING;
+    attrs[5].string_value = g_native_ui_event_target_id;
+    attrs[6].key = "modifiers";
+    attrs[6].kind = AIVM_NODE_ATTR_INT;
+    attrs[6].int_value = 0;
+    attrs[7].key = "repeat";
+    attrs[7].kind = AIVM_NODE_ATTR_BOOL;
+    attrs[7].bool_value = 0;
+    if (!native_vm_append_host_node(vm, "Map", "ui_event", attrs, 8U, &vm->ui_empty_event_node_handle)) {
+        return 0;
+    }
+    *out_handle = vm->ui_empty_event_node_handle;
+    return 1;
+}
+
+static int native_ui_ensure_size_node(AivmVm* vm, int64_t* out_handle)
+{
+    AivmNodeAttr attrs[2];
+    if (out_handle == NULL) {
+        return 0;
+    }
+    if (vm->ui_default_window_size_node_handle > 0 &&
+        vm->ui_default_window_size_node_handle <= (int64_t)vm->node_count) {
+        *out_handle = vm->ui_default_window_size_node_handle;
+        return 1;
+    }
+    attrs[0].key = "width";
+    attrs[0].kind = AIVM_NODE_ATTR_INT;
+    attrs[0].int_value = 0;
+    attrs[1].key = "height";
+    attrs[1].kind = AIVM_NODE_ATTR_INT;
+    attrs[1].int_value = 0;
+    if (!native_vm_append_host_node(vm, "Map", "ui_size", attrs, 2U, &vm->ui_default_window_size_node_handle)) {
+        return 0;
+    }
+    *out_handle = vm->ui_default_window_size_node_handle;
+    return 1;
+}
+
+static void native_ui_update_size_node(AivmVm* vm, int width, int height)
+{
+    const AivmNodeRecord* node;
+    if (vm == NULL || vm->ui_default_window_size_node_handle <= 0 ||
+        vm->ui_default_window_size_node_handle > (int64_t)vm->node_count) {
+        return;
+    }
+    node = &vm->nodes[(size_t)(vm->ui_default_window_size_node_handle - 1)];
+    if (node->attr_count < 2U || node->attr_start + 1U >= vm->node_attr_count) {
+        return;
+    }
+    vm->node_attrs[node->attr_start].int_value = width;
+    vm->node_attrs[node->attr_start + 1U].int_value = height;
+}
+
+static void native_ui_update_event_node(AivmVm* vm, const NativeHostUiEvent* event)
+{
+    const AivmNodeRecord* node;
+    size_t base;
+    if (vm == NULL || event == NULL ||
+        vm->ui_empty_event_node_handle <= 0 ||
+        vm->ui_empty_event_node_handle > (int64_t)vm->node_count) {
+        return;
+    }
+    (void)snprintf(g_native_ui_event_type, sizeof(g_native_ui_event_type), "%s", event->type);
+    (void)snprintf(g_native_ui_event_key, sizeof(g_native_ui_event_key), "%s", event->key);
+    (void)snprintf(g_native_ui_event_text, sizeof(g_native_ui_event_text), "%s", event->text);
+    node = &vm->nodes[(size_t)(vm->ui_empty_event_node_handle - 1)];
+    if (node->attr_count < 8U || node->attr_start + 7U >= vm->node_attr_count) {
+        return;
+    }
+    base = node->attr_start;
+    vm->node_attrs[base + NATIVE_UI_EVENT_ATTR_TYPE].string_value = g_native_ui_event_type;
+    vm->node_attrs[base + NATIVE_UI_EVENT_ATTR_X].int_value = event->x;
+    vm->node_attrs[base + NATIVE_UI_EVENT_ATTR_Y].int_value = event->y;
+    vm->node_attrs[base + NATIVE_UI_EVENT_ATTR_KEY].string_value = g_native_ui_event_key;
+    vm->node_attrs[base + NATIVE_UI_EVENT_ATTR_TEXT].string_value = g_native_ui_event_text;
+    vm->node_attrs[base + NATIVE_UI_EVENT_ATTR_TARGET_ID].string_value = g_native_ui_event_target_id;
+    vm->node_attrs[base + NATIVE_UI_EVENT_ATTR_MODIFIERS].int_value = event->modifiers;
+    vm->node_attrs[base + NATIVE_UI_EVENT_ATTR_REPEAT].bool_value = event->repeat ? 1 : 0;
+}
 
 static int native_syscall_ui_create_window(
     const char* target,
@@ -3206,7 +3449,14 @@ static int native_syscall_ui_create_window(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
-    *result = aivm_value_int(1);
+    {
+        int64_t handle = 0;
+        if (!native_host_ui_create_window(args[0].string_value, (int)args[1].int_value, (int)args[2].int_value, &handle)) {
+            *result = aivm_value_int(-1);
+            return AIVM_SYSCALL_OK;
+        }
+        *result = aivm_value_int(handle);
+    }
     return AIVM_SYSCALL_OK;
 }
 
@@ -3223,6 +3473,17 @@ static int native_syscall_ui_void_1(
     if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (strcmp(target, "sys.ui.closeWindow") == 0) {
+        (void)native_host_ui_close_window(args[0].int_value);
+    } else if (strcmp(target, "sys.ui.waitFrame") == 0) {
+        (void)native_host_ui_wait_frame(args[0].int_value);
+    } else if (strcmp(target, "sys.ui.beginFrame") == 0) {
+        (void)native_host_ui_begin_frame(args[0].int_value);
+    } else if (strcmp(target, "sys.ui.endFrame") == 0) {
+        (void)native_host_ui_end_frame(args[0].int_value);
+    } else if (strcmp(target, "sys.ui.present") == 0) {
+        (void)native_host_ui_present(args[0].int_value);
     }
     *result = aivm_value_void();
     return AIVM_SYSCALL_OK;
@@ -3244,6 +3505,13 @@ static int native_syscall_ui_draw_rect(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
+    (void)native_host_ui_draw_rect(
+        args[0].int_value,
+        (int)args[1].int_value,
+        (int)args[2].int_value,
+        (int)args[3].int_value,
+        (int)args[4].int_value,
+        args[5].string_value);
     *result = aivm_value_void();
     return AIVM_SYSCALL_OK;
 }
@@ -3264,6 +3532,13 @@ static int native_syscall_ui_draw_text(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
+    (void)native_host_ui_draw_text(
+        args[0].int_value,
+        (int)args[1].int_value,
+        (int)args[2].int_value,
+        args[3].string_value,
+        args[4].string_value,
+        (int)args[5].int_value);
     *result = aivm_value_void();
     return AIVM_SYSCALL_OK;
 }
@@ -3285,6 +3560,14 @@ static int native_syscall_ui_draw_line(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
+    (void)native_host_ui_draw_line(
+        args[0].int_value,
+        (int)args[1].int_value,
+        (int)args[2].int_value,
+        (int)args[3].int_value,
+        (int)args[4].int_value,
+        args[5].string_value,
+        (int)args[6].int_value);
     *result = aivm_value_void();
     return AIVM_SYSCALL_OK;
 }
@@ -3305,6 +3588,11 @@ static int native_syscall_ui_draw_path(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
+    (void)native_host_ui_draw_path(
+        args[0].int_value,
+        args[1].string_value,
+        args[2].string_value,
+        (int)args[3].int_value);
     *result = aivm_value_void();
     return AIVM_SYSCALL_OK;
 }
@@ -3323,7 +3611,19 @@ static int native_syscall_ui_poll_event(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
-    *result = aivm_value_node(NATIVE_UI_STATE_NODE_HANDLE);
+    {
+        NativeHostUiEvent event;
+        int64_t node_handle;
+        if (g_native_active_vm == NULL || !native_ui_ensure_event_node(g_native_active_vm, &node_handle)) {
+            result->type = AIVM_VAL_VOID;
+            return AIVM_SYSCALL_ERR_INVALID;
+        }
+        memset(&event, 0, sizeof(event));
+        (void)snprintf(event.type, sizeof(event.type), "none");
+        (void)native_host_ui_poll_event(args[0].int_value, &event);
+        native_ui_update_event_node(g_native_active_vm, &event);
+        *result = aivm_value_node(node_handle);
+    }
     return AIVM_SYSCALL_OK;
 }
 
@@ -3333,7 +3633,31 @@ static int native_syscall_ui_get_window_size(
     size_t arg_count,
     AivmValue* result)
 {
-    return native_syscall_ui_poll_event(target, args, arg_count, result);
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (g_native_active_vm == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    {
+        int width = 0;
+        int height = 0;
+        int64_t node_handle;
+        if (!native_ui_ensure_size_node(g_native_active_vm, &node_handle)) {
+            result->type = AIVM_VAL_VOID;
+            return AIVM_SYSCALL_ERR_INVALID;
+        }
+        (void)native_host_ui_get_window_size(args[0].int_value, &width, &height);
+        native_ui_update_size_node(g_native_active_vm, width, height);
+        *result = aivm_value_node(node_handle);
+    }
+    return AIVM_SYSCALL_OK;
 }
 
 static int native_base64_decode_char(char ch)
@@ -4358,6 +4682,12 @@ static int run_native_compiled_program(
         (void)write_native_debug_bundle(debug_options, NULL, NULL, 0, 0, "program-null");
         return 2;
     }
+    g_native_active_vm = &vm;
+    (void)snprintf(g_native_ui_event_type, sizeof(g_native_ui_event_type), "none");
+    g_native_ui_event_key[0] = '\0';
+    g_native_ui_event_text[0] = '\0';
+    g_native_ui_event_target_id[0] = '\0';
+    native_host_ui_reset();
 
     bindings[0].target = "sys.stdout.writeLine";
     bindings[0].handler = native_syscall_stdout_write_line;
@@ -4465,6 +4795,8 @@ static int run_native_compiled_program(
             (detail == NULL) ? "none" : detail,
             (unsigned long long)vm.instruction_pointer);
         (void)write_native_debug_bundle(debug_options, program, &vm, 0, 0, diagnostics_line);
+        native_host_ui_shutdown();
+        g_native_active_vm = NULL;
         return emit_vm_error_with_context(program, &vm, vm_error_message);
     }
     if (vm.status == AIVM_VM_STATUS_HALTED && vm.stack_count > 0U) {
@@ -4481,6 +4813,8 @@ static int run_native_compiled_program(
         aivm_vm_error_code(vm.error),
         (unsigned long long)vm.instruction_pointer);
     (void)write_native_debug_bundle(debug_options, program, &vm, exit_code, has_exit_code, diagnostics_line);
+    native_host_ui_shutdown();
+    g_native_active_vm = NULL;
     if (has_exit_code) {
         printf("Ok#ok1(type=int value=%d)\n", exit_code);
         return exit_code;
