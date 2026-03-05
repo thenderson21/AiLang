@@ -1465,6 +1465,37 @@ static int native_syscall_requires_host_ui_capability(const char* syscall_target
            strncmp(syscall_target, "sys.ui_", 7U) == 0;
 }
 
+static int native_syscall_requires_host_process_capability(const char* syscall_target)
+{
+    if (syscall_target == NULL) {
+        return 0;
+    }
+    return strcmp(syscall_target, "sys.process.spawn") == 0 ||
+           strcmp(syscall_target, "sys.process.wait") == 0 ||
+           strcmp(syscall_target, "sys.process.kill") == 0 ||
+           strcmp(syscall_target, "sys.process.stdout.read") == 0 ||
+           strcmp(syscall_target, "sys.process.stderr.read") == 0 ||
+           strcmp(syscall_target, "sys.process.poll") == 0;
+}
+
+static int native_syscall_requires_host_fs_capability(const char* syscall_target)
+{
+    if (syscall_target == NULL) {
+        return 0;
+    }
+    return strncmp(syscall_target, "sys.fs.", 7U) == 0 ||
+           strncmp(syscall_target, "sys.fs_", 7U) == 0;
+}
+
+static int native_syscall_requires_host_net_capability(const char* syscall_target)
+{
+    if (syscall_target == NULL) {
+        return 0;
+    }
+    return strncmp(syscall_target, "sys.net.", 8U) == 0 ||
+           strncmp(syscall_target, "sys.net_", 8U) == 0;
+}
+
 static void emit_native_target_capability_warnings(const char* target_rid, const AivmProgram* program)
 {
     size_t i;
@@ -1477,13 +1508,37 @@ static void emit_native_target_capability_warnings(const char* target_rid, const
             continue;
         }
         target = program->constants[i].string_value;
-        if (!native_syscall_requires_host_ui_capability(target)) {
+        if (syscall_target_already_reported(program, i, target)) {
             continue;
         }
-        if (!syscall_target_already_reported(program, i, target)) {
+        if (native_syscall_requires_host_ui_capability(target)) {
             fprintf(
                 stderr,
                 "Warn#warn1(code=CAP001 message=\"%s requires host UI capability on target '%s'; runtime will raise AIVMS001 if unavailable.\" nodeId=publish)\n",
+                target,
+                target_rid);
+            continue;
+        }
+        if (native_syscall_requires_host_process_capability(target)) {
+            fprintf(
+                stderr,
+                "Warn#warn1(code=CAP002 message=\"%s requires host process capability on target '%s'; runtime will raise AIVMS001 if unavailable.\" nodeId=publish)\n",
+                target,
+                target_rid);
+            continue;
+        }
+        if (native_syscall_requires_host_fs_capability(target)) {
+            fprintf(
+                stderr,
+                "Warn#warn1(code=CAP003 message=\"%s requires host filesystem capability on target '%s'; runtime will raise AIVMS001 if unavailable.\" nodeId=publish)\n",
+                target,
+                target_rid);
+            continue;
+        }
+        if (native_syscall_requires_host_net_capability(target)) {
+            fprintf(
+                stderr,
+                "Warn#warn1(code=CAP004 message=\"%s requires host network capability on target '%s'; runtime will raise AIVMS001 if unavailable.\" nodeId=publish)\n",
                 target,
                 target_rid);
         }
