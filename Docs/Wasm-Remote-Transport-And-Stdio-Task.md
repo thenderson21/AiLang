@@ -183,6 +183,7 @@ Rationale:
   - Browser adapter maps `pointerdown`/`touchstart` to canonical `click` events for deterministic mobile/touch parity.
   - Browser pointer/touch coordinate mapping is normalized to SVG-local space before clamp so `UiEvent.x/y` remain stable under page offset/scroll.
   - Browser adapter now uses pointer-first click mapping (`PointerEvent` when available, otherwise click/touch fallback) to avoid duplicate synthesized click events.
+  - Browser adapter now unregisters per-window `resize` listeners on `closeWindow` for deterministic lifecycle cleanup (no orphan handlers).
   - `sys.ui.closeWindow` now enqueues one deterministic `closed` event for the window and blocks further draw/frame calls for that handle.
   - Browser adapter now syncs window size on browser `resize` so `sys.ui.getWindowSize` stays aligned with live viewport dimensions.
   - `sys.ui.getWindowSize` now returns deterministic node refreshed from live web bridge dimensions on wasm web profiles.
