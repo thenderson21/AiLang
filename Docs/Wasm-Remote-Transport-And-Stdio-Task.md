@@ -168,6 +168,7 @@ Rationale:
     - bad handshake frame types reject deterministically and recover on reconnect
     - invalid/non-binary websocket payloads reject deterministically and recover on reconnect
     - short/truncated websocket frames reject deterministically and recover on reconnect
+    - malformed websocket ERROR payloads reject deterministically and recover on reconnect
     - default endpoint fallback (`ws://${location.hostname}:8765`)
   - Deterministic invalid `AIVM_REMOTE_MODE` runtime diagnostics (`RUN101`) with executable checks.
   - Browser-side stdin queue (`AiLang.stdin.push/close`) FIFO+EOF behavior with executable checks.
