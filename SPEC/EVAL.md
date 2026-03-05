@@ -275,6 +275,7 @@ This file is normative for `aic run` evaluation behavior.
 - `aivm_reset_state` clears arena usage and high-water counters deterministically.
 - `node_allocations_since_gc` resets to `0` after state reset and after a compaction attempt.
 - `node_gc_attempts` counts every deterministic compaction attempt (proactive and hard-cap path).
+- Memory telemetry counters are saturating (`size_t` max) and must never wrap.
 - Native debug bundle memory telemetry is contractually present in:
 - `config.toml` (policy constants)
 - `state_snapshots.toml` (live counters)
