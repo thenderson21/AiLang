@@ -326,6 +326,64 @@ EOF
   AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
 }
 
+run_web_runtime_invalid_mode_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-invalid-mode.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for invalid-mode check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for invalid-mode check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+if (!mainJsPath) {
+  throw new Error('node wasm invalid-mode check missing main path');
+}
+
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async () => ({ async arrayBuffer() { return new Uint8Array([1]).buffer; } });
+globalThis.AIVM_REMOTE_MODE = 'invalid-mode';
+globalThis.AiLang = { remote: {} };
+
+let message = '';
+try {
+  await import(pathToFileURL(mainJsPath).href);
+  throw new Error('expected invalid mode import to throw');
+} catch (err) {
+  message = String(err && err.message ? err.message : err);
+}
+if (!message.includes("RUN101: unsupported AIVM_REMOTE_MODE 'invalid-mode'")) {
+  throw new Error(`unexpected invalid mode message: ${message}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
 if ! command -v wasmtime >/dev/null 2>&1; then
   echo "wasmtime is required to run wasm golden tests" >&2
   exit 1
@@ -575,6 +633,8 @@ run_web_runtime_js_mode_check "spa" "${PUBLISH_SPA_DIR}"
 run_web_runtime_js_mode_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
 run_web_runtime_js_mode_missing_adapter_check "spa" "${PUBLISH_SPA_DIR}"
 run_web_runtime_js_mode_missing_adapter_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_invalid_mode_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_invalid_mode_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
 
 FULLSTACK_HOST_PORT="$((19000 + ($$ % 1000)))"
 (
