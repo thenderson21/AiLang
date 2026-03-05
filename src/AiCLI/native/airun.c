@@ -5541,10 +5541,12 @@ static int run_via_resolved_input(
 static int handle_run(int argc, char** argv)
 {
     RunTarget target;
-    int parse_rc = parse_run_target(argc, argv, 2, &target);
+    int parse_rc = 0;
     char out_dir[PATH_MAX];
     char app_path[PATH_MAX];
     int build_rc;
+    memset(&target, 0, sizeof(target));
+    parse_rc = parse_run_target(argc, argv, 2, &target);
     if (parse_rc != 0) {
         return parse_rc;
     }
