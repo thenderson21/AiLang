@@ -692,6 +692,241 @@ EOF
   AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
 }
 
+run_web_runtime_ws_mode_call_error_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-call-error.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws-call-error check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws-call-error check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws-call-error check missing required environment values');
+}
+
+function writeU16LE(arr, off, v) { arr[off] = v & 255; arr[off + 1] = (v >> 8) & 255; }
+function writeU32LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+  arr[off + 2] = (v >> 16) & 255;
+  arr[off + 3] = (v >> 24) & 255;
+}
+function readU32LE(arr, off) {
+  return (arr[off] | (arr[off + 1] << 8) | (arr[off + 2] << 16) | (arr[off + 3] << 24)) >>> 0;
+}
+function frame(type, id, payload) {
+  const out = new Uint8Array(9 + payload.length);
+  out[0] = type;
+  writeU32LE(out, 1, id);
+  writeU32LE(out, 5, payload.length);
+  out.set(payload, 9);
+  return out.buffer;
+}
+function encodeErrorPayload(code, msg) {
+  const b = new TextEncoder().encode(msg);
+  const out = new Uint8Array(4 + 2 + b.length);
+  writeU32LE(out, 0, code >>> 0);
+  writeU16LE(out, 4, b.length);
+  out.set(b, 6);
+  return out;
+}
+function encodeWelcome() {
+  const out = new Uint8Array(6);
+  writeU16LE(out, 0, 1);
+  writeU32LE(out, 2, 0);
+  return out;
+}
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor() {
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN;
+      if (typeof this.onopen === 'function') {
+        this.onopen();
+      }
+    });
+  }
+  send(data) {
+    const bytes = new Uint8Array(data);
+    const type = bytes[0];
+    const id = readU32LE(bytes, 1);
+    if (type === 0x01) {
+      if (typeof this.onmessage === 'function') {
+        this.onmessage({ data: frame(0x02, 1, encodeWelcome()) });
+      }
+      return;
+    }
+    if (type === 0x10) {
+      if (typeof this.onmessage === 'function') {
+        this.onmessage({ data: frame(0x12, id, encodeErrorPayload(55, 'call denied')) });
+      }
+      return;
+    }
+    throw new Error(`unexpected frame type ${type}`);
+  }
+  close() {
+    this.readyState = FakeWebSocket.CLOSED;
+    if (typeof this.onclose === 'function') {
+      this.onclose();
+    }
+  }
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) {
+    throw new Error(`unexpected fetch path: ${String(url)}`);
+  }
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+let message = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 1);
+  throw new Error('expected ws call to fail on ERROR frame');
+} catch (err) {
+  message = String(err && err.message ? err.message : err);
+}
+if (!message.includes('remote 55: call denied')) {
+  throw new Error(`unexpected ws call ERROR message: ${message}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
+run_web_runtime_ws_mode_socket_error_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-socket-error.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws-socket-error check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws-socket-error check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws-socket-error check missing required environment values');
+}
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor() {
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      if (typeof this.onerror === 'function') {
+        this.onerror(new Error('boom'));
+      }
+    });
+  }
+  send() {}
+  close() {
+    this.readyState = FakeWebSocket.CLOSED;
+    if (typeof this.onclose === 'function') {
+      this.onclose();
+    }
+  }
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) {
+    throw new Error(`unexpected fetch path: ${String(url)}`);
+  }
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+let message = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 1);
+  throw new Error('expected ws call to fail on socket error');
+} catch (err) {
+  message = String(err && err.message ? err.message : err);
+}
+if (!message.includes('remote websocket error')) {
+  throw new Error(`unexpected ws socket error message: ${message}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
 if ! command -v wasmtime >/dev/null 2>&1; then
   echo "wasmtime is required to run wasm golden tests" >&2
   exit 1
@@ -947,6 +1182,10 @@ run_web_runtime_ws_mode_call_check "spa" "${PUBLISH_SPA_DIR}"
 run_web_runtime_ws_mode_call_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
 run_web_runtime_ws_mode_deny_check "spa" "${PUBLISH_SPA_DIR}"
 run_web_runtime_ws_mode_deny_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_mode_call_error_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_mode_call_error_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_mode_socket_error_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_mode_socket_error_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
 
 FULLSTACK_HOST_PORT="$((19000 + ($$ % 1000)))"
 (
