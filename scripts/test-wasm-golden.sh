@@ -2191,6 +2191,152 @@ EOF
   AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
 }
 
+run_web_runtime_ws_reconnect_after_bad_handshake_type_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-reconnect-after-bad-handshake-type.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws reconnect-after-bad-handshake-type check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws reconnect-after-bad-handshake-type check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws reconnect-after-bad-handshake-type check missing required environment values');
+}
+
+function writeU16LE(arr, off, v) { arr[off] = v & 255; arr[off + 1] = (v >> 8) & 255; }
+function writeU32LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+  arr[off + 2] = (v >> 16) & 255;
+  arr[off + 3] = (v >> 24) & 255;
+}
+function readU32LE(arr, off) {
+  return (arr[off] | (arr[off + 1] << 8) | (arr[off + 2] << 16) | (arr[off + 3] << 24)) >>> 0;
+}
+function frame(type, id, payload) {
+  const out = new Uint8Array(9 + payload.length);
+  out[0] = type;
+  writeU32LE(out, 1, id);
+  writeU32LE(out, 5, payload.length);
+  out.set(payload, 9);
+  return out.buffer;
+}
+function encodeWelcome() {
+  const out = new Uint8Array(6);
+  writeU16LE(out, 0, 1);
+  writeU32LE(out, 2, 0);
+  return out;
+}
+function encodeResult(value) {
+  const out = new Uint8Array(8);
+  const dv = new DataView(out.buffer);
+  dv.setBigInt64(0, BigInt(value), true);
+  return out;
+}
+
+let constructorCount = 0;
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor() {
+    this.instanceId = ++constructorCount;
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN;
+      if (typeof this.onopen === 'function') this.onopen();
+    });
+  }
+  send(data) {
+    const bytes = new Uint8Array(data);
+    const type = bytes[0];
+    const id = readU32LE(bytes, 1);
+    if (type === 0x01) {
+      if (typeof this.onmessage !== 'function') return;
+      if (this.instanceId === 1) {
+        this.onmessage({ data: frame(0x41, 1, new Uint8Array(0)) });
+      } else {
+        this.onmessage({ data: frame(0x02, 1, encodeWelcome()) });
+      }
+      return;
+    }
+    if (type === 0x10 && typeof this.onmessage === 'function') {
+      this.onmessage({ data: frame(0x11, id, encodeResult(42424)) });
+    }
+  }
+  close() {
+    this.readyState = FakeWebSocket.CLOSED;
+    if (typeof this.onclose === 'function') this.onclose();
+  }
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) throw new Error(`unexpected fetch path: ${String(url)}`);
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+
+let firstError = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 51);
+  throw new Error('expected first ws call to fail with bad handshake type');
+} catch (err) {
+  firstError = String(err && err.message ? err.message : err);
+}
+if (!firstError.includes('remote unexpected handshake frame type 65')) {
+  throw new Error(`unexpected first bad-type error: ${firstError}`);
+}
+
+const secondValue = await globalThis.__aivmRemoteCall('cap.remote', 'echo', 52);
+if (secondValue !== 42424) {
+  throw new Error(`unexpected second ws value after bad-type reconnect: ${String(secondValue)}`);
+}
+if (constructorCount < 2) {
+  throw new Error(`expected reconnect after bad-type handshake; websocket instances=${constructorCount}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
 if ! command -v wasmtime >/dev/null 2>&1; then
   echo "wasmtime is required to run wasm golden tests" >&2
   exit 1
@@ -2470,6 +2616,8 @@ run_web_runtime_ws_reconnect_after_deny_check "spa" "${PUBLISH_SPA_DIR}"
 run_web_runtime_ws_reconnect_after_deny_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
 run_web_runtime_ws_handshake_bad_id_check "spa" "${PUBLISH_SPA_DIR}"
 run_web_runtime_ws_handshake_bad_id_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_reconnect_after_bad_handshake_type_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_reconnect_after_bad_handshake_type_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
 
 FULLSTACK_HOST_PORT="$((19000 + ($$ % 1000)))"
 (
