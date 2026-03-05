@@ -2983,6 +2983,10 @@ if ! contains_fixed '__aivmStdinRead' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit stdin drain bridge in main.js" >&2
   exit 1
 fi
+if ! contains_fixed 'AIVM_HOST_STDIN_READ' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit optional host-stdin callback hook in main.js" >&2
+  exit 1
+fi
 if ! contains_fixed 'console.log' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed 'console.error' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit stdout/stderr console mirrors in main.js" >&2
   exit 1
@@ -3018,6 +3022,10 @@ if ! contains_fixed '__aivmRemoteCall' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; t
 fi
 if ! contains_fixed '__aivmStdinRead' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit stdin drain bridge in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed 'AIVM_HOST_STDIN_READ' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit optional host-stdin callback hook in www/main.js" >&2
   exit 1
 fi
 if ! cmp -s "${PUBLISH_FULLSTACK_DIR}/www/aivm-runtime-wasm32-web.wasm" "${ROOT_DIR}/.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm"; then

@@ -28,7 +28,7 @@ The matrix below is the authoritative limitations view for target/profile behavi
 |---|---|---|---|---|
 | stdout (`io.print`, `io.write`, `sys.stdout.writeLine`) | native | native | native (browser sink) | native (host + browser mirror) |
 | stderr | native | native | native (browser sink) | native (host + browser mirror) |
-| stdin | native | native | native (`AiLang.stdin.push/close` queue) | planned (host stdin + `AiLang.stdin` queue) |
+| stdin | native | native | native (`AiLang.stdin.push/close` queue + optional `AIVM_HOST_STDIN_READ` fallback) | native (queue-first `AiLang.stdin.push/close`, optional host callback `AIVM_HOST_STDIN_READ`, deterministic EOF/null handling) |
 | `sys.remote.call` | native (if configured) | native (if configured) | native (`js` adapter) | native (`ws` adapter) |
 | capability enforcement | native | native | native | native |
 | file system (`sys.fs.*`) | native (capability/sandbox policy) | native (capability/sandbox policy) | blocked by default; use `remote` or virtual adapter | native on host path (capability/sandbox policy) |
@@ -88,7 +88,7 @@ Current strategy for browser UI parity is SVG backend mapping from vector-orient
 3. `spa` has no implicit terminal stdin; input must come from explicit queue APIs.
 4. Profile differences must be documented before enabling new capabilities.
 5. For browser targets, direct `sys.net.*` and direct local `sys.fs.*` are blocked by default unless explicitly surfaced through capability adapters.
-6. Fullstack host+browser stdout/stderr mirroring is active; dual-source stdin behavior remains an explicit parity target.
+6. Browser stdin remains explicit (no implicit DOM capture): queue API first, optional host callback second, deterministic empty/EOF behavior.
 
 ## Required Test Coverage
 
