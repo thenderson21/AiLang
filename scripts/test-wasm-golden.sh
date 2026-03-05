@@ -447,8 +447,22 @@ const svg = body.children[0].children[1];
 if (typeof svg.listenerCount !== 'function' || typeof svg.emit !== 'function') {
   throw new Error('ui test harness node is missing listener inspection hooks');
 }
+if (svg.listenerCount('pointerdown') !== 1 || svg.listenerCount('click') !== 0 || svg.listenerCount('touchstart') !== 0) {
+  throw new Error('ui pointer-first listener registration mismatch');
+}
 if (svg.listenerCount('keydown') !== 1 || svg.listenerCount('keyup') !== 1) {
   throw new Error('ui key listener registration mismatch');
+}
+if (svg.emit('pointerdown', { offsetX: 7, offsetY: 9, target: { getAttribute: () => 'p0' } }) !== 1) {
+  throw new Error('ui pointerdown listener dispatch mismatch');
+}
+if (globalThis.__aivmUiPollEventType(1) !== 2) {
+  throw new Error('ui pointer event type mismatch');
+}
+if (globalThis.__aivmUiPollEventTargetId(1) !== 'p0' ||
+    globalThis.__aivmUiPollEventX(1) !== 7 ||
+    globalThis.__aivmUiPollEventY(1) !== 9) {
+  throw new Error('ui pointer event payload mismatch');
 }
 if (svg.emit('keyup', { key: 'Enter', repeat: false, ctrlKey: true }) !== 1) {
   throw new Error('ui keyup listener dispatch mismatch');
@@ -467,6 +481,9 @@ if (globalThis.__aivmUiPollEventRepeat(1) !== 0) {
 }
 if (globalThis.__aivmUiCloseWindow(1) !== 0) {
   throw new Error('ui closeWindow failed');
+}
+if (svg.listenerCount('pointerdown') !== 0 || svg.listenerCount('click') !== 0 || svg.listenerCount('touchstart') !== 0) {
+  throw new Error('ui pointer listeners were not removed on close');
 }
 if (svg.listenerCount('keydown') !== 0 || svg.listenerCount('keyup') !== 0) {
   throw new Error('ui key listeners were not removed on close');
