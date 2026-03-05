@@ -3216,6 +3216,10 @@ if ! contains_fixed "{ passive: false }" "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit non-passive touch listener registration" >&2
   exit 1
 fi
+if ! contains_fixed "touchAction = 'none'" "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not disable default touch gestures on svg surface" >&2
+  exit 1
+fi
 if ! contains_fixed "'PointerEvent' in window" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed 'emitClickEvent' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit pointer-first click mapping gate" >&2
   exit 1
@@ -3347,6 +3351,10 @@ if ! contains_fixed 'preventDefault' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; the
 fi
 if ! contains_fixed "{ passive: false }" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit non-passive touch listener registration" >&2
+  exit 1
+fi
+if ! contains_fixed "touchAction = 'none'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not disable default touch gestures on svg surface" >&2
   exit 1
 fi
 if ! contains_fixed "'PointerEvent' in window" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed 'emitClickEvent' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then

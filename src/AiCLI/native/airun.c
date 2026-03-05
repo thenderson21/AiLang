@@ -1446,6 +1446,7 @@ static int emit_wasm_spa_files(const char* out_dir)
             "  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);\n"
             "  svg.setAttribute('tabindex', '0');\n"
             "  svg.style.border = '1px solid #999';\n"
+            "  svg.style.touchAction = 'none';\n"
             "  host.appendChild(label);\n"
             "  host.appendChild(svg);\n"
             "  (document.body || document.documentElement).appendChild(host);\n"
