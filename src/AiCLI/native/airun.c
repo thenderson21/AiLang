@@ -38,6 +38,7 @@ extern int kill(pid_t pid, int sig);
 #endif
 
 #include "aivm_c_api.h"
+#include "aivm_runtime.h"
 
 static int join_path(const char* left, const char* right, char* out, size_t out_len);
 static int find_executable_on_path(const char* name, char* out, size_t out_len);
@@ -118,6 +119,33 @@ static int ensure_directory(const char* path)
         return 1;
     }
     return errno == EEXIST;
+}
+
+static int ensure_directory_recursive(const char* path)
+{
+    char tmp[PATH_MAX];
+    size_t len;
+    size_t i;
+    if (path == NULL) {
+        return 0;
+    }
+    len = strlen(path);
+    if (len == 0U || len >= sizeof(tmp)) {
+        return 0;
+    }
+    memcpy(tmp, path, len + 1U);
+    for (i = 1U; i < len; i += 1U) {
+        if (tmp[i] == '/' || tmp[i] == '\\') {
+            char saved = tmp[i];
+            tmp[i] = '\0';
+            if (tmp[0] != '\0' && !ensure_directory(tmp)) {
+                tmp[i] = saved;
+                return 0;
+            }
+            tmp[i] = saved;
+        }
+    }
+    return ensure_directory(tmp);
 }
 
 static int copy_file(const char* src, const char* dst)
@@ -824,7 +852,7 @@ static void print_usage(void)
         "  clean [program(.aibc1|.aos|project-dir|project.aiproj)]\n"
         "  repl\n"
         "  bench [--iterations <n>] [--human]\n"
-        "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>]\n"
+        "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>]\n"
         "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--out <dir>]\n"
         "  version | --version\n"
         "\n"
@@ -862,6 +890,8 @@ static int is_reserved_cv_selector(const char* mode)
 
 #define NATIVE_PROCESS_CAPACITY 32U
 #define NATIVE_PROCESS_READ_CHUNK 4096U
+#define NATIVE_WORKER_CAPACITY 64U
+#define NATIVE_WORKER_TEXT_CAPACITY 512U
 
 typedef struct NativeProcessState
 {
@@ -883,6 +913,90 @@ typedef struct NativeProcessState
 
 static NativeProcessState g_native_processes[NATIVE_PROCESS_CAPACITY];
 static uint8_t g_native_process_read_scratch[NATIVE_PROCESS_READ_CHUNK];
+
+typedef struct NativeWorkerState
+{
+    int used;
+    int status; /* 0 pending, 1 success, -1 failure, -2 canceled */
+    int completion_status;
+    int64_t polls_remaining;
+    char result[NATIVE_WORKER_TEXT_CAPACITY];
+    char error[NATIVE_WORKER_TEXT_CAPACITY];
+} NativeWorkerState;
+
+static NativeWorkerState g_native_workers[NATIVE_WORKER_CAPACITY];
+
+static void native_worker_init_slot(NativeWorkerState* worker)
+{
+    if (worker == NULL) {
+        return;
+    }
+    memset(worker, 0, sizeof(*worker));
+    worker->status = 0;
+    worker->completion_status = 1;
+}
+
+static NativeWorkerState* native_worker_lookup(int64_t handle_value)
+{
+    size_t index;
+    if (handle_value <= 0 || handle_value > (int64_t)NATIVE_WORKER_CAPACITY) {
+        return NULL;
+    }
+    index = (size_t)(handle_value - 1);
+    if (!g_native_workers[index].used) {
+        return NULL;
+    }
+    return &g_native_workers[index];
+}
+
+static int64_t native_worker_allocate_slot(void)
+{
+    size_t index;
+    for (index = 0U; index < NATIVE_WORKER_CAPACITY; index += 1U) {
+        if (!g_native_workers[index].used) {
+            native_worker_init_slot(&g_native_workers[index]);
+            g_native_workers[index].used = 1;
+            return (int64_t)(index + 1U);
+        }
+    }
+    return -1;
+}
+
+static void native_worker_start_task(NativeWorkerState* worker, const char* task_name, const char* payload)
+{
+    int poll_ticks = 2;
+    if (worker == NULL || task_name == NULL || payload == NULL) {
+        return;
+    }
+
+    if (strcmp(task_name, "echo") == 0) {
+        worker->completion_status = 1;
+        (void)snprintf(worker->result, sizeof(worker->result), "%s", payload);
+    } else if (strcmp(task_name, "fail") == 0) {
+        worker->completion_status = -1;
+        if (payload[0] != '\0') {
+            (void)snprintf(worker->error, sizeof(worker->error), "%s", payload);
+        } else {
+            (void)snprintf(worker->error, sizeof(worker->error), "worker_failed");
+        }
+    } else if (strcmp(task_name, "sleep") == 0) {
+        char* end = NULL;
+        long parsed = strtol(payload, &end, 10);
+        if (end == payload || *end != '\0' || parsed < 0L || parsed > 1000000L) {
+            worker->completion_status = -1;
+            (void)snprintf(worker->error, sizeof(worker->error), "invalid_sleep_ticks");
+        } else {
+            worker->completion_status = 1;
+            poll_ticks = (int)parsed + 1;
+            (void)snprintf(worker->result, sizeof(worker->result), "slept");
+        }
+    } else {
+        worker->completion_status = -1;
+        (void)snprintf(worker->error, sizeof(worker->error), "unknown_task");
+    }
+
+    worker->polls_remaining = (int64_t)poll_ticks;
+}
 
 static void native_process_init_slot(NativeProcessState* process)
 {
@@ -1659,6 +1773,300 @@ static int native_syscall_process_stderr_read(
     return native_syscall_process_stream_read(target, args, arg_count, result, 0);
 }
 
+static int native_syscall_worker_start(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    int64_t handle;
+    NativeWorkerState* worker;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 2U || args == NULL ||
+        args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL ||
+        args[1].type != AIVM_VAL_STRING || args[1].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    handle = native_worker_allocate_slot();
+    if (handle < 0) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    worker = native_worker_lookup(handle);
+    if (worker == NULL) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    native_worker_start_task(worker, args[0].string_value, args[1].string_value);
+    *result = aivm_value_int(handle);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_worker_poll(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeWorkerState* worker;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    worker = native_worker_lookup(args[0].int_value);
+    if (worker == NULL) {
+        *result = aivm_value_int(-3);
+        return AIVM_SYSCALL_OK;
+    }
+    if (worker->status == 0) {
+        if (worker->polls_remaining > 0) {
+            worker->polls_remaining -= 1;
+        }
+        if (worker->polls_remaining <= 0) {
+            worker->status = worker->completion_status;
+        }
+    }
+    *result = aivm_value_int((int64_t)worker->status);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_worker_result(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeWorkerState* worker;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    worker = native_worker_lookup(args[0].int_value);
+    if (worker == NULL || worker->status != 1) {
+        *result = aivm_value_string("");
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_string(worker->result);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_worker_error(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeWorkerState* worker;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    worker = native_worker_lookup(args[0].int_value);
+    if (worker == NULL) {
+        *result = aivm_value_string("unknown_worker");
+        return AIVM_SYSCALL_OK;
+    }
+    if (worker->status == -1 || worker->status == -2) {
+        *result = aivm_value_string(worker->error);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_string("");
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_worker_cancel(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeWorkerState* worker;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    worker = native_worker_lookup(args[0].int_value);
+    if (worker == NULL || worker->status != 0) {
+        *result = aivm_value_bool(0);
+        return AIVM_SYSCALL_OK;
+    }
+    worker->status = -2;
+    worker->polls_remaining = 0;
+    worker->completion_status = -2;
+    (void)snprintf(worker->error, sizeof(worker->error), "canceled");
+    *result = aivm_value_bool(1);
+    return AIVM_SYSCALL_OK;
+}
+
+#define NATIVE_UI_STATE_NODE_HANDLE 1
+
+static int native_syscall_ui_create_window(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 3U ||
+        args[0].type != AIVM_VAL_STRING ||
+        args[1].type != AIVM_VAL_INT ||
+        args[2].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_int(1);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_ui_void_1(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_ui_draw_rect(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 6U ||
+        args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT ||
+        args[3].type != AIVM_VAL_INT || args[4].type != AIVM_VAL_INT || args[5].type != AIVM_VAL_STRING) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_ui_draw_text(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 6U ||
+        args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT ||
+        args[3].type != AIVM_VAL_STRING || args[4].type != AIVM_VAL_STRING || args[5].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_ui_draw_line(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 7U ||
+        args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT ||
+        args[3].type != AIVM_VAL_INT || args[4].type != AIVM_VAL_INT || args[5].type != AIVM_VAL_STRING ||
+        args[6].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_ui_draw_path(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 4U ||
+        args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_STRING ||
+        args[2].type != AIVM_VAL_STRING || args[3].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_ui_poll_event(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_node(NATIVE_UI_STATE_NODE_HANDLE);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_ui_get_window_size(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    return native_syscall_ui_poll_event(target, args, arg_count, result);
+}
+
 static int native_base64_decode_char(char ch)
 {
     if (ch >= 'A' && ch <= 'Z') {
@@ -2316,16 +2724,330 @@ static int native_syscall_str_decode_unicode_surrogate_pair_hex4(
     return AIVM_SYSCALL_OK;
 }
 
+typedef struct {
+    int emit_bundle;
+    const char* out_dir;
+    const char* input_path;
+} NativeDebugOptions;
+
+static const char* aivm_opcode_name(AivmOpcode opcode)
+{
+    switch (opcode) {
+        case AIVM_OP_NOP: return "NOP";
+        case AIVM_OP_HALT: return "HALT";
+        case AIVM_OP_STUB: return "STUB";
+        case AIVM_OP_PUSH_INT: return "PUSH_INT";
+        case AIVM_OP_POP: return "POP";
+        case AIVM_OP_STORE_LOCAL: return "STORE_LOCAL";
+        case AIVM_OP_LOAD_LOCAL: return "LOAD_LOCAL";
+        case AIVM_OP_ADD_INT: return "ADD_INT";
+        case AIVM_OP_JUMP: return "JUMP";
+        case AIVM_OP_JUMP_IF_FALSE: return "JUMP_IF_FALSE";
+        case AIVM_OP_PUSH_BOOL: return "PUSH_BOOL";
+        case AIVM_OP_CALL: return "CALL";
+        case AIVM_OP_RET: return "RET";
+        case AIVM_OP_EQ_INT: return "EQ_INT";
+        case AIVM_OP_EQ: return "EQ";
+        case AIVM_OP_CONST: return "CONST";
+        case AIVM_OP_STR_CONCAT: return "STR_CONCAT";
+        case AIVM_OP_TO_STRING: return "TO_STRING";
+        case AIVM_OP_STR_ESCAPE: return "STR_ESCAPE";
+        case AIVM_OP_RETURN: return "RETURN";
+        case AIVM_OP_STR_SUBSTRING: return "STR_SUBSTRING";
+        case AIVM_OP_STR_REMOVE: return "STR_REMOVE";
+        case AIVM_OP_CALL_SYS: return "CALL_SYS";
+        case AIVM_OP_ASYNC_CALL: return "ASYNC_CALL";
+        case AIVM_OP_ASYNC_CALL_SYS: return "ASYNC_CALL_SYS";
+        case AIVM_OP_AWAIT: return "AWAIT";
+        case AIVM_OP_PAR_BEGIN: return "PAR_BEGIN";
+        case AIVM_OP_PAR_FORK: return "PAR_FORK";
+        case AIVM_OP_PAR_JOIN: return "PAR_JOIN";
+        case AIVM_OP_PAR_CANCEL: return "PAR_CANCEL";
+        case AIVM_OP_STR_UTF8_BYTE_COUNT: return "STR_UTF8_BYTE_COUNT";
+        case AIVM_OP_NODE_KIND: return "NODE_KIND";
+        case AIVM_OP_NODE_ID: return "NODE_ID";
+        case AIVM_OP_ATTR_COUNT: return "ATTR_COUNT";
+        case AIVM_OP_ATTR_KEY: return "ATTR_KEY";
+        case AIVM_OP_ATTR_VALUE_KIND: return "ATTR_VALUE_KIND";
+        case AIVM_OP_ATTR_VALUE_STRING: return "ATTR_VALUE_STRING";
+        case AIVM_OP_ATTR_VALUE_INT: return "ATTR_VALUE_INT";
+        case AIVM_OP_ATTR_VALUE_BOOL: return "ATTR_VALUE_BOOL";
+        case AIVM_OP_CHILD_COUNT: return "CHILD_COUNT";
+        case AIVM_OP_CHILD_AT: return "CHILD_AT";
+        case AIVM_OP_MAKE_BLOCK: return "MAKE_BLOCK";
+        case AIVM_OP_APPEND_CHILD: return "APPEND_CHILD";
+        case AIVM_OP_MAKE_ERR: return "MAKE_ERR";
+        case AIVM_OP_MAKE_LIT_STRING: return "MAKE_LIT_STRING";
+        case AIVM_OP_MAKE_LIT_INT: return "MAKE_LIT_INT";
+        case AIVM_OP_MAKE_NODE: return "MAKE_NODE";
+        case AIVM_OP_MAKE_FIELD_STRING: return "MAKE_FIELD_STRING";
+        case AIVM_OP_MAKE_MAP: return "MAKE_MAP";
+        default: return "UNKNOWN";
+    }
+}
+
+static const char* infer_call_target(const AivmProgram* program, const AivmVm* vm)
+{
+    size_t pc;
+    const AivmInstruction* inst;
+    if (program == NULL || vm == NULL || program->instructions == NULL) {
+        return NULL;
+    }
+    pc = vm->instruction_pointer;
+    if (pc >= program->instruction_count) {
+        return NULL;
+    }
+    inst = &program->instructions[pc];
+    if (inst->opcode != AIVM_OP_CALL_SYS && inst->opcode != AIVM_OP_ASYNC_CALL_SYS) {
+        return NULL;
+    }
+    if (pc == 0U) {
+        return NULL;
+    }
+    {
+        const AivmInstruction* prev = &program->instructions[pc - 1U];
+        if (prev->opcode == AIVM_OP_CONST &&
+            prev->operand_int >= 0 &&
+            (size_t)prev->operand_int < program->constant_count) {
+            AivmValue target_value = program->constants[prev->operand_int];
+            if (target_value.type == AIVM_VAL_STRING && target_value.string_value != NULL) {
+                return target_value.string_value;
+            }
+        }
+    }
+    return NULL;
+}
+
+static int write_native_debug_bundle(
+    const NativeDebugOptions* options,
+    const AivmProgram* program,
+    const AivmVm* vm,
+    int exit_code,
+    int has_exit_code,
+    const char* diagnostics_line)
+{
+    char path[PATH_MAX];
+    FILE* f;
+    if (options == NULL || !options->emit_bundle || options->out_dir == NULL) {
+        return 1;
+    }
+    if (!ensure_directory_recursive(options->out_dir)) {
+        return 0;
+    }
+
+    if (!join_path(options->out_dir, "config.toml", path, sizeof(path))) {
+        return 0;
+    }
+    f = fopen(path, "wb");
+    if (f == NULL) {
+        return 0;
+    }
+    fprintf(f, "mode = \"debug-run-native\"\n");
+    fprintf(f, "app_path = \"%s\"\n", (options->input_path == NULL) ? "" : options->input_path);
+    fprintf(f, "status = \"%s\"\n", (vm != NULL && vm->status == AIVM_VM_STATUS_ERROR) ? "error" : "ok");
+    fprintf(f, "exit_code = %d\n", has_exit_code ? exit_code : 0);
+    fclose(f);
+
+    if (!join_path(options->out_dir, "vm_trace.toml", path, sizeof(path))) {
+        return 0;
+    }
+    f = fopen(path, "wb");
+    if (f == NULL) {
+        return 0;
+    }
+    fprintf(f, "trace = []\n");
+    if (vm != NULL && program != NULL && vm->instruction_pointer < program->instruction_count && program->instructions != NULL) {
+        const AivmInstruction* inst = &program->instructions[vm->instruction_pointer];
+        fprintf(f, "last = { function = \"main\", pc = %llu, op = \"%s\", node_id = \"unknown\" }\n",
+            (unsigned long long)vm->instruction_pointer,
+            aivm_opcode_name(inst->opcode));
+    }
+    fclose(f);
+
+    if (!join_path(options->out_dir, "state_snapshots.toml", path, sizeof(path))) {
+        return 0;
+    }
+    f = fopen(path, "wb");
+    if (f == NULL) {
+        return 0;
+    }
+    fprintf(f, "stack_count = %llu\n", (unsigned long long)((vm == NULL) ? 0U : vm->stack_count));
+    fprintf(f, "locals_count = %llu\n", (unsigned long long)((vm == NULL) ? 0U : vm->locals_count));
+    fclose(f);
+
+    if (!join_path(options->out_dir, "syscalls.toml", path, sizeof(path))) {
+        return 0;
+    }
+    f = fopen(path, "wb");
+    if (f == NULL) {
+        return 0;
+    }
+    fprintf(f, "syscalls = []\n");
+    fclose(f);
+
+    if (!join_path(options->out_dir, "events.toml", path, sizeof(path))) {
+        return 0;
+    }
+    f = fopen(path, "wb");
+    if (f == NULL) {
+        return 0;
+    }
+    fprintf(f, "events = []\n");
+    fclose(f);
+
+    if (!join_path(options->out_dir, "diagnostics.toml", path, sizeof(path))) {
+        return 0;
+    }
+    f = fopen(path, "wb");
+    if (f == NULL) {
+        return 0;
+    }
+    if (diagnostics_line != NULL && diagnostics_line[0] != '\0') {
+        fprintf(f, "diagnostics = [\"%s\"]\n", diagnostics_line);
+    } else {
+        fprintf(f, "diagnostics = []\n");
+    }
+    fclose(f);
+    return 1;
+}
+
+static int emit_vm_error_with_context(const AivmProgram* program, const AivmVm* vm, const char* vm_error_message)
+{
+    const char* phase = "exec";
+    const char* function_name = "main";
+    const char* node_id = "unknown";
+    const char* opcode_name = "UNKNOWN";
+    const char* call_target = NULL;
+    const char* vm_code = "VM000";
+    const char* vm_msg = "Unknown VM error.";
+    const char* detail = NULL;
+    size_t pc = 0U;
+    size_t display_pc = 0U;
+    const AivmInstruction* inst = NULL;
+    char typed_code[32];
+    const char* detail_colon;
+    const char* detail_slash;
+    size_t code_len;
+    if (vm == NULL || program == NULL) {
+        fprintf(stderr, "Err#err1(code=RUN001 message=\"%s phase=exec function=main pc=0 nodeId=unknown opcode=UNKNOWN\" nodeId=vm)\n",
+            (vm_error_message == NULL) ? "VM execution failed." : vm_error_message);
+        return 3;
+    }
+    detail = aivm_vm_error_detail(vm);
+    vm_code = aivm_vm_error_code(vm->error);
+    vm_msg = aivm_vm_error_message(vm->error);
+    pc = vm->instruction_pointer;
+    display_pc = pc;
+    if (program->instruction_count > 0U && display_pc >= program->instruction_count) {
+        display_pc = program->instruction_count - 1U;
+    }
+    if (vm->error == AIVM_VM_ERR_SYSCALL) {
+        phase = "syscall";
+    }
+    if (program->instructions != NULL && display_pc < program->instruction_count) {
+        inst = &program->instructions[display_pc];
+        opcode_name = aivm_opcode_name(inst->opcode);
+        {
+            AivmVm vm_for_target = *vm;
+            vm_for_target.instruction_pointer = display_pc;
+            call_target = infer_call_target(program, &vm_for_target);
+        }
+    }
+    if (vm->error == AIVM_VM_ERR_SYSCALL && program->instructions != NULL && program->instruction_count > 0U) {
+        size_t cursor = (pc == 0U) ? 0U : (pc - 1U);
+        if (cursor >= program->instruction_count) {
+            cursor = program->instruction_count - 1U;
+        }
+        while (1) {
+            const AivmInstruction* probe = &program->instructions[cursor];
+            if (probe->opcode == AIVM_OP_CALL_SYS || probe->opcode == AIVM_OP_ASYNC_CALL_SYS) {
+                display_pc = cursor;
+                opcode_name = aivm_opcode_name(probe->opcode);
+                if (probe->operand_int >= 0) {
+                    size_t arg_count = (size_t)probe->operand_int;
+                    if (cursor > arg_count) {
+                        size_t target_inst_index = cursor - arg_count - 1U;
+                        const AivmInstruction* target_inst = &program->instructions[target_inst_index];
+                        if (target_inst->opcode == AIVM_OP_CONST &&
+                            target_inst->operand_int >= 0 &&
+                            (size_t)target_inst->operand_int < program->constant_count) {
+                            AivmValue target_value = program->constants[target_inst->operand_int];
+                            if (target_value.type == AIVM_VAL_STRING && target_value.string_value != NULL) {
+                                call_target = target_value.string_value;
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+            if (cursor == 0U) {
+                break;
+            }
+            cursor -= 1U;
+        }
+    }
+
+    if (vm->error == AIVM_VM_ERR_SYSCALL && detail != NULL && detail[0] != '\0') {
+        memset(typed_code, 0, sizeof(typed_code));
+        detail_colon = strchr(detail, ':');
+        detail_slash = strchr(detail, '/');
+        if (detail_colon == NULL) {
+            detail_colon = detail + strlen(detail);
+        }
+        if (detail_slash != NULL && detail_slash < detail_colon) {
+            detail_colon = detail_slash;
+        }
+        code_len = (size_t)(detail_colon - detail);
+        if (code_len > 0U && code_len < sizeof(typed_code)) {
+            memcpy(typed_code, detail, code_len);
+            typed_code[code_len] = '\0';
+            fprintf(stderr,
+                "Err#err1(code=%s message=\"phase=%s function=%s pc=%llu nodeId=%s opcode=%s callTarget=%s vmCode=%s vmMessage=%s detail=%s\" nodeId=vm)\n",
+                typed_code,
+                phase,
+                function_name,
+                (unsigned long long)display_pc,
+                node_id,
+                opcode_name,
+                (call_target == NULL) ? "unknown" : call_target,
+                vm_code,
+                vm_msg,
+                detail);
+            return 3;
+        }
+    }
+
+    fprintf(stderr,
+        "Err#err1(code=RUN001 message=\"%s phase=%s function=%s pc=%llu nodeId=%s opcode=%s callTarget=%s vmCode=%s vmMessage=%s detail=%s\" nodeId=vm)\n",
+        (vm_error_message == NULL) ? "VM execution failed." : vm_error_message,
+        phase,
+        function_name,
+        (unsigned long long)display_pc,
+        node_id,
+        opcode_name,
+        (call_target == NULL) ? "unknown" : call_target,
+        vm_code,
+        vm_msg,
+        (detail == NULL) ? "none" : detail);
+    return 3;
+}
+
 static int run_native_compiled_program(
     const AivmProgram* program,
     const char* vm_error_message,
     const char* const* process_argv,
-    size_t process_argv_count)
+    size_t process_argv_count,
+    const NativeDebugOptions* debug_options)
 {
-    AivmSyscallBinding bindings[22];
-    AivmCResult result;
+    AivmSyscallBinding bindings[41];
+    AivmVm vm;
+    int ok;
+    int exit_code = 0;
+    int has_exit_code = 0;
+    char diagnostics_line[768];
 
     if (program == NULL) {
+        (void)write_native_debug_bundle(debug_options, NULL, NULL, 0, 0, "program-null");
         return 2;
     }
 
@@ -2373,29 +3095,89 @@ static int run_native_compiled_program(
     bindings[20].handler = native_syscall_str_decode_unicode_surrogate_pair_hex4;
     bindings[21].target = "sys.bytes.toUtf8String";
     bindings[21].handler = native_syscall_bytes_to_utf8_string;
-    result = aivm_c_execute_program_with_syscalls_and_argv(
+    bindings[22].target = "sys.ui.createWindow";
+    bindings[22].handler = native_syscall_ui_create_window;
+    bindings[23].target = "sys.ui.beginFrame";
+    bindings[23].handler = native_syscall_ui_void_1;
+    bindings[24].target = "sys.ui.drawRect";
+    bindings[24].handler = native_syscall_ui_draw_rect;
+    bindings[25].target = "sys.ui.drawText";
+    bindings[25].handler = native_syscall_ui_draw_text;
+    bindings[26].target = "sys.ui.endFrame";
+    bindings[26].handler = native_syscall_ui_void_1;
+    bindings[27].target = "sys.ui.pollEvent";
+    bindings[27].handler = native_syscall_ui_poll_event;
+    bindings[28].target = "sys.ui.present";
+    bindings[28].handler = native_syscall_ui_void_1;
+    bindings[29].target = "sys.ui.closeWindow";
+    bindings[29].handler = native_syscall_ui_void_1;
+    bindings[30].target = "sys.ui.drawLine";
+    bindings[30].handler = native_syscall_ui_draw_line;
+    bindings[31].target = "sys.ui.drawEllipse";
+    bindings[31].handler = native_syscall_ui_draw_rect;
+    bindings[32].target = "sys.ui.drawPath";
+    bindings[32].handler = native_syscall_ui_draw_path;
+    bindings[33].target = "sys.ui.drawImage";
+    bindings[33].handler = native_syscall_ui_draw_rect;
+    bindings[34].target = "sys.ui.getWindowSize";
+    bindings[34].handler = native_syscall_ui_get_window_size;
+    bindings[35].target = "sys.ui.waitFrame";
+    bindings[35].handler = native_syscall_ui_void_1;
+    bindings[36].target = "sys.worker.start";
+    bindings[36].handler = native_syscall_worker_start;
+    bindings[37].target = "sys.worker.poll";
+    bindings[37].handler = native_syscall_worker_poll;
+    bindings[38].target = "sys.worker.result";
+    bindings[38].handler = native_syscall_worker_result;
+    bindings[39].target = "sys.worker.error";
+    bindings[39].handler = native_syscall_worker_error;
+    bindings[40].target = "sys.worker.cancel";
+    bindings[40].handler = native_syscall_worker_cancel;
+    ok = aivm_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        22U,
+        41U,
         process_argv,
-        process_argv_count);
-
-    if (!result.loaded || result.load_status != AIVM_PROGRAM_OK) {
-        fprintf(stderr, "Err#err1(code=RUN001 message=\"Failed to load native program.\" nodeId=program)\n");
-        return 2;
+        process_argv_count,
+        &vm);
+    if (!ok || vm.status == AIVM_VM_STATUS_ERROR) {
+        const char* detail = aivm_vm_error_detail(&vm);
+        (void)snprintf(
+            diagnostics_line,
+            sizeof(diagnostics_line),
+            "status=error vm_code=%s detail=%s pc=%llu",
+            aivm_vm_error_code(vm.error),
+            (detail == NULL) ? "none" : detail,
+            (unsigned long long)vm.instruction_pointer);
+        (void)write_native_debug_bundle(debug_options, program, &vm, 0, 0, diagnostics_line);
+        return emit_vm_error_with_context(program, &vm, vm_error_message);
     }
-    if (!result.ok || result.status == AIVM_VM_STATUS_ERROR) {
-        fprintf(stderr, "Err#err1(code=RUN001 message=\"%s\" nodeId=vm)\n", vm_error_message);
-        return 3;
+    if (vm.status == AIVM_VM_STATUS_HALTED && vm.stack_count > 0U) {
+        const AivmValue* top = &vm.stack[vm.stack_count - 1U];
+        if (top->type == AIVM_VAL_INT) {
+            has_exit_code = 1;
+            exit_code = (int)top->int_value;
+        }
     }
-    if (result.has_exit_code) {
-        printf("Ok#ok1(type=int value=%d)\n", result.exit_code);
-        return result.exit_code;
+    (void)snprintf(
+        diagnostics_line,
+        sizeof(diagnostics_line),
+        "status=ok vm_code=%s pc=%llu",
+        aivm_vm_error_code(vm.error),
+        (unsigned long long)vm.instruction_pointer);
+    (void)write_native_debug_bundle(debug_options, program, &vm, exit_code, has_exit_code, diagnostics_line);
+    if (has_exit_code) {
+        printf("Ok#ok1(type=int value=%d)\n", exit_code);
+        return exit_code;
     }
     return 0;
 }
 
-static int run_native_aibc1(const char* path, const char* const* process_argv, size_t process_argv_count)
+static int run_native_aibc1(
+    const char* path,
+    const char* const* process_argv,
+    size_t process_argv_count,
+    const NativeDebugOptions* debug_options)
 {
     unsigned char* bytes = NULL;
     size_t byte_count = 0U;
@@ -2403,7 +3185,8 @@ static int run_native_aibc1(const char* path, const char* const* process_argv, s
     AivmProgramLoadResult load_result;
 
     if (!read_binary_file(path, &bytes, &byte_count)) {
-        fprintf(stderr, "Err#err1(code=RUN001 message=\"Failed to read AiBC1 file.\" nodeId=program)\n");
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Failed to read AiBC1 file. phase=load function=main pc=0 nodeId=unknown opcode=UNKNOWN callTarget=unknown\" nodeId=program)\n");
         return 2;
     }
 
@@ -2411,10 +3194,18 @@ static int run_native_aibc1(const char* path, const char* const* process_argv, s
     free(bytes);
 
     if (load_result.status != AIVM_PROGRAM_OK) {
-        fprintf(stderr, "Err#err1(code=RUN001 message=\"Failed to load AiBC1 program.\" nodeId=program)\n");
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Failed to load AiBC1 program. phase=load function=main pc=%llu nodeId=unknown opcode=UNKNOWN callTarget=unknown loadCode=%s\" nodeId=program)\n",
+            (unsigned long long)load_result.error_offset,
+            aivm_program_status_code(load_result.status));
         return 2;
     }
-    return run_native_compiled_program(&program, "AiBC1 execution failed.", process_argv, process_argv_count);
+    return run_native_compiled_program(
+        &program,
+        "AiBC1 execution failed.",
+        process_argv,
+        process_argv_count,
+        debug_options);
 }
 
 static int parse_attr_span(const char* attrs, const char* key, char* out, size_t out_len)
@@ -3869,16 +4660,16 @@ static int simple_compile_call_ext(
             return simple_fail("failed emitting syscall target const");
         }
         if (arg_count > 0U) {
+            AivmInstruction target_inst;
             size_t i;
-            size_t start = program->instruction_count - arg_count;
-            size_t end = program->instruction_count;
-            /* move target const before args on stack for CALL_SYS contract */
-            for (i = end; i > start; i -= 1U) {
+            size_t start = program->instruction_count - arg_count - 1U;
+            size_t target_index = program->instruction_count - 1U;
+            /* Move syscall target const ahead of args: [args..., target] -> [target, args...] */
+            target_inst = program->instruction_storage[target_index];
+            for (i = target_index; i > start; i -= 1U) {
                 program->instruction_storage[i] = program->instruction_storage[i - 1U];
             }
-            program->instruction_storage[start].opcode = AIVM_OP_CONST;
-            program->instruction_storage[start].operand_int = (int64_t)target_idx;
-            program->instruction_count += 1U;
+            program->instruction_storage[start] = target_inst;
         }
         if (!simple_emit_instruction(program, AIVM_OP_CALL_SYS, (int64_t)arg_count)) {
             return simple_fail("failed emitting CALL_SYS");
@@ -4465,7 +5256,11 @@ static int parse_simple_program_graph_to_program_file(const char* aos_path, Aivm
     return 1;
 }
 
-static int run_native_simple_program_aos(const char* aos_path, const char* const* process_argv, size_t process_argv_count)
+static int run_native_simple_program_aos(
+    const char* aos_path,
+    const char* const* process_argv,
+    size_t process_argv_count,
+    const NativeDebugOptions* debug_options)
 {
     AivmProgram program;
 
@@ -4476,10 +5271,15 @@ static int run_native_simple_program_aos(const char* aos_path, const char* const
         &program,
         "Native simple source execution failed.",
         process_argv,
-        process_argv_count);
+        process_argv_count,
+        debug_options);
 }
 
-static int run_native_bytecode_aos(const char* aos_path, const char* const* process_argv, size_t process_argv_count)
+static int run_native_bytecode_aos(
+    const char* aos_path,
+    const char* const* process_argv,
+    size_t process_argv_count,
+    const NativeDebugOptions* debug_options)
 {
     AivmProgram program;
 
@@ -4490,12 +5290,17 @@ static int run_native_bytecode_aos(const char* aos_path, const char* const* proc
         &program,
         "Native bytecode program execution failed.",
         process_argv,
-        process_argv_count);
+        process_argv_count,
+        debug_options);
 }
 
-static int run_native_bundle(const char* bundle_path, const char* const* process_argv, size_t process_argv_count)
+static int run_native_bundle(
+    const char* bundle_path,
+    const char* const* process_argv,
+    size_t process_argv_count,
+    const NativeDebugOptions* debug_options)
 {
-    return run_native_bytecode_aos(bundle_path, process_argv, process_argv_count);
+    return run_native_bytecode_aos(bundle_path, process_argv, process_argv_count, debug_options);
 }
 
 static void write_u32_le(FILE* f, uint32_t value)
@@ -4693,12 +5498,16 @@ static int parse_run_target(int argc, char** argv, int start_index, RunTarget* o
     return 0;
 }
 
-static int run_via_resolved_input(const char* input, const char* const* process_argv, size_t process_argv_count)
+static int run_via_resolved_input(
+    const char* input,
+    const char* const* process_argv,
+    size_t process_argv_count,
+    const NativeDebugOptions* debug_options)
 {
     char resolved[PATH_MAX];
     char source_aos[PATH_MAX];
     if (input != NULL && ends_with(input, ".aibundle") && file_exists(input)) {
-        int rc = run_native_bundle(input, process_argv, process_argv_count);
+        int rc = run_native_bundle(input, process_argv, process_argv_count, debug_options);
         if (rc >= 0) {
             return rc;
         }
@@ -4707,10 +5516,10 @@ static int run_via_resolved_input(const char* input, const char* const* process_
         return 2;
     }
     if (resolve_input_to_aibc1(input, resolved, sizeof(resolved))) {
-        return run_native_aibc1(resolved, process_argv, process_argv_count);
+        return run_native_aibc1(resolved, process_argv, process_argv_count, debug_options);
     }
     if (resolve_input_to_aos(input, source_aos, sizeof(source_aos))) {
-        int rc = run_native_bytecode_aos(source_aos, process_argv, process_argv_count);
+        int rc = run_native_bytecode_aos(source_aos, process_argv, process_argv_count, debug_options);
         if (rc >= 0) {
             return rc;
         }
@@ -4719,7 +5528,7 @@ static int run_via_resolved_input(const char* input, const char* const* process_
                 "Err#err1(code=DEV008 message=\"Native bytecode AOS input uses unsupported fields. Build precompiled .aibc1 or use supported instruction attributes.\" nodeId=program)\n");
             return 2;
         }
-        rc = run_native_simple_program_aos(source_aos, process_argv, process_argv_count);
+        rc = run_native_simple_program_aos(source_aos, process_argv, process_argv_count, debug_options);
         if (rc >= 0) {
             return rc;
         }
@@ -4732,10 +5541,12 @@ static int run_via_resolved_input(const char* input, const char* const* process_
 static int handle_run(int argc, char** argv)
 {
     RunTarget target;
-    int parse_rc = parse_run_target(argc, argv, 2, &target);
+    int parse_rc = 0;
     char out_dir[PATH_MAX];
     char app_path[PATH_MAX];
     int build_rc;
+    memset(&target, 0, sizeof(target));
+    parse_rc = parse_run_target(argc, argv, 2, &target);
     if (parse_rc != 0) {
         return parse_rc;
     }
@@ -4763,13 +5574,15 @@ static int handle_run(int argc, char** argv)
         return run_native_aibc1(
             app_path,
             (const char* const*)&argv[target.app_arg_start],
-            (size_t)target.app_arg_count);
+            (size_t)target.app_arg_count,
+            NULL);
     }
 
     return run_via_resolved_input(
         target.program_path,
         (const char* const*)&argv[target.app_arg_start],
-        (size_t)target.app_arg_count);
+        (size_t)target.app_arg_count,
+        NULL);
 }
 
 static int handle_serve(int argc, char** argv)
@@ -4783,17 +5596,81 @@ static int handle_serve(int argc, char** argv)
 
 static int handle_debug(int argc, char** argv)
 {
-    RunTarget target;
-    int parse_rc;
     if (argc >= 3 && strcmp(argv[2], "run") == 0) {
-        parse_rc = parse_run_target(argc, argv, 3, &target);
-        if (parse_rc != 0) {
-            return parse_rc;
+        const char* program_path = NULL;
+        int app_arg_start = -1;
+        int i;
+        const char* out_dir = NULL;
+        NativeDebugOptions debug_options;
+        int rc;
+        char config_path[PATH_MAX];
+        debug_options.emit_bundle = 0;
+        debug_options.out_dir = NULL;
+        debug_options.input_path = NULL;
+
+        for (i = 3; i < argc; i += 1) {
+            const char* arg = argv[i];
+            if (strcmp(arg, "--") == 0) {
+                app_arg_start = i + 1;
+                break;
+            }
+            if (strcmp(arg, "--out") == 0 && app_arg_start < 0) {
+                if ((i + 1) >= argc) {
+                    fprintf(stderr,
+                        "Err#err1(code=RUN001 message=\"Missing --out value.\" nodeId=argv)\n");
+                    return 2;
+                }
+                out_dir = argv[i + 1];
+                i += 1;
+                continue;
+            }
+            if (starts_with(arg, "--out=") && app_arg_start < 0) {
+                out_dir = arg + 6;
+                continue;
+            }
+            if (app_arg_start < 0 && starts_with(arg, "--vm=")) {
+                const char* mode = arg + 5;
+                if (strcmp(mode, "c") != 0 && !is_reserved_cv_selector(mode)) {
+                    return print_unsupported_vm_mode(mode);
+                }
+                continue;
+            }
+            if (program_path == NULL && arg[0] != '-' && app_arg_start < 0) {
+                program_path = arg;
+                continue;
+            }
+            if (program_path == NULL && arg[0] == '-' && app_arg_start < 0) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Unsupported flag for native C runtime.\" nodeId=argv)\n");
+                return 2;
+            }
+            if (app_arg_start < 0) {
+                app_arg_start = i;
+            }
+            break;
         }
-        return run_via_resolved_input(
-            target.program_path,
-            (const char* const*)&argv[target.app_arg_start],
-            (size_t)target.app_arg_count);
+        if (program_path == NULL) {
+            program_path = ".";
+        }
+        if (app_arg_start < 0 || app_arg_start > argc) {
+            app_arg_start = argc;
+        }
+        if (out_dir != NULL) {
+            debug_options.emit_bundle = 1;
+            debug_options.out_dir = out_dir;
+            debug_options.input_path = program_path;
+        }
+        rc = run_via_resolved_input(
+            program_path,
+            (const char* const*)&argv[app_arg_start],
+            (size_t)(argc - app_arg_start),
+            (out_dir == NULL) ? NULL : &debug_options);
+        if (out_dir != NULL &&
+            join_path(out_dir, "config.toml", config_path, sizeof(config_path)) &&
+            !file_exists(config_path)) {
+            (void)write_native_debug_bundle(&debug_options, NULL, NULL, rc, 1, "native-debug-run-pre-exec-failure");
+        }
+        return rc;
     }
     fprintf(stderr,
         "Err#err1(code=DEV008 message=\"Native debug supports only: debug run <program>\" nodeId=command)\n");
@@ -4820,7 +5697,7 @@ static int handle_repl(void)
             continue;
         }
         if (starts_with(line, "run ")) {
-            return run_via_resolved_input(line + 4, NULL, 0U);
+        return run_via_resolved_input(line + 4, NULL, 0U, NULL);
         }
 
         fprintf(stderr,
@@ -5555,7 +6432,7 @@ int main(int argc, char** argv)
         if (exe_base != NULL && strcmp(exe_base, "airun") != 0 && strcmp(exe_base, "airun.exe") != 0) {
             const char* const* app_argv = (argc > 1) ? (const char* const*)&argv[1] : NULL;
             size_t app_argc = (argc > 1) ? (size_t)(argc - 1) : 0U;
-            return run_native_aibc1(bundled_aibc1, app_argv, app_argc);
+            return run_native_aibc1(bundled_aibc1, app_argv, app_argc, NULL);
         }
     }
 
