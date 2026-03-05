@@ -184,10 +184,17 @@ fi
 TASK_TOOLING_CASES_STATUS="FAIL"
 TASK_TOOLING_CASES_COUNT=0
 if [[ -f "${TASK_TOOLING_MANIFEST}" ]]; then
-  TASK_TOOLING_CASES_COUNT="$(
-    (rg -n 'parity_vm_c_execute_src_(await_edge_invalid|par_join_edge_invalid|par_cancel_edge_noop)' "${TASK_TOOLING_MANIFEST}" || true) \
-      | wc -l | tr -d ' '
-  )"
+  if [[ "${HAS_RG}" == "1" ]]; then
+    TASK_TOOLING_CASES_COUNT="$(
+      (rg -n 'parity_vm_c_execute_src_(await_edge_invalid|par_join_edge_invalid|par_cancel_edge_noop)' "${TASK_TOOLING_MANIFEST}" || true) \
+        | wc -l | tr -d ' '
+    )"
+  else
+    TASK_TOOLING_CASES_COUNT="$(
+      (grep -nE 'parity_vm_c_execute_src_(await_edge_invalid|par_join_edge_invalid|par_cancel_edge_noop)' "${TASK_TOOLING_MANIFEST}" || true) \
+        | wc -l | tr -d ' '
+    )"
+  fi
   if [[ "${TASK_TOOLING_CASES_COUNT}" -ge 3 ]]; then
     TASK_TOOLING_CASES_STATUS="PASS"
   fi
