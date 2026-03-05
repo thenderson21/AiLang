@@ -268,6 +268,43 @@ EOF
     echo "native debug memory smoke failed: unexpected gc pressure threshold value in diagnostics.toml memory telemetry" >&2
     exit 1
   fi
+
+  TMP_NATIVE_DEBUG_OK_DIR="${ROOT_DIR}/.tmp/aivm-c-native-debug-ok"
+  TMP_NATIVE_DEBUG_OK_OUT="${ROOT_DIR}/.tmp/aivm-c-native-debug-ok-out"
+  TMP_NATIVE_DEBUG_OK_APP="${TMP_NATIVE_DEBUG_OK_DIR}/success_path.aos"
+  rm -rf "${TMP_NATIVE_DEBUG_OK_DIR}" "${TMP_NATIVE_DEBUG_OK_OUT}"
+  mkdir -p "${TMP_NATIVE_DEBUG_OK_DIR}"
+  cat > "${TMP_NATIVE_DEBUG_OK_APP}" <<'EOF'
+Bytecode#bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {
+  Func#f1(name=main params="argv" locals="") {
+    Inst#i1(op=HALT)
+  }
+}
+EOF
+  if ! "${ROOT_DIR}/tools/airun" debug run "${TMP_NATIVE_DEBUG_OK_APP}" --out "${TMP_NATIVE_DEBUG_OK_OUT}" >/dev/null 2>&1; then
+    echo "native debug success smoke failed: expected successful debug run" >&2
+    exit 1
+  fi
+  if ! grep -q "status = \"ok\"" "${TMP_NATIVE_DEBUG_OK_OUT}/config.toml"; then
+    echo "native debug success smoke failed: expected status=ok in config.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "vm_code=AIVM000" "${TMP_NATIVE_DEBUG_OK_OUT}/diagnostics.toml"; then
+    echo "native debug success smoke failed: expected vm_code=AIVM000 in diagnostics.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "string_arena_pressure_count = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/state_snapshots.toml"; then
+    echo "native debug success smoke failed: expected string_arena_pressure_count=0 in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "bytes_arena_pressure_count = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/state_snapshots.toml"; then
+    echo "native debug success smoke failed: expected bytes_arena_pressure_count=0 in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_arena_pressure_count = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/state_snapshots.toml"; then
+    echo "native debug success smoke failed: expected node_arena_pressure_count=0 in state_snapshots.toml" >&2
+    exit 1
+  fi
 fi
 
 mkdir -p "$(dirname "${PARITY_REPORT}")"
