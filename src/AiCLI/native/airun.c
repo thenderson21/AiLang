@@ -1464,6 +1464,7 @@ static int emit_wasm_spa_files(const char* out_dir)
             "      ws.onmessage = (ev) => {\n"
             "        const arr = new Uint8Array(ev.data); const frame = decodeFrame(arr);\n"
             "        if (frame.type === 0x02 && frame.id === 1) { resolve(); return; }\n"
+            "        if (frame.type === 0x03 && frame.id === 1) { const err = decodeError(frame.payload); reject(new Error(`remote handshake denied ${err.code}: ${err.message}`)); return; }\n"
             "        const p = pending.get(frame.id); if (!p) return;\n"
             "        if (frame.type === 0x11) { pending.delete(frame.id); p.resolve(decodeResult(frame.payload)); return; }\n"
             "        if (frame.type === 0x12) { const err = decodeError(frame.payload); pending.delete(frame.id); p.reject(new Error(`remote ${err.code}: ${err.message}`)); }\n"
