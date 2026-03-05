@@ -12,6 +12,7 @@ SHARED_FLAG="-DAIVM_BUILD_SHARED=OFF"
 if [[ "${AIVM_BUILD_SHARED:-0}" == "1" ]]; then
   SHARED_FLAG="-DAIVM_BUILD_SHARED=ON"
 fi
+PARITY_CLI="${BUILD_DIR}/aivm_parity_cli"
 
 cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" "${SHARED_FLAG}"
 cmake --build "${BUILD_DIR}"
@@ -130,7 +131,77 @@ EOF
 fi
 
 mkdir -p "$(dirname "${PARITY_REPORT}")"
-printf 'parity manifest skipped: source-mode dualrun removed in C-only runtime cutover\n' > "${PARITY_REPORT}"
+TASK_EDGE_TMP_DIR="${ROOT_DIR}/.tmp/aivm-task-edge-parity"
+mkdir -p "${TASK_EDGE_TMP_DIR}"
+TASK_EDGE_TOTAL=0
+TASK_EDGE_PASSED=0
+TASK_EDGE_FAILED=0
+{
+  echo "task edge parity checks"
+  echo "name|status|actual_exit|expected_exit"
+} > "${PARITY_REPORT}"
+
+run_task_edge_case() {
+  local name="$1"
+  local input="$2"
+  local expected_output="$3"
+  local expected_exit="$4"
+  local actual_output="${TASK_EDGE_TMP_DIR}/${name}.actual.out"
+  local actual_exit=0
+  local status="PASS"
+
+  set +e
+  "${ROOT_DIR}/tools/airun" run "${input}" --vm=c > "${actual_output}" 2>&1
+  actual_exit=$?
+  set -e
+
+  if [[ "${actual_exit}" != "${expected_exit}" ]]; then
+    status="FAIL"
+  fi
+  if [[ "${status}" == "PASS" && -n "${expected_output}" ]]; then
+    if ! "${PARITY_CLI}" "${actual_output}" "${expected_output}" >/dev/null 2>&1; then
+      status="FAIL"
+    fi
+  fi
+  if [[ "${status}" == "PASS" && -z "${expected_output}" ]]; then
+    if [[ -s "${actual_output}" ]]; then
+      status="FAIL"
+    fi
+  fi
+
+  TASK_EDGE_TOTAL=$((TASK_EDGE_TOTAL + 1))
+  if [[ "${status}" == "PASS" ]]; then
+    TASK_EDGE_PASSED=$((TASK_EDGE_PASSED + 1))
+  else
+    TASK_EDGE_FAILED=$((TASK_EDGE_FAILED + 1))
+    echo "task edge parity failed: ${name}" >&2
+    if [[ -f "${actual_output}" ]]; then
+      cat "${actual_output}" >&2
+    fi
+  fi
+  printf '%s|%s|%s|%s\n' "${name}" "${status}" "${actual_exit}" "${expected_exit}" >> "${PARITY_REPORT}"
+}
+
+run_task_edge_case \
+  "await_edge_invalid" \
+  "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_await_edge_invalid.aos" \
+  "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_await_edge_invalid.out" \
+  "3"
+run_task_edge_case \
+  "par_join_edge_invalid" \
+  "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_par_join_edge_invalid.aos" \
+  "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_par_join_edge_invalid.out" \
+  "3"
+run_task_edge_case \
+  "par_cancel_edge_noop" \
+  "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_par_cancel_edge_noop.aos" \
+  "" \
+  "0"
+
+printf 'summary|passed=%s|total=%s|failed=%s\n' "${TASK_EDGE_PASSED}" "${TASK_EDGE_TOTAL}" "${TASK_EDGE_FAILED}" >> "${PARITY_REPORT}"
+if [[ "${TASK_EDGE_FAILED}" != "0" ]]; then
+  exit 1
+fi
 
 if [[ "${AIVM_MEM_LEAK_GATE:-0}" == "1" ]]; then
   leak_iterations="${AIVM_LEAK_CHECK_ITERATIONS:-50}"

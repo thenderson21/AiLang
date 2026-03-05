@@ -194,9 +194,12 @@ if [[ "${RUN_TESTS}" == "1" ]]; then
 fi
 
 TASK_TOOLING_GATE_STATUS="FAIL"
-if [[ "${TASK_TOOLING_CASES_STATUS}" == "PASS" &&
-      ( "${DETERMINISM_GATE_STATUS}" == "PASS" || "${DETERMINISM_GATE_STATUS}" == "PENDING" ) ]]; then
-  TASK_TOOLING_GATE_STATUS="PASS"
+if [[ "${TASK_TOOLING_CASES_STATUS}" == "PASS" ]]; then
+  if [[ "${DETERMINISM_GATE_STATUS}" == "PASS" ]]; then
+    TASK_TOOLING_GATE_STATUS="PASS"
+  elif [[ "${DETERMINISM_GATE_STATUS}" == "PENDING" ]]; then
+    TASK_TOOLING_GATE_STATUS="PENDING"
+  fi
 fi
 
 # Benchmark gate (required only when RUN_BENCH=1).
@@ -304,9 +307,13 @@ OVERALL_REQUIRED_DESC+=("behavioral=${BEHAVIORAL_GATE_STATUS}")
 if [[ "${BEHAVIORAL_GATE_STATUS}" != "PASS" ]]; then
   OVERALL_FAILURES=$((OVERALL_FAILURES + 1))
 fi
-OVERALL_REQUIRED_DESC+=("task-tooling=${TASK_TOOLING_GATE_STATUS}")
-if [[ "${TASK_TOOLING_GATE_STATUS}" != "PASS" ]]; then
-  OVERALL_FAILURES=$((OVERALL_FAILURES + 1))
+if [[ "${RUN_TESTS}" == "1" ]]; then
+  OVERALL_REQUIRED_DESC+=("task-tooling=${TASK_TOOLING_GATE_STATUS}")
+  if [[ "${TASK_TOOLING_GATE_STATUS}" != "PASS" ]]; then
+    OVERALL_FAILURES=$((OVERALL_FAILURES + 1))
+  fi
+else
+  OVERALL_OPTIONAL_DESC+=("task-tooling=${TASK_TOOLING_GATE_STATUS}")
 fi
 
 if [[ "${RUN_TESTS}" == "1" ]]; then
