@@ -489,6 +489,17 @@ if (globalThis.__aivmUiPollEventX(999) !== -1 ||
     globalThis.__aivmUiPollEventModifiers(999) !== '') {
   throw new Error('ui poll-event accessors should reject unknown window id deterministically');
 }
+if (globalThis.__aivmUiCreateWindow(0, 'bad', 100, 50) !== -1 ||
+    globalThis.__aivmUiCreateWindow(-1, 'bad', 100, 50) !== -1 ||
+    globalThis.__aivmUiCreateWindow(3.14, 'bad', 100, 50) !== -1 ||
+    globalThis.__aivmUiCreateWindow(1, 'bad', 0, 50) !== -1 ||
+    globalThis.__aivmUiCreateWindow(1, 'bad', 100, 0) !== -1 ||
+    globalThis.__aivmUiCreateWindow(1, 'bad', -1, 50) !== -1 ||
+    globalThis.__aivmUiCreateWindow(1, 'bad', 100, -1) !== -1 ||
+    globalThis.__aivmUiCreateWindow(1, 'bad', 10.5, 20) !== -1 ||
+    globalThis.__aivmUiCreateWindow(1, 'bad', 10, 20.5) !== -1) {
+  throw new Error('ui createWindow should reject invalid window id/size deterministically');
+}
 
 if (globalThis.__aivmUiCreateWindow(1, 'T', 100, 50) !== 0) {
   throw new Error('ui createWindow failed');
