@@ -255,3 +255,26 @@ This file is normative for `aic run` evaluation behavior.
 - `sys.bytes.at(data,index)` returns `-1` when `index` is out of range.
 - `sys.bytes.slice(data,start,length)` clamps start/length and never throws for range overflow.
 - `sys.bytes.fromBase64(text)` uses strict base64 validation; invalid input is syscall error.
+
+## VM Memory + Node GC Contract
+
+- VM memory arenas are deterministic and bounded:
+- `string_arena` hard cap failure emits `AIVM011` detail `AIVMM001: string arena capacity exceeded.`
+- `bytes_arena` hard cap failure emits `AIVM011` detail `AIVMM002: bytes arena capacity exceeded.`
+- Node arena hard cap failure emits `AIVM011` detail `AIVMM005: node arena capacity exceeded.`
+- Node GC compaction is deterministic and may run proactively before hard-cap:
+- policy interval `node_gc_interval_allocations = 64`
+- pressure threshold `node_gc_pressure_threshold_nodes = 192`
+- proactive compaction runs only when both interval and threshold conditions are met.
+- Hard-cap node creation path must attempt compaction before emitting `AIVMM005`.
+- Node compaction semantics:
+- reachable node handles are preserved via deterministic handle remapping.
+- unreachable nodes are reclaimed.
+- all VM references to node handles (`stack`, `locals`, completed tasks, par values, process argv root) are remapped in one deterministic transition.
+- Reset semantics:
+- `aivm_reset_state` clears arena usage and high-water counters deterministically.
+- `node_allocations_since_gc` resets to `0` after state reset and after a compaction attempt.
+- Native debug bundle memory telemetry is contractually present in:
+- `config.toml` (policy constants)
+- `state_snapshots.toml` (live counters)
+- `diagnostics.toml` memory table (summary counters)
