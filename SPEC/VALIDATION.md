@@ -22,6 +22,7 @@ This file is normative for semantic validation used by `aic check` (default path
 - Manifest node requires:
 - `Project.name` (string), `Project.entryFile` (string, relative path), `Project.entryExport` (non-empty string), and `0` children.
 - Child arity must match node contract (for example `Let=1`, `Var=0`, `Eq=2`, `Add=2`, `If=2..3`).
+- Child arity must match node contract (for example `Let=1`, `Var=0`, `Eq=2`, `Add=2`, `If=2..3`, `While=2`).
 - `If` branches must be `Block` nodes where required (`VAL021`, `VAL022`).
 - `Fn` must have `params` and a single `Block` body (`VAL050`).
 - `Await` must have exactly one child (`VAL167`).

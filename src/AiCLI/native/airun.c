@@ -6977,6 +6977,53 @@ static int simple_compile_if_stmt_ext(
     return 1;
 }
 
+static int simple_compile_while_stmt_ext(
+    const SimpleNodeView* node,
+    AivmProgram* program,
+    SimpleLocals* locals,
+    SimpleCompileContext* ctx,
+    int* out_did_return)
+{
+    SimpleNodeView cond_node;
+    SimpleNodeView body_node;
+    size_t loop_start_ip;
+    size_t jump_exit_ip;
+    int body_return = 0;
+    if (out_did_return != NULL) {
+        *out_did_return = 0;
+    }
+    if (!simple_parse_next_node(node->body_start, node->body_end, &cond_node) ||
+        !simple_parse_next_node(cond_node.next, node->body_end, &body_node)) {
+        return simple_fail("while stmt shape invalid");
+    }
+
+    loop_start_ip = program->instruction_count;
+    if (!simple_compile_expr_ext(&cond_node, program, locals, ctx)) {
+        return 0;
+    }
+    jump_exit_ip = program->instruction_count;
+    if (!simple_emit_instruction(program, AIVM_OP_JUMP_IF_FALSE, 0)) {
+        return 0;
+    }
+    if (strcmp(body_node.kind, "Block") == 0) {
+        if (!simple_compile_block_ext(&body_node, program, locals, ctx, &body_return)) {
+            return 0;
+        }
+    } else if (!simple_compile_expr_ext(&body_node, program, locals, ctx) ||
+               !simple_emit_instruction(program, AIVM_OP_POP, 0)) {
+        return 0;
+    }
+    if (!simple_emit_instruction(program, AIVM_OP_JUMP, (int64_t)loop_start_ip)) {
+        return 0;
+    }
+    program->instruction_storage[jump_exit_ip].operand_int = (int64_t)program->instruction_count;
+    if (out_did_return != NULL) {
+        (void)body_return;
+        *out_did_return = 0;
+    }
+    return 1;
+}
+
 static int simple_compile_stmt_ext(
     const SimpleNodeView* node,
     AivmProgram* program,
@@ -7032,6 +7079,9 @@ static int simple_compile_stmt_ext(
     }
     if (strcmp(node->kind, "If") == 0) {
         return simple_compile_if_stmt_ext(node, program, locals, ctx, out_did_return);
+    }
+    if (strcmp(node->kind, "While") == 0) {
+        return simple_compile_while_stmt_ext(node, program, locals, ctx, out_did_return);
     }
     if (strcmp(node->kind, "Block") == 0) {
         return simple_compile_block_ext(node, program, locals, ctx, out_did_return);

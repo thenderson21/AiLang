@@ -23,6 +23,7 @@ This file is normative for `aic run` evaluation behavior.
 - `Var(name)`: return bound value.
 - `Lit`: return literal value.
 - `If`: evaluate condition; must be bool literal; evaluate selected branch only.
+- `While`: evaluate condition before each iteration; condition must be bool literal; when true evaluate body and repeat, when false exit loop.
 - `Eq`: evaluate both sides, then compare by primitive type and value.
 - `StrConcat`: evaluate both sides, convert to string form, concatenate.
 - `Add`: evaluate both sides, both must be int literals.
