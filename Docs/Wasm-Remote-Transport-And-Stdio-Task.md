@@ -175,7 +175,7 @@ Rationale:
   - Deterministic dual-source stdin bridge in web runtime (`AiLang.stdin.push/close` queue + optional host callback `AIVM_HOST_STDIN_READ`) with executable checks for queue-first then host fallback behavior.
   - Browser output mirroring checks validating stdout/stderr land in browser output/console paths.
   - Publish-time deterministic `WASM001` warnings for unsupported `sys.process.*`, `sys.fs.*`, `sys.net.*`, and `sys.ui.*` in wasm profiles where blocked.
-  - Initial browser SVG UI mapping for `sys.ui.createWindow`, `sys.ui.beginFrame`, `sys.ui.drawRect`, `sys.ui.drawText`, `sys.ui.endFrame`, `sys.ui.present`, and `sys.ui.closeWindow`.
+  - Initial browser SVG UI mapping for `sys.ui.createWindow`, `sys.ui.beginFrame`, `sys.ui.drawRect`, `sys.ui.drawText`, `sys.ui.drawLine`, `sys.ui.drawEllipse`, `sys.ui.endFrame`, `sys.ui.present`, and `sys.ui.closeWindow`.
 
 - Remaining:
   - Extend SVG backend coverage to remaining `sys.ui.*` operations (line, ellipse, path, image, pollEvent, waitFrame, getWindowSize) with deterministic event parity.

@@ -3134,6 +3134,10 @@ if ! contains_fixed '__aivmUiCreateWindow' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit ui createWindow bridge in main.js" >&2
   exit 1
 fi
+if ! contains_fixed '__aivmUiDrawLine' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed '__aivmUiDrawEllipse' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit ui line/ellipse bridges in main.js" >&2
+  exit 1
+fi
 if ! contains_fixed 'AIVM_HOST_STDIN_READ' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit optional host-stdin callback hook in main.js" >&2
   exit 1
@@ -3177,6 +3181,10 @@ if ! contains_fixed '__aivmStdinRead' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; th
 fi
 if ! contains_fixed '__aivmUiCreateWindow' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit ui createWindow bridge in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed '__aivmUiDrawLine' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiDrawEllipse' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit ui line/ellipse bridges in www/main.js" >&2
   exit 1
 fi
 if ! contains_fixed 'AIVM_HOST_STDIN_READ' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
