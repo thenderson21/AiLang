@@ -26,16 +26,16 @@ The matrix below is the authoritative limitations view for target/profile behavi
 
 | Capability family | native host targets (`osx/linux/windows`) | wasm cli | wasm spa | wasm fullstack |
 |---|---|---|---|---|
-| stdout (`io.print`, `io.write`, `sys.stdout.writeLine`) | native | native | native (browser sink) | planned (host + browser mirror) |
-| stderr | native | native | native (browser sink) | planned (host + browser mirror) |
-| stdin | native | native | planned (`AiLang.stdin.push/close` queue) | planned (host stdin + `AiLang.stdin` queue) |
+| stdout (`io.print`, `io.write`, `sys.stdout.writeLine`) | native | native | native (browser sink) | native (host + browser mirror) |
+| stderr | native | native | native (browser sink) | native (host + browser mirror) |
+| stdin | native | native | native (`AiLang.stdin.push/close` queue) | planned (host stdin + `AiLang.stdin` queue) |
 | `sys.remote.call` | native (if configured) | native (if configured) | native (`js` adapter) | native (`ws` adapter) |
 | capability enforcement | native | native | native | native |
 | file system (`sys.fs.*`) | native (capability/sandbox policy) | native (capability/sandbox policy) | blocked by default; use `remote` or virtual adapter | native on host path (capability/sandbox policy) |
 | process lifecycle (`sys.process.spawn/wait/poll/kill/...`) | native | target-dependent (often blocked) | blocked | host-side only; browser path blocked unless remote adapter exposed |
 | direct network syscalls (`sys.net.*`) | native | target-dependent | blocked direct; use `remote` capability path | host-side native; browser path should use `remote` capability path |
 | HTTP/AJAX/fetch | native host net path | target-dependent | remote (`sys.remote.call` -> JS fetch/XHR adapter) | remote (`sys.remote.call` -> ws/server adapter, optionally host fetch path) |
-| vector UI syscalls (`sys.ui.*`) | native host implementation-dependent | blocked unless host implements | planned SVG backend mapping | planned SVG backend mapping |
+| vector UI syscalls (`sys.ui.*`) | native host implementation-dependent | blocked unless host implements | blocked (`WASM001` publish warning, `RUN101` on execution) until SVG backend mapping lands | blocked (`WASM001` publish warning, `RUN101` on execution) until SVG backend mapping lands |
 | crypto (`sys.crypto.*`) | native | target-dependent | profile/adapter-dependent (document per-capability) | profile/adapter-dependent (document per-capability) |
 | time (`sys.time.*`) | native | target-dependent | profile/adapter-dependent (must be deterministic by contract) | profile/adapter-dependent (must be deterministic by contract) |
 | env/cwd/platform/runtime identity | native | target-dependent | profile-defined strings only | profile-defined strings + host-derived where allowed |
@@ -88,7 +88,7 @@ Current strategy for browser UI parity is SVG backend mapping from vector-orient
 3. `spa` has no implicit terminal stdin; input must come from explicit queue APIs.
 4. Profile differences must be documented before enabling new capabilities.
 5. For browser targets, direct `sys.net.*` and direct local `sys.fs.*` are blocked by default unless explicitly surfaced through capability adapters.
-6. Fullstack stdio mirroring and dual-source stdin behavior are required parity targets and should not be treated as optional.
+6. Fullstack host+browser stdout/stderr mirroring is active; dual-source stdin behavior remains an explicit parity target.
 
 ## Required Test Coverage
 
