@@ -6,7 +6,7 @@ SOURCE_PATH="${ROOT_DIR}/src/AiCLI/native/airun.c"
 NATIVE_INCLUDE="${ROOT_DIR}/src/AiVM.Core/native/include"
 NATIVE_SRC_DIR="${ROOT_DIR}/src/AiVM.Core/native/src"
 NATIVE_UI_HOST_SRC="${ROOT_DIR}/src/AiCLI/native/airun_ui_host_macos.m"
-NATIVE_UI_HOST_STUB_SRC="${ROOT_DIR}/src/AiCLI/native/airun_ui_host_stub.c"
+NATIVE_UI_HOST_UNAVAILABLE_SRC="${ROOT_DIR}/src/AiCLI/native/airun_ui_host_unavailable.c"
 UNAME_S="$(uname -s)"
 UNAME_M="$(uname -m)"
 HOST_WRAPPER_PATH="${ROOT_DIR}/tools/airun"
@@ -51,7 +51,7 @@ mkdir -p "${OUT_DIR}"
 CC_BIN="cc"
 CC_EXTRA=()
 LD_EXTRA=()
-UI_HOST_SRC="${NATIVE_UI_HOST_STUB_SRC}"
+UI_HOST_SRC="${NATIVE_UI_HOST_UNAVAILABLE_SRC}"
 if [[ "${TARGET_PLATFORM}" == "osx" ]]; then
   CC_BIN="clang"
   if [[ "${TARGET_ARCH}" == "x64" ]]; then

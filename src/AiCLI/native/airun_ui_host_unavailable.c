@@ -71,7 +71,7 @@ int native_host_ui_poll_event(int64_t handle, NativeHostUiEvent* out_event)
     (void)handle;
     if (out_event != NULL) {
         memset(out_event, 0, sizeof(*out_event));
-        (void)snprintf(out_event->type, sizeof(out_event->type), "none");
+        (void)snprintf(out_event->type, sizeof(out_event->type), "unsupported");
     }
     return 0;
 }
