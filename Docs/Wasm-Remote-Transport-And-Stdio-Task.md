@@ -171,11 +171,11 @@ Rationale:
     - default endpoint fallback (`ws://${location.hostname}:8765`)
   - Deterministic invalid `AIVM_REMOTE_MODE` runtime diagnostics (`RUN101`) with executable checks.
   - Browser-side stdin queue (`AiLang.stdin.push/close`) FIFO+EOF behavior with executable checks.
+  - Deterministic dual-source stdin bridge in web runtime (`AiLang.stdin.push/close` queue + optional host callback `AIVM_HOST_STDIN_READ`) with executable checks for queue-first then host fallback behavior.
   - Browser output mirroring checks validating stdout/stderr land in browser output/console paths.
   - Publish-time deterministic `WASM001` warnings for unsupported `sys.process.*`, `sys.fs.*`, `sys.net.*`, and `sys.ui.*` in wasm profiles where blocked.
 
 - Remaining:
-  - Fullstack dual-source stdin parity in live runtime (host stdin + `AiLang.stdin.push(...)` active together).
   - SVG backend implementation for `sys.ui.*` browser rendering/event parity (currently explicitly warned/blocked for wasm profiles).
 
 ## Out of Scope

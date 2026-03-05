@@ -224,6 +224,23 @@ if (globalThis.__aivmStdinRead() !== 'second') {
 if (globalThis.__aivmStdinRead() !== '') {
   throw new Error('stdin open-empty must yield empty string');
 }
+const hostReads = ['host-only', undefined];
+globalThis.AIVM_HOST_STDIN_READ = () => {
+  if (hostReads.length === 0) {
+    return undefined;
+  }
+  return hostReads.shift();
+};
+globalThis.AiLang.stdin.push('queue-wins');
+if (globalThis.__aivmStdinRead() !== 'queue-wins') {
+  throw new Error('stdin queue must take precedence over host callback');
+}
+if (globalThis.__aivmStdinRead() !== 'host-only') {
+  throw new Error('stdin host callback fallback mismatch');
+}
+if (globalThis.__aivmStdinRead() !== '') {
+  throw new Error('stdin host callback undefined must preserve open-empty semantics');
+}
 globalThis.AiLang.stdin.close();
 if (globalThis.__aivmStdinRead() !== null) {
   throw new Error('stdin closed-empty must yield null');
