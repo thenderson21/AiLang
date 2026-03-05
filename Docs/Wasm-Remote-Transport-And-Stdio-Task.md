@@ -148,6 +148,25 @@ Rationale:
 - stdin queue FIFO and EOF semantics
 6. Docs updated with wasm mode matrix and stdio behavior.
 
+## Current Implementation Status
+
+- Implemented:
+  - `js` mode runtime call path with executable checks (adapter-present and adapter-missing deterministic failure).
+  - `ws` mode runtime call path with executable checks:
+    - successful HELLO/WELCOME + CALL/RESULT flow
+    - handshake DENY handling
+    - CALL ERROR frame handling
+    - socket error handling
+    - default endpoint fallback (`ws://${location.hostname}:8765`)
+  - Deterministic invalid `AIVM_REMOTE_MODE` runtime diagnostics (`RUN101`) with executable checks.
+  - Browser-side stdin queue (`AiLang.stdin.push/close`) FIFO+EOF behavior with executable checks.
+  - Browser output mirroring checks validating stdout/stderr land in browser output/console paths.
+  - Publish-time deterministic `WASM001` warnings for unsupported `sys.process.*`, `sys.fs.*`, `sys.net.*`, and `sys.ui.*` in wasm profiles where blocked.
+
+- Remaining:
+  - Fullstack dual-source stdin parity in live runtime (host stdin + `AiLang.stdin.push(...)` active together).
+  - SVG backend implementation for `sys.ui.*` browser rendering/event parity (currently explicitly warned/blocked for wasm profiles).
+
 ## Out of Scope
 
 - New high-level protocol syscalls.
