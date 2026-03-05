@@ -3192,6 +3192,10 @@ if ! contains_fixed 'win.frameParts = []' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not clear ui frame state on closeWindow" >&2
   exit 1
 fi
+if ! contains_fixed 'uiState.windows.delete(windowId);' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit closed-window record cleanup" >&2
+  exit 1
+fi
 if ! contains_fixed 'clampToWindow' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit ui click coordinate clamp helper" >&2
   exit 1
@@ -3311,6 +3315,10 @@ if ! contains_fixed "removeEventListener('keydown'" "${PUBLISH_FULLSTACK_DIR}/ww
 fi
 if ! contains_fixed 'win.frameParts = []' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not clear ui frame state on closeWindow" >&2
+  exit 1
+fi
+if ! contains_fixed 'uiState.windows.delete(windowId);' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit closed-window record cleanup" >&2
   exit 1
 fi
 if ! contains_fixed 'clampToWindow' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then

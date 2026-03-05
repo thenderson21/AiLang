@@ -1449,7 +1449,7 @@ static int emit_wasm_spa_files(const char* out_dir)
             "  host.appendChild(label);\n"
             "  host.appendChild(svg);\n"
             "  (document.body || document.documentElement).appendChild(host);\n"
-            "  const state = { host, svg, width, height, frameParts: [], nextElementId: 1, focusedTargetId: '', closed: false, resizeHandler: null, pointerHandler: null, clickHandler: null, touchHandler: null, keyHandler: null, blurHandler: null, eventQueue: [], lastPolledEvent: { type: 'none', targetId: '', x: -1, y: -1, key: '', text: '', modifiers: '', repeat: false } };\n"
+            "  const state = { host, svg, width, height, frameParts: [], nextElementId: 1, focusedTargetId: '', closed: false, closeConsumed: false, resizeHandler: null, pointerHandler: null, clickHandler: null, touchHandler: null, keyHandler: null, blurHandler: null, eventQueue: [], lastPolledEvent: { type: 'none', targetId: '', x: -1, y: -1, key: '', text: '', modifiers: '', repeat: false } };\n"
             "  const pushEvent = (evt) => { state.eventQueue.push(evt); if (state.eventQueue.length > 64) state.eventQueue.shift(); };\n"
             "  const clampToWindow = (x, y) => {\n"
             "    const maxX = Math.max(0, (state.width | 0) - 1);\n"
@@ -1639,7 +1639,8 @@ static int emit_wasm_spa_files(const char* out_dir)
             "  const win = uiState.windows.get(windowId);\n"
             "  if (!win || win.closed) return -1;\n"
             "  return 0;\n"
-            "};\n"
+            "};\n";
+        const char* main_js_tailb =
             "globalThis.__aivmUiGetWindowWidth = (windowId) => {\n"
             "  const win = uiState.windows.get(windowId);\n"
             "  if (!win || win.closed) return -1;\n"
@@ -1655,6 +1656,7 @@ static int emit_wasm_spa_files(const char* out_dir)
             "  if (!win) return -1;\n"
             "  const evt = win.eventQueue.length > 0 ? win.eventQueue.shift() : { type: 'none', targetId: '', x: -1, y: -1, key: '', text: '', modifiers: '', repeat: false };\n"
             "  win.lastPolledEvent = evt;\n"
+            "  win.closeConsumed = (evt.type === 'closed');\n"
             "  if (evt.type === 'closed') return 1;\n"
             "  if (evt.type === 'click') return 2;\n"
             "  if (evt.type === 'key') return 3;\n"
@@ -1693,7 +1695,11 @@ static int emit_wasm_spa_files(const char* out_dir)
             "globalThis.__aivmUiPollEventRepeat = (windowId) => {\n"
             "  const win = uiState.windows.get(windowId);\n"
             "  if (!win) return -1;\n"
-            "  return win.lastPolledEvent?.repeat ? 1 : 0;\n"
+            "  const repeatValue = win.lastPolledEvent?.repeat ? 1 : 0;\n"
+            "  if (win.closeConsumed) {\n"
+            "    uiState.windows.delete(windowId);\n"
+            "  }\n"
+            "  return repeatValue;\n"
             "};\n"
             "function readHostStdin() {\n"
             "  if (typeof globalThis.AIVM_HOST_STDIN_READ !== 'function') return undefined;\n"
@@ -1734,7 +1740,7 @@ static int emit_wasm_spa_files(const char* out_dir)
             "runtime.printErr = (line) => { const s = String(line); logs.push(s); console.error(s); };\n"
             "runtime.callMain(['/app.aibc1']);\n"
             "if (output) output.textContent = logs.join('\\n');\n";
-        if (snprintf(main_js, sizeof(main_js), "%s%s%s%s%s%s%s%s", main_js_head, main_js_head2, main_js_head3, main_js_head3b, main_js_head4, main_js_mid, main_js_tail, main_js_tail2) >= (int)sizeof(main_js)) {
+        if (snprintf(main_js, sizeof(main_js), "%s%s%s%s%s%s%s%s%s", main_js_head, main_js_head2, main_js_head3, main_js_head3b, main_js_head4, main_js_mid, main_js_tail, main_js_tailb, main_js_tail2) >= (int)sizeof(main_js)) {
             return 0;
         }
     }
