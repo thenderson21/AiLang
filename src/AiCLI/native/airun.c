@@ -4419,16 +4419,16 @@ static int simple_compile_call_ext(
             return simple_fail("failed emitting syscall target const");
         }
         if (arg_count > 0U) {
+            AivmInstruction target_inst;
             size_t i;
-            size_t start = program->instruction_count - arg_count;
-            size_t end = program->instruction_count;
-            /* move target const before args on stack for CALL_SYS contract */
-            for (i = end; i > start; i -= 1U) {
+            size_t start = program->instruction_count - arg_count - 1U;
+            size_t target_index = program->instruction_count - 1U;
+            /* Move syscall target const ahead of args: [args..., target] -> [target, args...] */
+            target_inst = program->instruction_storage[target_index];
+            for (i = target_index; i > start; i -= 1U) {
                 program->instruction_storage[i] = program->instruction_storage[i - 1U];
             }
-            program->instruction_storage[start].opcode = AIVM_OP_CONST;
-            program->instruction_storage[start].operand_int = (int64_t)target_idx;
-            program->instruction_count += 1U;
+            program->instruction_storage[start] = target_inst;
         }
         if (!simple_emit_instruction(program, AIVM_OP_CALL_SYS, (int64_t)arg_count)) {
             return simple_fail("failed emitting CALL_SYS");
