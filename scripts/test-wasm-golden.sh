@@ -3590,6 +3590,10 @@ if ! contains_fixed '__aivmUiGetWindowWidth' "${PUBLISH_SPA_DIR}/main.js" || ! c
   echo "wasm profile mismatch: spa publish did not emit ui live window-size bridges in main.js" >&2
   exit 1
 fi
+if ! contains_fixed 'return (win.width | 0) ||' "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed 'return (win.height | 0) ||' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not prioritize live window size state over stale viewBox fallback" >&2
+  exit 1
+fi
 if ! contains_fixed "addEventListener('resize'" "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit ui resize sync hook in main.js" >&2
   exit 1
@@ -3729,6 +3733,10 @@ if ! contains_fixed '__aivmUiWaitFrame' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; 
 fi
 if ! contains_fixed '__aivmUiGetWindowWidth' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiGetWindowHeight' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit ui live window-size bridges in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed 'return (win.width | 0) ||' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed 'return (win.height | 0) ||' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not prioritize live window size state over stale viewBox fallback" >&2
   exit 1
 fi
 if ! contains_fixed "addEventListener('resize'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
