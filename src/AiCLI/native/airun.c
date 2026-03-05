@@ -1470,6 +1470,7 @@ static int emit_wasm_spa_files(const char* out_dir)
             "      ws.onopen = () => { ws.send(encodeHello(1, ['cap.remote'])); };\n"
             "      ws.onmessage = (ev) => {\n"
             "        const arr = new Uint8Array(ev.data); const frame = decodeFrame(arr);\n"
+            "        if (!settled && frame.id !== 1) { rejectReady(`remote unexpected handshake frame id ${frame.id}`); ready = null; ws = null; return; }\n"
             "        if (frame.type === 0x02 && frame.id === 1) { resolveReady(); return; }\n"
             "        if (frame.type === 0x03 && frame.id === 1) { const err = decodeError(frame.payload); rejectReady(`remote handshake denied ${err.code}: ${err.message}`); ready = null; ws = null; return; }\n"
             "        if (frame.id === 1) { rejectReady(`remote unexpected handshake frame type ${frame.type}`); ready = null; ws = null; return; }\n"
