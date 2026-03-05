@@ -3,6 +3,7 @@ $ErrorActionPreference = 'Stop'
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $sourcePath = Join-Path $root 'src/AiCLI/native/airun.c'
+$uiHostWindowsPath = Join-Path $root 'src/AiCLI/native/airun_ui_host_windows.c'
 $nativeInclude = Join-Path $root 'src/AiVM.Core/native/include'
 $nativeSrc = Join-Path $root 'src/AiVM.Core/native/src'
 $hostWrapperPath = Join-Path $root 'tools/airun.exe'
@@ -23,6 +24,7 @@ if (-not (Get-Command cl -ErrorAction SilentlyContinue)) {
 
 $sources = @(
   $sourcePath,
+  $uiHostWindowsPath,
   (Join-Path $nativeSrc 'aivm_types.c'),
   (Join-Path $nativeSrc 'aivm_vm.c'),
   (Join-Path $nativeSrc 'aivm_program.c'),
@@ -34,7 +36,7 @@ $sources = @(
   (Join-Path $nativeSrc 'remote/aivm_remote_channel.c'),
   (Join-Path $nativeSrc 'remote/aivm_remote_session.c')
 )
-$clArgs = @('/nologo', '/O2', '/W4', '/WX', '/std:c11', '/D_CRT_SECURE_NO_WARNINGS', "/I$nativeInclude", "/Fe:$wrapperPath") + $sources + @('Ws2_32.lib', 'psapi.lib')
+$clArgs = @('/nologo', '/O2', '/W4', '/WX', '/std:c11', '/D_CRT_SECURE_NO_WARNINGS', '/DAIRUN_UI_HOST_EXTERNAL=1', "/I$nativeInclude", "/Fe:$wrapperPath") + $sources + @('Ws2_32.lib', 'psapi.lib', 'user32.lib', 'gdi32.lib')
 & cl @clArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
