@@ -3156,6 +3156,10 @@ if ! contains_fixed '__aivmUiDrawPath' "${PUBLISH_SPA_DIR}/main.js" || ! contain
   echo "wasm profile mismatch: spa publish did not emit ui path/image bridges in main.js" >&2
   exit 1
 fi
+if ! contains_fixed 'data-aivm-id' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit deterministic ui target-id tagging" >&2
+  exit 1
+fi
 if ! contains_fixed '__aivmUiWaitFrame' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit ui waitFrame bridge in main.js" >&2
   exit 1
@@ -3223,6 +3227,10 @@ if ! contains_fixed '__aivmUiDrawLine' "${PUBLISH_FULLSTACK_DIR}/www/main.js" ||
 fi
 if ! contains_fixed '__aivmUiDrawPath' "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed '__aivmUiDrawImage' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit ui path/image bridges in www/main.js" >&2
+  exit 1
+fi
+if ! contains_fixed 'data-aivm-id' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit deterministic ui target-id tagging" >&2
   exit 1
 fi
 if ! contains_fixed '__aivmUiWaitFrame' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
