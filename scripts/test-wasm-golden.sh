@@ -464,6 +464,40 @@ if (globalThis.__aivmUiPollEventTargetId(1) !== 'p0' ||
     globalThis.__aivmUiPollEventY(1) !== 9) {
   throw new Error('ui pointer event payload mismatch');
 }
+delete globalThis.window.PointerEvent;
+if (globalThis.__aivmUiCreateWindow(2, 'T2', 80, 40) !== 0) {
+  throw new Error('ui touch-fallback createWindow failed');
+}
+if (body.children.length < 2 || body.children[1].children.length < 2) {
+  throw new Error('ui touch-fallback host/svg structure mismatch');
+}
+const svg2 = body.children[1].children[1];
+if (svg2.listenerCount('pointerdown') !== 0 || svg2.listenerCount('click') !== 1 || svg2.listenerCount('touchstart') !== 1) {
+  throw new Error('ui touch-fallback listener registration mismatch');
+}
+let touchPrevented = false;
+if (svg2.emit('touchstart', {
+  target: { getAttribute: () => 't0' },
+  touches: [{ clientX: 12, clientY: 15 }],
+  preventDefault() { touchPrevented = true; }
+}) !== 1) {
+  throw new Error('ui touchstart listener dispatch mismatch');
+}
+if (!touchPrevented) {
+  throw new Error('ui touchstart did not invoke preventDefault in fallback path');
+}
+if (globalThis.__aivmUiPollEventType(2) !== 2 ||
+    globalThis.__aivmUiPollEventTargetId(2) !== 't0' ||
+    globalThis.__aivmUiPollEventX(2) !== 12 ||
+    globalThis.__aivmUiPollEventY(2) !== 15) {
+  throw new Error('ui touch-fallback canonical click payload mismatch');
+}
+if (globalThis.__aivmUiCloseWindow(2) !== 0) {
+  throw new Error('ui touch-fallback closeWindow failed');
+}
+if (svg2.listenerCount('click') !== 0 || svg2.listenerCount('touchstart') !== 0) {
+  throw new Error('ui touch-fallback listeners were not removed on close');
+}
 if (svg.emit('keyup', { key: 'Enter', repeat: false, ctrlKey: true }) !== 1) {
   throw new Error('ui keyup listener dispatch mismatch');
 }
