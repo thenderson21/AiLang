@@ -492,6 +492,28 @@ if (globalThis.__aivmUiPollEventType(2) !== 2 ||
     globalThis.__aivmUiPollEventY(2) !== 15) {
   throw new Error('ui touch-fallback canonical click payload mismatch');
 }
+if (svg2.emit('click', {
+  offsetX: 21,
+  offsetY: 22,
+  target: { getAttribute: () => 'c2' }
+}) !== 1) {
+  throw new Error('ui click-fallback listener dispatch mismatch');
+}
+if (globalThis.__aivmUiPollEventType(2) !== 2 ||
+    globalThis.__aivmUiPollEventTargetId(2) !== 'c2' ||
+    globalThis.__aivmUiPollEventX(2) !== 21 ||
+    globalThis.__aivmUiPollEventY(2) !== 22) {
+  throw new Error('ui click-fallback canonical click payload mismatch');
+}
+if (svg2.emit('keydown', { key: 'x', repeat: false }) !== 1) {
+  throw new Error('ui click-fallback keydown dispatch mismatch');
+}
+if (globalThis.__aivmUiPollEventType(2) !== 3 ||
+    globalThis.__aivmUiPollEventTargetId(2) !== 'c2' ||
+    globalThis.__aivmUiPollEventKey(2) !== 'x' ||
+    globalThis.__aivmUiPollEventText(2) !== 'x') {
+  throw new Error('ui click-fallback focus/key routing mismatch');
+}
 if (globalThis.__aivmUiCloseWindow(2) !== 0) {
   throw new Error('ui touch-fallback closeWindow failed');
 }
