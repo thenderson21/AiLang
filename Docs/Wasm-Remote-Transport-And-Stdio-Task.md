@@ -181,6 +181,7 @@ Rationale:
   - Browser adapter now tracks deterministic focused target (`focusedTargetId`) so `key` events route through canonical `targetId` based on last click.
   - Browser adapter clears focus deterministically on `blur` so key routing never uses stale targets after focus loss.
   - Browser adapter maps `pointerdown`/`touchstart` to canonical `click` events for deterministic mobile/touch parity.
+  - Browser pointer/touch coordinate mapping is normalized to SVG-local space before clamp so `UiEvent.x/y` remain stable under page offset/scroll.
   - `sys.ui.closeWindow` now enqueues one deterministic `closed` event for the window and blocks further draw/frame calls for that handle.
   - Browser adapter now syncs window size on browser `resize` so `sys.ui.getWindowSize` stays aligned with live viewport dimensions.
   - `sys.ui.getWindowSize` now returns deterministic node refreshed from live web bridge dimensions on wasm web profiles.

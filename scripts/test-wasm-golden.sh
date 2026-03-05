@@ -3184,6 +3184,10 @@ if ! contains_fixed 'clampToWindow' "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit ui click coordinate clamp helper" >&2
   exit 1
 fi
+if ! contains_fixed 'eventToLocal' "${PUBLISH_SPA_DIR}/main.js"; then
+  echo "wasm profile mismatch: spa publish did not emit ui local-coordinate mapping helper" >&2
+  exit 1
+fi
 if ! contains_fixed "addEventListener('pointerdown'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "addEventListener('touchstart'" "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit pointer/touch ui click mappings" >&2
   exit 1
@@ -3283,6 +3287,10 @@ if ! contains_fixed "addEventListener('resize'" "${PUBLISH_FULLSTACK_DIR}/www/ma
 fi
 if ! contains_fixed 'clampToWindow' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit ui click coordinate clamp helper" >&2
+  exit 1
+fi
+if ! contains_fixed 'eventToLocal' "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+  echo "wasm profile mismatch: fullstack publish did not emit ui local-coordinate mapping helper" >&2
   exit 1
 fi
 if ! contains_fixed "addEventListener('pointerdown'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "addEventListener('touchstart'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
