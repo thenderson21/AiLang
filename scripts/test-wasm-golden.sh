@@ -3485,7 +3485,7 @@ if ! contains_fixed "type: 'key'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fix
   echo "wasm profile mismatch: spa publish did not emit canonical ui event type payloads" >&2
   exit 1
 fi
-if contains_fixed "type: 'keydown'" "${PUBLISH_SPA_DIR}/main.js" || contains_fixed "type: 'move'" "${PUBLISH_SPA_DIR}/main.js"; then
+if contains_fixed "type: 'keydown'" "${PUBLISH_SPA_DIR}/main.js" || contains_fixed "type: 'keyup'" "${PUBLISH_SPA_DIR}/main.js" || contains_fixed "type: 'move'" "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish still emits non-canonical ui event type payloads" >&2
   exit 1
 fi
@@ -3626,7 +3626,7 @@ if ! contains_fixed "type: 'key'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! co
   echo "wasm profile mismatch: fullstack publish did not emit canonical ui event type payloads" >&2
   exit 1
 fi
-if contains_fixed "type: 'keydown'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || contains_fixed "type: 'move'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+if contains_fixed "type: 'keydown'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || contains_fixed "type: 'keyup'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || contains_fixed "type: 'move'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish still emits non-canonical ui event type payloads" >&2
   exit 1
 fi
