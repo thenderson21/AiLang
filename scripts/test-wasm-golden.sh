@@ -473,11 +473,29 @@ if (globalThis.__aivmUiPollEventType(1) !== 3) {
 if (globalThis.__aivmUiPollEventKey(1) !== 'enter') {
   throw new Error('ui keyup event key mismatch');
 }
+if (globalThis.__aivmUiPollEventTargetId(1) !== 'p0') {
+  throw new Error('ui keyup focus target routing mismatch');
+}
 if (globalThis.__aivmUiPollEventModifiers(1) !== 'ctrl') {
   throw new Error('ui keyup event modifiers mismatch');
 }
 if (globalThis.__aivmUiPollEventRepeat(1) !== 0) {
   throw new Error('ui keyup event repeat mismatch');
+}
+if (svg.emit('blur', {}) !== 1) {
+  throw new Error('ui blur listener dispatch mismatch');
+}
+if (svg.emit('keydown', { key: 'a', repeat: false }) !== 1) {
+  throw new Error('ui keydown listener dispatch mismatch');
+}
+if (globalThis.__aivmUiPollEventType(1) !== 3) {
+  throw new Error('ui keydown event type mismatch');
+}
+if (globalThis.__aivmUiPollEventTargetId(1) !== '') {
+  throw new Error('ui blur focus-clear routing mismatch');
+}
+if (globalThis.__aivmUiPollEventKey(1) !== 'a' || globalThis.__aivmUiPollEventText(1) !== 'a') {
+  throw new Error('ui keydown canonical payload mismatch');
 }
 if (globalThis.__aivmUiCloseWindow(1) !== 0) {
   throw new Error('ui closeWindow failed');
