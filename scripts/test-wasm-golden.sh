@@ -3393,20 +3393,20 @@ if contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.drawRect is not avai
   echo "wasm fullstack warning mismatch: unexpected WASM001 warning for sys.ui.drawRect" >&2
   exit 1
 fi
-if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.pollEvent is not available on wasm profile 'spa'" "${UI_POLL_SPA_WARN}"; then
-  echo "wasm spa warning mismatch: expected WASM001 warning for sys.ui.pollEvent" >&2
+if contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.pollEvent is not available on wasm profile 'spa'" "${UI_POLL_SPA_WARN}"; then
+  echo "wasm spa warning mismatch: unexpected WASM001 warning for sys.ui.pollEvent" >&2
   exit 1
 fi
-if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.pollEvent is not available on wasm profile 'fullstack'" "${UI_POLL_FULLSTACK_WARN}"; then
-  echo "wasm fullstack warning mismatch: expected WASM001 warning for sys.ui.pollEvent" >&2
+if contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.pollEvent is not available on wasm profile 'fullstack'" "${UI_POLL_FULLSTACK_WARN}"; then
+  echo "wasm fullstack warning mismatch: unexpected WASM001 warning for sys.ui.pollEvent" >&2
   exit 1
 fi
-if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.getWindowSize is not available on wasm profile 'spa'" "${UI_SIZE_SPA_WARN}"; then
-  echo "wasm spa warning mismatch: expected WASM001 warning for sys.ui.getWindowSize" >&2
+if contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.getWindowSize is not available on wasm profile 'spa'" "${UI_SIZE_SPA_WARN}"; then
+  echo "wasm spa warning mismatch: unexpected WASM001 warning for sys.ui.getWindowSize" >&2
   exit 1
 fi
-if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.getWindowSize is not available on wasm profile 'fullstack'" "${UI_SIZE_FULLSTACK_WARN}"; then
-  echo "wasm fullstack warning mismatch: expected WASM001 warning for sys.ui.getWindowSize" >&2
+if contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.getWindowSize is not available on wasm profile 'fullstack'" "${UI_SIZE_FULLSTACK_WARN}"; then
+  echo "wasm fullstack warning mismatch: unexpected WASM001 warning for sys.ui.getWindowSize" >&2
   exit 1
 fi
 set +e
@@ -3423,11 +3423,11 @@ if [[ ${ui_size_runtime_rc} -ne 3 ]]; then
   echo "wasm ui runtime mismatch: expected exit 3 for sys.ui.getWindowSize unsupported runtime, got ${ui_size_runtime_rc}" >&2
   exit 1
 fi
-if ! contains_fixed 'Err#err1(code=RUN101 message="sys.ui.pollEvent is not available on this target." nodeId=vm)' "${UI_POLL_RUNTIME_OUT}"; then
+if ! contains_fixed 'Err#err1(code=RUN101 message="ui bridge is not available on this target." nodeId=vm)' "${UI_POLL_RUNTIME_OUT}"; then
   echo "wasm ui runtime mismatch: expected RUN101 deterministic message for sys.ui.pollEvent unsupported runtime" >&2
   exit 1
 fi
-if ! contains_fixed 'Err#err1(code=RUN101 message="sys.ui.getWindowSize is not available on this target." nodeId=vm)' "${UI_SIZE_RUNTIME_OUT}"; then
+if ! contains_fixed 'Err#err1(code=RUN101 message="ui bridge is not available on this target." nodeId=vm)' "${UI_SIZE_RUNTIME_OUT}"; then
   echo "wasm ui runtime mismatch: expected RUN101 deterministic message for sys.ui.getWindowSize unsupported runtime" >&2
   exit 1
 fi

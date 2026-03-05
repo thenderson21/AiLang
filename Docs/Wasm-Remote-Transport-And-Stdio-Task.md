@@ -176,9 +176,11 @@ Rationale:
   - Browser output mirroring checks validating stdout/stderr land in browser output/console paths.
   - Publish-time deterministic `WASM001` warnings for unsupported `sys.process.*`, `sys.fs.*`, `sys.net.*`, and `sys.ui.*` in wasm profiles where blocked.
   - Initial browser SVG UI mapping for `sys.ui.createWindow`, `sys.ui.beginFrame`, `sys.ui.drawRect`, `sys.ui.drawText`, `sys.ui.drawLine`, `sys.ui.drawEllipse`, `sys.ui.drawPath`, `sys.ui.drawImage`, `sys.ui.endFrame`, `sys.ui.present`, `sys.ui.waitFrame`, and `sys.ui.closeWindow`.
+  - `sys.ui.pollEvent` now returns deterministic empty-event node on wasm web profiles.
+  - `sys.ui.getWindowSize` now returns deterministic node (updated from `createWindow` dimensions) on wasm web profiles.
 
 - Remaining:
-  - Extend SVG backend coverage to remaining `sys.ui.*` operations (`pollEvent`, `getWindowSize`) with deterministic event/window-size node parity (runtime currently rejects these deterministically; warning + runtime checks are in place).
+  - Replace deterministic placeholder event/size node behavior with full browser event queue + live resize parity while keeping deterministic contracts.
 
 ## Out of Scope
 
