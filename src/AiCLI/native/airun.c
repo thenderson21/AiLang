@@ -161,6 +161,19 @@ static int simple_resolve_path(const char* base_file, const char* import_path, c
 static int simple_fail(const char* message);
 static int simple_failf(const char* fmt, ...);
 static const char* native_build_error(void);
+static AivmVm* g_native_active_vm;
+static int native_vm_append_host_node(
+    AivmVm* vm,
+    const char* kind,
+    const char* id,
+    const AivmNodeAttr* attrs,
+    size_t attr_count,
+    int64_t* out_handle);
+static int native_bytes_to_base64(
+    const uint8_t* input,
+    size_t in_len,
+    char* output,
+    size_t output_capacity);
 
 #define AIRUN_NATIVE_CACHE_SCHEMA "airun-native-cache-v2"
 #define AIRUN_NATIVE_COMPILER_FINGERPRINT "native-compiler-2026-03-05-call-fixup-order-v2"
@@ -2106,6 +2119,9 @@ static int emit_wasm_fullstack_layout(const char* out_dir)
 #define NATIVE_PROCESS_READ_CHUNK 4096U
 #define NATIVE_WORKER_CAPACITY 64U
 #define NATIVE_WORKER_TEXT_CAPACITY 512U
+#define NATIVE_NET_HANDLE_CAPACITY 64U
+#define NATIVE_NET_ASYNC_CAPACITY 128U
+#define NATIVE_NET_BYTES_CHUNK 65536U
 
 typedef struct NativeProcessState
 {
@@ -2139,6 +2155,36 @@ typedef struct NativeWorkerState
 } NativeWorkerState;
 
 static NativeWorkerState g_native_workers[NATIVE_WORKER_CAPACITY];
+
+typedef enum {
+    NATIVE_NET_HANDLE_KIND_NONE = 0,
+    NATIVE_NET_HANDLE_KIND_TCP_LISTENER = 1,
+    NATIVE_NET_HANDLE_KIND_TCP_STREAM = 2,
+    NATIVE_NET_HANDLE_KIND_UDP_SOCKET = 3
+} NativeNetHandleKind;
+
+typedef struct NativeNetHandleState
+{
+    int used;
+    NativeNetHandleKind kind;
+    NativeSocket socket;
+} NativeNetHandleState;
+
+typedef struct NativeNetAsyncState
+{
+    int used;
+    int status; /* 0 pending, 1 success, -1 failure, -2 canceled */
+    int64_t result_int;
+    uint8_t* result_bytes;
+    size_t result_bytes_len;
+    char error[128];
+} NativeNetAsyncState;
+
+static NativeNetHandleState g_native_net_handles[NATIVE_NET_HANDLE_CAPACITY];
+static NativeNetAsyncState g_native_net_async_ops[NATIVE_NET_ASYNC_CAPACITY];
+static uint8_t g_native_net_bytes_scratch[NATIVE_NET_BYTES_CHUNK];
+static char g_native_net_text_scratch[NATIVE_NET_BYTES_CHUNK];
+static char g_native_net_host_scratch[64];
 
 static void native_worker_init_slot(NativeWorkerState* worker)
 {
@@ -2280,6 +2326,180 @@ static int64_t native_process_allocate_slot(void)
         }
     }
     return -1;
+}
+
+static void native_net_reset(void)
+{
+    size_t i;
+    for (i = 0U; i < NATIVE_NET_HANDLE_CAPACITY; i += 1U) {
+        if (g_native_net_handles[i].used && g_native_net_handles[i].socket != NATIVE_INVALID_SOCKET) {
+            native_socket_close(g_native_net_handles[i].socket);
+        }
+        g_native_net_handles[i].used = 0;
+        g_native_net_handles[i].kind = NATIVE_NET_HANDLE_KIND_NONE;
+        g_native_net_handles[i].socket = NATIVE_INVALID_SOCKET;
+    }
+    for (i = 0U; i < NATIVE_NET_ASYNC_CAPACITY; i += 1U) {
+        if (g_native_net_async_ops[i].result_bytes != NULL) {
+            free(g_native_net_async_ops[i].result_bytes);
+        }
+        memset(&g_native_net_async_ops[i], 0, sizeof(g_native_net_async_ops[i]));
+    }
+}
+
+static int native_net_platform_init(void)
+{
+#ifdef _WIN32
+    static int wsa_ready = 0;
+    if (!wsa_ready) {
+        WSADATA wsa_data;
+        if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
+            return 0;
+        }
+        wsa_ready = 1;
+    }
+#endif
+    return 1;
+}
+
+static int native_net_parse_ipv4(const char* host, uint16_t port, struct sockaddr_in* out_addr)
+{
+    if (out_addr == NULL) {
+        return 0;
+    }
+    memset(out_addr, 0, sizeof(*out_addr));
+    out_addr->sin_family = AF_INET;
+    out_addr->sin_port = htons(port);
+    if (host == NULL || host[0] == '\0' || strcmp(host, "*") == 0 || strcmp(host, "0.0.0.0") == 0) {
+        out_addr->sin_addr.s_addr = htonl(INADDR_ANY);
+        return 1;
+    }
+    if (strcmp(host, "localhost") == 0) {
+        out_addr->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+        return 1;
+    }
+    return inet_pton(AF_INET, host, &out_addr->sin_addr) == 1;
+}
+
+static NativeNetHandleState* native_net_handle_lookup(int64_t handle)
+{
+    size_t index;
+    if (handle <= 0 || handle > (int64_t)NATIVE_NET_HANDLE_CAPACITY) {
+        return NULL;
+    }
+    index = (size_t)(handle - 1);
+    if (!g_native_net_handles[index].used) {
+        return NULL;
+    }
+    return &g_native_net_handles[index];
+}
+
+static int64_t native_net_handle_allocate(NativeNetHandleKind kind, NativeSocket socket_fd)
+{
+    size_t i;
+    if (kind == NATIVE_NET_HANDLE_KIND_NONE || socket_fd == NATIVE_INVALID_SOCKET) {
+        return -1;
+    }
+    for (i = 0U; i < NATIVE_NET_HANDLE_CAPACITY; i += 1U) {
+        if (!g_native_net_handles[i].used) {
+            g_native_net_handles[i].used = 1;
+            g_native_net_handles[i].kind = kind;
+            g_native_net_handles[i].socket = socket_fd;
+            return (int64_t)(i + 1U);
+        }
+    }
+    return -1;
+}
+
+static int native_net_handle_close(int64_t handle)
+{
+    NativeNetHandleState* state = native_net_handle_lookup(handle);
+    if (state == NULL) {
+        return 0;
+    }
+    if (state->socket != NATIVE_INVALID_SOCKET) {
+        native_socket_close(state->socket);
+    }
+    state->used = 0;
+    state->kind = NATIVE_NET_HANDLE_KIND_NONE;
+    state->socket = NATIVE_INVALID_SOCKET;
+    return 1;
+}
+
+static NativeNetAsyncState* native_net_async_lookup(int64_t op_handle)
+{
+    size_t index;
+    if (op_handle <= 0 || op_handle > (int64_t)NATIVE_NET_ASYNC_CAPACITY) {
+        return NULL;
+    }
+    index = (size_t)(op_handle - 1);
+    if (!g_native_net_async_ops[index].used) {
+        return NULL;
+    }
+    return &g_native_net_async_ops[index];
+}
+
+static int64_t native_net_async_allocate(void)
+{
+    size_t i;
+    for (i = 0U; i < NATIVE_NET_ASYNC_CAPACITY; i += 1U) {
+        if (!g_native_net_async_ops[i].used) {
+            memset(&g_native_net_async_ops[i], 0, sizeof(g_native_net_async_ops[i]));
+            g_native_net_async_ops[i].used = 1;
+            g_native_net_async_ops[i].status = 0;
+            return (int64_t)(i + 1U);
+        }
+    }
+    return -1;
+}
+
+static void native_net_async_set_success_int(NativeNetAsyncState* op, int64_t value)
+{
+    if (op == NULL) {
+        return;
+    }
+    op->status = 1;
+    op->result_int = value;
+    op->error[0] = '\0';
+}
+
+static void native_net_async_set_success_bytes(NativeNetAsyncState* op, const uint8_t* bytes, size_t len)
+{
+    if (op == NULL) {
+        return;
+    }
+    if (op->result_bytes != NULL) {
+        free(op->result_bytes);
+        op->result_bytes = NULL;
+    }
+    op->result_bytes_len = 0U;
+    if (len > 0U && bytes != NULL) {
+        op->result_bytes = (uint8_t*)malloc(len);
+        if (op->result_bytes == NULL) {
+            op->status = -1;
+            (void)snprintf(op->error, sizeof(op->error), "alloc_failed");
+            return;
+        }
+        memcpy(op->result_bytes, bytes, len);
+        op->result_bytes_len = len;
+    }
+    op->status = 1;
+    op->result_int = 0;
+    op->error[0] = '\0';
+}
+
+static void native_net_async_set_failure(NativeNetAsyncState* op, const char* message)
+{
+    if (op == NULL) {
+        return;
+    }
+    op->status = -1;
+    op->result_int = 0;
+    if (message == NULL || message[0] == '\0') {
+        (void)snprintf(op->error, sizeof(op->error), "failed");
+    } else {
+        (void)snprintf(op->error, sizeof(op->error), "%s", message);
+    }
 }
 
 #ifdef _WIN32
@@ -3740,6 +3960,618 @@ static int native_syscall_process_stderr_read(
     AivmValue* result)
 {
     return native_syscall_process_stream_read(target, args, arg_count, result, 0);
+}
+
+static int native_syscall_net_tcp_listen(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    struct sockaddr_in addr;
+    NativeSocket socket_fd;
+    int64_t handle;
+    int reuse = 1;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count < 2U || arg_count > 4U ||
+        args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL ||
+        args[1].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (!native_net_platform_init() ||
+        args[1].int_value <= 0 || args[1].int_value > 65535 ||
+        !native_net_parse_ipv4(args[0].string_value, (uint16_t)args[1].int_value, &addr)) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (socket_fd == NATIVE_INVALID_SOCKET) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    (void)setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, (const char*)&reuse, sizeof(reuse));
+    if (bind(socket_fd, (struct sockaddr*)&addr, sizeof(addr)) != 0 || listen(socket_fd, 16) != 0) {
+        native_socket_close(socket_fd);
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    handle = native_net_handle_allocate(NATIVE_NET_HANDLE_KIND_TCP_LISTENER, socket_fd);
+    if (handle < 0) {
+        native_socket_close(socket_fd);
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_int(handle);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_net_tcp_accept(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeNetHandleState* listener;
+    NativeSocket accepted;
+    int64_t handle;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    listener = native_net_handle_lookup(args[0].int_value);
+    if (listener == NULL || listener->kind != NATIVE_NET_HANDLE_KIND_TCP_LISTENER) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    accepted = accept(listener->socket, NULL, NULL);
+    if (accepted == NATIVE_INVALID_SOCKET) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    handle = native_net_handle_allocate(NATIVE_NET_HANDLE_KIND_TCP_STREAM, accepted);
+    if (handle < 0) {
+        native_socket_close(accepted);
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_int(handle);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_net_tcp_connect(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    struct sockaddr_in addr;
+    NativeSocket socket_fd;
+    int64_t handle;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 2U ||
+        args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL ||
+        args[1].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (!native_net_platform_init() ||
+        args[1].int_value <= 0 || args[1].int_value > 65535 ||
+        !native_net_parse_ipv4(args[0].string_value, (uint16_t)args[1].int_value, &addr)) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (socket_fd == NATIVE_INVALID_SOCKET) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    if (connect(socket_fd, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
+        native_socket_close(socket_fd);
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    handle = native_net_handle_allocate(NATIVE_NET_HANDLE_KIND_TCP_STREAM, socket_fd);
+    if (handle < 0) {
+        native_socket_close(socket_fd);
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_int(handle);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_net_tcp_read(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeNetHandleState* state;
+    int read_count;
+    int max_bytes;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 2U || args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    state = native_net_handle_lookup(args[0].int_value);
+    if (state == NULL || state->kind != NATIVE_NET_HANDLE_KIND_TCP_STREAM) {
+        *result = aivm_value_bytes(NULL, 0U);
+        return AIVM_SYSCALL_OK;
+    }
+    max_bytes = (int)args[1].int_value;
+    if (max_bytes <= 0) {
+        *result = aivm_value_bytes(NULL, 0U);
+        return AIVM_SYSCALL_OK;
+    }
+    if ((size_t)max_bytes > NATIVE_NET_BYTES_CHUNK) {
+        max_bytes = (int)NATIVE_NET_BYTES_CHUNK;
+    }
+#ifdef _WIN32
+    read_count = recv(state->socket, (char*)g_native_net_bytes_scratch, max_bytes, 0);
+#else
+    read_count = (int)recv(state->socket, g_native_net_bytes_scratch, (size_t)max_bytes, 0);
+#endif
+    if (read_count <= 0) {
+        *result = aivm_value_bytes(NULL, 0U);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_bytes(g_native_net_bytes_scratch, (size_t)read_count);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_net_tcp_write(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeNetHandleState* state;
+    int wrote;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 2U ||
+        args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_BYTES) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    state = native_net_handle_lookup(args[0].int_value);
+    if (state == NULL || state->kind != NATIVE_NET_HANDLE_KIND_TCP_STREAM) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    if (args[1].bytes_value.length == 0U || args[1].bytes_value.data == NULL) {
+        *result = aivm_value_int(0);
+        return AIVM_SYSCALL_OK;
+    }
+#ifdef _WIN32
+    wrote = send(state->socket, (const char*)args[1].bytes_value.data, (int)args[1].bytes_value.length, 0);
+#else
+    wrote = (int)send(state->socket, args[1].bytes_value.data, args[1].bytes_value.length, 0);
+#endif
+    *result = aivm_value_int((wrote < 0) ? -1 : (int64_t)wrote);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_net_tcp_close(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    (void)native_net_handle_close(args[0].int_value);
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_net_udp_bind(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    struct sockaddr_in addr;
+    NativeSocket socket_fd;
+    int64_t handle;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 2U ||
+        args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL ||
+        args[1].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (!native_net_platform_init() ||
+        args[1].int_value <= 0 || args[1].int_value > 65535 ||
+        !native_net_parse_ipv4(args[0].string_value, (uint16_t)args[1].int_value, &addr)) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    socket_fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (socket_fd == NATIVE_INVALID_SOCKET) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    if (bind(socket_fd, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
+        native_socket_close(socket_fd);
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    handle = native_net_handle_allocate(NATIVE_NET_HANDLE_KIND_UDP_SOCKET, socket_fd);
+    if (handle < 0) {
+        native_socket_close(socket_fd);
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_int(handle);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_net_udp_send(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeNetHandleState* state;
+    struct sockaddr_in addr;
+    int wrote;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 4U ||
+        args[0].type != AIVM_VAL_INT ||
+        args[1].type != AIVM_VAL_STRING || args[1].string_value == NULL ||
+        args[2].type != AIVM_VAL_INT ||
+        args[3].type != AIVM_VAL_BYTES) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    state = native_net_handle_lookup(args[0].int_value);
+    if (state == NULL || state->kind != NATIVE_NET_HANDLE_KIND_UDP_SOCKET ||
+        args[2].int_value <= 0 || args[2].int_value > 65535 ||
+        !native_net_parse_ipv4(args[1].string_value, (uint16_t)args[2].int_value, &addr)) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+#ifdef _WIN32
+    wrote = sendto(
+        state->socket,
+        (const char*)args[3].bytes_value.data,
+        (int)args[3].bytes_value.length,
+        0,
+        (struct sockaddr*)&addr,
+        (int)sizeof(addr));
+#else
+    wrote = (int)sendto(
+        state->socket,
+        args[3].bytes_value.data,
+        args[3].bytes_value.length,
+        0,
+        (struct sockaddr*)&addr,
+        sizeof(addr));
+#endif
+    *result = aivm_value_int((wrote < 0) ? -1 : (int64_t)wrote);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_net_udp_recv(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeNetHandleState* state;
+    struct sockaddr_in peer_addr;
+    socklen_t peer_len = (socklen_t)sizeof(peer_addr);
+    int read_count;
+    int max_bytes;
+    int64_t node_handle;
+    AivmNodeAttr attrs[4];
+    uint32_t ip;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 2U || args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (g_native_active_vm == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    state = native_net_handle_lookup(args[0].int_value);
+    if (state == NULL || state->kind != NATIVE_NET_HANDLE_KIND_UDP_SOCKET) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    max_bytes = (int)args[1].int_value;
+    if (max_bytes <= 0) {
+        max_bytes = 1;
+    }
+    if ((size_t)max_bytes > NATIVE_NET_BYTES_CHUNK) {
+        max_bytes = (int)NATIVE_NET_BYTES_CHUNK;
+    }
+    memset(&peer_addr, 0, sizeof(peer_addr));
+#ifdef _WIN32
+    read_count = recvfrom(
+        state->socket,
+        (char*)g_native_net_bytes_scratch,
+        max_bytes,
+        0,
+        (struct sockaddr*)&peer_addr,
+        (int*)&peer_len);
+#else
+    read_count = (int)recvfrom(
+        state->socket,
+        g_native_net_bytes_scratch,
+        (size_t)max_bytes,
+        0,
+        (struct sockaddr*)&peer_addr,
+        &peer_len);
+#endif
+    if (read_count < 0) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    ip = ntohl(peer_addr.sin_addr.s_addr);
+    (void)snprintf(
+        g_native_net_host_scratch,
+        sizeof(g_native_net_host_scratch),
+        "%u.%u.%u.%u",
+        (unsigned)((ip >> 24) & 0xFFU),
+        (unsigned)((ip >> 16) & 0xFFU),
+        (unsigned)((ip >> 8) & 0xFFU),
+        (unsigned)(ip & 0xFFU));
+    (void)snprintf(
+        g_native_net_text_scratch,
+        sizeof(g_native_net_text_scratch),
+        "%u.%u.%u.%u",
+        (unsigned)((ip >> 24) & 0xFFU),
+        (unsigned)((ip >> 16) & 0xFFU),
+        (unsigned)((ip >> 8) & 0xFFU),
+        (unsigned)(ip & 0xFFU));
+    attrs[0].key = "host";
+    attrs[0].kind = AIVM_NODE_ATTR_STRING;
+    attrs[0].string_value = g_native_net_host_scratch;
+    attrs[1].key = "port";
+    attrs[1].kind = AIVM_NODE_ATTR_INT;
+    attrs[1].int_value = (int64_t)ntohs(peer_addr.sin_port);
+    attrs[2].key = "length";
+    attrs[2].kind = AIVM_NODE_ATTR_INT;
+    attrs[2].int_value = (int64_t)read_count;
+    if (!native_bytes_to_base64(g_native_net_bytes_scratch, (size_t)read_count, g_native_net_text_scratch, sizeof(g_native_net_text_scratch))) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    attrs[3].key = "dataBase64";
+    attrs[3].kind = AIVM_NODE_ATTR_STRING;
+    attrs[3].string_value = g_native_net_text_scratch;
+    if (!native_vm_append_host_node(g_native_active_vm, "Map", "net_udp_recv", attrs, 4U, &node_handle)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_node(node_handle);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_net_async_poll(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeNetAsyncState* op;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    op = native_net_async_lookup(args[0].int_value);
+    *result = aivm_value_int((op == NULL) ? -3 : (int64_t)op->status);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_net_async_cancel(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeNetAsyncState* op;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    op = native_net_async_lookup(args[0].int_value);
+    if (op == NULL || op->status != 0) {
+        *result = aivm_value_bool(0);
+        return AIVM_SYSCALL_OK;
+    }
+    op->status = -2;
+    *result = aivm_value_bool(1);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_net_async_await(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeNetAsyncState* op;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    op = native_net_async_lookup(args[0].int_value);
+    if (op == NULL) {
+        *result = aivm_value_int(-3);
+        return AIVM_SYSCALL_OK;
+    }
+    while (op->status == 0) {
+#ifdef _WIN32
+        Sleep(1);
+#else
+        usleep(1000);
+#endif
+    }
+    *result = aivm_value_int((int64_t)op->status);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_net_async_result_int(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeNetAsyncState* op;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    op = native_net_async_lookup(args[0].int_value);
+    *result = aivm_value_int((op == NULL || op->status != 1) ? 0 : op->result_int);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_net_async_result_bytes(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeNetAsyncState* op;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    op = native_net_async_lookup(args[0].int_value);
+    if (op == NULL || op->status != 1 || op->result_bytes == NULL || op->result_bytes_len == 0U) {
+        *result = aivm_value_bytes(NULL, 0U);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_bytes(op->result_bytes, op->result_bytes_len);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_net_async_error(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    NativeNetAsyncState* op;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    op = native_net_async_lookup(args[0].int_value);
+    *result = aivm_value_string((op == NULL || op->status != -1) ? "" : op->error);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_net_start_op(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    int64_t op_handle;
+    NativeNetAsyncState* op;
+    AivmValue inner_result = aivm_value_void();
+    int rc = AIVM_SYSCALL_ERR_INVALID;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    op_handle = native_net_async_allocate();
+    if (op_handle < 0) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    op = native_net_async_lookup(op_handle);
+    if (op == NULL) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    if (strcmp(target, "sys.net.tcp.connectStart") == 0 || strcmp(target, "sys.net.tcp.connectTlsStart") == 0) {
+        rc = native_syscall_net_tcp_connect("sys.net.tcp.connect", args, arg_count, &inner_result);
+        if (rc == AIVM_SYSCALL_OK && inner_result.type == AIVM_VAL_INT && inner_result.int_value >= 0) {
+            native_net_async_set_success_int(op, inner_result.int_value);
+        } else {
+            native_net_async_set_failure(op, "connect_failed");
+        }
+    } else if (strcmp(target, "sys.net.tcp.readStart") == 0) {
+        rc = native_syscall_net_tcp_read("sys.net.tcp.read", args, arg_count, &inner_result);
+        if (rc == AIVM_SYSCALL_OK && inner_result.type == AIVM_VAL_BYTES) {
+            native_net_async_set_success_bytes(op, inner_result.bytes_value.data, inner_result.bytes_value.length);
+        } else {
+            native_net_async_set_failure(op, "read_failed");
+        }
+    } else if (strcmp(target, "sys.net.tcp.writeStart") == 0) {
+        rc = native_syscall_net_tcp_write("sys.net.tcp.write", args, arg_count, &inner_result);
+        if (rc == AIVM_SYSCALL_OK && inner_result.type == AIVM_VAL_INT && inner_result.int_value >= 0) {
+            native_net_async_set_success_int(op, inner_result.int_value);
+        } else {
+            native_net_async_set_failure(op, "write_failed");
+        }
+    } else {
+        native_net_async_set_failure(op, "unsupported_start");
+    }
+    *result = aivm_value_int(op_handle);
+    return AIVM_SYSCALL_OK;
 }
 
 static int native_syscall_worker_start(
@@ -5786,7 +6618,7 @@ static int run_native_compiled_program(
     size_t process_argv_count,
     const NativeDebugOptions* debug_options)
 {
-    AivmSyscallBinding bindings[69];
+    AivmSyscallBinding bindings[90];
     AivmVm vm;
     int ok;
     int exit_code = 0;
@@ -5804,6 +6636,7 @@ static int run_native_compiled_program(
     g_native_ui_event_target_id[0] = '\0';
     native_ui_runtime_reset_handles();
     native_host_ui_reset();
+    native_net_reset();
 
     bindings[0].target = "sys.stdout.writeLine";
     bindings[0].handler = native_syscall_stdout_write_line;
@@ -5944,10 +6777,52 @@ static int run_native_compiled_program(
     bindings[67].handler = native_syscall_fs_dir_list;
     bindings[68].target = "sys.fs.path.stat";
     bindings[68].handler = native_syscall_fs_path_stat;
+    bindings[69].target = "sys.net.tcp.close";
+    bindings[69].handler = native_syscall_net_tcp_close;
+    bindings[70].target = "sys.net.tcp.connect";
+    bindings[70].handler = native_syscall_net_tcp_connect;
+    bindings[71].target = "sys.net.tcp.listen";
+    bindings[71].handler = native_syscall_net_tcp_listen;
+    bindings[72].target = "sys.net.tcp.listenTls";
+    bindings[72].handler = native_syscall_net_tcp_listen;
+    bindings[73].target = "sys.net.tcp.accept";
+    bindings[73].handler = native_syscall_net_tcp_accept;
+    bindings[74].target = "sys.net.tcp.read";
+    bindings[74].handler = native_syscall_net_tcp_read;
+    bindings[75].target = "sys.net.tcp.write";
+    bindings[75].handler = native_syscall_net_tcp_write;
+    bindings[76].target = "sys.net.tcp.connectTls";
+    bindings[76].handler = native_syscall_net_tcp_connect;
+    bindings[77].target = "sys.net.tcp.connectStart";
+    bindings[77].handler = native_syscall_net_start_op;
+    bindings[78].target = "sys.net.tcp.connectTlsStart";
+    bindings[78].handler = native_syscall_net_start_op;
+    bindings[79].target = "sys.net.tcp.readStart";
+    bindings[79].handler = native_syscall_net_start_op;
+    bindings[80].target = "sys.net.tcp.writeStart";
+    bindings[80].handler = native_syscall_net_start_op;
+    bindings[81].target = "sys.net.async.poll";
+    bindings[81].handler = native_syscall_net_async_poll;
+    bindings[82].target = "sys.net.async.cancel";
+    bindings[82].handler = native_syscall_net_async_cancel;
+    bindings[83].target = "sys.net.async.await";
+    bindings[83].handler = native_syscall_net_async_await;
+    bindings[84].target = "sys.net.async.resultInt";
+    bindings[84].handler = native_syscall_net_async_result_int;
+    bindings[85].target = "sys.net.async.resultBytes";
+    bindings[85].handler = native_syscall_net_async_result_bytes;
+    bindings[86].target = "sys.net.async.error";
+    bindings[86].handler = native_syscall_net_async_error;
+    bindings[87].target = "sys.net.udp.bind";
+    bindings[87].handler = native_syscall_net_udp_bind;
+    bindings[88].target = "sys.net.udp.recv";
+    bindings[88].handler = native_syscall_net_udp_recv;
+    bindings[89].target = "sys.net.udp.send";
+    bindings[89].handler = native_syscall_net_udp_send;
     ok = aivm_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        69U,
+        90U,
         process_argv,
         process_argv_count,
         &vm);
@@ -5961,6 +6836,7 @@ static int run_native_compiled_program(
             (detail == NULL) ? "none" : detail,
             (unsigned long long)vm.instruction_pointer);
         (void)write_native_debug_bundle(debug_options, program, &vm, 0, 0, diagnostics_line);
+        native_net_reset();
         native_host_ui_shutdown();
         g_native_active_vm = NULL;
         return emit_vm_error_with_context(program, &vm, vm_error_message);
@@ -5979,6 +6855,7 @@ static int run_native_compiled_program(
         aivm_vm_error_code(vm.error),
         (unsigned long long)vm.instruction_pointer);
     (void)write_native_debug_bundle(debug_options, program, &vm, exit_code, has_exit_code, diagnostics_line);
+    native_net_reset();
     native_host_ui_shutdown();
     g_native_active_vm = NULL;
     if (has_exit_code) {
