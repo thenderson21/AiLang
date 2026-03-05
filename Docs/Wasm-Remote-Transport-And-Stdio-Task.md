@@ -178,7 +178,7 @@ Rationale:
   - Initial browser SVG UI mapping for `sys.ui.createWindow`, `sys.ui.beginFrame`, `sys.ui.drawRect`, `sys.ui.drawText`, `sys.ui.drawLine`, `sys.ui.drawEllipse`, `sys.ui.drawPath`, `sys.ui.drawImage`, `sys.ui.endFrame`, `sys.ui.present`, `sys.ui.waitFrame`, and `sys.ui.closeWindow`.
 
 - Remaining:
-  - Extend SVG backend coverage to remaining `sys.ui.*` operations (`pollEvent`, `getWindowSize`) with deterministic event parity.
+  - Extend SVG backend coverage to remaining `sys.ui.*` operations (`pollEvent`, `getWindowSize`) with deterministic event/window-size node parity.
 
 ## Out of Scope
 
