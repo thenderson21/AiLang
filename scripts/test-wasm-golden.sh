@@ -1278,6 +1278,127 @@ EOF
   AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
 }
 
+run_web_runtime_ws_pending_close_check() {
+  local label="$1"
+  local web_root="$2"
+  local main_js_path="${web_root}/main.js"
+  local runtime_mjs_path="${web_root}/aivm-runtime-wasm32-web.mjs"
+  local node_check_path="${TMP_DIR}/node-web-check-${label}-ws-pending-close.mjs"
+  local app_fetch_path="./app.aibc1"
+
+  if [[ ! -f "${main_js_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing main.js for ws pending-close check" >&2
+    exit 1
+  fi
+  if [[ ! -f "${runtime_mjs_path}" ]]; then
+    echo "wasm ${label} runtime mismatch: missing web runtime module for ws pending-close check" >&2
+    exit 1
+  fi
+
+  cat > "${runtime_mjs_path}" <<'EOF'
+export default async function createRuntime() {
+  return {
+    FS: { writeFile() {} },
+    print: null,
+    printErr: null,
+    callMain() {}
+  };
+}
+EOF
+
+  cat > "${node_check_path}" <<'EOF'
+import { pathToFileURL } from 'node:url';
+
+const mainJsPath = process.env.AIVM_MAIN_JS;
+const fetchPath = process.env.AIVM_FETCH_PATH;
+if (!mainJsPath || !fetchPath) {
+  throw new Error('node wasm ws pending-close check missing required environment values');
+}
+
+function writeU16LE(arr, off, v) { arr[off] = v & 255; arr[off + 1] = (v >> 8) & 255; }
+function writeU32LE(arr, off, v) {
+  arr[off] = v & 255;
+  arr[off + 1] = (v >> 8) & 255;
+  arr[off + 2] = (v >> 16) & 255;
+  arr[off + 3] = (v >> 24) & 255;
+}
+function frame(type, id, payload) {
+  const out = new Uint8Array(9 + payload.length);
+  out[0] = type;
+  writeU32LE(out, 1, id);
+  writeU32LE(out, 5, payload.length);
+  out.set(payload, 9);
+  return out.buffer;
+}
+function encodeWelcome() {
+  const out = new Uint8Array(6);
+  writeU16LE(out, 0, 1);
+  writeU32LE(out, 2, 0);
+  return out;
+}
+
+class FakeWebSocket {
+  static CONNECTING = 0;
+  static OPEN = 1;
+  static CLOSING = 2;
+  static CLOSED = 3;
+  constructor() {
+    this.readyState = FakeWebSocket.CONNECTING;
+    this.onopen = null;
+    this.onmessage = null;
+    this.onerror = null;
+    this.onclose = null;
+    queueMicrotask(() => {
+      this.readyState = FakeWebSocket.OPEN;
+      if (typeof this.onopen === 'function') this.onopen();
+    });
+  }
+  send(data) {
+    const bytes = new Uint8Array(data);
+    const type = bytes[0];
+    if (type === 0x01 && typeof this.onmessage === 'function') {
+      this.onmessage({ data: frame(0x02, 1, encodeWelcome()) });
+      return;
+    }
+    if (type === 0x10 && typeof this.onclose === 'function') {
+      this.readyState = FakeWebSocket.CLOSED;
+      this.onclose();
+      return;
+    }
+  }
+  close() {
+    this.readyState = FakeWebSocket.CLOSED;
+    if (typeof this.onclose === 'function') this.onclose();
+  }
+}
+
+globalThis.WebSocket = FakeWebSocket;
+globalThis.location = { hostname: 'localhost' };
+globalThis.document = { getElementById() { return null; } };
+globalThis.console = { log() {}, error() {} };
+globalThis.fetch = async (url) => {
+  if (String(url) !== fetchPath) throw new Error(`unexpected fetch path: ${String(url)}`);
+  return { async arrayBuffer() { return new Uint8Array([1]).buffer; } };
+};
+globalThis.AIVM_REMOTE_MODE = 'ws';
+globalThis.AiLang = { remote: {} };
+
+await import(pathToFileURL(mainJsPath).href);
+let message = '';
+try {
+  await globalThis.__aivmRemoteCall('cap.remote', 'echo', 9);
+  throw new Error('expected ws call to fail when socket closes with pending call');
+} catch (err) {
+  message = String(err && err.message ? err.message : err);
+}
+if (!message.includes('remote websocket closed')) {
+  throw new Error(`unexpected pending-close message: ${message}`);
+}
+EOF
+
+  AIVM_MAIN_JS="${main_js_path}" AIVM_FETCH_PATH="${app_fetch_path}" node "${node_check_path}"
+}
+
 if ! command -v wasmtime >/dev/null 2>&1; then
   echo "wasmtime is required to run wasm golden tests" >&2
   exit 1
@@ -1543,6 +1664,8 @@ run_web_runtime_ws_unexpected_call_frame_check "spa" "${PUBLISH_SPA_DIR}"
 run_web_runtime_ws_unexpected_call_frame_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
 run_web_runtime_ws_unexpected_handshake_frame_check "spa" "${PUBLISH_SPA_DIR}"
 run_web_runtime_ws_unexpected_handshake_frame_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
+run_web_runtime_ws_pending_close_check "spa" "${PUBLISH_SPA_DIR}"
+run_web_runtime_ws_pending_close_check "fullstack" "${PUBLISH_FULLSTACK_DIR}/www"
 
 FULLSTACK_HOST_PORT="$((19000 + ($$ % 1000)))"
 (
