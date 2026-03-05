@@ -72,6 +72,8 @@ UI_POLL_SPA_WARN="${TMP_DIR}/ui-poll-spa.warn"
 UI_POLL_FULLSTACK_WARN="${TMP_DIR}/ui-poll-fullstack.warn"
 UI_SIZE_SPA_WARN="${TMP_DIR}/ui-size-spa.warn"
 UI_SIZE_FULLSTACK_WARN="${TMP_DIR}/ui-size-fullstack.warn"
+UI_POLL_RUNTIME_OUT="${TMP_DIR}/ui-poll-runtime.out"
+UI_SIZE_RUNTIME_OUT="${TMP_DIR}/ui-size-runtime.out"
 MANIFEST_HOST_TARGET_DIR="${TMP_DIR}/manifest-host-target"
 MANIFEST_HOST_TARGET_ERR="${TMP_DIR}/manifest-host-target.err"
 FULLSTACK_HOST_STDOUT="${TMP_DIR}/fullstack-host.stdout"
@@ -3103,6 +3105,8 @@ done
 ./tools/airun publish "${UI_POLL_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/ui-poll-fullstack" >/dev/null 2>"${UI_POLL_FULLSTACK_WARN}"
 ./tools/airun publish "${UI_SIZE_WARN_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/ui-size-spa" >/dev/null 2>"${UI_SIZE_SPA_WARN}"
 ./tools/airun publish "${UI_SIZE_WARN_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/ui-size-fullstack" >/dev/null 2>"${UI_SIZE_FULLSTACK_WARN}"
+./tools/airun publish "${UI_POLL_WARN_CASE}" --target wasm32 --wasm-profile cli --out "${TMP_DIR}/ui-poll-cli" >/dev/null
+./tools/airun publish "${UI_SIZE_WARN_CASE}" --target wasm32 --wasm-profile cli --out "${TMP_DIR}/ui-size-cli" >/dev/null
 echo "wasm golden corpus: PASS (${#CASES[@]} cases)"
 echo "wasm bytecode-only corpus: PASS (${#BYTECODE_ONLY_CASES[@]} cases)"
 echo "wasm stdin EOF corpus: PASS (${#WASM_STDIN_EOF_CASES[@]} cases)"
@@ -3403,6 +3407,28 @@ if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.getWindowSize is n
 fi
 if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.ui.getWindowSize is not available on wasm profile 'fullstack'" "${UI_SIZE_FULLSTACK_WARN}"; then
   echo "wasm fullstack warning mismatch: expected WASM001 warning for sys.ui.getWindowSize" >&2
+  exit 1
+fi
+set +e
+wasmtime run -C cache=n "${TMP_DIR}/ui-poll-cli/wasm_profile_warn_ui_poll_event.wasm" - < "${TMP_DIR}/ui-poll-cli/app.aibc1" >"${UI_POLL_RUNTIME_OUT}" 2>&1
+ui_poll_runtime_rc=$?
+wasmtime run -C cache=n "${TMP_DIR}/ui-size-cli/wasm_profile_warn_ui_get_window_size.wasm" - < "${TMP_DIR}/ui-size-cli/app.aibc1" >"${UI_SIZE_RUNTIME_OUT}" 2>&1
+ui_size_runtime_rc=$?
+set -e
+if [[ ${ui_poll_runtime_rc} -ne 3 ]]; then
+  echo "wasm ui runtime mismatch: expected exit 3 for sys.ui.pollEvent unsupported runtime, got ${ui_poll_runtime_rc}" >&2
+  exit 1
+fi
+if [[ ${ui_size_runtime_rc} -ne 3 ]]; then
+  echo "wasm ui runtime mismatch: expected exit 3 for sys.ui.getWindowSize unsupported runtime, got ${ui_size_runtime_rc}" >&2
+  exit 1
+fi
+if ! contains_fixed 'Err#err1(code=RUN101 message="sys.ui.pollEvent is not available on this target." nodeId=vm)' "${UI_POLL_RUNTIME_OUT}"; then
+  echo "wasm ui runtime mismatch: expected RUN101 deterministic message for sys.ui.pollEvent unsupported runtime" >&2
+  exit 1
+fi
+if ! contains_fixed 'Err#err1(code=RUN101 message="sys.ui.getWindowSize is not available on this target." nodeId=vm)' "${UI_SIZE_RUNTIME_OUT}"; then
+  echo "wasm ui runtime mismatch: expected RUN101 deterministic message for sys.ui.getWindowSize unsupported runtime" >&2
   exit 1
 fi
 
