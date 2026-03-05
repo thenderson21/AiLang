@@ -172,6 +172,10 @@ EOF
     echo "native debug memory smoke failed: gc allocation counter missing in state_snapshots.toml" >&2
     exit 1
   fi
+  if ! grep -q "node_gc_allocations_since_gc = 0" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: expected gc allocation counter reset in state_snapshots.toml" >&2
+    exit 1
+  fi
   if ! grep -q "node_gc_pressure_threshold_nodes" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
     echo "native debug memory smoke failed: gc pressure threshold missing in state_snapshots.toml" >&2
     exit 1
@@ -182,6 +186,10 @@ EOF
   fi
   if ! grep -q "node_gc_allocations_since_gc" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
     echo "native debug memory smoke failed: gc allocation counter missing in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -Eq "node_gc_compactions = [1-9][0-9]*" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected gc compaction activity in diagnostics.toml memory telemetry" >&2
     exit 1
   fi
   if ! grep -q "node_gc_interval_allocations = 64" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
