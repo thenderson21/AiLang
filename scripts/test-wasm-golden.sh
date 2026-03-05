@@ -516,6 +516,19 @@ if (globalThis.__aivmUiPollEventType(2) !== 2 ||
   throw new Error('ui touch-fallback clamp payload mismatch');
 }
 if (svg2.emit('click', {
+  clientX: 31,
+  clientY: 45,
+  target: { getAttribute: () => 'c1' }
+}) !== 1) {
+  throw new Error('ui click-fallback client-coord dispatch mismatch');
+}
+if (globalThis.__aivmUiPollEventType(2) !== 2 ||
+    globalThis.__aivmUiPollEventTargetId(2) !== 'c1' ||
+    globalThis.__aivmUiPollEventX(2) !== 21 ||
+    globalThis.__aivmUiPollEventY(2) !== 25) {
+  throw new Error('ui click-fallback client-coord payload mismatch');
+}
+if (svg2.emit('click', {
   offsetX: 21,
   offsetY: 22,
   target: { getAttribute: () => 'c2' }
@@ -528,11 +541,24 @@ if (globalThis.__aivmUiPollEventType(2) !== 2 ||
     globalThis.__aivmUiPollEventY(2) !== 22) {
   throw new Error('ui click-fallback canonical click payload mismatch');
 }
+if (svg2.emit('click', {
+  clientX: -100,
+  clientY: -100,
+  target: { getAttribute: () => 'c3' }
+}) !== 1) {
+  throw new Error('ui click-fallback negative clamp dispatch mismatch');
+}
+if (globalThis.__aivmUiPollEventType(2) !== 2 ||
+    globalThis.__aivmUiPollEventTargetId(2) !== 'c3' ||
+    globalThis.__aivmUiPollEventX(2) !== 0 ||
+    globalThis.__aivmUiPollEventY(2) !== 0) {
+  throw new Error('ui click-fallback negative clamp payload mismatch');
+}
 if (svg2.emit('keydown', { key: 'x', repeat: false }) !== 1) {
   throw new Error('ui click-fallback keydown dispatch mismatch');
 }
 if (globalThis.__aivmUiPollEventType(2) !== 3 ||
-    globalThis.__aivmUiPollEventTargetId(2) !== 'c2' ||
+    globalThis.__aivmUiPollEventTargetId(2) !== 'c3' ||
     globalThis.__aivmUiPollEventKey(2) !== 'x' ||
     globalThis.__aivmUiPollEventText(2) !== 'x') {
   throw new Error('ui click-fallback focus/key routing mismatch');
