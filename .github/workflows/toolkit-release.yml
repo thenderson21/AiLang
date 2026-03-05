@@ -409,6 +409,67 @@ jobs:
           path: ./release-assets
           merge-multiple: true
 
+      - name: Build universal SDK package
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.prepare.outputs.version }}"
+          SDK_DIR="airun-${VERSION}-sdk-universal"
+          rm -rf "${SDK_DIR}"
+          mkdir -p "${SDK_DIR}/.artifacts"
+
+          declare -a RIDS=(
+            "linux-x64"
+            "linux-arm64"
+            "osx-x64"
+            "osx-arm64"
+            "windows-x64"
+            "windows-arm64"
+          )
+
+          for RID in "${RIDS[@]}"; do
+            PKG_DIR="airun-${VERSION}-${RID}"
+            TAR_PATH="./release-assets/${PKG_DIR}.tar.gz"
+            ZIP_PATH="./release-assets/${PKG_DIR}.zip"
+            if [[ -f "${TAR_PATH}" ]]; then
+              tar -xzf "${TAR_PATH}" -C ./release-assets
+            elif [[ -f "${ZIP_PATH}" ]]; then
+              unzip -q "${ZIP_PATH}" -d ./release-assets
+            else
+              echo "missing packaged runtime for ${RID}" >&2
+              exit 1
+            fi
+
+            mkdir -p "${SDK_DIR}/.artifacts/airun-${RID}"
+            if [[ "${RID}" == windows-* ]]; then
+              cp "./release-assets/${PKG_DIR}/airun.exe" "${SDK_DIR}/.artifacts/airun-${RID}/airun.exe"
+            else
+              cp "./release-assets/${PKG_DIR}/airun" "${SDK_DIR}/.artifacts/airun-${RID}/airun"
+              chmod +x "${SDK_DIR}/.artifacts/airun-${RID}/airun"
+            fi
+          done
+
+          WASM_PKG="airun-${VERSION}-wasm32"
+          tar -xzf "./release-assets/${WASM_PKG}.tar.gz" -C ./release-assets
+          mkdir -p "${SDK_DIR}/.artifacts/aivm-wasm32"
+          cp "./release-assets/${WASM_PKG}/aivm-runtime-wasm32.wasm" "${SDK_DIR}/.artifacts/aivm-wasm32/"
+          cp "./release-assets/${WASM_PKG}/aivm-runtime-wasm32-web.wasm" "${SDK_DIR}/.artifacts/aivm-wasm32/"
+          cp "./release-assets/${WASM_PKG}/aivm-runtime-wasm32-web.mjs" "${SDK_DIR}/.artifacts/aivm-wasm32/"
+
+          cp ./LICENSE "${SDK_DIR}/"
+          cat > "${SDK_DIR}/README.md" <<'EOF'
+          # AiLang Universal Publish SDK
+
+          This package contains prebuilt runtime artifacts under `.artifacts/`:
+
+          - `.artifacts/airun-<rid>/airun(.exe)` for all release RIDs
+          - `.artifacts/aivm-wasm32/*` for wasm publish targets
+
+          Use with host `airun` to publish for any supported target RID.
+          EOF
+
+          tar -czf "./release-assets/${SDK_DIR}.tar.gz" "${SDK_DIR}"
+
       - name: Generate release notes
         uses: actions/github-script@v7
         with:
