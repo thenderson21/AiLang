@@ -4092,8 +4092,8 @@ if [[ ${process_rc} -ne 3 ]]; then
   echo "wasm cli unsupported-capability mismatch: expected exit 3 for sys.process.spawn, got ${process_rc}" >&2
   exit 1
 fi
-if ! contains_regex 'Err#err1\(code=RUN001 message="' "${PROCESS_OUT}"; then
-  echo "wasm cli unsupported-capability mismatch: expected RUN001 wrapper code for failed syscall execution" >&2
+if ! contains_regex 'Err#err1\(code=AIVMS004 message="phase=syscall .*callTarget=sys.process.spawn .*vmCode=AIVM010' "${PROCESS_OUT}"; then
+  echo "wasm cli unsupported-capability mismatch: expected typed syscall diagnostic for sys.process.spawn failure" >&2
   exit 1
 fi
 if ! contains_fixed "Warn#warn1(code=WASM001 message=\"sys.process.spawn is not available on wasm profile 'spa'" "${PROCESS_SPA_WARN}"; then
