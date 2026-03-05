@@ -12,12 +12,37 @@ typedef struct {
     int64_t handle;
     NSWindow* window;
     id delegate_ref;
+    id canvas_ref;
     int close_pending;
 } NativeUiWindowSlot;
 
 static NativeUiWindowSlot g_native_ui_windows[8];
 static int64_t g_native_ui_next_handle = 1;
 static int g_native_ui_app_initialized = 0;
+
+@interface NativeUiCanvasView : NSView
+@property(nonatomic, strong) NSImage* frameImage;
+@end
+
+@implementation NativeUiCanvasView
+- (BOOL)isFlipped
+{
+    return NO;
+}
+
+- (void)drawRect:(NSRect)dirtyRect
+{
+    (void)dirtyRect;
+    [[NSColor whiteColor] setFill];
+    NSRectFill([self bounds]);
+    if (self.frameImage != nil) {
+        [self.frameImage drawInRect:[self bounds]
+                            fromRect:NSZeroRect
+                           operation:NSCompositingOperationSourceOver
+                            fraction:1.0];
+    }
+}
+@end
 
 static NSColor* native_ui_parse_color(const char* color, NSColor* fallback)
 {
@@ -54,41 +79,90 @@ static NSColor* native_ui_parse_color(const char* color, NSColor* fallback)
     return fallback;
 }
 
+static NativeUiWindowSlot* native_ui_find_slot(int64_t handle)
+{
+    size_t i;
+    if (handle <= 0) {
+        return NULL;
+    }
+    for (i = 0U; i < sizeof(g_native_ui_windows) / sizeof(g_native_ui_windows[0]); i += 1U) {
+        if (g_native_ui_windows[i].handle == handle && g_native_ui_windows[i].window != nil) {
+            return &g_native_ui_windows[i];
+        }
+    }
+    return NULL;
+}
+
+static NativeUiWindowSlot* native_ui_find_empty_slot(void)
+{
+    size_t i;
+    for (i = 0U; i < sizeof(g_native_ui_windows) / sizeof(g_native_ui_windows[0]); i += 1U) {
+        if (g_native_ui_windows[i].window == nil) {
+            return &g_native_ui_windows[i];
+        }
+    }
+    return NULL;
+}
+
+static NativeUiCanvasView* native_ui_canvas_for_slot(NativeUiWindowSlot* slot)
+{
+    if (slot == NULL || slot->window == nil || slot->canvas_ref == nil) {
+        return nil;
+    }
+    if (![slot->canvas_ref isKindOfClass:[NativeUiCanvasView class]]) {
+        return nil;
+    }
+    return (NativeUiCanvasView*)slot->canvas_ref;
+}
+
+static int native_ui_ensure_frame_image(NativeUiCanvasView* canvas)
+{
+    NSRect bounds;
+    NSSize size;
+    if (canvas == nil) {
+        return 0;
+    }
+    bounds = [canvas bounds];
+    size = bounds.size;
+    if (size.width < 1.0) {
+        size.width = 1.0;
+    }
+    if (size.height < 1.0) {
+        size.height = 1.0;
+    }
+    if (canvas.frameImage == nil ||
+        canvas.frameImage.size.width != size.width ||
+        canvas.frameImage.size.height != size.height) {
+        NSImage* image = [[NSImage alloc] initWithSize:size];
+        [image lockFocus];
+        [[NSColor whiteColor] setFill];
+        NSRectFill(NSMakeRect(0.0, 0.0, size.width, size.height));
+        [image unlockFocus];
+        canvas.frameImage = image;
+    }
+    return 1;
+}
+
 static int native_ui_lock_focus(NativeUiWindowSlot* slot, NSRect* out_bounds)
 {
-    NSView* content_view;
-    if (slot == NULL || slot->window == nil) {
+    NativeUiCanvasView* canvas = native_ui_canvas_for_slot(slot);
+    if (canvas == nil || !native_ui_ensure_frame_image(canvas) || canvas.frameImage == nil) {
         return 0;
     }
-    content_view = [slot->window contentView];
-    if (content_view == nil) {
-        return 0;
-    }
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-    if (![content_view lockFocusIfCanDraw]) {
-#pragma clang diagnostic pop
-        return 0;
-    }
+    [canvas.frameImage lockFocus];
     if (out_bounds != NULL) {
-        *out_bounds = [content_view bounds];
+        *out_bounds = NSMakeRect(0.0, 0.0, canvas.frameImage.size.width, canvas.frameImage.size.height);
     }
     return 1;
 }
 
 static void native_ui_unlock_focus(NativeUiWindowSlot* slot)
 {
-    NSView* content_view;
-    if (slot == NULL || slot->window == nil) {
+    NativeUiCanvasView* canvas = native_ui_canvas_for_slot(slot);
+    if (canvas == nil || canvas.frameImage == nil) {
         return;
     }
-    content_view = [slot->window contentView];
-    if (content_view != nil) {
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
-        [content_view unlockFocus];
-#pragma clang diagnostic pop
-    }
+    [canvas.frameImage unlockFocus];
 }
 
 static CGFloat native_ui_y_to_cocoa(NSRect bounds, int y_top)
@@ -203,31 +277,6 @@ static int native_ui_draw_svg_path(NSRect bounds, const char* path_text, const c
     return 1;
 }
 
-static NativeUiWindowSlot* native_ui_find_slot(int64_t handle)
-{
-    size_t i;
-    if (handle <= 0) {
-        return NULL;
-    }
-    for (i = 0U; i < sizeof(g_native_ui_windows) / sizeof(g_native_ui_windows[0]); i += 1U) {
-        if (g_native_ui_windows[i].handle == handle && g_native_ui_windows[i].window != nil) {
-            return &g_native_ui_windows[i];
-        }
-    }
-    return NULL;
-}
-
-static NativeUiWindowSlot* native_ui_find_empty_slot(void)
-{
-    size_t i;
-    for (i = 0U; i < sizeof(g_native_ui_windows) / sizeof(g_native_ui_windows[0]); i += 1U) {
-        if (g_native_ui_windows[i].window == nil) {
-            return &g_native_ui_windows[i];
-        }
-    }
-    return NULL;
-}
-
 static int native_ui_init_app(void)
 {
     if (g_native_ui_app_initialized != 0) {
@@ -330,6 +379,7 @@ void native_host_ui_reset(void)
         g_native_ui_windows[i].handle = 0;
         g_native_ui_windows[i].window = nil;
         g_native_ui_windows[i].delegate_ref = nil;
+        g_native_ui_windows[i].canvas_ref = nil;
         g_native_ui_windows[i].close_pending = 0;
     }
     g_native_ui_next_handle = 1;
@@ -343,6 +393,7 @@ void native_host_ui_shutdown(void)
             [g_native_ui_windows[i].window close];
             g_native_ui_windows[i].window = nil;
             g_native_ui_windows[i].delegate_ref = nil;
+            g_native_ui_windows[i].canvas_ref = nil;
             g_native_ui_windows[i].handle = 0;
             g_native_ui_windows[i].close_pending = 0;
         }
@@ -352,6 +403,7 @@ void native_host_ui_shutdown(void)
 int native_host_ui_create_window(const char* title, int width, int height, int64_t* out_handle)
 {
     NativeUiWindowSlot* slot;
+    NativeUiCanvasView* canvas;
     NSRect frame;
     NSWindow* window;
     NativeUiWindowDelegate* delegate;
@@ -381,6 +433,9 @@ int native_host_ui_create_window(const char* title, int width, int height, int64
     window_title = [NSString stringWithUTF8String:(title == NULL || title[0] == '\0') ? "AiLang" : title];
     [window setTitle:window_title];
     [window setReleasedWhenClosed:NO];
+    canvas = [[NativeUiCanvasView alloc] initWithFrame:[[window contentView] bounds]];
+    [canvas setAutoresizingMask:(NSViewWidthSizable | NSViewHeightSizable)];
+    [window setContentView:canvas];
     delegate = [NativeUiWindowDelegate new];
     delegate.slot = slot;
     [window setDelegate:delegate];
@@ -389,6 +444,7 @@ int native_host_ui_create_window(const char* title, int width, int height, int64
     slot->handle = g_native_ui_next_handle++;
     slot->window = window;
     slot->delegate_ref = delegate;
+    slot->canvas_ref = canvas;
     slot->close_pending = 0;
     *out_handle = slot->handle;
     return 1;
@@ -401,6 +457,9 @@ int native_host_ui_close_window(int64_t handle)
         return 0;
     }
     [slot->window close];
+    slot->window = nil;
+    slot->delegate_ref = nil;
+    slot->canvas_ref = nil;
     slot->close_pending = 1;
     return 1;
 }
@@ -429,10 +488,17 @@ int native_host_ui_end_frame(int64_t handle)
 int native_host_ui_present(int64_t handle)
 {
     NativeUiWindowSlot* slot = native_ui_find_slot(handle);
+    NativeUiCanvasView* canvas;
     if (slot == NULL) {
         return 0;
     }
+    canvas = native_ui_canvas_for_slot(slot);
+    if (canvas != nil) {
+        [canvas setNeedsDisplay:YES];
+        [canvas displayIfNeeded];
+    }
     [slot->window displayIfNeeded];
+    [NSApp updateWindows];
     return 1;
 }
 
@@ -482,10 +548,7 @@ int native_host_ui_draw_text(int64_t handle, int x, int y, const char* text, con
         return 0;
     }
     font = [NSFont systemFontOfSize:(font_size > 0) ? (CGFloat)font_size : 12.0];
-    attrs = @{
-        NSForegroundColorAttributeName: native_ui_parse_color(color, [NSColor blackColor]),
-        NSFontAttributeName: font
-    };
+    attrs = @{ NSForegroundColorAttributeName: native_ui_parse_color(color, [NSColor blackColor]), NSFontAttributeName: font };
     [ns_text drawAtPoint:NSMakePoint((CGFloat)x, native_ui_y_to_cocoa(bounds, y + ((font_size > 0) ? font_size : 12)))
           withAttributes:attrs];
     native_ui_unlock_focus(slot);
@@ -532,6 +595,7 @@ int native_host_ui_draw_path(int64_t handle, const char* path, const char* color
 int native_host_ui_poll_event(int64_t handle, NativeHostUiEvent* out_event)
 {
     NativeUiWindowSlot* slot = native_ui_find_slot(handle);
+    NativeUiCanvasView* canvas;
     NSEvent* event;
     if (slot == NULL || out_event == NULL) {
         return 0;
@@ -550,6 +614,7 @@ int native_host_ui_poll_event(int64_t handle, NativeHostUiEvent* out_event)
     if (event == nil) {
         return 1;
     }
+    canvas = native_ui_canvas_for_slot(slot);
     switch ([event type]) {
         case NSEventTypeLeftMouseDown: {
             NSWindow* source_window = [event window];
@@ -559,7 +624,11 @@ int native_host_ui_poll_event(int64_t handle, NativeHostUiEvent* out_event)
             if (source_window == nil) {
                 source_window = slot->window;
             }
-            content_bounds = [[source_window contentView] bounds];
+            if (canvas != nil) {
+                content_bounds = [canvas bounds];
+            } else {
+                content_bounds = [[source_window contentView] bounds];
+            }
             y_top = (int)llround(content_bounds.size.height - location.y);
             out_event->x = (int)llround(location.x);
             out_event->y = y_top < 0 ? 0 : y_top;
@@ -591,11 +660,16 @@ int native_host_ui_poll_event(int64_t handle, NativeHostUiEvent* out_event)
 int native_host_ui_get_window_size(int64_t handle, int* out_width, int* out_height)
 {
     NativeUiWindowSlot* slot = native_ui_find_slot(handle);
+    NativeUiCanvasView* canvas;
     NSRect content_bounds;
     if (slot == NULL || out_width == NULL || out_height == NULL) {
         return 0;
     }
-    content_bounds = [[slot->window contentView] bounds];
+    canvas = native_ui_canvas_for_slot(slot);
+    if (canvas == nil) {
+        return 0;
+    }
+    content_bounds = [canvas bounds];
     *out_width = (int)llround(content_bounds.size.width);
     *out_height = (int)llround(content_bounds.size.height);
     return 1;
