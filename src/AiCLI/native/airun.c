@@ -2886,6 +2886,7 @@ static int write_native_debug_bundle(
     fprintf(f, "node_child_count = %llu\n", (unsigned long long)((vm == NULL) ? 0U : vm->node_child_count));
     fprintf(f, "node_child_high_water = %llu\n", (unsigned long long)((vm == NULL) ? 0U : vm->node_child_high_water));
     fprintf(f, "node_gc_compactions = %llu\n", (unsigned long long)((vm == NULL) ? 0U : vm->node_gc_compaction_count));
+    fprintf(f, "node_gc_attempts = %llu\n", (unsigned long long)((vm == NULL) ? 0U : vm->node_gc_attempt_count));
     fprintf(f, "node_gc_reclaimed_nodes = %llu\n", (unsigned long long)((vm == NULL) ? 0U : vm->node_gc_reclaimed_nodes));
     fprintf(f, "node_gc_reclaimed_attrs = %llu\n", (unsigned long long)((vm == NULL) ? 0U : vm->node_gc_reclaimed_attrs));
     fprintf(f, "node_gc_reclaimed_children = %llu\n", (unsigned long long)((vm == NULL) ? 0U : vm->node_gc_reclaimed_children));
@@ -2929,7 +2930,7 @@ static int write_native_debug_bundle(
     } else {
         fprintf(f, "diagnostics = []\n");
     }
-    fprintf(f, "memory = { string_arena_used = %llu, string_arena_high_water = %llu, bytes_arena_used = %llu, bytes_arena_high_water = %llu, node_count = %llu, node_high_water = %llu, node_gc_compactions = %llu, node_gc_reclaimed_nodes = %llu, node_gc_allocations_since_gc = %llu, node_gc_interval_allocations = %d, node_gc_pressure_threshold_nodes = %d, string_arena_pressure_count = %llu, bytes_arena_pressure_count = %llu, node_arena_pressure_count = %llu }\n",
+    fprintf(f, "memory = { string_arena_used = %llu, string_arena_high_water = %llu, bytes_arena_used = %llu, bytes_arena_high_water = %llu, node_count = %llu, node_high_water = %llu, node_gc_compactions = %llu, node_gc_attempts = %llu, node_gc_reclaimed_nodes = %llu, node_gc_allocations_since_gc = %llu, node_gc_interval_allocations = %d, node_gc_pressure_threshold_nodes = %d, string_arena_pressure_count = %llu, bytes_arena_pressure_count = %llu, node_arena_pressure_count = %llu }\n",
         (unsigned long long)((vm == NULL) ? 0U : vm->string_arena_used),
         (unsigned long long)((vm == NULL) ? 0U : vm->string_arena_high_water),
         (unsigned long long)((vm == NULL) ? 0U : vm->bytes_arena_used),
@@ -2937,6 +2938,7 @@ static int write_native_debug_bundle(
         (unsigned long long)((vm == NULL) ? 0U : vm->node_count),
         (unsigned long long)((vm == NULL) ? 0U : vm->node_high_water),
         (unsigned long long)((vm == NULL) ? 0U : vm->node_gc_compaction_count),
+        (unsigned long long)((vm == NULL) ? 0U : vm->node_gc_attempt_count),
         (unsigned long long)((vm == NULL) ? 0U : vm->node_gc_reclaimed_nodes),
         (unsigned long long)((vm == NULL) ? 0U : vm->node_allocations_since_gc),
         AIVM_VM_NODE_GC_INTERVAL_ALLOCATIONS,
