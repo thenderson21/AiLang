@@ -1478,7 +1478,7 @@ static int emit_wasm_spa_files(const char* out_dir)
             "        if (frame.type === 0x12) { const err = decodeError(frame.payload); pending.delete(frame.id); p.reject(new Error(`remote ${err.code}: ${err.message}`)); return; }\n"
             "        pending.delete(frame.id); p.reject(new Error(`remote unexpected frame type ${frame.type}`));\n"
             "      };\n"
-            "      ws.onerror = () => { rejectReady('remote websocket error'); failPending('remote websocket error'); };\n"
+            "      ws.onerror = () => { rejectReady('remote websocket error'); ready = null; ws = null; failPending('remote websocket error'); };\n"
             "      ws.onclose = () => { rejectReady('remote websocket closed'); ready = null; ws = null; failPending('remote websocket closed'); };\n"
             "    });\n"
             "    return ready;\n"
