@@ -459,6 +459,16 @@ globalThis.AiLang = {
 
 await import(pathToFileURL(mainJsPath).href);
 
+if (globalThis.__aivmUiCloseWindow(999) !== -1) {
+  throw new Error('ui closeWindow should reject unknown window id');
+}
+if (globalThis.__aivmUiPollEventType(999) !== -1) {
+  throw new Error('ui pollEventType should reject unknown window id');
+}
+if (globalThis.__aivmUiGetWindowWidth(999) !== -1 || globalThis.__aivmUiGetWindowHeight(999) !== -1) {
+  throw new Error('ui getWindowSize should reject unknown window id');
+}
+
 if (globalThis.__aivmUiCreateWindow(1, 'T', 100, 50) !== 0) {
   throw new Error('ui createWindow failed');
 }
