@@ -331,6 +331,7 @@ function makeNode(tag) {
   const listeners = new Map();
   const children = [];
   const attrs = new Map();
+  let rect = { left: 0, top: 0, width: 100, height: 50 };
   return {
     tag,
     style: {},
@@ -380,9 +381,17 @@ function makeNode(tag) {
       }
       return snapshot.length;
     },
+    setBoundingRect(next) {
+      rect = {
+        left: Number(next?.left ?? 0),
+        top: Number(next?.top ?? 0),
+        width: Number(next?.width ?? 100),
+        height: Number(next?.height ?? 50)
+      };
+    },
     focus() {},
     getBoundingClientRect() {
-      return { left: 0, top: 0, width: 100, height: 50 };
+      return { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
     },
     viewBox: { baseVal: { width: 100, height: 50 } }
   };
@@ -475,10 +484,11 @@ const svg2 = body.children[1].children[1];
 if (svg2.listenerCount('pointerdown') !== 0 || svg2.listenerCount('click') !== 1 || svg2.listenerCount('touchstart') !== 1) {
   throw new Error('ui touch-fallback listener registration mismatch');
 }
+svg2.setBoundingRect({ left: 10, top: 20, width: 80, height: 40 });
 let touchPrevented = false;
 if (svg2.emit('touchstart', {
   target: { getAttribute: () => 't0' },
-  touches: [{ clientX: 12, clientY: 15 }],
+  touches: [{ clientX: 17, clientY: 29 }],
   preventDefault() { touchPrevented = true; }
 }) !== 1) {
   throw new Error('ui touchstart listener dispatch mismatch');
@@ -488,9 +498,22 @@ if (!touchPrevented) {
 }
 if (globalThis.__aivmUiPollEventType(2) !== 2 ||
     globalThis.__aivmUiPollEventTargetId(2) !== 't0' ||
-    globalThis.__aivmUiPollEventX(2) !== 12 ||
-    globalThis.__aivmUiPollEventY(2) !== 15) {
+    globalThis.__aivmUiPollEventX(2) !== 7 ||
+    globalThis.__aivmUiPollEventY(2) !== 9) {
   throw new Error('ui touch-fallback canonical click payload mismatch');
+}
+if (svg2.emit('touchstart', {
+  target: { getAttribute: () => 't1' },
+  touches: [{ clientX: 1000, clientY: 1000 }],
+  preventDefault() {}
+}) !== 1) {
+  throw new Error('ui touchstart clamp dispatch mismatch');
+}
+if (globalThis.__aivmUiPollEventType(2) !== 2 ||
+    globalThis.__aivmUiPollEventTargetId(2) !== 't1' ||
+    globalThis.__aivmUiPollEventX(2) !== 79 ||
+    globalThis.__aivmUiPollEventY(2) !== 39) {
+  throw new Error('ui touch-fallback clamp payload mismatch');
 }
 if (svg2.emit('click', {
   offsetX: 21,
