@@ -293,6 +293,18 @@ EOF
     echo "native debug success smoke failed: expected vm_code=AIVM000 in diagnostics.toml" >&2
     exit 1
   fi
+  if ! grep -q "string_arena_pressure_count = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/diagnostics.toml"; then
+    echo "native debug success smoke failed: expected string_arena_pressure_count=0 in diagnostics.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "bytes_arena_pressure_count = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/diagnostics.toml"; then
+    echo "native debug success smoke failed: expected bytes_arena_pressure_count=0 in diagnostics.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_arena_pressure_count = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/diagnostics.toml"; then
+    echo "native debug success smoke failed: expected node_arena_pressure_count=0 in diagnostics.toml" >&2
+    exit 1
+  fi
   if ! grep -q "string_arena_pressure_count = 0" "${TMP_NATIVE_DEBUG_OK_OUT}/state_snapshots.toml"; then
     echo "native debug success smoke failed: expected string_arena_pressure_count=0 in state_snapshots.toml" >&2
     exit 1
