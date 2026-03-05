@@ -523,6 +523,18 @@ if (globalThis.window.listenerCount('resize') !== 1) {
 if (body.children.length !== 1) {
   throw new Error('ui duplicate createWindow should not duplicate host node');
 }
+if (globalThis.__aivmUiPollEventType(1) !== 0) {
+  throw new Error('ui default event type should be none');
+}
+if (globalThis.__aivmUiPollEventX(1) !== -1 ||
+    globalThis.__aivmUiPollEventY(1) !== -1 ||
+    globalThis.__aivmUiPollEventTargetId(1) !== '' ||
+    globalThis.__aivmUiPollEventKey(1) !== '' ||
+    globalThis.__aivmUiPollEventText(1) !== '' ||
+    globalThis.__aivmUiPollEventModifiers(1) !== '' ||
+    globalThis.__aivmUiPollEventRepeat(1) !== 0) {
+  throw new Error('ui default none-event payload mismatch');
+}
 svg.setBoundingRect({ left: 0, top: 0, width: 121, height: 76 });
 if (globalThis.window.emit('resize', {}) !== 1) {
   throw new Error('ui resize listener dispatch mismatch');
