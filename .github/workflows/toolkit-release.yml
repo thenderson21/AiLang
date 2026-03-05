@@ -130,6 +130,7 @@ jobs:
     needs:
       - prepare
       - build-gate
+      - package-wasm32
     strategy:
       fail-fast: false
       matrix:
@@ -188,6 +189,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Download wasm runtime files
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm-runtime-files
+          path: ./.artifacts/aivm-wasm32
 
       - name: Setup MSVC tools
         if: matrix.platform == 'windows'
@@ -273,6 +280,10 @@ jobs:
           test -x "./${{ matrix.artifact_dir }}/${{ matrix.airun }}"
           cp "./${{ matrix.artifact_dir }}/${{ matrix.airun }}" "${PACKAGE_DIR}/"
           cp -R ./dist/compiler "${PACKAGE_DIR}/compiler"
+          mkdir -p "${PACKAGE_DIR}/.artifacts/aivm-wasm32"
+          cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm "${PACKAGE_DIR}/.artifacts/aivm-wasm32/"
+          cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm "${PACKAGE_DIR}/.artifacts/aivm-wasm32/"
+          cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.mjs "${PACKAGE_DIR}/.artifacts/aivm-wasm32/"
           cp ./LICENSE "${PACKAGE_DIR}/"
           tar -czf "${PACKAGE_DIR}.tar.gz" "${PACKAGE_DIR}"
 
@@ -288,6 +299,10 @@ jobs:
           Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}" $packageDir
           Copy-Item .\LICENSE $packageDir
           Copy-Item .\dist\compiler $packageDir -Recurse
+          New-Item -ItemType Directory -Force "$packageDir\.artifacts\aivm-wasm32" | Out-Null
+          Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32.wasm "$packageDir\.artifacts\aivm-wasm32\"
+          Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32-web.wasm "$packageDir\.artifacts\aivm-wasm32\"
+          Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32-web.mjs "$packageDir\.artifacts\aivm-wasm32\"
           Compress-Archive -Path $packageDir -DestinationPath "$packageDir.zip" -Force
 
       - name: Upload packaged artifact
@@ -356,9 +371,19 @@ jobs:
           PACKAGE_DIR="airun-${VERSION}-wasm32"
           mkdir -p "${PACKAGE_DIR}"
           test -f ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm
+          test -f ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm
+          test -f ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.mjs
           cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm "${PACKAGE_DIR}/"
+          cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm "${PACKAGE_DIR}/"
+          cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.mjs "${PACKAGE_DIR}/"
           cp ./LICENSE "${PACKAGE_DIR}/"
           tar -czf "${PACKAGE_DIR}.tar.gz" "${PACKAGE_DIR}"
+
+      - name: Upload wasm runtime files
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-runtime-files
+          path: ./.artifacts/aivm-wasm32
 
       - name: Upload wasm artifact
         uses: actions/upload-artifact@v4

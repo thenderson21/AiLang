@@ -9,9 +9,38 @@ on:
       - "codex/**"
 
 jobs:
+  wasm-runtime-artifact:
+    name: wasm-runtime-artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Emscripten
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: latest
+
+      - name: Build wasm runtime artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./scripts/build-aivm-wasm.sh
+          test -f ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm
+          test -f ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm
+          test -f ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.mjs
+
+      - name: Upload wasm runtime files
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-runtime-files
+          path: ./.artifacts/aivm-wasm32
+
   build-toolkit:
     name: build-${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    needs:
+      - wasm-runtime-artifact
     strategy:
       fail-fast: false
       matrix:
@@ -29,6 +58,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Download wasm runtime files
+        uses: actions/download-artifact@v4
+        with:
+          name: wasm-runtime-files
+          path: ./.artifacts/aivm-wasm32
 
       - name: Build airun runtime (non-Windows)
         if: runner.os != 'Windows'
@@ -86,6 +121,10 @@ jobs:
           set -euo pipefail
           mkdir -p ./dist/compiler
           cp ./src/compiler/*.aos ./dist/compiler/
+          mkdir -p ./dist/.artifacts/aivm-wasm32
+          cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm ./dist/.artifacts/aivm-wasm32/
+          cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm ./dist/.artifacts/aivm-wasm32/
+          cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.mjs ./dist/.artifacts/aivm-wasm32/
 
       - name: Stage compiler assets (Windows)
         if: runner.os == 'Windows'
@@ -93,6 +132,10 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force .\dist\compiler | Out-Null
           Copy-Item .\src\compiler\*.aos .\dist\compiler\
+          New-Item -ItemType Directory -Force .\dist\.artifacts\aivm-wasm32 | Out-Null
+          Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32.wasm .\dist\.artifacts\aivm-wasm32\
+          Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32-web.wasm .\dist\.artifacts\aivm-wasm32\
+          Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32-web.mjs .\dist\.artifacts\aivm-wasm32\
 
       - name: Upload toolkit artifact
         uses: actions/upload-artifact@v4
