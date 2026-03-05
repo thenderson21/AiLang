@@ -176,11 +176,11 @@ Rationale:
   - Browser output mirroring checks validating stdout/stderr land in browser output/console paths.
   - Publish-time deterministic `WASM001` warnings for unsupported `sys.process.*`, `sys.fs.*`, `sys.net.*`, and `sys.ui.*` in wasm profiles where blocked.
   - Initial browser SVG UI mapping for `sys.ui.createWindow`, `sys.ui.beginFrame`, `sys.ui.drawRect`, `sys.ui.drawText`, `sys.ui.drawLine`, `sys.ui.drawEllipse`, `sys.ui.drawPath`, `sys.ui.drawImage`, `sys.ui.endFrame`, `sys.ui.present`, `sys.ui.waitFrame`, and `sys.ui.closeWindow`.
-  - `sys.ui.pollEvent` now returns deterministic event node sourced from browser queue (`click`/`move`/`keydown`, with deterministic `type/x/y` attrs) on wasm web profiles.
+  - `sys.ui.pollEvent` now returns deterministic canonical event node sourced from browser queue (`none`/`closed`/`click`/`key`) with canonical attrs (`type,targetId,x,y,key,text,modifiers,repeat`) on wasm web profiles.
   - `sys.ui.getWindowSize` now returns deterministic node refreshed from live web bridge dimensions on wasm web profiles.
 
 - Remaining:
-  - Expand event-node payload coverage beyond current `type/x/y` baseline while keeping deterministic contracts.
+  - Extend browser event source coverage (beyond click/keydown baseline) while preserving canonical deterministic payload shape.
 
 ## Out of Scope
 
