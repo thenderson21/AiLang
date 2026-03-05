@@ -371,6 +371,15 @@ function makeNode(tag) {
       const list = listeners.get(String(type));
       return list ? list.length : 0;
     },
+    emit(type, ev) {
+      const list = listeners.get(String(type));
+      if (!list) return 0;
+      const snapshot = list.slice();
+      for (const fn of snapshot) {
+        fn(ev);
+      }
+      return snapshot.length;
+    },
     focus() {},
     getBoundingClientRect() {
       return { left: 0, top: 0, width: 100, height: 50 };
@@ -431,8 +440,36 @@ await import(pathToFileURL(mainJsPath).href);
 if (globalThis.__aivmUiCreateWindow(1, 'T', 100, 50) !== 0) {
   throw new Error('ui createWindow failed');
 }
+if (body.children.length < 1 || body.children[0].children.length < 2) {
+  throw new Error('ui createWindow did not create expected host/svg structure');
+}
+const svg = body.children[0].children[1];
+if (typeof svg.listenerCount !== 'function' || typeof svg.emit !== 'function') {
+  throw new Error('ui test harness node is missing listener inspection hooks');
+}
+if (svg.listenerCount('keydown') !== 1 || svg.listenerCount('keyup') !== 1) {
+  throw new Error('ui key listener registration mismatch');
+}
+if (svg.emit('keyup', { key: 'Enter', repeat: false, ctrlKey: true }) !== 1) {
+  throw new Error('ui keyup listener dispatch mismatch');
+}
+if (globalThis.__aivmUiPollEventType(1) !== 3) {
+  throw new Error('ui keyup event type mismatch');
+}
+if (globalThis.__aivmUiPollEventKey(1) !== 'enter') {
+  throw new Error('ui keyup event key mismatch');
+}
+if (globalThis.__aivmUiPollEventModifiers(1) !== 'ctrl') {
+  throw new Error('ui keyup event modifiers mismatch');
+}
+if (globalThis.__aivmUiPollEventRepeat(1) !== 0) {
+  throw new Error('ui keyup event repeat mismatch');
+}
 if (globalThis.__aivmUiCloseWindow(1) !== 0) {
   throw new Error('ui closeWindow failed');
+}
+if (svg.listenerCount('keydown') !== 0 || svg.listenerCount('keyup') !== 0) {
+  throw new Error('ui key listeners were not removed on close');
 }
 if (globalThis.__aivmUiPollEventType(1) !== 1) {
   throw new Error('ui close event type mismatch');
@@ -3357,7 +3394,7 @@ if ! contains_fixed "removeEventListener('resize'" "${PUBLISH_SPA_DIR}/main.js";
   echo "wasm profile mismatch: spa publish did not emit ui resize cleanup hook in main.js" >&2
   exit 1
 fi
-if ! contains_fixed "removeEventListener('keydown'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('blur'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('pointerdown'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('click'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('touchstart'" "${PUBLISH_SPA_DIR}/main.js"; then
+if ! contains_fixed "removeEventListener('keydown'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('keyup'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('blur'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('pointerdown'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('click'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "removeEventListener('touchstart'" "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit full ui input listener cleanup hooks in main.js" >&2
   exit 1
 fi
@@ -3494,7 +3531,7 @@ if ! contains_fixed "removeEventListener('resize'" "${PUBLISH_FULLSTACK_DIR}/www
   echo "wasm profile mismatch: fullstack publish did not emit ui resize cleanup hook in www/main.js" >&2
   exit 1
 fi
-if ! contains_fixed "removeEventListener('keydown'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('blur'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('pointerdown'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('click'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('touchstart'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+if ! contains_fixed "removeEventListener('keydown'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('keyup'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('blur'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('pointerdown'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('click'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "removeEventListener('touchstart'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit full ui input listener cleanup hooks in www/main.js" >&2
   exit 1
 fi
