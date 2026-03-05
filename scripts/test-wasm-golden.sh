@@ -713,6 +713,15 @@ if (globalThis.__aivmUiCloseWindow(1) !== 0) {
 if (globalThis.window.listenerCount('resize') !== 0) {
   throw new Error('ui resize listener was not removed on close');
 }
+if (globalThis.__aivmUiBeginFrame(1) !== -1 ||
+    globalThis.__aivmUiDrawRect(1, 0, 0, 1, 1, '#000') !== -1 ||
+    globalThis.__aivmUiEndFrame(1) !== -1 ||
+    globalThis.__aivmUiPresent(1) !== -1 ||
+    globalThis.__aivmUiWaitFrame(1) !== -1 ||
+    globalThis.__aivmUiGetWindowWidth(1) !== -1 ||
+    globalThis.__aivmUiGetWindowHeight(1) !== -1) {
+  throw new Error('ui closed window should block frame/draw/present/wait/size bridges');
+}
 if (svg.listenerCount('pointerdown') !== 0 || svg.listenerCount('click') !== 0 || svg.listenerCount('touchstart') !== 0) {
   throw new Error('ui pointer listeners were not removed on close');
 }
