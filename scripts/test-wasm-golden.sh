@@ -655,6 +655,21 @@ if (globalThis.__aivmUiPollEventType(2) !== 3 ||
 if (globalThis.__aivmUiCloseWindow(2) !== 0) {
   throw new Error('ui touch-fallback closeWindow failed');
 }
+if (globalThis.__aivmUiCloseWindow(2) !== 0) {
+  throw new Error('ui repeated closeWindow should be idempotent before close-event cleanup');
+}
+if (globalThis.__aivmUiPollEventType(2) !== 1) {
+  throw new Error('ui secondary window close event type mismatch');
+}
+if (globalThis.__aivmUiPollEventRepeat(2) !== 0) {
+  throw new Error('ui secondary window close event repeat mismatch');
+}
+if (globalThis.__aivmUiCloseWindow(2) !== -1) {
+  throw new Error('ui secondary window should be removed after close-event cleanup');
+}
+if (globalThis.__aivmUiPollEventType(2) !== -1) {
+  throw new Error('ui secondary window should not emit duplicate close events');
+}
 if (globalThis.window.listenerCount('resize') !== 1) {
   throw new Error('ui resize listener was not decremented after closing second window');
 }
