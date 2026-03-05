@@ -4311,25 +4311,13 @@ static int native_syscall_ui_void_1(
         }
         native_ui_runtime_unregister_handle(args[0].int_value);
     } else if (strcmp(target, "sys.ui.waitFrame") == 0) {
-        if (!native_host_ui_wait_frame(args[0].int_value)) {
-            result->type = AIVM_VAL_VOID;
-            return AIVM_SYSCALL_ERR_INVALID;
-        }
+        (void)native_host_ui_wait_frame(args[0].int_value);
     } else if (strcmp(target, "sys.ui.beginFrame") == 0) {
-        if (!native_host_ui_begin_frame(args[0].int_value)) {
-            result->type = AIVM_VAL_VOID;
-            return AIVM_SYSCALL_ERR_INVALID;
-        }
+        (void)native_host_ui_begin_frame(args[0].int_value);
     } else if (strcmp(target, "sys.ui.endFrame") == 0) {
-        if (!native_host_ui_end_frame(args[0].int_value)) {
-            result->type = AIVM_VAL_VOID;
-            return AIVM_SYSCALL_ERR_INVALID;
-        }
+        (void)native_host_ui_end_frame(args[0].int_value);
     } else if (strcmp(target, "sys.ui.present") == 0) {
-        if (!native_host_ui_present(args[0].int_value)) {
-            result->type = AIVM_VAL_VOID;
-            return AIVM_SYSCALL_ERR_INVALID;
-        }
+        (void)native_host_ui_present(args[0].int_value);
     }
     *result = aivm_value_void();
     return AIVM_SYSCALL_OK;
@@ -4355,16 +4343,13 @@ static int native_syscall_ui_draw_rect(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_INVALID;
     }
-    if (!native_host_ui_draw_rect(
+    (void)native_host_ui_draw_rect(
         args[0].int_value,
         (int)args[1].int_value,
         (int)args[2].int_value,
         (int)args[3].int_value,
         (int)args[4].int_value,
-        args[5].string_value)) {
-        result->type = AIVM_VAL_VOID;
-        return AIVM_SYSCALL_ERR_INVALID;
-    }
+        args[5].string_value);
     *result = aivm_value_void();
     return AIVM_SYSCALL_OK;
 }
@@ -4389,16 +4374,13 @@ static int native_syscall_ui_draw_text(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_INVALID;
     }
-    if (!native_host_ui_draw_text(
+    (void)native_host_ui_draw_text(
         args[0].int_value,
         (int)args[1].int_value,
         (int)args[2].int_value,
         args[3].string_value,
         args[4].string_value,
-        (int)args[5].int_value)) {
-        result->type = AIVM_VAL_VOID;
-        return AIVM_SYSCALL_ERR_INVALID;
-    }
+        (int)args[5].int_value);
     *result = aivm_value_void();
     return AIVM_SYSCALL_OK;
 }
@@ -4424,17 +4406,14 @@ static int native_syscall_ui_draw_line(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_INVALID;
     }
-    if (!native_host_ui_draw_line(
+    (void)native_host_ui_draw_line(
         args[0].int_value,
         (int)args[1].int_value,
         (int)args[2].int_value,
         (int)args[3].int_value,
         (int)args[4].int_value,
         args[5].string_value,
-        (int)args[6].int_value)) {
-        result->type = AIVM_VAL_VOID;
-        return AIVM_SYSCALL_ERR_INVALID;
-    }
+        (int)args[6].int_value);
     *result = aivm_value_void();
     return AIVM_SYSCALL_OK;
 }
@@ -4459,14 +4438,11 @@ static int native_syscall_ui_draw_path(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_INVALID;
     }
-    if (!native_host_ui_draw_path(
+    (void)native_host_ui_draw_path(
         args[0].int_value,
         args[1].string_value,
         args[2].string_value,
-        (int)args[3].int_value)) {
-        result->type = AIVM_VAL_VOID;
-        return AIVM_SYSCALL_ERR_INVALID;
-    }
+        (int)args[3].int_value);
     *result = aivm_value_void();
     return AIVM_SYSCALL_OK;
 }
@@ -4499,8 +4475,7 @@ static int native_syscall_ui_poll_event(
         memset(&event, 0, sizeof(event));
         (void)snprintf(event.type, sizeof(event.type), "none");
         if (!native_host_ui_poll_event(args[0].int_value, &event)) {
-            result->type = AIVM_VAL_VOID;
-            return AIVM_SYSCALL_ERR_INVALID;
+            (void)snprintf(event.type, sizeof(event.type), "none");
         }
         native_ui_update_event_node(g_native_active_vm, &event);
         *result = aivm_value_node(node_handle);
@@ -4538,10 +4513,7 @@ static int native_syscall_ui_get_window_size(
             result->type = AIVM_VAL_VOID;
             return AIVM_SYSCALL_ERR_INVALID;
         }
-        if (!native_host_ui_get_window_size(args[0].int_value, &width, &height)) {
-            result->type = AIVM_VAL_VOID;
-            return AIVM_SYSCALL_ERR_INVALID;
-        }
+        (void)native_host_ui_get_window_size(args[0].int_value, &width, &height);
         native_ui_update_size_node(g_native_active_vm, width, height);
         *result = aivm_value_node(node_handle);
     }
