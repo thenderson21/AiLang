@@ -67,6 +67,7 @@ This file is normative for semantic validation used by `aic check` (default path
 - args are `(string, string)` and return int worker handle.
 - `sys.worker_poll(workerHandle)` contract:
 - args are `(int)` and return status int (`0,1,-1,-2,-3`).
+- status mapping is deterministic: `0=pending`, `1=completed-success`, `-1=completed-failure`, `-2=canceled`, `-3=unknown-handle`.
 - `sys.worker_result(workerHandle)` and `sys.worker_error(workerHandle)` return strings.
 - `sys.worker_cancel(workerHandle)` returns bool.
 

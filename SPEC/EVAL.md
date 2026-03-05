@@ -30,7 +30,7 @@ This file is normative for `aic run` evaluation behavior.
 - native target (`io.*`, `compiler.*`) dispatches directly.
 - otherwise resolve function binding, apply closure with captured env.
 - async function call (`Fn(async=true)`) returns `Task(handle=...)` and schedules child evaluation under structured parent scope.
-- `Await`: evaluate child expression; child must resolve to `Task`; block until completion and return resolved value or propagate resolved `Err`.
+- `Await`: evaluate child expression; child must resolve to `Task`; logically block the current evaluation flow until completion and return resolved value or propagate resolved `Err` (host thread remains owner-driven and deterministic).
 - `Par`: evaluate each child in isolated branch state from the same lexical snapshot, then join all branches before continuing.
 - `Import(path)`: resolve path relative to current module file; parse via frontend; validate with `validate.aos`; evaluate imported module in isolated environment; merge only names explicitly listed by `Export`.
 - `Export(name)`: mark an existing binding as exported from the current module evaluation scope.
@@ -109,6 +109,15 @@ This file is normative for `aic run` evaluation behavior.
 - `sys.worker_result(workerHandle) -> string`
 - `sys.worker_error(workerHandle) -> string`
 - `sys.worker_cancel(workerHandle) -> bool`
+- `sys.worker_poll(workerHandle)` status mapping is deterministic:
+- `0` pending
+- `1` completed-success
+- `-1` completed-failure
+- `-2` canceled
+- `-3` unknown-handle
+- `sys.worker_result`/`sys.worker_error` are non-blocking terminal-state reads:
+- unknown handle => `result=""`, `error="unknown_worker"`
+- pending/non-terminal => deterministic empty-string payload
 - Worker task execution may overlap on host threads.
 - Completion becomes language-visible only when owner thread performs polling in evaluator steps.
 - For deterministic tie-breaking in app-level aggregation, ready workers must be consumed in ascending worker-handle order.
