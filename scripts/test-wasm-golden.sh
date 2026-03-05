@@ -3180,7 +3180,7 @@ if ! contains_fixed '__aivmUiPollEventTargetId' "${PUBLISH_SPA_DIR}/main.js" || 
   echo "wasm profile mismatch: spa publish did not emit canonical ui event payload bridges in main.js" >&2
   exit 1
 fi
-if ! contains_fixed "type: 'key'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "type: 'click'" "${PUBLISH_SPA_DIR}/main.js"; then
+if ! contains_fixed "type: 'key'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "type: 'click'" "${PUBLISH_SPA_DIR}/main.js" || ! contains_fixed "type: 'closed'" "${PUBLISH_SPA_DIR}/main.js"; then
   echo "wasm profile mismatch: spa publish did not emit canonical ui event type payloads" >&2
   exit 1
 fi
@@ -3265,7 +3265,7 @@ if ! contains_fixed '__aivmUiPollEventTargetId' "${PUBLISH_FULLSTACK_DIR}/www/ma
   echo "wasm profile mismatch: fullstack publish did not emit canonical ui event payload bridges in www/main.js" >&2
   exit 1
 fi
-if ! contains_fixed "type: 'key'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "type: 'click'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
+if ! contains_fixed "type: 'key'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "type: 'click'" "${PUBLISH_FULLSTACK_DIR}/www/main.js" || ! contains_fixed "type: 'closed'" "${PUBLISH_FULLSTACK_DIR}/www/main.js"; then
   echo "wasm profile mismatch: fullstack publish did not emit canonical ui event type payloads" >&2
   exit 1
 fi
