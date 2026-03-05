@@ -33,7 +33,7 @@ $sources = @(
   (Join-Path $nativeSrc 'aivm_c_api.c')
 )
 
-$clArgs = @('/nologo', '/O2', '/W4', '/WX', '/std:c11', '/D_CRT_SECURE_NO_WARNINGS', "/I$nativeInclude", "/Fe:$wrapperPath") + $sources
+$clArgs = @('/nologo', '/O2', '/W4', '/WX', '/std:c11', '/D_CRT_SECURE_NO_WARNINGS', "/I$nativeInclude", "/Fe:$wrapperPath") + $sources + @('psapi.lib')
 & cl @clArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 

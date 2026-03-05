@@ -120,6 +120,35 @@ With VM args:
 C_VM_BIN=./tools/airun-c C_VM_RUN_ARGS="run --vm=bytecode" ./scripts/profile-c-vm.sh examples/bench/loop_compute.aos
 ```
 
+## 4) Memory leak gate
+
+Built-in CLI command (`airun debug profile`) runs repeated deterministic executions and enforces RSS-growth threshold.
+
+Direct CLI usage:
+
+```bash
+./tools/airun debug profile ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos --iterations 20 --max-growth-kb 2048 --out .tmp/aivm-mem-audit.toml --vm=c
+```
+
+```bash
+./scripts/aivm-mem-audit.sh ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos 20
+```
+
+Optional threshold tuning (KB):
+
+```bash
+AIVM_LEAK_MAX_RSS_GROWTH_KB=2048 ./scripts/aivm-mem-audit.sh ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos 20
+```
+
+Windows:
+
+```powershell
+./scripts/aivm-mem-audit.ps1 .\src\AiVM.Core\native\tests\parity_cases\vm_c_execute_src_main_params.aos 20
+```
+
+Report path can be overridden with `AIVM_MEM_AUDIT_REPORT`.
+Report format is deterministic TOML (`aivm_debug_mem_v1`) for AI/agent parsing.
+
 ## Notes
 
 - Keep benchmark inputs deterministic and side-effect-free.

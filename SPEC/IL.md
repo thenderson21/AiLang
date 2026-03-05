@@ -121,6 +121,7 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 - `sys.debug.assert(cond, code, message)` returns `void` when `cond=true`, otherwise raises deterministic runtime error.
 - `sys.debug.artifactWrite(path, text)` returns bool success.
 - `sys.debug.traceAsync(opId, phase, detail)` returns `void`; canonical `phase` values: `start`, `poll`, `done`, `fail`, `cancel`.
+- `sys.debug.taskReclaimStats()` returns `DebugTaskReclaimStats(reclaimed=..., skipPinned=..., exhausted=...)` as a node payload.
 
 ## Stability Rule
 

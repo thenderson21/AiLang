@@ -103,3 +103,65 @@ All new migration issues must include:
 3. Remove repo-wide C# from mainline.
 4. Complete RC+cycle memory model and leak/profiling.
 5. Lock benchmark gates and finish all samples.
+
+## Local Reproducibility Runbook (M4)
+
+Use this sequence to reproduce threading/task readiness checks locally with deterministic outputs.
+
+### Preconditions
+
+- Run from repository root.
+- `tools/airun` exists and is executable.
+- No network dependency is required.
+
+### Command Sequence
+
+1. Core deterministic test gate:
+
+```bash
+./scripts/test.sh
+```
+
+Expected:
+
+- `100% tests passed` for `src/AiVM.Core/native` C test suite.
+- `parity dashboard: 97/97 passing (100.00%)` (or current canonical corpus count at run time).
+- `overall DoD status: PASS`.
+
+2. Determinism-only focused check:
+
+```bash
+ctest --test-dir .tmp/aivm-c-build-native -R aivm_test_vm_determinism
+```
+
+Expected:
+
+- `aivm_test_vm_determinism` passes.
+
+3. Dashboard gate refresh:
+
+```bash
+./scripts/aivm-parity-dashboard.sh .tmp/aivm-parity-dashboard-local.md
+```
+
+Expected in report:
+
+- `Behavioral parity` = `PASS`.
+- `Task tooling` = `PASS`.
+- `Determinism readiness` = `PASS` (or `PENDING` only when tests are intentionally skipped via env flags).
+
+4. Task-tooling parity edge case presence:
+
+```bash
+rg -n "parity_vm_c_execute_src_(await_edge_invalid|par_join_edge_invalid|par_cancel_edge_noop)" src/AiVM.Core/native/tests/parity_commands_portable.txt
+```
+
+Expected:
+
+- Exactly 3 matching entries.
+
+### Failure Triage Order
+
+1. If determinism gate fails, fix `aivm_test_vm_determinism` before parity manifest updates.
+2. If task-tooling gate fails with missing edge cases, restore entries in parity command manifests first.
+3. If full test gate fails after parity edits, run changed parity cases directly with `./tools/airun run <case>.aos --vm=c` and reconcile `.out` snapshots.

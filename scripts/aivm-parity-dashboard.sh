@@ -17,10 +17,22 @@ RUN_BENCH="${AIVM_DOD_RUN_BENCH:-1}"
 REQUIRE_SAMPLES="${AIVM_DOD_REQUIRE_SAMPLES:-0}"
 REQUIRE_MEMORY="${AIVM_DOD_REQUIRE_MEMORY:-0}"
 REQUIRE_ZERO_CSHARP="${AIVM_DOD_REQUIRE_ZERO_CSHARP:-0}"
+TASK_TOOLING_MANIFEST="${AIVM_TASK_TOOLING_MANIFEST:-${AIVM_C_TESTS_DIR}/parity_commands_portable.txt}"
 
 mkdir -p "${TMP_DIR}"
 mkdir -p "$(dirname "${REPORT_PATH}")"
 cd "${ROOT_DIR}"
+
+ensure_runtime() {
+  if [[ -x "${ROOT_DIR}/tools/airun" ]]; then
+    return 0
+  fi
+  ./scripts/build-airun.sh >/dev/null
+  if [[ ! -x "${ROOT_DIR}/tools/airun" ]]; then
+    echo "missing runtime: ${ROOT_DIR}/tools/airun" >&2
+    exit 2
+  fi
+}
 
 run_c_mode() {
   local input="$1"
@@ -40,6 +52,7 @@ status_word() {
 }
 
 ./scripts/bootstrap-golden-publish-fixtures.sh >/dev/null
+ensure_runtime
 cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" >/dev/null
 cmake --build "${BUILD_DIR}" --target aivm_parity_cli >/dev/null
 
@@ -158,6 +171,37 @@ if [[ "${RUN_TESTS}" == "1" ]]; then
   fi
 fi
 
+# Task tooling + determinism readiness gates.
+TASK_TOOLING_CASES_STATUS="FAIL"
+TASK_TOOLING_CASES_COUNT=0
+if [[ -f "${TASK_TOOLING_MANIFEST}" ]]; then
+  TASK_TOOLING_CASES_COUNT="$(
+    (rg -n 'parity_vm_c_execute_src_(await_edge_invalid|par_join_edge_invalid|par_cancel_edge_noop)' "${TASK_TOOLING_MANIFEST}" || true) \
+      | wc -l | tr -d ' '
+  )"
+  if [[ "${TASK_TOOLING_CASES_COUNT}" -ge 3 ]]; then
+    TASK_TOOLING_CASES_STATUS="PASS"
+  fi
+fi
+
+DETERMINISM_GATE_STATUS="PENDING"
+if [[ "${RUN_TESTS}" == "1" ]]; then
+  if [[ "${DETERMINISM_STATUS}" == "pass" ]]; then
+    DETERMINISM_GATE_STATUS="PASS"
+  else
+    DETERMINISM_GATE_STATUS="FAIL"
+  fi
+fi
+
+TASK_TOOLING_GATE_STATUS="FAIL"
+if [[ "${TASK_TOOLING_CASES_STATUS}" == "PASS" ]]; then
+  if [[ "${DETERMINISM_GATE_STATUS}" == "PASS" ]]; then
+    TASK_TOOLING_GATE_STATUS="PASS"
+  elif [[ "${DETERMINISM_GATE_STATUS}" == "PENDING" ]]; then
+    TASK_TOOLING_GATE_STATUS="PENDING"
+  fi
+fi
+
 # Benchmark gate (required only when RUN_BENCH=1).
 BENCH_GATE_STATUS="PENDING"
 BENCH_BASELINE_FILE="${AIVM_C_TESTS_DIR}/compiler_runtime_bench_baseline.tsv"
@@ -263,6 +307,14 @@ OVERALL_REQUIRED_DESC+=("behavioral=${BEHAVIORAL_GATE_STATUS}")
 if [[ "${BEHAVIORAL_GATE_STATUS}" != "PASS" ]]; then
   OVERALL_FAILURES=$((OVERALL_FAILURES + 1))
 fi
+if [[ "${RUN_TESTS}" == "1" ]]; then
+  OVERALL_REQUIRED_DESC+=("task-tooling=${TASK_TOOLING_GATE_STATUS}")
+  if [[ "${TASK_TOOLING_GATE_STATUS}" != "PASS" ]]; then
+    OVERALL_FAILURES=$((OVERALL_FAILURES + 1))
+  fi
+else
+  OVERALL_OPTIONAL_DESC+=("task-tooling=${TASK_TOOLING_GATE_STATUS}")
+fi
 
 if [[ "${RUN_TESTS}" == "1" ]]; then
   OVERALL_REQUIRED_DESC+=("tests=${TEST_GATE_STATUS}")
@@ -329,6 +381,8 @@ TS_UTC="$(date -u '+%Y-%m-%d %H:%M:%S UTC')"
   echo "| Gate | Status | Details |"
   echo "|---|---|---|"
   echo "| Behavioral parity | ${BEHAVIORAL_GATE_STATUS} | ${PASSED}/${TOTAL} (${PARITY_PERCENT}%) with mode=${MODE_USED} |"
+  echo "| Task tooling | ${TASK_TOOLING_GATE_STATUS} | manifest=${TASK_TOOLING_MANIFEST##${ROOT_DIR}/}, edge_cases=${TASK_TOOLING_CASES_COUNT} |"
+  echo "| Determinism readiness | ${DETERMINISM_GATE_STATUS} | ctest_vm_determinism=${DETERMINISM_STATUS} |"
   echo "| Zero-C# | ${ZERO_CSHARP_STATUS} | tracked_csharp=${TRACKED_CS_COUNT}, dotnet_refs_in_ci_scripts=${DOTNET_REF_COUNT} |"
   echo "| Test coverage | ${TEST_GATE_STATUS} | test-aivm-c=${TEST_AIVM_C_STATUS}, test.sh=${TEST_FULL_STATUS}, determinism=${DETERMINISM_STATUS} |"
   echo "| Benchmark | ${BENCH_GATE_STATUS} | bench_run=${BENCH_RUN_STATUS}, baseline=${BENCH_BASELINE_STATUS}, threshold=${BENCH_THRESHOLD_STATUS}, regressions=${BENCH_REGRESSION_COUNT}, missing=${BENCH_BASELINE_MISSING_COUNT}, max_pct=${BENCH_ALLOWED_REGRESSION_PCT} |"

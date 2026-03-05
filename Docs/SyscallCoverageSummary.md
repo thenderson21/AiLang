@@ -1,90 +1,76 @@
 # Syscall Coverage Summary
 
-Audit date: 2026-02-13
+Last updated: 2026-03-04
 
-## What Exists
+## Purpose
 
-Existing syscall surface supports parts of:
+Track syscall and host-tooling readiness for deterministic AiLang/AiVM execution.
 
-- CLI output/input via `console.print` and `io.*` plus `sys.stdout.writeLine`
-- Process exit and host metadata (`sys.process.exit`, `sys.platform`, `sys.arch`, `sys.os.version`, `sys.runtime`)
-- File read/existence (`sys.fs.file.read`, `sys.fs.file.exists`)
-- TCP/TLS listener basics and HTTP-style header/body read (`sys.net_*` subset)
-- Outbound HTTP can be implemented in AiLang stdlib via `httpRequest` over `sys.net.tcp*`
+Scope is local-only tooling and contracts (no AiVectra runtime implementation).
 
-## What Was Added as Planning Artifacts
+## Current Worker/Task Tooling Coverage
 
-Added docs:
+Implemented and test-backed:
 
-- `/Users/toddhenderson/RiderProjects/AiLang/Docs/SyscallAudit.md`
-- `/Users/toddhenderson/RiderProjects/AiLang/Docs/SyscallRequiredSpec_v1.md`
-- `/Users/toddhenderson/RiderProjects/AiLang/Docs/SyscallCoverageSummary.md`
+- Worker syscall contracts:
+  - `sys.worker.start(taskName,payload) -> int`
+  - `sys.worker.poll(workerHandle) -> int`
+  - `sys.worker.result(workerHandle) -> string`
+  - `sys.worker.error(workerHandle) -> string`
+  - `sys.worker.cancel(workerHandle) -> bool`
+- Contract validation coverage includes:
+  - return types
+  - arity/type errors
+  - id-target lookup parity
+- Deterministic terminal-state matrix coverage includes:
+  - pending
+  - completed
+  - failed
+  - canceled
+  - unknown handle
 
-Roadmap update:
+Primary tests:
 
-- `/Users/toddhenderson/RiderProjects/AiLang/ROADMAP.md` updated with a new syscall capability audit workstream and execution sequence.
+- `src/AiVM.Core/native/tests/test_syscall_contracts.c`
+- `src/AiVM.Core/native/tests/test_syscall.c`
+- `src/AiVM.Core/native/tests/test_runtime.c`
+- `src/AiVM.Core/native/tests/test_bytes_host.c`
 
-## Capability Coverage Decision
+## Host Event Queue Adapter Coverage
 
-### CLI apps
+Implemented in runtime host bridge:
 
-Status: partial now, full after planned primitives.
+- `aivm_runtime_host_enqueue_event(...)`
+- `aivm_runtime_host_drain_events(...)`
 
-Missing blockers:
+Contract summary:
 
-- Consistent console family in `sys.*`
-- Process argv/env/cwd primitives
-- File write + directory/stat/readDir primitives
+- Adapter is host-provided via `AivmRuntimeHostAdapter`:
+  - `enqueue(context, event_name, payload)`
+  - `drain(context, max_events, out_drained_count)`
+- Owner-thread remains semantic authority.
+- Worker/host threads may enqueue only through adapter callbacks.
+- Drain is explicit and bounded (`max_events`) to keep host-side sequencing deterministic.
+- Result statuses:
+  - `AIVM_RUNTIME_HOST_EVENT_OK`
+  - `AIVM_RUNTIME_HOST_EVENT_INVALID`
+  - `AIVM_RUNTIME_HOST_EVENT_REJECTED`
 
-### TCP server
+Primary tests:
 
-Status: partial now, full after planned primitives.
+- `src/AiVM.Core/native/tests/test_runtime.c`
 
-Missing blockers:
+## Status Against Threading/Task Plan (M3)
 
-- Generic `tcpRead` primitive (current host read path is HTTP-specific)
-- Host bind control (`host` parameter)
+- M3.1 `sys.worker_*` contract behavior + return typing: complete.
+- M3.2 deterministic polling/result terminal-state matrix: complete.
+- M3.3 host readiness enqueue/drain adapter interfaces: complete.
+- M3.4 host integration docs + local usage path: complete.
 
-### HTTP server (library level)
+## Remaining Focus (Next Milestone)
 
-Status: partial now, full after planned primitives.
+M4 local stress/determinism:
 
-Missing blockers:
-
-- Generic socket read/write and time primitives for robust request loops/timeouts
-
-### WebSocket (library level)
-
-Status: not yet.
-
-Missing blockers:
-
-- Generic socket read/write framing support
-- Time primitives (timeouts/ping cadence)
-- Minimal crypto primitives (hash/base64/random)
-
-### Basic GUI window + rendering
-
-Status: not yet.
-
-Missing blockers:
-
-- Entire `ui` syscall group
-
-### Event loop driven UI
-
-Status: not yet.
-
-Missing blockers:
-
-- `ui_pollEvent` + frame lifecycle primitives
-
-## Overall Result
-
-After defining and scheduling the v1 primitives, the capability surface is sufficient to build:
-
-- CLI libraries in AiLang
-- TCP/HTTP/WebSocket libraries in AiLang
-- Basic desktop UI/event loop libraries in AiLang
-
-This task intentionally performs planning and issue generation only. No syscall implementations are included.
+- 1000+ in-flight operation simulation in deterministic harness.
+- additional parity cases for async/par edge ordering and cancellation.
+- dashboard/runbook updates for repeatable local readiness checks.
