@@ -1245,6 +1245,17 @@ static const char* wasm_profile_normalize(const char* profile)
     return profile;
 }
 
+static int wasm_ui_unavailable_for_web_profiles(const char* target)
+{
+    if (target == NULL) {
+        return 0;
+    }
+    return strcmp(target, "sys.ui.pollEvent") == 0 ||
+           strcmp(target, "sys.ui.getWindowSize") == 0 ||
+           strcmp(target, "sys.ui_pollEvent") == 0 ||
+           strcmp(target, "sys.ui_getWindowSize") == 0;
+}
+
 static int wasm_syscall_unavailable_for_profile(const char* profile, const char* target)
 {
     if (profile == NULL || target == NULL) {
@@ -1268,7 +1279,8 @@ static int wasm_syscall_unavailable_for_profile(const char* profile, const char*
                strcmp(target, "sys.process.stderr.read") == 0 ||
                strcmp(target, "sys.process.poll") == 0 ||
                strncmp(target, "sys.net.", 8U) == 0 ||
-               strncmp(target, "sys.fs.", 7U) == 0;
+               strncmp(target, "sys.fs.", 7U) == 0 ||
+               wasm_ui_unavailable_for_web_profiles(target);
     }
     return 0;
 }
