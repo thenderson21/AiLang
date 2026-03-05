@@ -1469,6 +1469,7 @@ static int emit_wasm_spa_files(const char* out_dir)
             "  svg.addEventListener('keydown', (ev) => {\n"
             "    pushEvent({ type: 'key', targetId: String(state.focusedTargetId ?? ''), x: -1, y: -1, key: uiEventKey(ev?.key), text: uiEventText(ev), modifiers: uiEventModifiers(ev), repeat: !!ev?.repeat });\n"
             "  });\n"
+            "  svg.addEventListener('blur', () => { state.focusedTargetId = ''; });\n"
             "  if (typeof window !== 'undefined' && window?.addEventListener) {\n"
             "    window.addEventListener('resize', syncWindowSize);\n"
             "  }\n"
