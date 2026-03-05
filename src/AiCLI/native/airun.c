@@ -1406,6 +1406,28 @@ static int wasm_syscall_unavailable_for_profile(const char* profile, const char*
     return 0;
 }
 
+static int syscall_target_already_reported(const AivmProgram* program, size_t index, const char* target)
+{
+    size_t j;
+    if (program == NULL || target == NULL) {
+        return 0;
+    }
+    for (j = 0U; j < index; j += 1U) {
+        const char* prior_target;
+        if (program->constants[j].type != AIVM_VAL_STRING || program->constants[j].string_value == NULL) {
+            continue;
+        }
+        prior_target = program->constants[j].string_value;
+        if (strncmp(prior_target, "sys.", 4U) != 0) {
+            continue;
+        }
+        if (strcmp(prior_target, target) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
 static void emit_wasm_profile_warnings(const char* profile, const AivmProgram* program)
 {
     size_t i;
@@ -1414,8 +1436,6 @@ static void emit_wasm_profile_warnings(const char* profile, const AivmProgram* p
     }
     for (i = 0U; i < program->constant_count; i += 1U) {
         const char* target = NULL;
-        size_t j;
-        int already_reported = 0;
         if (program->constants[i].type != AIVM_VAL_STRING || program->constants[i].string_value == NULL) {
             continue;
         }
@@ -1426,26 +1446,46 @@ static void emit_wasm_profile_warnings(const char* profile, const AivmProgram* p
         if (!wasm_syscall_unavailable_for_profile(profile, target)) {
             continue;
         }
-        for (j = 0U; j < i; j += 1U) {
-            const char* prior_target;
-            if (program->constants[j].type != AIVM_VAL_STRING || program->constants[j].string_value == NULL) {
-                continue;
-            }
-            prior_target = program->constants[j].string_value;
-            if (strncmp(prior_target, "sys.", 4U) != 0) {
-                continue;
-            }
-            if (strcmp(prior_target, target) == 0) {
-                already_reported = 1;
-                break;
-            }
-        }
-        if (!already_reported) {
+        if (!syscall_target_already_reported(program, i, target)) {
             fprintf(
                 stderr,
                 "Warn#warn1(code=WASM001 message=\"%s is not available on wasm profile '%s'; runtime will raise RUN101 if executed.\" nodeId=publish)\n",
                 target,
                 profile);
+        }
+    }
+}
+
+static int native_syscall_requires_host_ui_capability(const char* syscall_target)
+{
+    if (syscall_target == NULL) {
+        return 0;
+    }
+    return strncmp(syscall_target, "sys.ui.", 7U) == 0 ||
+           strncmp(syscall_target, "sys.ui_", 7U) == 0;
+}
+
+static void emit_native_target_capability_warnings(const char* target_rid, const AivmProgram* program)
+{
+    size_t i;
+    if (target_rid == NULL || program == NULL) {
+        return;
+    }
+    for (i = 0U; i < program->constant_count; i += 1U) {
+        const char* target = NULL;
+        if (program->constants[i].type != AIVM_VAL_STRING || program->constants[i].string_value == NULL) {
+            continue;
+        }
+        target = program->constants[i].string_value;
+        if (!native_syscall_requires_host_ui_capability(target)) {
+            continue;
+        }
+        if (!syscall_target_already_reported(program, i, target)) {
+            fprintf(
+                stderr,
+                "Warn#warn1(code=CAP001 message=\"%s requires host UI capability on target '%s'; runtime will raise AIVMS001 if unavailable.\" nodeId=publish)\n",
+                target,
+                target_rid);
         }
     }
 }
@@ -8401,6 +8441,8 @@ static AIRUN_MAYBE_UNUSED int handle_publish(int argc, char** argv)
     char manifest_target[64];
     char manifest_wasm_fullstack_host_target[64];
     char wasm_fullstack_host_target[64];
+    unsigned char* publish_app_bytes = NULL;
+    size_t publish_app_size = 0U;
     AivmProgram publish_program;
     int i;
 
@@ -8597,10 +8639,17 @@ static AIRUN_MAYBE_UNUSED int handle_publish(int argc, char** argv)
             "Err#err1(code=RUN001 message=\"App destination path overflow.\" nodeId=publish)\n");
         return 2;
     }
+    if (!read_binary_file(app_dst, &publish_app_bytes, &publish_app_size) ||
+        aivm_program_load_aibc1(publish_app_bytes, publish_app_size, &publish_program).status != AIVM_PROGRAM_OK) {
+        free(publish_app_bytes);
+        fprintf(stderr,
+            "Err#err1(code=RUN001 message=\"Failed to inspect published app bytecode.\" nodeId=publish)\n");
+        return 2;
+    }
+    free(publish_app_bytes);
+    publish_app_bytes = NULL;
 
     if (strcmp(target, "wasm32") == 0) {
-        unsigned char* app_bytes = NULL;
-        size_t app_size = 0U;
         if (!join_path(artifact_dir, runtime_bin, runtime_src, sizeof(runtime_src))) {
             fprintf(stderr,
                 "Err#err1(code=RUN001 message=\"Runtime source path overflow.\" nodeId=publish)\n");
@@ -8641,14 +8690,6 @@ static AIRUN_MAYBE_UNUSED int handle_publish(int argc, char** argv)
                 "Err#err1(code=RUN001 message=\"Failed to copy runtime for target RID. Build target runtime first.\" nodeId=publish)\n");
             return 2;
         }
-        if (!read_binary_file(app_dst, &app_bytes, &app_size) ||
-            aivm_program_load_aibc1(app_bytes, app_size, &publish_program).status != AIVM_PROGRAM_OK) {
-            free(app_bytes);
-            fprintf(stderr,
-                "Err#err1(code=RUN001 message=\"Failed to inspect published wasm app bytecode.\" nodeId=publish)\n");
-            return 2;
-        }
-        free(app_bytes);
         emit_wasm_profile_warnings(wasm_profile, &publish_program);
 
         if (strcmp(wasm_profile, "cli") == 0) {
@@ -8784,6 +8825,7 @@ static AIRUN_MAYBE_UNUSED int handle_publish(int argc, char** argv)
             "Err#err1(code=RUN001 message=\"Failed to copy runtime for target RID. Build target runtime first.\" nodeId=publish)\n");
         return 2;
     }
+    emit_native_target_capability_warnings(target, &publish_program);
 
     printf("Ok#ok1(type=string value=\"publish-complete\")\n");
     return 0;
