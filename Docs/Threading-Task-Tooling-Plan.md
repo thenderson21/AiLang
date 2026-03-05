@@ -1,7 +1,28 @@
 # Threading/Task Tooling Plan (Local-Only)
 
-Status: Draft execution plan for AiLang/AiVM tooling only.
+Status: Completed execution plan for AiLang/AiVM tooling only.
 Scope excludes AiVectra runtime implementation.
+
+Completion snapshot (2026-03-05):
+
+- M1 contracts/spec sync: complete.
+- M2 task manager tooling surface: complete for current deterministic host/runtime boundaries.
+- M3 worker bridge + host tooling contracts/docs: complete.
+- M4 local stress/determinism/parity/dashboard/runbook: complete.
+
+Primary completion evidence:
+
+- `src/AiVM.Core/native/tests/test_syscall_contracts.c`
+- `src/AiVM.Core/native/tests/test_syscall.c`
+- `src/AiVM.Core/native/tests/test_runtime.c`
+- `src/AiVM.Core/native/tests/test_vm_determinism.c`
+- `src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_await_edge_invalid.aos`
+- `src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_par_join_edge_invalid.aos`
+- `src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_par_cancel_edge_noop.aos`
+- `scripts/test-aivm-c.sh`
+- `scripts/aivm-parity-dashboard.sh`
+- `Docs/SyscallCoverageSummary.md`
+- `Docs/AiVM-C-Replacement-Tasks.md`
 
 ## Constraints
 
