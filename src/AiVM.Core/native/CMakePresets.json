@@ -50,11 +50,47 @@
       }
     },
     {
+      "name": "aivm-native-unix-test-unit",
+      "inherits": "aivm-native-unix-test",
+      "filter": {
+        "include": {
+          "label": "unit"
+        }
+      }
+    },
+    {
+      "name": "aivm-native-unix-test-integration",
+      "inherits": "aivm-native-unix-test",
+      "filter": {
+        "include": {
+          "label": "integration"
+        }
+      }
+    },
+    {
       "name": "aivm-native-windows-test",
       "configurePreset": "aivm-native-windows",
       "configuration": "Debug",
       "output": {
         "outputOnFailure": true
+      }
+    },
+    {
+      "name": "aivm-native-windows-test-unit",
+      "inherits": "aivm-native-windows-test",
+      "filter": {
+        "include": {
+          "label": "unit"
+        }
+      }
+    },
+    {
+      "name": "aivm-native-windows-test-integration",
+      "inherits": "aivm-native-windows-test",
+      "filter": {
+        "include": {
+          "label": "integration"
+        }
       }
     }
   ]

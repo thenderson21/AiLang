@@ -298,4 +298,48 @@ if (BUILD_TESTING)
             ${CMAKE_CURRENT_SOURCE_DIR}/tests/parity_left.txt
             ${CMAKE_CURRENT_SOURCE_DIR}/tests/parity_right.txt
     )
+
+    set_tests_properties(
+        aivm_test_program_loader
+        aivm_test_vm_core
+        aivm_test_values
+        aivm_test_vm_stack
+        aivm_test_vm_frames_locals
+        aivm_test_vm_ops
+        aivm_test_runtime
+        aivm_test_c_api
+        PROPERTIES LABELS "unit;core"
+    )
+    set_tests_properties(
+        aivm_test_syscall
+        aivm_test_syscall_contracts
+        PROPERTIES LABELS "unit;syscall"
+    )
+    set_tests_properties(
+        aivm_test_vm_diagnostics
+        aivm_test_vm_determinism
+        PROPERTIES LABELS "unit;determinism"
+    )
+    set_tests_properties(
+        aivm_test_memory_rc
+        aivm_test_memory_cycle
+        PROPERTIES LABELS "unit;memory"
+    )
+    set_tests_properties(
+        aivm_test_remote_channel
+        aivm_test_remote_session
+        aivm_test_remote_transport
+        aivm_test_remote_ws_frame
+        PROPERTIES LABELS "unit;remote"
+    )
+    set_tests_properties(
+        aivm_test_bytes_host
+        aivm_test_process_lifecycle_stress
+        PROPERTIES LABELS "integration;host"
+    )
+    set_tests_properties(
+        aivm_test_parity
+        aivm_test_parity_cli
+        PROPERTIES LABELS "integration;parity"
+    )
 endif()

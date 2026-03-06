@@ -16,9 +16,10 @@ PARITY_CLI="${BUILD_DIR}/aivm_parity_cli"
 
 if [[ -f "${AIVM_C_SOURCE_DIR}/CMakePresets.json" ]]; then
   pushd "${AIVM_C_SOURCE_DIR}" >/dev/null
+  TEST_PRESET="${AIVM_CTEST_PRESET:-aivm-native-unix-test}"
   cmake --preset aivm-native-unix --fresh "${SHARED_FLAG}"
   cmake --build --preset aivm-native-unix-build
-  ctest --preset aivm-native-unix-test
+  ctest --preset "${TEST_PRESET}"
   popd >/dev/null
 else
   cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" "${SHARED_FLAG}"

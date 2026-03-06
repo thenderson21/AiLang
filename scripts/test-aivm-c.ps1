@@ -12,19 +12,21 @@ $presetFile = Join-Path $sourceDir 'CMakePresets.json'
 if (Test-Path $presetFile) {
   Push-Location $sourceDir
   try {
+    $defaultTestPreset = if ($IsWindows) { 'aivm-native-windows-test' } else { 'aivm-native-unix-test' }
+    $testPreset = if ($env:AIVM_CTEST_PRESET) { $env:AIVM_CTEST_PRESET } else { $defaultTestPreset }
     if ($IsWindows) {
       & cmake --preset aivm-native-windows --fresh -DAIVM_BUILD_SHARED=OFF
       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       & cmake --build --preset aivm-native-windows-build
       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      & ctest --preset aivm-native-windows-test
+      & ctest --preset $testPreset
       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     } else {
       & cmake --preset aivm-native-unix --fresh -DAIVM_BUILD_SHARED=OFF
       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       & cmake --build --preset aivm-native-unix-build
       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      & ctest --preset aivm-native-unix-test
+      & ctest --preset $testPreset
       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
   } finally {
