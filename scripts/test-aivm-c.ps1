@@ -4,52 +4,33 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $preferredSource = Join-Path $root 'src/AiVM.Core/native'
 $sourceDir = if ($env:AIVM_C_SOURCE_DIR) { $env:AIVM_C_SOURCE_DIR } else { $preferredSource }
-$buildDir = if ($env:AIVM_C_BUILD_DIR) { $env:AIVM_C_BUILD_DIR } else { Join-Path $root '.tmp/aivm-c-build-native' }
 $parityReport = if ($env:AIVM_PARITY_REPORT) { $env:AIVM_PARITY_REPORT } else { Join-Path $root '.tmp/aivm-dualrun-manifest/report.txt' }
 $presetFile = Join-Path $sourceDir 'CMakePresets.json'
-if (Test-Path $presetFile) {
-  Push-Location $sourceDir
-  try {
-    $defaultTestPreset = if ($IsWindows) { 'aivm-native-windows-test' } else { 'aivm-native-unix-test' }
-    $testPreset = if ($env:AIVM_CTEST_PRESET) { $env:AIVM_CTEST_PRESET } else { $defaultTestPreset }
-    if ($IsWindows) {
-      & cmake --preset aivm-native-windows --fresh -DAIVM_BUILD_SHARED=OFF
-      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      & cmake --build --preset aivm-native-windows-build
-      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      & ctest --preset $testPreset
-      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    } else {
-      & cmake --preset aivm-native-unix --fresh -DAIVM_BUILD_SHARED=OFF
-      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      & cmake --build --preset aivm-native-unix-build
-      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      & ctest --preset $testPreset
-      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    }
-  } finally {
-    Pop-Location
-  }
-} else {
-  $cmakeArgs = @('-S', $sourceDir, '-B', $buildDir, '-DAIVM_BUILD_SHARED=OFF')
-  if ($IsWindows) {
-    $cmakeArgs += @('-G', 'Visual Studio 17 2022', '-A', 'x64')
-  }
+if (-not (Test-Path $presetFile)) {
+  throw "missing $presetFile; native test flow requires presets"
+}
 
-  & cmake @cmakeArgs
-  if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
+Push-Location $sourceDir
+try {
+  $defaultTestPreset = if ($IsWindows) { 'aivm-native-windows-test' } else { 'aivm-native-unix-test' }
+  $testPreset = if ($env:AIVM_CTEST_PRESET) { $env:AIVM_CTEST_PRESET } else { $defaultTestPreset }
   if ($IsWindows) {
-    & cmake --build $buildDir --config Debug
+    & cmake --preset aivm-native-windows --fresh -DAIVM_BUILD_SHARED=OFF
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    & ctest --test-dir $buildDir -C Debug --output-on-failure
+    & cmake --build --preset aivm-native-windows-build
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & ctest --preset $testPreset
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   } else {
-    & cmake --build $buildDir
+    & cmake --preset aivm-native-unix --fresh -DAIVM_BUILD_SHARED=OFF
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    & ctest --test-dir $buildDir --output-on-failure
+    & cmake --build --preset aivm-native-unix-build
+    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    & ctest --preset $testPreset
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   }
+} finally {
+  Pop-Location
 }
 
 if ($IsWindows) {

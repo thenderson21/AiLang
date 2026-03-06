@@ -58,17 +58,14 @@ status_word() {
 
 ./scripts/bootstrap-golden-publish-fixtures.sh >/dev/null
 ensure_runtime
-USE_PRESETS=0
-if [[ -f "${AIVM_C_SOURCE_DIR}/CMakePresets.json" ]]; then
-  USE_PRESETS=1
-  pushd "${AIVM_C_SOURCE_DIR}" >/dev/null
-  cmake --preset aivm-native-unix --fresh >/dev/null
-  cmake --build --preset aivm-native-unix-build --target aivm_parity_cli >/dev/null
-  popd >/dev/null
-else
-  cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" >/dev/null
-  cmake --build "${BUILD_DIR}" --target aivm_parity_cli >/dev/null
+if [[ ! -f "${AIVM_C_SOURCE_DIR}/CMakePresets.json" ]]; then
+  echo "missing ${AIVM_C_SOURCE_DIR}/CMakePresets.json; parity dashboard requires presets" >&2
+  exit 2
 fi
+pushd "${AIVM_C_SOURCE_DIR}" >/dev/null
+cmake --preset aivm-native-unix --fresh >/dev/null
+cmake --build --preset aivm-native-unix-build --target aivm_parity_cli >/dev/null
+popd >/dev/null
 
 GOLDEN_INPUTS=()
 while IFS= read -r line; do
@@ -176,15 +173,10 @@ if [[ "${RUN_TESTS}" == "1" ]]; then
   t1=$?
   ./scripts/test.sh > "${TMP_DIR}/test-full.log" 2>&1
   t2=$?
-  if [[ "${USE_PRESETS}" == "1" ]]; then
-    pushd "${AIVM_C_SOURCE_DIR}" >/dev/null
-    ctest --preset aivm-native-unix-test -R aivm_test_vm_determinism > "${TMP_DIR}/test-determinism.log" 2>&1
-    t3=$?
-    popd >/dev/null
-  else
-    ctest --test-dir "${BUILD_DIR}" -R aivm_test_vm_determinism > "${TMP_DIR}/test-determinism.log" 2>&1
-    t3=$?
-  fi
+  pushd "${AIVM_C_SOURCE_DIR}" >/dev/null
+  ctest --preset aivm-native-unix-test -R aivm_test_vm_determinism > "${TMP_DIR}/test-determinism.log" 2>&1
+  t3=$?
+  popd >/dev/null
   set -e
   if [[ ${t1} -eq 0 ]]; then TEST_AIVM_C_STATUS="pass"; else TEST_AIVM_C_STATUS="fail"; fi
   if [[ ${t2} -eq 0 ]]; then TEST_FULL_STATUS="pass"; else TEST_FULL_STATUS="fail"; fi
@@ -368,18 +360,10 @@ if [[ "${RUN_WASM}" == "1" ]]; then
   if command -v wasmtime >/dev/null 2>&1 &&
      command -v emcc >/dev/null 2>&1; then
     set +e
-    if [[ "${USE_PRESETS}" == "1" ]]; then
-      pushd "${AIVM_C_SOURCE_DIR}" >/dev/null
-      ctest --preset aivm-native-unix-test-wasm -V > "${TMP_DIR}/test-wasm-golden.log" 2>&1
-      wasm_rc=$?
-      popd >/dev/null
-    elif [[ -x "${ROOT_DIR}/scripts/test-wasm-golden.sh" ]]; then
-      ./scripts/test-wasm-golden.sh > "${TMP_DIR}/test-wasm-golden.log" 2>&1
-      wasm_rc=$?
-    else
-      wasm_rc=1
-      echo "missing wasm runner: expected ctest preset or scripts/test-wasm-golden.sh" > "${TMP_DIR}/test-wasm-golden.log"
-    fi
+    pushd "${AIVM_C_SOURCE_DIR}" >/dev/null
+    ctest --preset aivm-native-unix-test-wasm -V > "${TMP_DIR}/test-wasm-golden.log" 2>&1
+    wasm_rc=$?
+    popd >/dev/null
     set -e
     if [[ ${wasm_rc} -eq 0 ]]; then
       WASM_RUN_STATUS="pass"
