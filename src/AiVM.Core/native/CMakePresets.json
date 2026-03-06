@@ -101,6 +101,33 @@
       }
     },
     {
+      "name": "aivm-native-unix-test-parity",
+      "inherits": "aivm-native-unix-test",
+      "filter": {
+        "include": {
+          "label": "parity"
+        }
+      }
+    },
+    {
+      "name": "aivm-native-unix-test-host",
+      "inherits": "aivm-native-unix-test",
+      "filter": {
+        "include": {
+          "label": "host"
+        }
+      }
+    },
+    {
+      "name": "aivm-native-unix-test-wasm",
+      "inherits": "aivm-native-unix-test",
+      "filter": {
+        "include": {
+          "label": "wasm"
+        }
+      }
+    },
+    {
       "name": "aivm-native-windows-test",
       "configurePreset": "aivm-native-windows",
       "configuration": "Debug",
@@ -123,6 +150,24 @@
       "filter": {
         "include": {
           "label": "integration"
+        }
+      }
+    },
+    {
+      "name": "aivm-native-windows-test-parity",
+      "inherits": "aivm-native-windows-test",
+      "filter": {
+        "include": {
+          "label": "parity"
+        }
+      }
+    },
+    {
+      "name": "aivm-native-windows-test-host",
+      "inherits": "aivm-native-windows-test",
+      "filter": {
+        "include": {
+          "label": "host"
         }
       }
     }
