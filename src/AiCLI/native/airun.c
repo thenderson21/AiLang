@@ -3986,7 +3986,7 @@ static int native_syscall_net_tcp_listen(
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
     }
-    if (args == NULL || arg_count < 2U || arg_count > 4U ||
+    if (args == NULL || arg_count != 2U ||
         args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL ||
         args[1].type != AIVM_VAL_INT) {
         result->type = AIVM_VAL_VOID;
@@ -4618,7 +4618,7 @@ static int native_syscall_net_start_op(
         *result = aivm_value_int(-1);
         return AIVM_SYSCALL_OK;
     }
-    if (strcmp(target, "sys.net.tcp.connectStart") == 0 || strcmp(target, "sys.net.tcp.connectTlsStart") == 0) {
+    if (strcmp(target, "sys.net.tcp.connectStart") == 0) {
         rc = native_syscall_net_tcp_connect("sys.net.tcp.connect", args, arg_count, &inner_result);
         if (rc == AIVM_SYSCALL_OK && inner_result.type == AIVM_VAL_INT && inner_result.int_value >= 0) {
             native_net_async_set_success_int(op, inner_result.int_value);
