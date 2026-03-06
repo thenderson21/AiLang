@@ -365,12 +365,21 @@ WASM_MALFORMED_CASES="0"
 WASM_PROFILE_STATUS="unknown"
 WASM_RUN_STATUS="not-run"
 if [[ "${RUN_WASM}" == "1" ]]; then
-  if [[ -x "${ROOT_DIR}/scripts/test-wasm-golden.sh" ]] &&
-     command -v wasmtime >/dev/null 2>&1 &&
+  if command -v wasmtime >/dev/null 2>&1 &&
      command -v emcc >/dev/null 2>&1; then
     set +e
-    ./scripts/test-wasm-golden.sh > "${TMP_DIR}/test-wasm-golden.log" 2>&1
-    wasm_rc=$?
+    if [[ "${USE_PRESETS}" == "1" ]]; then
+      pushd "${AIVM_C_SOURCE_DIR}" >/dev/null
+      ctest --preset aivm-native-unix-test-wasm -V > "${TMP_DIR}/test-wasm-golden.log" 2>&1
+      wasm_rc=$?
+      popd >/dev/null
+    elif [[ -x "${ROOT_DIR}/scripts/test-wasm-golden.sh" ]]; then
+      ./scripts/test-wasm-golden.sh > "${TMP_DIR}/test-wasm-golden.log" 2>&1
+      wasm_rc=$?
+    else
+      wasm_rc=1
+      echo "missing wasm runner: expected ctest preset or scripts/test-wasm-golden.sh" > "${TMP_DIR}/test-wasm-golden.log"
+    fi
     set -e
     if [[ ${wasm_rc} -eq 0 ]]; then
       WASM_RUN_STATUS="pass"
