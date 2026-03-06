@@ -305,12 +305,26 @@ if (BUILD_TESTING)
                 ${CMAKE_CURRENT_SOURCE_DIR}/tests/ctest_airun_smoke.ps1
                 ${CMAKE_CURRENT_SOURCE_DIR}/../../..
         )
+        add_test(
+            NAME aivm_test_task_edge_parity
+            COMMAND pwsh -NoProfile -ExecutionPolicy Bypass -File
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests/ctest_task_edge_parity.ps1
+                ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+                $<TARGET_FILE:aivm_parity_cli>
+        )
     else()
         add_test(
             NAME aivm_test_airun_smoke
             COMMAND bash
                 ${CMAKE_CURRENT_SOURCE_DIR}/tests/ctest_airun_smoke.sh
                 ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+        )
+        add_test(
+            NAME aivm_test_task_edge_parity
+            COMMAND bash
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests/ctest_task_edge_parity.sh
+                ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+                $<TARGET_FILE:aivm_parity_cli>
         )
     endif()
 
@@ -356,6 +370,7 @@ if (BUILD_TESTING)
     set_tests_properties(
         aivm_test_parity
         aivm_test_parity_cli
+        aivm_test_task_edge_parity
         PROPERTIES LABELS "integration;parity"
     )
 endif()
