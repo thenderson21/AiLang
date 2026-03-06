@@ -277,8 +277,11 @@ int native_host_ui_draw_rect(int64_t handle, int x, int y, int width, int height
 {
     NativeUiLinuxWindowSlot* slot = native_ui_linux_find_slot(handle);
     unsigned long pixel;
-    if (slot == NULL || g_native_ui_display == NULL || width <= 0 || height <= 0) {
+    if (slot == NULL || g_native_ui_display == NULL) {
         return 0;
+    }
+    if (width <= 0 || height <= 0) {
+        return 1;
     }
     pixel = native_ui_linux_parse_color(color, BlackPixel(g_native_ui_display, g_native_ui_screen));
     XSetForeground(g_native_ui_display, slot->gc, pixel);
@@ -290,8 +293,11 @@ int native_host_ui_draw_ellipse(int64_t handle, int x, int y, int width, int hei
 {
     NativeUiLinuxWindowSlot* slot = native_ui_linux_find_slot(handle);
     unsigned long pixel;
-    if (slot == NULL || g_native_ui_display == NULL || width <= 0 || height <= 0) {
+    if (slot == NULL || g_native_ui_display == NULL) {
         return 0;
+    }
+    if (width <= 0 || height <= 0) {
+        return 1;
     }
     pixel = native_ui_linux_parse_color(color, BlackPixel(g_native_ui_display, g_native_ui_screen));
     XSetForeground(g_native_ui_display, slot->gc, pixel);

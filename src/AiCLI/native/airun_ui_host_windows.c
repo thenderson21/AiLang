@@ -372,8 +372,11 @@ int native_host_ui_draw_rect(int64_t handle, int x, int y, int width, int height
     HDC dc;
     HBRUSH brush;
     RECT rect;
-    if (slot == NULL || slot->hwnd == NULL || width <= 0 || height <= 0) {
+    if (slot == NULL || slot->hwnd == NULL) {
         return 0;
+    }
+    if (width <= 0 || height <= 0) {
+        return 1;
     }
     dc = GetDC(slot->hwnd);
     if (dc == NULL) {
@@ -399,8 +402,11 @@ int native_host_ui_draw_ellipse(int64_t handle, int x, int y, int width, int hei
     HBRUSH brush;
     HGDIOBJ prev_brush;
     HGDIOBJ prev_pen;
-    if (slot == NULL || slot->hwnd == NULL || width <= 0 || height <= 0) {
+    if (slot == NULL || slot->hwnd == NULL) {
         return 0;
+    }
+    if (width <= 0 || height <= 0) {
+        return 1;
     }
     dc = GetDC(slot->hwnd);
     if (dc == NULL) {

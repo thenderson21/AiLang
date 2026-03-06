@@ -8461,6 +8461,18 @@ static int simple_compile_block_ext(
     SimpleLocals* locals,
     SimpleCompileContext* ctx,
     int* out_did_return);
+
+static int simple_emit_empty_string_const(AivmProgram* program)
+{
+    size_t empty_const_idx = 0U;
+    if (program == NULL) {
+        return 0;
+    }
+    if (!simple_add_string_const(program, "", &empty_const_idx)) {
+        return simple_fail("failed adding empty string const");
+    }
+    return simple_emit_instruction(program, AIVM_OP_CONST, (int64_t)empty_const_idx);
+}
 static int simple_compile_fn_by_index(SimpleCompileContext* ctx, size_t fn_index);
 
 static int simple_add_source(SimpleCompileContext* ctx, const char* path, const char* text, int* out_index)
@@ -9002,6 +9014,7 @@ static int simple_compile_call_ext(
     const char* c;
     SimpleNodeView arg;
     char target[128];
+    int is_syscall_target;
     size_t arg_count = 0U;
     if (node == NULL || program == NULL || locals == NULL || ctx == NULL) {
         return 0;
@@ -9009,21 +9022,13 @@ static int simple_compile_call_ext(
     if (!parse_attr_span(node->attrs, "target", target, sizeof(target))) {
         return simple_fail("call missing target");
     }
+    is_syscall_target =
+        starts_with(target, "sys.") ||
+        strcmp(target, "io.print") == 0 ||
+        strcmp(target, "io.write") == 0 ||
+        strcmp(target, "sys.stdout.writeLine") == 0;
 
-    c = node->body_start;
-    while (simple_parse_next_node(c, node->body_end, &arg)) {
-        if (arg_count >= 32U) {
-            return simple_fail("call arg count exceeds native compiler limit");
-        }
-        if (!simple_compile_expr_ext(&arg, program, locals, ctx)) {
-            return 0;
-        }
-        arg_count += 1U;
-        c = arg.next;
-    }
-
-    if (starts_with(target, "sys.") || strcmp(target, "io.print") == 0 || strcmp(target, "io.write") == 0 ||
-        strcmp(target, "sys.stdout.writeLine") == 0) {
+    if (is_syscall_target) {
         size_t target_idx = 0U;
         const char* mapped = target;
         if (strcmp(target, "io.print") == 0 || strcmp(target, "io.write") == 0) {
@@ -9035,17 +9040,16 @@ static int simple_compile_call_ext(
         if (!simple_emit_instruction(program, AIVM_OP_CONST, (int64_t)target_idx)) {
             return simple_fail("failed emitting syscall target const");
         }
-        if (arg_count > 0U) {
-            AivmInstruction target_inst;
-            size_t i;
-            size_t start = program->instruction_count - arg_count - 1U;
-            size_t target_index = program->instruction_count - 1U;
-            /* Move syscall target const ahead of args: [args..., target] -> [target, args...] */
-            target_inst = program->instruction_storage[target_index];
-            for (i = target_index; i > start; i -= 1U) {
-                program->instruction_storage[i] = program->instruction_storage[i - 1U];
+        c = node->body_start;
+        while (simple_parse_next_node(c, node->body_end, &arg)) {
+            if (arg_count >= 32U) {
+                return simple_fail("call arg count exceeds native compiler limit");
             }
-            program->instruction_storage[start] = target_inst;
+            if (!simple_compile_expr_ext(&arg, program, locals, ctx)) {
+                return 0;
+            }
+            arg_count += 1U;
+            c = arg.next;
         }
         if (!simple_emit_instruction(program, AIVM_OP_CALL_SYS, (int64_t)arg_count)) {
             return simple_fail("failed emitting CALL_SYS");
@@ -9053,6 +9057,17 @@ static int simple_compile_call_ext(
     } else {
         size_t fn_index;
         size_t call_inst_index;
+        c = node->body_start;
+        while (simple_parse_next_node(c, node->body_end, &arg)) {
+            if (arg_count >= 32U) {
+                return simple_fail("call arg count exceeds native compiler limit");
+            }
+            if (!simple_compile_expr_ext(&arg, program, locals, ctx)) {
+                return 0;
+            }
+            arg_count += 1U;
+            c = arg.next;
+        }
         if (!simple_find_func(ctx, target, &fn_index)) {
             return simple_failf("unknown function target: %s", target);
         }
@@ -9293,17 +9308,48 @@ static int simple_compile_expr_ext(
     if (strcmp(node->kind, "Block") == 0) {
         const char* c = node->body_start;
         SimpleNodeView child;
-        int did_return = 0;
+        int emitted_value = 0;
         while (simple_parse_next_node(c, node->body_end, &child)) {
-            if (!simple_compile_stmt_ext(&child, program, locals, ctx, &did_return)) {
+            SimpleNodeView next_child;
+            int has_next = simple_parse_next_node(child.next, node->body_end, &next_child);
+            if (has_next) {
+                int did_return = 0;
+                if (!simple_compile_stmt_ext(&child, program, locals, ctx, &did_return)) {
+                    return 0;
+                }
+                if (did_return) {
+                    return 1;
+                }
+                c = child.next;
+                continue;
+            }
+            if (strcmp(child.kind, "Let") == 0 ||
+                strcmp(child.kind, "Return") == 0 ||
+                strcmp(child.kind, "Break") == 0 ||
+                strcmp(child.kind, "Continue") == 0 ||
+                strcmp(child.kind, "Loop") == 0) {
+                int did_return = 0;
+                if (!simple_compile_stmt_ext(&child, program, locals, ctx, &did_return)) {
+                    return 0;
+                }
+                if (did_return) {
+                    return 1;
+                }
+                if (!simple_emit_empty_string_const(program)) {
+                    return 0;
+                }
+            } else if (!simple_compile_expr_ext(&child, program, locals, ctx)) {
                 return 0;
             }
-            if (did_return) {
-                return 1;
-            }
+            emitted_value = 1;
             c = child.next;
         }
-        return simple_emit_instruction(program, AIVM_OP_CONST, 0);
+        if (!emitted_value) {
+            if (!simple_emit_empty_string_const(program)) {
+                return 0;
+            }
+        }
+        return 1;
     }
     {
         const char* trace = getenv("AIVM_NATIVE_BUILD_TRACE");

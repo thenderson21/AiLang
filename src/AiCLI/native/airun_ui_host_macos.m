@@ -516,8 +516,11 @@ int native_host_ui_draw_rect(int64_t handle, int x, int y, int width, int height
     NativeUiWindowSlot* slot = native_ui_find_slot(handle);
     NSRect bounds;
     NSRect rect;
-    if (slot == NULL || width <= 0 || height <= 0) {
+    if (slot == NULL) {
         return 0;
+    }
+    if (width <= 0 || height <= 0) {
+        return 1;
     }
     if (!native_ui_lock_focus(slot, &bounds)) {
         return 0;
@@ -535,8 +538,11 @@ int native_host_ui_draw_ellipse(int64_t handle, int x, int y, int width, int hei
     NSRect bounds;
     NSRect rect;
     NSBezierPath* path;
-    if (slot == NULL || width <= 0 || height <= 0) {
+    if (slot == NULL) {
         return 0;
+    }
+    if (width <= 0 || height <= 0) {
+        return 1;
     }
     if (!native_ui_lock_focus(slot, &bounds)) {
         return 0;
