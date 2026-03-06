@@ -52,6 +52,9 @@ extern int kill(pid_t pid, int sig);
 #include "airun_ui_host.h"
 
 #ifndef AIRUN_UI_HOST_EXTERNAL
+#ifndef AIRUN_ALLOW_INTERNAL_UI_FALLBACK
+#error "Internal UI fallback backend is disabled by default. Define AIRUN_UI_HOST_EXTERNAL for production builds or AIRUN_ALLOW_INTERNAL_UI_FALLBACK for embedded tests."
+#endif
 #include "airun_ui_host_unavailable.c"
 #endif
 
