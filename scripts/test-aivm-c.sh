@@ -14,9 +14,17 @@ if [[ "${AIVM_BUILD_SHARED:-0}" == "1" ]]; then
 fi
 PARITY_CLI="${BUILD_DIR}/aivm_parity_cli"
 
-cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" "${SHARED_FLAG}"
-cmake --build "${BUILD_DIR}"
-ctest --test-dir "${BUILD_DIR}" --output-on-failure
+if [[ -f "${AIVM_C_SOURCE_DIR}/CMakePresets.json" ]]; then
+  pushd "${AIVM_C_SOURCE_DIR}" >/dev/null
+  cmake --preset aivm-native-unix --fresh "${SHARED_FLAG}"
+  cmake --build --preset aivm-native-unix-build
+  ctest --preset aivm-native-unix-test
+  popd >/dev/null
+else
+  cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" "${SHARED_FLAG}"
+  cmake --build "${BUILD_DIR}"
+  ctest --test-dir "${BUILD_DIR}" --output-on-failure
+fi
 
 if [[ -x "${ROOT_DIR}/tools/airun" ]]; then
   AIRUN_HELP_TEXT="$("${ROOT_DIR}/tools/airun" 2>&1 || true)"

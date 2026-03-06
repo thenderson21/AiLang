@@ -1,0 +1,61 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 21,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "aivm-native-base",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/../../../.tmp/aivm-c-build-native",
+      "cacheVariables": {
+        "AIVM_BUILD_SHARED": "OFF",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+    {
+      "name": "aivm-native-unix",
+      "inherits": "aivm-native-base",
+      "generator": "Unix Makefiles"
+    },
+    {
+      "name": "aivm-native-windows",
+      "inherits": "aivm-native-base",
+      "generator": "Visual Studio 17 2022",
+      "architecture": {
+        "value": "x64",
+        "strategy": "set"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "aivm-native-unix-build",
+      "configurePreset": "aivm-native-unix"
+    },
+    {
+      "name": "aivm-native-windows-build",
+      "configurePreset": "aivm-native-windows",
+      "configuration": "Debug"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "aivm-native-unix-test",
+      "configurePreset": "aivm-native-unix",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "aivm-native-windows-test",
+      "configurePreset": "aivm-native-windows",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
+    }
+  ]
+}
