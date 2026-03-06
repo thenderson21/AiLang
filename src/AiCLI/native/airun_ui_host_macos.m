@@ -279,11 +279,21 @@ static int native_ui_draw_svg_path(NSRect bounds, const char* path_text, const c
 
 static int native_ui_init_app(void)
 {
+    BOOL policy_ok = NO;
     if (g_native_ui_app_initialized != 0) {
         return 1;
     }
     [NSApplication sharedApplication];
-    [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+    if (NSApp == nil) {
+        return 0;
+    }
+    policy_ok = [NSApp setActivationPolicy:NSApplicationActivationPolicyAccessory];
+    if (!policy_ok) {
+        policy_ok = [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular];
+    }
+    if (!policy_ok) {
+        return 0;
+    }
     [NSApp finishLaunching];
     g_native_ui_app_initialized = 1;
     return 1;
@@ -440,7 +450,10 @@ int native_host_ui_create_window(const char* title, int width, int height, int64
     delegate.slot = slot;
     [window setDelegate:delegate];
     [window makeKeyAndOrderFront:nil];
-    [NSApp activateIgnoringOtherApps:YES];
+    [NSApp updateWindows];
+    if (![window isVisible]) {
+        return 0;
+    }
     slot->handle = g_native_ui_next_handle++;
     slot->window = window;
     slot->delegate_ref = delegate;
