@@ -27,7 +27,7 @@ else
   ctest --test-dir "${BUILD_DIR}" --output-on-failure
 fi
 
-if [[ -x "${ROOT_DIR}/tools/airun" ]]; then
+if [[ "${AIVM_LEGACY_SMOKE:-0}" == "1" && -x "${ROOT_DIR}/tools/airun" ]]; then
   AIRUN_HELP_TEXT="$("${ROOT_DIR}/tools/airun" 2>&1 || true)"
   AIRUN_HAS_BUILD=0
   AIRUN_HAS_CLEAN=0

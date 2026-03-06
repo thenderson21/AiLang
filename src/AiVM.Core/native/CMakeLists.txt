@@ -298,6 +298,21 @@ if (BUILD_TESTING)
             ${CMAKE_CURRENT_SOURCE_DIR}/tests/parity_left.txt
             ${CMAKE_CURRENT_SOURCE_DIR}/tests/parity_right.txt
     )
+    if (WIN32)
+        add_test(
+            NAME aivm_test_airun_smoke
+            COMMAND pwsh -NoProfile -ExecutionPolicy Bypass -File
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests/ctest_airun_smoke.ps1
+                ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+        )
+    else()
+        add_test(
+            NAME aivm_test_airun_smoke
+            COMMAND bash
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests/ctest_airun_smoke.sh
+                ${CMAKE_CURRENT_SOURCE_DIR}/../../..
+        )
+    endif()
 
     set_tests_properties(
         aivm_test_program_loader
@@ -335,6 +350,7 @@ if (BUILD_TESTING)
     set_tests_properties(
         aivm_test_bytes_host
         aivm_test_process_lifecycle_stress
+        aivm_test_airun_smoke
         PROPERTIES LABELS "integration;host"
     )
     set_tests_properties(

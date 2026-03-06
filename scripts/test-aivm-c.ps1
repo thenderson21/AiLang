@@ -69,6 +69,8 @@ if (-not (Test-Path $parityDir)) {
   New-Item -ItemType Directory -Force -Path $parityDir | Out-Null
 }
 
+$runLegacySmoke = ($env:AIVM_LEGACY_SMOKE -eq '1')
+if ($runLegacySmoke) {
 if ($IsWindows) {
   if (Test-Path (Join-Path $root 'tools/airun.exe')) {
     & (Join-Path $root 'tools/airun.exe') run (Join-Path $root 'src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos') --vm=c | Out-Null
@@ -151,6 +153,9 @@ Bytecode#bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {
   } else {
     Set-Content -Path $parityReport -Value 'parity manifest skipped: missing ./tools/airun'
   }
+}
+} else {
+  Set-Content -Path $parityReport -Value 'parity manifest skipped: legacy smoke disabled (set AIVM_LEGACY_SMOKE=1 to enable)'
 }
 
 if ($env:AIVM_MEM_LEAK_GATE -eq '1') {
