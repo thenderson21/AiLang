@@ -9357,7 +9357,7 @@ static int simple_locals_lookup(SimpleLocals* locals, const char* name, size_t* 
     if (locals->count >= SIMPLE_MAX_LOCALS) {
         return simple_failf("local table capacity exceeded (name=%s max=%d)", name, SIMPLE_MAX_LOCALS);
     }
-    if (locals->ctx->next_local_slot >= AIVM_VM_LOCALS_CAPACITY) {
+    if (locals->count >= AIVM_VM_LOCALS_CAPACITY) {
         return simple_failf(
             "vm local slot capacity exceeded (name=%s max=%d)",
             name,
@@ -9367,8 +9367,7 @@ static int simple_locals_lookup(SimpleLocals* locals, const char* name, size_t* 
         (int)sizeof(locals->names[locals->count])) {
         return simple_failf("local name too long: %s", name);
     }
-    locals->slots[locals->count] = locals->ctx->next_local_slot;
-    locals->ctx->next_local_slot += 1U;
+    locals->slots[locals->count] = locals->count;
     *out_slot = locals->slots[locals->count];
     locals->count += 1U;
     return 1;
