@@ -529,6 +529,26 @@ int native_host_ui_draw_rect(int64_t handle, int x, int y, int width, int height
     return 1;
 }
 
+int native_host_ui_draw_ellipse(int64_t handle, int x, int y, int width, int height, const char* color)
+{
+    NativeUiWindowSlot* slot = native_ui_find_slot(handle);
+    NSRect bounds;
+    NSRect rect;
+    NSBezierPath* path;
+    if (slot == NULL || width <= 0 || height <= 0) {
+        return 0;
+    }
+    if (!native_ui_lock_focus(slot, &bounds)) {
+        return 0;
+    }
+    rect = NSMakeRect((CGFloat)x, native_ui_y_to_cocoa(bounds, y + height), (CGFloat)width, (CGFloat)height);
+    path = [NSBezierPath bezierPathWithOvalInRect:rect];
+    [native_ui_parse_color(color, [NSColor blackColor]) setFill];
+    [path fill];
+    native_ui_unlock_focus(slot);
+    return 1;
+}
+
 int native_host_ui_draw_text(int64_t handle, int x, int y, const char* text, const char* color, int font_size)
 {
     NativeUiWindowSlot* slot = native_ui_find_slot(handle);

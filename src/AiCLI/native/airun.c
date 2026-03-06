@@ -52,82 +52,10 @@ extern int kill(pid_t pid, int sig);
 #include "airun_ui_host.h"
 
 #ifndef AIRUN_UI_HOST_EXTERNAL
-void native_host_ui_reset(void) {}
-void native_host_ui_shutdown(void) {}
-int native_host_ui_create_window(const char* title, int width, int height, int64_t* out_handle)
-{
-    (void)title;
-    (void)width;
-    (void)height;
-    if (out_handle != NULL) {
-        *out_handle = 0;
-    }
-    return 0;
-}
-int native_host_ui_close_window(int64_t handle) { (void)handle; return 0; }
-int native_host_ui_begin_frame(int64_t handle) { (void)handle; return 0; }
-int native_host_ui_end_frame(int64_t handle) { (void)handle; return 0; }
-int native_host_ui_present(int64_t handle) { (void)handle; return 0; }
-int native_host_ui_wait_frame(int64_t handle) { (void)handle; return 0; }
-int native_host_ui_draw_rect(int64_t handle, int x, int y, int width, int height, const char* color)
-{
-    (void)handle;
-    (void)x;
-    (void)y;
-    (void)width;
-    (void)height;
-    (void)color;
-    return 0;
-}
-int native_host_ui_draw_text(int64_t handle, int x, int y, const char* text, const char* color, int font_size)
-{
-    (void)handle;
-    (void)x;
-    (void)y;
-    (void)text;
-    (void)color;
-    (void)font_size;
-    return 0;
-}
-int native_host_ui_draw_line(int64_t handle, int x1, int y1, int x2, int y2, const char* color, int stroke_width)
-{
-    (void)handle;
-    (void)x1;
-    (void)y1;
-    (void)x2;
-    (void)y2;
-    (void)color;
-    (void)stroke_width;
-    return 0;
-}
-int native_host_ui_draw_path(int64_t handle, const char* path, const char* color, int stroke_width)
-{
-    (void)handle;
-    (void)path;
-    (void)color;
-    (void)stroke_width;
-    return 0;
-}
-int native_host_ui_poll_event(int64_t handle, NativeHostUiEvent* out_event)
-{
-    (void)handle;
-    if (out_event != NULL) {
-        memset(out_event, 0, sizeof(*out_event));
-        (void)snprintf(out_event->type, sizeof(out_event->type), "none");
-    }
-    return 0;
-}
-int native_host_ui_get_window_size(int64_t handle, int* out_width, int* out_height)
-{
-    (void)handle;
-    if (out_width != NULL) {
-        *out_width = 0;
-    }
-    if (out_height != NULL) {
-        *out_height = 0;
-    }
-    return 0;
-}
+#ifndef AIRUN_ALLOW_INTERNAL_UI_FALLBACK
+#error "Internal UI fallback backend is disabled by default. Define AIRUN_UI_HOST_EXTERNAL for production builds or AIRUN_ALLOW_INTERNAL_UI_FALLBACK for embedded tests."
+#endif
+#include "airun_ui_host_unavailable.c"
 #endif
 
 #if defined(AIRUN_MINIMAL_RUNTIME)
@@ -3976,7 +3904,7 @@ static int native_syscall_net_tcp_listen(
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
     }
-    if (args == NULL || arg_count < 2U || arg_count > 4U ||
+    if (args == NULL || arg_count != 2U ||
         args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL ||
         args[1].type != AIVM_VAL_INT) {
         result->type = AIVM_VAL_VOID;
@@ -4089,6 +4017,68 @@ static int native_syscall_net_tcp_connect(
     }
     *result = aivm_value_int(handle);
     return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_net_tcp_connect_tls(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 2U ||
+        args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL ||
+        args[1].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    result->type = AIVM_VAL_VOID;
+    return AIVM_SYSCALL_ERR_INVALID;
+}
+
+static int native_syscall_net_tcp_listen_tls(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 4U ||
+        args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL ||
+        args[1].type != AIVM_VAL_INT ||
+        args[2].type != AIVM_VAL_STRING || args[2].string_value == NULL ||
+        args[3].type != AIVM_VAL_STRING || args[3].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    result->type = AIVM_VAL_VOID;
+    return AIVM_SYSCALL_ERR_INVALID;
+}
+
+static int native_syscall_net_tcp_connect_tls_start(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 2U ||
+        args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL ||
+        args[1].type != AIVM_VAL_INT) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    result->type = AIVM_VAL_VOID;
+    return AIVM_SYSCALL_ERR_INVALID;
 }
 
 static int native_syscall_net_tcp_read(
@@ -4529,12 +4519,21 @@ static int native_syscall_net_start_op(
     size_t arg_count,
     AivmValue* result)
 {
+    int is_supported_target;
     int64_t op_handle;
     NativeNetAsyncState* op;
     AivmValue inner_result = aivm_value_void();
     int rc = AIVM_SYSCALL_ERR_INVALID;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    is_supported_target =
+        strcmp(target, "sys.net.tcp.connectStart") == 0 ||
+        strcmp(target, "sys.net.tcp.readStart") == 0 ||
+        strcmp(target, "sys.net.tcp.writeStart") == 0;
+    if (!is_supported_target) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
     }
     op_handle = native_net_async_allocate();
     if (op_handle < 0) {
@@ -4546,7 +4545,7 @@ static int native_syscall_net_start_op(
         *result = aivm_value_int(-1);
         return AIVM_SYSCALL_OK;
     }
-    if (strcmp(target, "sys.net.tcp.connectStart") == 0 || strcmp(target, "sys.net.tcp.connectTlsStart") == 0) {
+    if (strcmp(target, "sys.net.tcp.connectStart") == 0) {
         rc = native_syscall_net_tcp_connect("sys.net.tcp.connect", args, arg_count, &inner_result);
         if (rc == AIVM_SYSCALL_OK && inner_result.type == AIVM_VAL_INT && inner_result.int_value >= 0) {
             native_net_async_set_success_int(op, inner_result.int_value);
@@ -4567,8 +4566,6 @@ static int native_syscall_net_start_op(
         } else {
             native_net_async_set_failure(op, "write_failed");
         }
-    } else {
-        native_net_async_set_failure(op, "unsupported_start");
     }
     *result = aivm_value_int(op_handle);
     return AIVM_SYSCALL_OK;
@@ -5162,6 +5159,9 @@ static int native_syscall_ui_void_1(
             result->type = AIVM_VAL_VOID;
             return AIVM_SYSCALL_ERR_INVALID;
         }
+    } else {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
     }
     *result = aivm_value_void();
     return AIVM_SYSCALL_OK;
@@ -5173,9 +5173,12 @@ static int native_syscall_ui_draw_rect(
     size_t arg_count,
     AivmValue* result)
 {
-    (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (target == NULL || strcmp(target, "sys.ui.drawRect") != 0) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
     }
     if (args == NULL || arg_count != 6U ||
         args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT ||
@@ -5201,15 +5204,82 @@ static int native_syscall_ui_draw_rect(
     return AIVM_SYSCALL_OK;
 }
 
+static int native_syscall_ui_draw_ellipse(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (target == NULL || strcmp(target, "sys.ui.drawEllipse") != 0) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
+    }
+    if (args == NULL || arg_count != 6U ||
+        args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT ||
+        args[3].type != AIVM_VAL_INT || args[4].type != AIVM_VAL_INT || args[5].type != AIVM_VAL_STRING) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (!native_ui_runtime_is_active_handle(args[0].int_value)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (!native_host_ui_draw_ellipse(
+            args[0].int_value,
+            (int)args[1].int_value,
+            (int)args[2].int_value,
+            (int)args[3].int_value,
+            (int)args[4].int_value,
+            args[5].string_value)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_ui_draw_image(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (target == NULL || strcmp(target, "sys.ui.drawImage") != 0) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
+    }
+    if (args == NULL || arg_count != 6U ||
+        args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT ||
+        args[3].type != AIVM_VAL_INT || args[4].type != AIVM_VAL_INT || args[5].type != AIVM_VAL_STRING) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (!native_ui_runtime_is_active_handle(args[0].int_value)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    result->type = AIVM_VAL_VOID;
+    return AIVM_SYSCALL_ERR_INVALID;
+}
+
 static int native_syscall_ui_draw_text(
     const char* target,
     const AivmValue* args,
     size_t arg_count,
     AivmValue* result)
 {
-    (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (target == NULL || strcmp(target, "sys.ui.drawText") != 0) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
     }
     if (args == NULL || arg_count != 6U ||
         args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT ||
@@ -5241,9 +5311,12 @@ static int native_syscall_ui_draw_line(
     size_t arg_count,
     AivmValue* result)
 {
-    (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (target == NULL || strcmp(target, "sys.ui.drawLine") != 0) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
     }
     if (args == NULL || arg_count != 7U ||
         args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT ||
@@ -5277,9 +5350,12 @@ static int native_syscall_ui_draw_path(
     size_t arg_count,
     AivmValue* result)
 {
-    (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (target == NULL || strcmp(target, "sys.ui.drawPath") != 0) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
     }
     if (args == NULL || arg_count != 4U ||
         args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_STRING ||
@@ -5309,9 +5385,12 @@ static int native_syscall_ui_poll_event(
     size_t arg_count,
     AivmValue* result)
 {
-    (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (target == NULL || strcmp(target, "sys.ui.pollEvent") != 0) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
     }
     if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
         result->type = AIVM_VAL_VOID;
@@ -5346,9 +5425,12 @@ static int native_syscall_ui_get_window_size(
     size_t arg_count,
     AivmValue* result)
 {
-    (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (target == NULL || strcmp(target, "sys.ui.getWindowSize") != 0) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_NOT_FOUND;
     }
     if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_INT) {
         result->type = AIVM_VAL_VOID;
@@ -7211,11 +7293,11 @@ static int run_native_compiled_program(
     bindings[32].target = "sys.ui.drawLine";
     bindings[32].handler = native_syscall_ui_draw_line;
     bindings[33].target = "sys.ui.drawEllipse";
-    bindings[33].handler = native_syscall_ui_draw_rect;
+    bindings[33].handler = native_syscall_ui_draw_ellipse;
     bindings[34].target = "sys.ui.drawPath";
     bindings[34].handler = native_syscall_ui_draw_path;
     bindings[35].target = "sys.ui.drawImage";
-    bindings[35].handler = native_syscall_ui_draw_rect;
+    bindings[35].handler = native_syscall_ui_draw_image;
     bindings[36].target = "sys.ui.getWindowSize";
     bindings[36].handler = native_syscall_ui_get_window_size;
     bindings[37].target = "sys.ui.waitFrame";
@@ -7290,7 +7372,7 @@ static int run_native_compiled_program(
     bindings[71].target = "sys.net.tcp.listen";
     bindings[71].handler = native_syscall_net_tcp_listen;
     bindings[72].target = "sys.net.tcp.listenTls";
-    bindings[72].handler = native_syscall_net_tcp_listen;
+    bindings[72].handler = native_syscall_net_tcp_listen_tls;
     bindings[73].target = "sys.net.tcp.accept";
     bindings[73].handler = native_syscall_net_tcp_accept;
     bindings[74].target = "sys.net.tcp.read";
@@ -7298,11 +7380,11 @@ static int run_native_compiled_program(
     bindings[75].target = "sys.net.tcp.write";
     bindings[75].handler = native_syscall_net_tcp_write;
     bindings[76].target = "sys.net.tcp.connectTls";
-    bindings[76].handler = native_syscall_net_tcp_connect;
+    bindings[76].handler = native_syscall_net_tcp_connect_tls;
     bindings[77].target = "sys.net.tcp.connectStart";
     bindings[77].handler = native_syscall_net_start_op;
     bindings[78].target = "sys.net.tcp.connectTlsStart";
-    bindings[78].handler = native_syscall_net_start_op;
+    bindings[78].handler = native_syscall_net_tcp_connect_tls_start;
     bindings[79].target = "sys.net.tcp.readStart";
     bindings[79].handler = native_syscall_net_start_op;
     bindings[80].target = "sys.net.tcp.writeStart";
