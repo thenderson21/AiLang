@@ -8987,6 +8987,12 @@ static int simple_split_params(const char* raw, char out_params[][64], size_t* o
     return 1;
 }
 
+static int simple_param_count(const char* raw, size_t* out_count)
+{
+    char params[SIMPLE_MAX_LOCALS][64];
+    return simple_split_params(raw, params, out_count);
+}
+
 static int simple_add_fixup(SimpleCompileContext* ctx, size_t instruction_index, const char* target)
 {
     if (ctx == NULL || target == NULL) {
@@ -9453,6 +9459,19 @@ static int simple_compile_call_ext(
         }
         if (!simple_find_func(ctx, target, &fn_index)) {
             return simple_failf("unknown function target: %s", target);
+        }
+        {
+            size_t param_count = 0U;
+            if (!simple_param_count(ctx->funcs[fn_index].params_raw, &param_count)) {
+                return simple_failf("failed parsing params for target: %s", target);
+            }
+            if (arg_count != param_count) {
+                return simple_failf(
+                    "call target %s expects %llu args, got %llu",
+                    target,
+                    (unsigned long long)param_count,
+                    (unsigned long long)arg_count);
+            }
         }
         call_inst_index = program->instruction_count;
         if (!simple_emit_instruction(program, AIVM_OP_CALL, 0)) {
