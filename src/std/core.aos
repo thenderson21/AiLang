@@ -477,11 +477,26 @@ Program#std_core_p1 {
                 Var#std_core_v87(name=key)
               }
               Block#std_core_b47 {
-                Return#std_core_r36 {
-                  AttrValueString#std_core_avs6 {
-                    Call#std_core_c18(target=mapFieldValue) { Var#std_core_v88(name=field) }
-                    Lit#std_core_i49(value=0)
+                Let#std_core_l54(name=valueNode) {
+                  Call#std_core_c18(target=mapFieldValue) { Var#std_core_v88(name=field) }
+                }
+                If#std_core_if19 {
+                  Eq#std_core_eq13 {
+                    AttrValueKind#std_core_avk1 {
+                      Var#std_core_v154(name=valueNode)
+                      Lit#std_core_i49(value=0)
+                    }
+                    Lit#std_core_i64(value="string")
                   }
+                  Block#std_core_b70 {
+                    Return#std_core_r36 {
+                      AttrValueString#std_core_avs6 {
+                        Var#std_core_v154(name=valueNode)
+                        Lit#std_core_i65(value=0)
+                      }
+                    }
+                  }
+                  Block#std_core_b71 { Return#std_core_r52 { Var#std_core_v83(name=fallback) } }
                 }
               }
               Block#std_core_b48 {
@@ -541,11 +556,26 @@ Program#std_core_p1 {
                 Var#std_core_v102(name=key)
               }
               Block#std_core_b53 {
-                Return#std_core_r40 {
-                  AttrValueInt#std_core_avi1 {
-                    Call#std_core_c22(target=mapFieldValue) { Var#std_core_v103(name=field) }
-                    Lit#std_core_i52(value=0)
+                Let#std_core_l55(name=valueNode) {
+                  Call#std_core_c22(target=mapFieldValue) { Var#std_core_v103(name=field) }
+                }
+                If#std_core_if20 {
+                  Eq#std_core_eq14 {
+                    AttrValueKind#std_core_avk2 {
+                      Var#std_core_v155(name=valueNode)
+                      Lit#std_core_i52(value=0)
+                    }
+                    Lit#std_core_i66(value="int")
                   }
+                  Block#std_core_b72 {
+                    Return#std_core_r40 {
+                      AttrValueInt#std_core_avi1 {
+                        Var#std_core_v155(name=valueNode)
+                        Lit#std_core_i67(value=0)
+                      }
+                    }
+                  }
+                  Block#std_core_b73 { Return#std_core_r53 { Var#std_core_v98(name=fallback) } }
                 }
               }
               Block#std_core_b54 {
@@ -605,11 +635,26 @@ Program#std_core_p1 {
                 Var#std_core_v117(name=key)
               }
               Block#std_core_b59 {
-                Return#std_core_r44 {
-                  AttrValueBool#std_core_avb3 {
-                    Call#std_core_c26(target=mapFieldValue) { Var#std_core_v118(name=field) }
-                    Lit#std_core_i55(value=0)
+                Let#std_core_l56(name=valueNode) {
+                  Call#std_core_c26(target=mapFieldValue) { Var#std_core_v118(name=field) }
+                }
+                If#std_core_if21 {
+                  Eq#std_core_eq15 {
+                    AttrValueKind#std_core_avk3 {
+                      Var#std_core_v156(name=valueNode)
+                      Lit#std_core_i55(value=0)
+                    }
+                    Lit#std_core_i68(value="bool")
                   }
+                  Block#std_core_b74 {
+                    Return#std_core_r44 {
+                      AttrValueBool#std_core_avb3 {
+                        Var#std_core_v156(name=valueNode)
+                        Lit#std_core_i69(value=0)
+                      }
+                    }
+                  }
+                  Block#std_core_b75 { Return#std_core_r54 { Var#std_core_v113(name=fallback) } }
                 }
               }
               Block#std_core_b60 {

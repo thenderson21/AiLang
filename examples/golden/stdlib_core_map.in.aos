@@ -87,4 +87,44 @@ Program#gcoremap_p1 {
       }
     }
   }
+
+  Call#gcoremap_c17(target=io.print) {
+    ToString#gcoremap_ts1 {
+      ChildCount#gcoremap_cc1 {
+        Call#gcoremap_c18(target=mapGetNodeOr) {
+          Var#gcoremap_v10(name=state4)
+          Lit#gcoremap_s15(value="meta")
+          Map#gcoremap_m4 { }
+        }
+      }
+    }
+  }
+
+  Call#gcoremap_c19(target=io.print) {
+    Call#gcoremap_c20(target=mapGetStringOr) {
+      Var#gcoremap_v11(name=state4)
+      Lit#gcoremap_s16(value="count")
+      Lit#gcoremap_s17(value="fallback")
+    }
+  }
+
+  Call#gcoremap_c21(target=io.print) {
+    ToString#gcoremap_ts2 {
+      Call#gcoremap_c22(target=mapGetIntOr) {
+        Var#gcoremap_v12(name=state4)
+        Lit#gcoremap_s18(value="name")
+        Lit#gcoremap_i4(value=99)
+      }
+    }
+  }
+
+  Call#gcoremap_c23(target=io.print) {
+    ToString#gcoremap_ts3 {
+      Call#gcoremap_c24(target=mapGetBoolOr) {
+        Var#gcoremap_v13(name=state4)
+        Lit#gcoremap_s19(value="mode")
+        Lit#gcoremap_b4(value=true)
+      }
+    }
+  }
 }
