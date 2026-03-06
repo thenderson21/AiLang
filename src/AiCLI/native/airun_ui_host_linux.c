@@ -286,6 +286,19 @@ int native_host_ui_draw_rect(int64_t handle, int x, int y, int width, int height
     return 1;
 }
 
+int native_host_ui_draw_ellipse(int64_t handle, int x, int y, int width, int height, const char* color)
+{
+    NativeUiLinuxWindowSlot* slot = native_ui_linux_find_slot(handle);
+    unsigned long pixel;
+    if (slot == NULL || g_native_ui_display == NULL || width <= 0 || height <= 0) {
+        return 0;
+    }
+    pixel = native_ui_linux_parse_color(color, BlackPixel(g_native_ui_display, g_native_ui_screen));
+    XSetForeground(g_native_ui_display, slot->gc, pixel);
+    XFillArc(g_native_ui_display, slot->window, slot->gc, x, y, (unsigned int)width, (unsigned int)height, 0, 360 * 64);
+    return 1;
+}
+
 int native_host_ui_draw_text(int64_t handle, int x, int y, const char* text, const char* color, int font_size)
 {
     NativeUiLinuxWindowSlot* slot = native_ui_linux_find_slot(handle);
@@ -492,6 +505,7 @@ int native_host_ui_end_frame(int64_t handle) { (void)handle; return 0; }
 int native_host_ui_present(int64_t handle) { (void)handle; return 0; }
 int native_host_ui_wait_frame(int64_t handle) { (void)handle; return 0; }
 int native_host_ui_draw_rect(int64_t handle, int x, int y, int width, int height, const char* color) { (void)handle; (void)x; (void)y; (void)width; (void)height; (void)color; return 0; }
+int native_host_ui_draw_ellipse(int64_t handle, int x, int y, int width, int height, const char* color) { (void)handle; (void)x; (void)y; (void)width; (void)height; (void)color; return 0; }
 int native_host_ui_draw_text(int64_t handle, int x, int y, const char* text, const char* color, int font_size) { (void)handle; (void)x; (void)y; (void)text; (void)color; (void)font_size; return 0; }
 int native_host_ui_draw_line(int64_t handle, int x1, int y1, int x2, int y2, const char* color, int stroke_width) { (void)handle; (void)x1; (void)y1; (void)x2; (void)y2; (void)color; (void)stroke_width; return 0; }
 int native_host_ui_draw_path(int64_t handle, const char* path, const char* color, int stroke_width) { (void)handle; (void)path; (void)color; (void)stroke_width; return 0; }

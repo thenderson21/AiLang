@@ -79,6 +79,16 @@ int native_host_ui_draw_rect(int64_t handle, int x, int y, int width, int height
     (void)color;
     return 0;
 }
+int native_host_ui_draw_ellipse(int64_t handle, int x, int y, int width, int height, const char* color)
+{
+    (void)handle;
+    (void)x;
+    (void)y;
+    (void)width;
+    (void)height;
+    (void)color;
+    return 0;
+}
 int native_host_ui_draw_text(int64_t handle, int x, int y, const char* text, const char* color, int font_size)
 {
     (void)handle;
@@ -5201,6 +5211,64 @@ static int native_syscall_ui_draw_rect(
     return AIVM_SYSCALL_OK;
 }
 
+static int native_syscall_ui_draw_ellipse(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 6U ||
+        args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT ||
+        args[3].type != AIVM_VAL_INT || args[4].type != AIVM_VAL_INT || args[5].type != AIVM_VAL_STRING) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (!native_ui_runtime_is_active_handle(args[0].int_value)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (!native_host_ui_draw_ellipse(
+            args[0].int_value,
+            (int)args[1].int_value,
+            (int)args[2].int_value,
+            (int)args[3].int_value,
+            (int)args[4].int_value,
+            args[5].string_value)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_ui_draw_image(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 6U ||
+        args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT || args[2].type != AIVM_VAL_INT ||
+        args[3].type != AIVM_VAL_INT || args[4].type != AIVM_VAL_INT || args[5].type != AIVM_VAL_STRING) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (!native_ui_runtime_is_active_handle(args[0].int_value)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    result->type = AIVM_VAL_VOID;
+    return AIVM_SYSCALL_ERR_INVALID;
+}
+
 static int native_syscall_ui_draw_text(
     const char* target,
     const AivmValue* args,
@@ -7211,11 +7279,11 @@ static int run_native_compiled_program(
     bindings[32].target = "sys.ui.drawLine";
     bindings[32].handler = native_syscall_ui_draw_line;
     bindings[33].target = "sys.ui.drawEllipse";
-    bindings[33].handler = native_syscall_ui_draw_rect;
+    bindings[33].handler = native_syscall_ui_draw_ellipse;
     bindings[34].target = "sys.ui.drawPath";
     bindings[34].handler = native_syscall_ui_draw_path;
     bindings[35].target = "sys.ui.drawImage";
-    bindings[35].handler = native_syscall_ui_draw_rect;
+    bindings[35].handler = native_syscall_ui_draw_image;
     bindings[36].target = "sys.ui.getWindowSize";
     bindings[36].handler = native_syscall_ui_get_window_size;
     bindings[37].target = "sys.ui.waitFrame";
