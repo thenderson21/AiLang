@@ -4601,12 +4601,21 @@ static int native_syscall_net_start_op(
     size_t arg_count,
     AivmValue* result)
 {
+    int is_supported_target;
     int64_t op_handle;
     NativeNetAsyncState* op;
     AivmValue inner_result = aivm_value_void();
     int rc = AIVM_SYSCALL_ERR_INVALID;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    is_supported_target =
+        strcmp(target, "sys.net.tcp.connectStart") == 0 ||
+        strcmp(target, "sys.net.tcp.readStart") == 0 ||
+        strcmp(target, "sys.net.tcp.writeStart") == 0;
+    if (!is_supported_target) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
     }
     op_handle = native_net_async_allocate();
     if (op_handle < 0) {
@@ -4639,8 +4648,6 @@ static int native_syscall_net_start_op(
         } else {
             native_net_async_set_failure(op, "write_failed");
         }
-    } else {
-        native_net_async_set_failure(op, "unsupported_start");
     }
     *result = aivm_value_int(op_handle);
     return AIVM_SYSCALL_OK;
