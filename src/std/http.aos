@@ -332,6 +332,238 @@ Program#std_http_p1 {
     }
   }
 
+  Let#std_http_l29b(name=httpFindCrlfCrlf) {
+    Fn#std_http_f20b(params=text,start) {
+      Block#std_http_b26b {
+        Return#std_http_r23b {
+          Call#std_http_c11b(target=find) {
+            Var#std_http_v59b(name=text)
+            Lit#std_http_i46b(value="\r\n\r\n")
+            Var#std_http_v59c(name=start)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l29c(name=httpFindCrlf) {
+    Fn#std_http_f20c(params=text,start) {
+      Block#std_http_b26c {
+        Return#std_http_r23c {
+          Call#std_http_c11c(target=find) {
+            Var#std_http_v59d(name=text)
+            Lit#std_http_i46c(value="\r\n")
+            Var#std_http_v59e(name=start)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l29d(name=httpResponseBody) {
+    Fn#std_http_f20d(params=responseText) {
+      Block#std_http_b26d {
+        Let#std_http_l29e(name=marker) {
+          Call#std_http_c11d(target=httpFindCrlfCrlf) {
+            Var#std_http_v59f(name=responseText)
+            Lit#std_http_i46d(value=0)
+          }
+        }
+        If#std_http_if61d {
+          Eq#std_http_eq61d { Var#std_http_v59g(name=marker) Lit#std_http_i46e(value=-1) }
+          Block#std_http_b26e { Return#std_http_r23d { Lit#std_http_i46f(value="") } }
+          Block#std_http_b26f {
+            Return#std_http_r23e {
+              Call#std_http_c11e(target=substring) {
+                Var#std_http_v59h(name=responseText)
+                Add#std_http_add1b { Var#std_http_v59i(name=marker) Lit#std_http_i46g(value=4) }
+                Lit#std_http_i46h(value=2147483647)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l29f(name=httpResponseStatusCode) {
+    Fn#std_http_f20e(params=responseText) {
+      Block#std_http_b26g {
+        Let#std_http_l29g(name=lineEnd) {
+          Call#std_http_c11f(target=httpFindCrlf) {
+            Var#std_http_v59j(name=responseText)
+            Lit#std_http_i46i(value=0)
+          }
+        }
+        If#std_http_if61e {
+          Eq#std_http_eq61e { Var#std_http_v59k(name=lineEnd) Lit#std_http_i46j(value=-1) }
+          Block#std_http_b26h { Return#std_http_r23f { Lit#std_http_i46k(value=0) } }
+          Block#std_http_b26i {
+            Let#std_http_l29h(name=statusLine) {
+              Call#std_http_c11g(target=substring) {
+                Var#std_http_v59l(name=responseText)
+                Lit#std_http_i46l(value=0)
+                Var#std_http_v59m(name=lineEnd)
+              }
+            }
+            Let#std_http_l29i(name=codeText) {
+              Call#std_http_c11h(target=substring) {
+                Var#std_http_v59n(name=statusLine)
+                Lit#std_http_i46m(value=9)
+                Lit#std_http_i46n(value=3)
+              }
+            }
+            Return#std_http_r23g { ToInt#std_http_ti1 { Var#std_http_v59o(name=codeText) } }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l29fa(name=httpCollectUntilCrLf) {
+    Fn#std_http_f20ea(params=text,start,acc) {
+      Block#std_http_b26ga {
+        If#std_http_if61ea {
+          Eq#std_http_eq61ea {
+            Call#std_http_c11ha(target=substring) {
+              Var#std_http_v59oa(name=text)
+              Var#std_http_v59ob(name=start)
+              Lit#std_http_i46na(value=2)
+            }
+            Lit#std_http_i46nb(value="\r\n")
+          }
+          Block#std_http_b26gb { Return#std_http_r23ga { Var#std_http_v59oc(name=acc) } }
+          Block#std_http_b26gc {
+            Return#std_http_r23gb {
+              Call#std_http_c11hb(target=httpCollectUntilCrLf) {
+                Var#std_http_v59od(name=text)
+                Add#std_http_add1h { Var#std_http_v59oe(name=start) Lit#std_http_i46nc(value=1) }
+                StrConcat#std_http_s10a {
+                  Var#std_http_v59of(name=acc)
+                  Call#std_http_c11hc(target=substring) {
+                    Var#std_http_v59og(name=text)
+                    Var#std_http_v59oh(name=start)
+                    Lit#std_http_i46nd(value=1)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l29j(name=httpResponseHeaderGetAt) {
+    Fn#std_http_f20f(params=text,key,start,fallback) {
+      Block#std_http_b26j {
+        Let#std_http_l29k(name=lineEnd) {
+          Call#std_http_c11i(target=httpFindCrlf) {
+            Var#std_http_v59p(name=text)
+            Var#std_http_v59q(name=start)
+          }
+        }
+        If#std_http_if61f {
+          Eq#std_http_eq61f { Var#std_http_v59r(name=lineEnd) Lit#std_http_i46o(value=-1) }
+          Block#std_http_b26k { Return#std_http_r23h { Var#std_http_v59s(name=fallback) } }
+          Block#std_http_b26l {
+            If#std_http_if61g {
+              Eq#std_http_eq61g { Var#std_http_v59t(name=lineEnd) Var#std_http_v59u(name=start) }
+              Block#std_http_b26m { Return#std_http_r23i { Var#std_http_v59v(name=fallback) } }
+              Block#std_http_b26n {
+                Let#std_http_l29l(name=line) {
+                  Call#std_http_c11j(target=httpCollectUntilCrLf) {
+                    Var#std_http_v59w(name=text)
+                    Var#std_http_v59x(name=start)
+                    Lit#std_http_i46p(value="")
+                  }
+                }
+                Let#std_http_l29m(name=sep) {
+                  Call#std_http_c11k(target=find) {
+                    Var#std_http_v59z(name=line)
+                    Lit#std_http_i46r(value=": ")
+                    Lit#std_http_i46s(value=0)
+                  }
+                }
+                If#std_http_if61h {
+                  Eq#std_http_eq61h { Var#std_http_v60a(name=sep) Lit#std_http_i46t(value=-1) }
+                  Block#std_http_b26o {
+                    Return#std_http_r23j {
+                      Call#std_http_c11l(target=httpResponseHeaderGetAt) {
+                        Var#std_http_v60b(name=text)
+                        Var#std_http_v60c(name=key)
+                        Add#std_http_add1d { Var#std_http_v60d(name=lineEnd) Lit#std_http_i46u(value=2) }
+                        Var#std_http_v60e(name=fallback)
+                      }
+                    }
+                  }
+                  Block#std_http_b26p {
+                    Let#std_http_l29n(name=headerKey) {
+                      Call#std_http_c11m(target=substring) {
+                        Var#std_http_v60f(name=line)
+                        Lit#std_http_i46v(value=0)
+                        Var#std_http_v60g(name=sep)
+                      }
+                    }
+                    If#std_http_if61i {
+                      Eq#std_http_eq61i { Var#std_http_v60h(name=headerKey) Var#std_http_v60i(name=key) }
+                      Block#std_http_b26q {
+                        Return#std_http_r23k {
+                          Call#std_http_c11n(target=substring) {
+                            Var#std_http_v60j(name=line)
+                            Add#std_http_add1e { Var#std_http_v60k(name=sep) Lit#std_http_i46w(value=2) }
+                            Lit#std_http_i46x(value=2147483647)
+                          }
+                        }
+                      }
+                      Block#std_http_b26r {
+                        Return#std_http_r23l {
+                          Call#std_http_c11o(target=httpResponseHeaderGetAt) {
+                            Var#std_http_v60l(name=text)
+                            Var#std_http_v60m(name=key)
+                            Add#std_http_add1f { Var#std_http_v60n(name=lineEnd) Lit#std_http_i46y(value=2) }
+                            Var#std_http_v60o(name=fallback)
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l29o(name=httpResponseHeaderGet) {
+    Fn#std_http_f20g(params=responseText,key,fallback) {
+      Block#std_http_b26s {
+        Let#std_http_l29p(name=lineEnd) {
+          Call#std_http_c11p(target=httpFindCrlf) {
+            Var#std_http_v60p(name=responseText)
+            Lit#std_http_i46z(value=0)
+          }
+        }
+        If#std_http_if61j {
+          Eq#std_http_eq61j { Var#std_http_v60q(name=lineEnd) Lit#std_http_i46aa(value=-1) }
+          Block#std_http_b26t { Return#std_http_r23m { Var#std_http_v60r(name=fallback) } }
+          Block#std_http_b26u {
+            Return#std_http_r23n {
+              Call#std_http_c11q(target=httpResponseHeaderGetAt) {
+                Var#std_http_v60s(name=responseText)
+                Var#std_http_v60t(name=key)
+                Add#std_http_add1g { Var#std_http_v60u(name=lineEnd) Lit#std_http_i46ab(value=2) }
+                Var#std_http_v60v(name=fallback)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   Let#std_http_l30(name=httpRequest) {
     Fn#std_http_f21(params=method,host,port,path,headers,body,maxBytes) {
       Block#std_http_b27 {
@@ -764,6 +996,39 @@ Program#std_http_p1 {
     }
   }
 
+  Let#std_http_l54(name=httpRequestAwaitBody) {
+    Fn#std_http_f28(params=state) {
+      Block#std_http_b76 {
+        Let#std_http_l65(name=raw) { Call#std_http_c109(target=httpRequestAwait) { Var#std_http_v182(name=state) } }
+        Return#std_http_r52 { Call#std_http_c110(target=httpResponseBody) { Var#std_http_v183(name=raw) } }
+      }
+    }
+  }
+
+  Let#std_http_l66(name=httpRequestAwaitStatusCode) {
+    Fn#std_http_f29(params=state) {
+      Block#std_http_b77 {
+        Let#std_http_l67(name=raw) { Call#std_http_c111(target=httpRequestAwait) { Var#std_http_v184(name=state) } }
+        Return#std_http_r53 { Call#std_http_c112(target=httpResponseStatusCode) { Var#std_http_v185(name=raw) } }
+      }
+    }
+  }
+
+  Let#std_http_l68(name=httpRequestAwaitHeaderGet) {
+    Fn#std_http_f30(params=state,key,fallback) {
+      Block#std_http_b78 {
+        Let#std_http_l69(name=raw) { Call#std_http_c113(target=httpRequestAwait) { Var#std_http_v186(name=state) } }
+        Return#std_http_r54 {
+          Call#std_http_c114(target=httpResponseHeaderGet) {
+            Var#std_http_v187(name=raw)
+            Var#std_http_v188(name=key)
+            Var#std_http_v189(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
   Export#std_http_e1(name=httpHeaders)
   Export#std_http_e2(name=httpQuery)
   Export#std_http_e3(name=httpPath)
@@ -790,4 +1055,10 @@ Program#std_http_p1 {
   Export#std_http_e24(name=httpRequestPollWriting)
   Export#std_http_e25(name=httpRequestPollReading)
   Export#std_http_e26(name=httpRequestRemaining)
+  Export#std_http_e27(name=httpResponseBody)
+  Export#std_http_e28(name=httpResponseStatusCode)
+  Export#std_http_e29(name=httpResponseHeaderGet)
+  Export#std_http_e30(name=httpRequestAwaitBody)
+  Export#std_http_e31(name=httpRequestAwaitStatusCode)
+  Export#std_http_e32(name=httpRequestAwaitHeaderGet)
 }

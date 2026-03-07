@@ -87,7 +87,7 @@ Program#cf_p1 {
       Block#cf_b0 {
         Let#cf_u_l9(name=cityEncoded) { Call#cf_u_c13(target=replaceSpaces) { Var#cf_u_v24(name=city) } }
         Return#cf_r0 {
-          Call#cf_c900(target=httpRequestAwait) {
+          Call#cf_c900(target=httpRequestAwaitBody) {
             Call#cf_c0(target=httpRequest) {
               Lit#cf_i20(value="GET")
               Lit#cf_i21(value="wttr.in")
