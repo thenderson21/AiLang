@@ -74,8 +74,8 @@ production stdlib contract.
 - `src/std/ui_input.aos`
   - Useful, but profile-specific and not required for non-UI programs.
 - `src/std/platform.aos`
-  - Redundant with `std.system.platform` and should be removed instead of kept
-    as an alias.
+  - Redundant with `std.system.platform` and must not remain in the shipped
+    stdlib surface as an alias.
 
 ## Compiler namespace status
 

@@ -3,6 +3,9 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MANIFEST_FILE="${ROOT_DIR}/Docs/Stdlib-Baseline-Manifest.tsv"
+FORBIDDEN_STDLIB_MODULES=(
+  "src/std/platform.aos"
+)
 
 if [[ ! -f "${MANIFEST_FILE}" ]]; then
   echo "missing stdlib baseline manifest: ${MANIFEST_FILE}" >&2
@@ -13,6 +16,13 @@ if ! command -v rg >/dev/null 2>&1; then
   echo "stdlib conformance requires rg" >&2
   exit 1
 fi
+
+for forbidden_module in "${FORBIDDEN_STDLIB_MODULES[@]}"; do
+  if [[ -e "${ROOT_DIR}/${forbidden_module}" ]]; then
+    echo "forbidden stdlib duplicate surface present: ${forbidden_module}" >&2
+    exit 1
+  fi
+done
 
 manifest_module_count=0
 
