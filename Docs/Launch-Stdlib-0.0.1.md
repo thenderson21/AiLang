@@ -43,12 +43,15 @@ Reason:
 - `src/std/process.aos`
 - `src/std/fs.aos`
 - `src/std/time.aos`
+- `src/std/debug.aos`
 
 Reason:
 
 - These cover platform identity, process args/env, filesystem, and time.
 - They are effectful wrappers around `sys.*`, but they are still baseline
   because real programs need a stable standard entrypoint for these concerns.
+- `std.debug` is baseline because a production language must provide a standard,
+  supported debugging surface for diagnostics, tracing, replay, and validation.
 
 ### Tier 3: Network and service baseline
 
@@ -66,8 +69,6 @@ Reason:
 These libraries may remain in the repo, but they are not part of the minimum
 production stdlib contract.
 
-- `src/std/debug.aos`
-  - Debug/developer tooling only.
 - `src/std/ui_input.aos`
   - Useful, but profile-specific and not required for non-UI programs.
 - `src/std/platform.aos`
@@ -107,6 +108,8 @@ Each production-baseline module must meet all of these:
 - Behaves deterministically.
 - Has target-specific unsupported behavior documented when capability-limited.
 - Has coverage through library tests, golden coverage, or sample usage.
+- For debugging libraries, has clear production behavior for capture, replay,
+  and diagnostic emission.
 
 ## Immediate cleanup targets
 
@@ -119,6 +122,8 @@ Each production-baseline module must meet all of these:
    profiles.
 5. Add conformance tests so the baseline is enforced by the repo, not just by
    documentation.
+6. Treat `std.debug` as a required production surface, not a best-effort dev
+   helper.
 
 ## JSON contract
 

@@ -25,6 +25,11 @@ This branch exists to turn the baseline in
 
 ## Phase 3: Library quality
 
+1. Review `std.debug.aos` for production-readiness:
+   - stable debug/dump surface
+   - replay/capture expectations
+   - target capability notes
+   - contract distinction between production diagnostics and debug-only internals
 1. Review `std.http.aos` for production-readiness:
    - request/response helpers
    - error shape
@@ -51,4 +56,5 @@ This branch is complete when:
 - the production baseline is explicitly documented
 - baseline modules are enforced by tests or conformance checks
 - samples prefer `std.*`
+- `std.debug` is treated as required production surface
 - `compiler.*` is no longer acting as an app-library dumping ground
