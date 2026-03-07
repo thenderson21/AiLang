@@ -1,0 +1,16 @@
+Program#std_image_p1 {
+  Let#std_image_l1(name=decodeToRgbaBase64) {
+    Fn#std_image_f1(params=data,mimeType) {
+      Block#std_image_b1 {
+        Return#std_image_r1 {
+          Call#std_image_c1(target=sys.image.decodeToRgbaBase64) {
+            Var#std_image_v1(name=data)
+            Var#std_image_v2(name=mimeType)
+          }
+        }
+      }
+    }
+  }
+
+  Export#std_image_e1(name=decodeToRgbaBase64)
+}

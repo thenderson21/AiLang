@@ -50,7 +50,9 @@ extern int kill(pid_t pid, int sig);
 #ifdef __APPLE__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#include <CoreGraphics/CoreGraphics.h>
 #include <CoreFoundation/CoreFoundation.h>
+#include <ImageIO/ImageIO.h>
 #include <Security/SecureTransport.h>
 #include <Security/Security.h>
 #pragma clang diagnostic pop
@@ -119,6 +121,11 @@ static int native_bytes_from_base64(
     size_t output_capacity,
     size_t* out_len);
 static int native_host_open_default(const char* target);
+static int native_image_decode_to_rgba_base64(
+    const uint8_t* input,
+    size_t input_len,
+    const char* mime_type,
+    AivmValue* result);
 static int native_syscall_net_start_op(
     const char* target,
     const AivmValue* args,
@@ -6864,6 +6871,133 @@ static int native_bytes_to_base64(
     return 1;
 }
 
+static int native_rgba_base64_capacity(size_t rgba_length, size_t* out_capacity)
+{
+    size_t capacity;
+    if (out_capacity == NULL) {
+        return 0;
+    }
+    if (rgba_length > ((SIZE_MAX - 3U) / 4U) * 3U) {
+        return 0;
+    }
+    capacity = ((rgba_length + 2U) / 3U) * 4U;
+    if (capacity >= SIZE_MAX) {
+        return 0;
+    }
+    *out_capacity = capacity + 1U;
+    return 1;
+}
+
+static int native_image_decode_to_rgba_base64(
+    const uint8_t* input,
+    size_t input_len,
+    const char* mime_type,
+    AivmValue* result)
+{
+    (void)mime_type;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (input == NULL || input_len == 0U) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+#ifdef __APPLE__
+    CFDataRef data = NULL;
+    CGImageSourceRef source = NULL;
+    CGImageRef image = NULL;
+    CGColorSpaceRef color_space = NULL;
+    CGContextRef context = NULL;
+    uint8_t* rgba = NULL;
+    size_t width;
+    size_t height;
+    size_t rgba_length;
+    size_t base64_capacity;
+    int status = AIVM_SYSCALL_ERR_INVALID;
+
+    data = CFDataCreate(kCFAllocatorDefault, input, (CFIndex)input_len);
+    if (data == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    source = CGImageSourceCreateWithData(data, NULL);
+    if (source == NULL) {
+        goto cleanup;
+    }
+    image = CGImageSourceCreateImageAtIndex(source, 0U, NULL);
+    if (image == NULL) {
+        goto cleanup;
+    }
+    width = (size_t)CGImageGetWidth(image);
+    height = (size_t)CGImageGetHeight(image);
+    if (width == 0U || height == 0U) {
+        goto cleanup;
+    }
+    if (width > (SIZE_MAX / 4U) || height > (SIZE_MAX / (width * 4U))) {
+        goto cleanup;
+    }
+    rgba_length = width * height * 4U;
+    rgba = (uint8_t*)malloc(rgba_length);
+    if (rgba == NULL) {
+        goto cleanup;
+    }
+    memset(rgba, 0, rgba_length);
+    color_space = CGColorSpaceCreateDeviceRGB();
+    if (color_space == NULL) {
+        goto cleanup;
+    }
+    context = CGBitmapContextCreate(
+        rgba,
+        width,
+        height,
+        8U,
+        width * 4U,
+        color_space,
+        kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
+    if (context == NULL) {
+        goto cleanup;
+    }
+    CGContextSetBlendMode(context, kCGBlendModeCopy);
+    CGContextDrawImage(context, CGRectMake(0.0, 0.0, (CGFloat)width, (CGFloat)height), image);
+    if (!native_rgba_base64_capacity(rgba_length, &base64_capacity)) {
+        goto cleanup;
+    }
+    if (!native_string_scratch_ensure_capacity(base64_capacity)) {
+        goto cleanup;
+    }
+    if (!native_bytes_to_base64(rgba, rgba_length, g_native_string_scratch, base64_capacity)) {
+        goto cleanup;
+    }
+    *result = aivm_value_string(g_native_string_scratch);
+    status = AIVM_SYSCALL_OK;
+
+cleanup:
+    if (context != NULL) {
+        CGContextRelease(context);
+    }
+    if (color_space != NULL) {
+        CGColorSpaceRelease(color_space);
+    }
+    if (image != NULL) {
+        CGImageRelease(image);
+    }
+    if (source != NULL) {
+        CFRelease(source);
+    }
+    if (data != NULL) {
+        CFRelease(data);
+    }
+    free(rgba);
+    if (status != AIVM_SYSCALL_OK) {
+        result->type = AIVM_VAL_VOID;
+    }
+    return status;
+#else
+    result->type = AIVM_VAL_VOID;
+    return AIVM_SYSCALL_ERR_INVALID;
+#endif
+}
+
 static int native_is_valid_utf8_without_nul(const uint8_t* data, size_t len)
 {
     size_t i = 0U;
@@ -7706,6 +7840,34 @@ static int native_syscall_bytes_from_utf8_string(
     return AIVM_SYSCALL_OK;
 }
 
+static int native_syscall_image_decode_to_rgba_base64(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 2U || args == NULL ||
+        args[0].type != AIVM_VAL_BYTES ||
+        args[1].type != AIVM_VAL_STRING ||
+        args[1].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (args[0].bytes_value.length > 0U && args[0].bytes_value.data == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    return native_image_decode_to_rgba_base64(
+        args[0].bytes_value.data,
+        args[0].bytes_value.length,
+        args[1].string_value,
+        result);
+}
+
 static int native_syscall_str_from_codepoint(
     const char* target,
     const AivmValue* args,
@@ -8419,7 +8581,7 @@ static int run_native_compiled_program(
     size_t process_argv_count,
     const NativeDebugOptions* debug_options)
 {
-    AivmSyscallBinding bindings[103];
+    AivmSyscallBinding bindings[104];
     AivmVm vm;
     int ok;
     int exit_code = 0;
@@ -8649,10 +8811,12 @@ static int run_native_compiled_program(
     bindings[100].handler = native_syscall_debug_capture_frame_end;
     bindings[101].target = "sys.host.openDefault";
     bindings[101].handler = native_syscall_host_open_default;
+    bindings[103].target = "sys.image.decodeToRgbaBase64";
+    bindings[103].handler = native_syscall_image_decode_to_rgba_base64;
     ok = aivm_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        103U,
+        104U,
         process_argv,
         process_argv_count,
         &vm);

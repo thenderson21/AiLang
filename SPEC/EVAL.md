@@ -246,6 +246,9 @@ This file is normative for `aic run` evaluation behavior.
 - `rgbaBase64` encodes raw row-major RGBA8 bytes (`width * height * 4` bytes).
 - Host responsibility is mechanical rendering only (no fit/crop/layout semantics).
 - Image composition semantics (sizing policy, alignment, clipping policy choices) are library-owned.
+- `sys.image.decodeToRgbaBase64(bytes, mimeType)` is a host decode primitive.
+- Host owns compressed image decoding mechanics; libraries own fetch, cache, and render policy.
+- Unsupported targets or undecodable payloads must fail explicitly through the syscall boundary.
 
 ## Result Emission
 

@@ -70,7 +70,7 @@ if [[ "${TARGET_PLATFORM}" == "osx" ]]; then
     CC_EXTRA=(-arch arm64)
   fi
   UI_HOST_SRC="${NATIVE_UI_HOST_SRC}"
-  LD_EXTRA=(-framework AppKit -framework Foundation -framework Security -framework CoreFoundation)
+  LD_EXTRA=(-framework AppKit -framework Foundation -framework Security -framework CoreFoundation -framework CoreGraphics -framework ImageIO)
 elif [[ "${TARGET_PLATFORM}" == "linux" && "${TARGET_ARCH}" == "arm64" && "${HOST_ARCH}" == "x64" ]]; then
   UI_HOST_SRC="${NATIVE_UI_HOST_LINUX_SRC}"
   LD_EXTRA=(-lX11)

@@ -83,6 +83,9 @@ This file is normative for semantic validation used by `aic check` (default path
 - args are `(bytes)` and returns string.
 - `sys.bytes.toUtf8String(data)` contract:
 - args are `(bytes)` and returns string when payload is valid UTF-8, else `""`.
+- `sys.image.decodeToRgbaBase64(data,mimeType)` contract:
+- args are `(bytes, string)` and returns base64-encoded row-major RGBA8 bytes suitable for `sys.ui.drawImage`.
+- unsupported hosts or decode failures must surface as typed syscall failure, never as a silent empty image.
 
 - `sys.worker.start(taskName,payload)` contract:
 - args are `(string, string)` and return int worker handle.
