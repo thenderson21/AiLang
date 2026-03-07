@@ -77,8 +77,12 @@ This file is normative for semantic validation used by `aic check` (default path
 - args are `(bytes, bytes)` and returns bytes.
 - `sys.bytes.fromBase64(text)` contract:
 - args are `(string)` and returns bytes.
+- `sys.bytes.fromUtf8String(text)` contract:
+- args are `(string)` and returns UTF-8 bytes.
 - `sys.bytes.toBase64(data)` contract:
 - args are `(bytes)` and returns string.
+- `sys.bytes.toUtf8String(data)` contract:
+- args are `(bytes)` and returns string when payload is valid UTF-8, else `""`.
 
 - `sys.worker.start(taskName,payload)` contract:
 - args are `(string, string)` and return int worker handle.

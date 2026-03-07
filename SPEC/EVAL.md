@@ -260,6 +260,8 @@ This file is normative for `aic run` evaluation behavior.
 - `sys.bytes.at(data,index)` returns `-1` when `index` is out of range.
 - `sys.bytes.slice(data,start,length)` clamps start/length and never throws for range overflow.
 - `sys.bytes.fromBase64(text)` uses strict base64 validation; invalid input is syscall error.
+- `sys.bytes.fromUtf8String(text)` returns the raw UTF-8 byte sequence for the input string.
+- `sys.bytes.toUtf8String(data)` returns `""` when the payload is not valid UTF-8.
 
 ## VM Memory + Node GC Contract
 

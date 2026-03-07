@@ -71,6 +71,14 @@ Program#std_bytes_p1 {
     }
   }
 
+  Let#std_bytes_l8(name=fromUtf8String) {
+    Fn#std_bytes_f8(params=text) {
+      Block#std_bytes_b8 {
+        Return#std_bytes_r8 { Call#std_bytes_c8(target=sys.bytes.fromUtf8String) { Var#std_bytes_v12(name=text) } }
+      }
+    }
+  }
+
   Export#std_bytes_e1(name=length)
   Export#std_bytes_e2(name=at)
   Export#std_bytes_e3(name=slice)
@@ -78,4 +86,5 @@ Program#std_bytes_p1 {
   Export#std_bytes_e5(name=fromBase64)
   Export#std_bytes_e6(name=toBase64)
   Export#std_bytes_e7(name=toUtf8String)
+  Export#std_bytes_e8(name=fromUtf8String)
 }

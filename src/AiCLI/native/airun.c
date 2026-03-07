@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <time.h>
+#include <stdint.h>
 
 #ifdef _WIN32
 #include <direct.h>
@@ -44,6 +45,15 @@ extern int kill(pid_t pid, int sig);
 #endif
 #define AIVM_PATH_SEP '/'
 #define AIVM_EXE_EXT ""
+#endif
+
+#ifdef __APPLE__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#include <CoreFoundation/CoreFoundation.h>
+#include <Security/SecureTransport.h>
+#include <Security/Security.h>
+#pragma clang diagnostic pop
 #endif
 
 #include "aivm_c_api.h"
@@ -109,7 +119,14 @@ static int native_bytes_from_base64(
     size_t output_capacity,
     size_t* out_len);
 static int native_host_open_default(const char* target);
+static int native_syscall_net_start_op(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result);
+#ifdef AIRUN_TEST_FAKE_OPEN_URL
 static char g_native_open_url_test_scratch[1024];
+#endif
 
 #define AIRUN_NATIVE_CACHE_SCHEMA "airun-native-cache-v2"
 #define AIRUN_NATIVE_COMPILER_FINGERPRINT "native-compiler-2026-03-05-call-fixup-order-v2"
@@ -2128,7 +2145,8 @@ typedef enum {
     NATIVE_NET_HANDLE_KIND_NONE = 0,
     NATIVE_NET_HANDLE_KIND_TCP_LISTENER = 1,
     NATIVE_NET_HANDLE_KIND_TCP_STREAM = 2,
-    NATIVE_NET_HANDLE_KIND_UDP_SOCKET = 3
+    NATIVE_NET_HANDLE_KIND_UDP_SOCKET = 3,
+    NATIVE_NET_HANDLE_KIND_TCP_TLS_STREAM = 4
 } NativeNetHandleKind;
 
 typedef struct NativeNetHandleState
@@ -2136,6 +2154,7 @@ typedef struct NativeNetHandleState
     int used;
     NativeNetHandleKind kind;
     NativeSocket socket;
+    void* tls_state;
 } NativeNetHandleState;
 
 typedef struct NativeNetAsyncState
@@ -2151,8 +2170,21 @@ typedef struct NativeNetAsyncState
     int64_t result_int;
     uint8_t* result_bytes;
     size_t result_bytes_len;
+    int use_tls;
+    char host[256];
     char error[128];
 } NativeNetAsyncState;
+
+#ifdef __APPLE__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+typedef struct NativeTlsStreamState
+{
+    SSLContextRef context;
+} NativeTlsStreamState;
+static OSStatus g_native_tls_last_status = noErr;
+#pragma clang diagnostic pop
+#endif
 
 static NativeNetHandleState g_native_net_handles[NATIVE_NET_HANDLE_CAPACITY];
 static NativeNetAsyncState g_native_net_async_ops[NATIVE_NET_ASYNC_CAPACITY];
@@ -2161,6 +2193,141 @@ static char g_native_net_text_scratch[NATIVE_NET_BYTES_CHUNK];
 static char g_native_net_host_scratch[64];
 static int native_net_handle_close(int64_t handle);
 static void native_net_async_release_pending_bytes(NativeNetAsyncState* op);
+static int native_net_socket_would_block(void);
+
+#ifdef __APPLE__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+static OSStatus native_tls_socket_read(SSLConnectionRef connection, void* data, size_t* data_length)
+{
+    ssize_t read_count;
+    NativeSocket socket_fd;
+    if (data_length == NULL) {
+        return errSecParam;
+    }
+    socket_fd = (NativeSocket)(intptr_t)connection;
+    read_count = recv(socket_fd, data, *data_length, 0);
+    if (read_count > 0) {
+        *data_length = (size_t)read_count;
+        return noErr;
+    }
+    if (read_count == 0) {
+        *data_length = 0U;
+        return errSSLClosedGraceful;
+    }
+    if (native_net_socket_would_block()) {
+        *data_length = 0U;
+        return errSSLWouldBlock;
+    }
+    *data_length = 0U;
+    return errSecIO;
+}
+
+static OSStatus native_tls_socket_write(SSLConnectionRef connection, const void* data, size_t* data_length)
+{
+    ssize_t write_count;
+    NativeSocket socket_fd;
+    if (data_length == NULL) {
+        return errSecParam;
+    }
+    socket_fd = (NativeSocket)(intptr_t)connection;
+    write_count = send(socket_fd, data, *data_length, 0);
+    if (write_count >= 0) {
+        *data_length = (size_t)write_count;
+        return noErr;
+    }
+    if (native_net_socket_would_block()) {
+        *data_length = 0U;
+        return errSSLWouldBlock;
+    }
+    *data_length = 0U;
+    return errSecIO;
+}
+
+static void native_tls_stream_destroy(NativeTlsStreamState* tls_state)
+{
+    if (tls_state == NULL) {
+        return;
+    }
+    if (tls_state->context != NULL) {
+        CFRelease(tls_state->context);
+        tls_state->context = NULL;
+    }
+    free(tls_state);
+}
+
+static NativeTlsStreamState* native_tls_stream_create(NativeSocket socket_fd, const char* host)
+{
+    NativeTlsStreamState* tls_state;
+    OSStatus status;
+    tls_state = (NativeTlsStreamState*)calloc(1U, sizeof(*tls_state));
+    if (tls_state == NULL) {
+        g_native_tls_last_status = errSecAllocate;
+        return NULL;
+    }
+    tls_state->context = SSLCreateContext(kCFAllocatorDefault, kSSLClientSide, kSSLStreamType);
+    if (tls_state->context == NULL) {
+        g_native_tls_last_status = errSecAllocate;
+        native_tls_stream_destroy(tls_state);
+        return NULL;
+    }
+    status = SSLSetIOFuncs(tls_state->context, native_tls_socket_read, native_tls_socket_write);
+    if (status == noErr) {
+        status = SSLSetConnection(tls_state->context, (SSLConnectionRef)(intptr_t)socket_fd);
+    }
+    if (status == noErr && host != NULL && host[0] != '\0') {
+        status = SSLSetPeerDomainName(tls_state->context, host, strlen(host));
+    }
+    if (status == noErr) {
+        status = SSLSetProtocolVersionMin(tls_state->context, kTLSProtocol12);
+    }
+    if (status != noErr) {
+        g_native_tls_last_status = status;
+        native_tls_stream_destroy(tls_state);
+        return NULL;
+    }
+    g_native_tls_last_status = noErr;
+    return tls_state;
+}
+
+static int native_tls_stream_handshake(NativeNetHandleState* state)
+{
+    NativeTlsStreamState* tls_state;
+    OSStatus status;
+    if (state == NULL || state->kind != NATIVE_NET_HANDLE_KIND_TCP_TLS_STREAM || state->tls_state == NULL) {
+        return -1;
+    }
+    tls_state = (NativeTlsStreamState*)state->tls_state;
+    for (;;) {
+        status = SSLHandshake(tls_state->context);
+        if (status == noErr) {
+            g_native_tls_last_status = noErr;
+            return 1;
+        }
+        if (status == errSSLWouldBlock) {
+            g_native_tls_last_status = status;
+            return 0;
+        }
+        if (status == errSSLServerAuthCompleted) {
+            SecTrustRef trust = NULL;
+            if (SSLCopyPeerTrust(tls_state->context, &trust) != noErr || trust == NULL) {
+                g_native_tls_last_status = status;
+                return -1;
+            }
+            if (!SecTrustEvaluateWithError(trust, NULL)) {
+                CFRelease(trust);
+                g_native_tls_last_status = errSSLXCertChainInvalid;
+                return -1;
+            }
+            CFRelease(trust);
+            continue;
+        }
+        g_native_tls_last_status = status;
+        return -1;
+    }
+}
+#pragma clang diagnostic pop
+#endif
 
 static void native_worker_init_slot(NativeWorkerState* worker)
 {
@@ -2308,12 +2475,9 @@ static void native_net_reset(void)
 {
     size_t i;
     for (i = 0U; i < NATIVE_NET_HANDLE_CAPACITY; i += 1U) {
-        if (g_native_net_handles[i].used && g_native_net_handles[i].socket != NATIVE_INVALID_SOCKET) {
-            native_socket_close(g_native_net_handles[i].socket);
+        if (g_native_net_handles[i].used) {
+            (void)native_net_handle_close((int64_t)(i + 1U));
         }
-        g_native_net_handles[i].used = 0;
-        g_native_net_handles[i].kind = NATIVE_NET_HANDLE_KIND_NONE;
-        g_native_net_handles[i].socket = NATIVE_INVALID_SOCKET;
     }
     for (i = 0U; i < NATIVE_NET_ASYNC_CAPACITY; i += 1U) {
         native_net_async_release_pending_bytes(&g_native_net_async_ops[i]);
@@ -2361,6 +2525,109 @@ static int native_net_socket_would_block(void)
 #else
     return errno == EWOULDBLOCK || errno == EAGAIN || errno == EINPROGRESS || errno == EALREADY;
 #endif
+}
+
+#ifdef __APPLE__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#endif
+static int native_net_stream_read(
+    NativeNetHandleState* state,
+    uint8_t* bytes,
+    size_t max_bytes,
+    size_t* out_read,
+    int* out_closed)
+{
+    if (out_read == NULL || out_closed == NULL || state == NULL) {
+        return -1;
+    }
+    *out_read = 0U;
+    *out_closed = 0;
+    if (state->kind == NATIVE_NET_HANDLE_KIND_TCP_STREAM) {
+#ifdef _WIN32
+        int read_count = recv(state->socket, (char*)bytes, (int)max_bytes, 0);
+#else
+        ssize_t read_count = recv(state->socket, bytes, max_bytes, 0);
+#endif
+        if (read_count > 0) {
+            *out_read = (size_t)read_count;
+            return 1;
+        }
+        if (read_count == 0) {
+            *out_closed = 1;
+            return 1;
+        }
+        return native_net_socket_would_block() ? 0 : -1;
+    }
+#ifdef __APPLE__
+    if (state->kind == NATIVE_NET_HANDLE_KIND_TCP_TLS_STREAM) {
+        size_t processed = max_bytes;
+        OSStatus status;
+        NativeTlsStreamState* tls_state = (NativeTlsStreamState*)state->tls_state;
+        if (tls_state == NULL) {
+            return -1;
+        }
+        status = SSLRead(tls_state->context, bytes, max_bytes, &processed);
+        *out_read = processed;
+        if (status == noErr) {
+            return 1;
+        }
+        if (status == errSSLWouldBlock) {
+            return processed > 0U ? 1 : 0;
+        }
+        if (status == errSSLClosedGraceful || status == errSSLClosedAbort) {
+            *out_closed = 1;
+            return 1;
+        }
+    }
+#endif
+    return -1;
+}
+
+static int native_net_stream_write(
+    NativeNetHandleState* state,
+    const uint8_t* bytes,
+    size_t max_bytes,
+    size_t* out_written)
+{
+    if (out_written == NULL || state == NULL) {
+        return -1;
+    }
+    *out_written = 0U;
+    if (state->kind == NATIVE_NET_HANDLE_KIND_TCP_STREAM) {
+#ifdef _WIN32
+        int write_count = send(state->socket, (const char*)bytes, (int)max_bytes, 0);
+#else
+        ssize_t write_count = send(state->socket, bytes, max_bytes, 0);
+#endif
+        if (write_count > 0) {
+            *out_written = (size_t)write_count;
+            return 1;
+        }
+        if (write_count == 0) {
+            return -1;
+        }
+        return native_net_socket_would_block() ? 0 : -1;
+    }
+#ifdef __APPLE__
+    if (state->kind == NATIVE_NET_HANDLE_KIND_TCP_TLS_STREAM) {
+        size_t processed = max_bytes;
+        OSStatus status;
+        NativeTlsStreamState* tls_state = (NativeTlsStreamState*)state->tls_state;
+        if (tls_state == NULL) {
+            return -1;
+        }
+        status = SSLWrite(tls_state->context, bytes, max_bytes, &processed);
+        *out_written = processed;
+        if (status == noErr) {
+            return 1;
+        }
+        if (status == errSSLWouldBlock) {
+            return processed > 0U ? 1 : 0;
+        }
+    }
+#endif
+    return -1;
 }
 
 static int native_net_resolve_ipv4(const char* host, uint16_t port, int socket_type, int passive, struct sockaddr_in* out_addr)
@@ -2423,11 +2690,15 @@ static int64_t native_net_handle_allocate(NativeNetHandleKind kind, NativeSocket
             g_native_net_handles[i].used = 1;
             g_native_net_handles[i].kind = kind;
             g_native_net_handles[i].socket = socket_fd;
+            g_native_net_handles[i].tls_state = NULL;
             return (int64_t)(i + 1U);
         }
     }
     return -1;
 }
+#ifdef __APPLE__
+#pragma clang diagnostic pop
+#endif
 
 static int native_net_handle_close(int64_t handle)
 {
@@ -2435,12 +2706,19 @@ static int native_net_handle_close(int64_t handle)
     if (state == NULL) {
         return 0;
     }
+#ifdef __APPLE__
+    if (state->tls_state != NULL) {
+        native_tls_stream_destroy((NativeTlsStreamState*)state->tls_state);
+        state->tls_state = NULL;
+    }
+#endif
     if (state->socket != NATIVE_INVALID_SOCKET) {
         native_socket_close(state->socket);
     }
     state->used = 0;
     state->kind = NATIVE_NET_HANDLE_KIND_NONE;
     state->socket = NATIVE_INVALID_SOCKET;
+    state->tls_state = NULL;
     return 1;
 }
 
@@ -2536,6 +2814,17 @@ static void native_net_async_set_failure(NativeNetAsyncState* op, const char* me
     }
 }
 
+static void native_net_async_set_tls_failure(NativeNetAsyncState* op, const char* prefix)
+{
+#ifdef __APPLE__
+    char detail[64];
+    (void)snprintf(detail, sizeof(detail), "%s:%d", (prefix == NULL || prefix[0] == '\0') ? "connect_tls_failed" : prefix, (int)g_native_tls_last_status);
+    native_net_async_set_failure(op, detail);
+#else
+    native_net_async_set_failure(op, (prefix == NULL || prefix[0] == '\0') ? "connect_tls_failed" : prefix);
+#endif
+}
+
 static void native_net_async_cancel_pending_socket(NativeNetAsyncState* op)
 {
     if (op == NULL) {
@@ -2558,18 +2847,23 @@ static void native_net_async_process(NativeNetAsyncState* op)
         return;
     }
     state = native_net_handle_lookup(op->socket_handle);
-    if (state == NULL || state->kind != NATIVE_NET_HANDLE_KIND_TCP_STREAM) {
+    if (state == NULL ||
+        (state->kind != NATIVE_NET_HANDLE_KIND_TCP_STREAM &&
+         state->kind != NATIVE_NET_HANDLE_KIND_TCP_TLS_STREAM)) {
         native_net_async_set_failure(op, "invalid_handle");
         return;
     }
     FD_ZERO(&read_set);
     FD_ZERO(&write_set);
     timeout.tv_sec = 0;
-    timeout.tv_usec = 0;
+    timeout.tv_usec = 1000;
     if (op->kind == 1 || op->kind == 3) {
         FD_SET(state->socket, &write_set);
     }
     if (op->kind == 2) {
+        FD_SET(state->socket, &read_set);
+    }
+    if (op->kind == 1 && op->use_tls) {
         FD_SET(state->socket, &read_set);
     }
 #ifdef _WIN32
@@ -2592,65 +2886,82 @@ static void native_net_async_process(NativeNetAsyncState* op)
             native_net_async_set_failure(op, "connect_failed");
             return;
         }
+        if (op->use_tls) {
+#ifdef __APPLE__
+            if (state->kind != NATIVE_NET_HANDLE_KIND_TCP_TLS_STREAM) {
+                state->tls_state = native_tls_stream_create(state->socket, op->host);
+                if (state->tls_state == NULL) {
+                    native_net_async_cancel_pending_socket(op);
+                    native_net_async_set_tls_failure(op, "connect_tls_failed");
+                    return;
+                }
+                state->kind = NATIVE_NET_HANDLE_KIND_TCP_TLS_STREAM;
+            }
+            select_rc = native_tls_stream_handshake(state);
+            if (select_rc < 0) {
+                native_net_async_cancel_pending_socket(op);
+                native_net_async_set_tls_failure(op, "connect_tls_failed");
+                return;
+            }
+            if (select_rc == 0) {
+                return;
+            }
+#else
+            native_net_async_cancel_pending_socket(op);
+            native_net_async_set_tls_failure(op, "connect_tls_failed");
+            return;
+#endif
+        }
         native_net_async_set_success_int(op, op->socket_handle);
         return;
     }
     if (op->kind == 2) {
-        int read_count;
         int max_bytes = op->max_bytes;
+        size_t read_count = 0U;
+        int io_status;
+        int closed = 0;
         if (max_bytes <= 0) {
             max_bytes = 1;
         }
         if ((size_t)max_bytes > NATIVE_NET_BYTES_CHUNK) {
             max_bytes = (int)NATIVE_NET_BYTES_CHUNK;
         }
-#ifdef _WIN32
-        read_count = recv(state->socket, (char*)g_native_net_bytes_scratch, max_bytes, 0);
-#else
-        read_count = (int)recv(state->socket, g_native_net_bytes_scratch, (size_t)max_bytes, 0);
-#endif
-        if (read_count < 0) {
-            if (native_net_socket_would_block()) {
-                return;
-            }
+        io_status = native_net_stream_read(state, g_native_net_bytes_scratch, (size_t)max_bytes, &read_count, &closed);
+        if (io_status == 0) {
+            return;
+        }
+        if (io_status < 0) {
             native_net_async_set_failure(op, "read_failed");
             return;
         }
-        native_net_async_set_success_bytes(op, g_native_net_bytes_scratch, (size_t)((read_count > 0) ? read_count : 0));
+        native_net_async_set_success_bytes(op, g_native_net_bytes_scratch, read_count);
         return;
     }
     if (op->kind == 3) {
-        int wrote;
         size_t remaining = op->pending_bytes_len - op->pending_bytes_offset;
+        size_t wrote = 0U;
+        int io_status;
         if (remaining == 0U) {
             native_net_async_set_success_int(op, (int64_t)op->pending_bytes_len);
             return;
         }
-#ifdef _WIN32
-        wrote = send(
-            state->socket,
-            (const char*)(op->pending_bytes + op->pending_bytes_offset),
-            (int)remaining,
-            0);
-#else
-        wrote = (int)send(
-            state->socket,
+        io_status = native_net_stream_write(
+            state,
             op->pending_bytes + op->pending_bytes_offset,
             remaining,
-            0);
-#endif
-        if (wrote < 0) {
-            if (native_net_socket_would_block()) {
-                return;
-            }
+            &wrote);
+        if (io_status == 0) {
+            return;
+        }
+        if (io_status < 0) {
             native_net_async_set_failure(op, "write_failed");
             return;
         }
-        if (wrote == 0) {
+        if (wrote == 0U) {
             native_net_async_set_failure(op, "write_failed");
             return;
         }
-        op->pending_bytes_offset += (size_t)wrote;
+        op->pending_bytes_offset += wrote;
         if (op->pending_bytes_offset >= op->pending_bytes_len) {
             native_net_async_set_success_int(op, (int64_t)op->pending_bytes_len);
         }
@@ -4270,6 +4581,10 @@ static int native_syscall_net_tcp_connect_tls(
     size_t arg_count,
     AivmValue* result)
 {
+    struct sockaddr_in addr;
+    NativeSocket socket_fd;
+    int64_t handle;
+    NativeNetHandleState* state;
     (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
@@ -4280,8 +4595,54 @@ static int native_syscall_net_tcp_connect_tls(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
+    if (!native_net_platform_init() ||
+        args[1].int_value <= 0 || args[1].int_value > 65535 ||
+        !native_net_resolve_ipv4(args[0].string_value, (uint16_t)args[1].int_value, SOCK_STREAM, 0, &addr)) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (socket_fd == NATIVE_INVALID_SOCKET) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    if (connect(socket_fd, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
+        native_socket_close(socket_fd);
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    handle = native_net_handle_allocate(NATIVE_NET_HANDLE_KIND_TCP_STREAM, socket_fd);
+    if (handle < 0) {
+        native_socket_close(socket_fd);
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    state = native_net_handle_lookup(handle);
+    if (state == NULL) {
+        (void)native_net_handle_close(handle);
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+#ifdef __APPLE__
+    state->tls_state = native_tls_stream_create(socket_fd, args[0].string_value);
+    if (state->tls_state == NULL) {
+        (void)native_net_handle_close(handle);
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    state->kind = NATIVE_NET_HANDLE_KIND_TCP_TLS_STREAM;
+    if (native_tls_stream_handshake(state) != 1) {
+        (void)native_net_handle_close(handle);
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    *result = aivm_value_int(handle);
+    return AIVM_SYSCALL_OK;
+#else
+    (void)native_net_handle_close(handle);
     result->type = AIVM_VAL_VOID;
     return AIVM_SYSCALL_ERR_INVALID;
+#endif
 }
 
 static int native_syscall_net_tcp_listen_tls(
@@ -4312,18 +4673,7 @@ static int native_syscall_net_tcp_connect_tls_start(
     size_t arg_count,
     AivmValue* result)
 {
-    (void)target;
-    if (result == NULL) {
-        return AIVM_SYSCALL_ERR_NULL_RESULT;
-    }
-    if (args == NULL || arg_count != 2U ||
-        args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL ||
-        args[1].type != AIVM_VAL_INT) {
-        result->type = AIVM_VAL_VOID;
-        return AIVM_SYSCALL_ERR_CONTRACT;
-    }
-    result->type = AIVM_VAL_VOID;
-    return AIVM_SYSCALL_ERR_INVALID;
+    return native_syscall_net_start_op(target, args, arg_count, result);
 }
 
 static int native_syscall_net_tcp_read(
@@ -4333,8 +4683,10 @@ static int native_syscall_net_tcp_read(
     AivmValue* result)
 {
     NativeNetHandleState* state;
-    int read_count;
     int max_bytes;
+    size_t read_count;
+    int closed;
+    int io_status;
     (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
@@ -4344,7 +4696,9 @@ static int native_syscall_net_tcp_read(
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
     state = native_net_handle_lookup(args[0].int_value);
-    if (state == NULL || state->kind != NATIVE_NET_HANDLE_KIND_TCP_STREAM) {
+    if (state == NULL ||
+        (state->kind != NATIVE_NET_HANDLE_KIND_TCP_STREAM &&
+         state->kind != NATIVE_NET_HANDLE_KIND_TCP_TLS_STREAM)) {
         *result = aivm_value_bytes(NULL, 0U);
         return AIVM_SYSCALL_OK;
     }
@@ -4356,16 +4710,12 @@ static int native_syscall_net_tcp_read(
     if ((size_t)max_bytes > NATIVE_NET_BYTES_CHUNK) {
         max_bytes = (int)NATIVE_NET_BYTES_CHUNK;
     }
-#ifdef _WIN32
-    read_count = recv(state->socket, (char*)g_native_net_bytes_scratch, max_bytes, 0);
-#else
-    read_count = (int)recv(state->socket, g_native_net_bytes_scratch, (size_t)max_bytes, 0);
-#endif
-    if (read_count <= 0) {
+    io_status = native_net_stream_read(state, g_native_net_bytes_scratch, (size_t)max_bytes, &read_count, &closed);
+    if (io_status <= 0 || read_count == 0U) {
         *result = aivm_value_bytes(NULL, 0U);
         return AIVM_SYSCALL_OK;
     }
-    *result = aivm_value_bytes(g_native_net_bytes_scratch, (size_t)read_count);
+    *result = aivm_value_bytes(g_native_net_bytes_scratch, read_count);
     return AIVM_SYSCALL_OK;
 }
 
@@ -4376,7 +4726,8 @@ static int native_syscall_net_tcp_write(
     AivmValue* result)
 {
     NativeNetHandleState* state;
-    int wrote;
+    size_t wrote;
+    int io_status;
     (void)target;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
@@ -4387,7 +4738,9 @@ static int native_syscall_net_tcp_write(
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
     state = native_net_handle_lookup(args[0].int_value);
-    if (state == NULL || state->kind != NATIVE_NET_HANDLE_KIND_TCP_STREAM) {
+    if (state == NULL ||
+        (state->kind != NATIVE_NET_HANDLE_KIND_TCP_STREAM &&
+         state->kind != NATIVE_NET_HANDLE_KIND_TCP_TLS_STREAM)) {
         *result = aivm_value_int(-1);
         return AIVM_SYSCALL_OK;
     }
@@ -4395,12 +4748,8 @@ static int native_syscall_net_tcp_write(
         *result = aivm_value_int(0);
         return AIVM_SYSCALL_OK;
     }
-#ifdef _WIN32
-    wrote = send(state->socket, (const char*)args[1].bytes_value.data, (int)args[1].bytes_value.length, 0);
-#else
-    wrote = (int)send(state->socket, args[1].bytes_value.data, args[1].bytes_value.length, 0);
-#endif
-    *result = aivm_value_int((wrote < 0) ? -1 : (int64_t)wrote);
+    io_status = native_net_stream_write(state, args[1].bytes_value.data, args[1].bytes_value.length, &wrote);
+    *result = aivm_value_int((io_status < 0) ? -1 : (int64_t)wrote);
     return AIVM_SYSCALL_OK;
 }
 
@@ -4636,6 +4985,13 @@ static int native_syscall_net_async_poll(
     op = native_net_async_lookup(args[0].int_value);
     if (op != NULL && op->status == 0) {
         native_net_async_process(op);
+        if (op->status == 0) {
+#ifdef _WIN32
+            Sleep(1);
+#else
+            usleep(1000);
+#endif
+        }
     }
     *result = aivm_value_int((op == NULL) ? -3 : (int64_t)op->status);
     return AIVM_SYSCALL_OK;
@@ -4784,6 +5140,7 @@ static int native_syscall_net_start_op(
     }
     is_supported_target =
         strcmp(target, "sys.net.tcp.connectStart") == 0 ||
+        strcmp(target, "sys.net.tcp.connectTlsStart") == 0 ||
         strcmp(target, "sys.net.tcp.readStart") == 0 ||
         strcmp(target, "sys.net.tcp.writeStart") == 0;
     if (!is_supported_target) {
@@ -4800,7 +5157,8 @@ static int native_syscall_net_start_op(
         *result = aivm_value_int(-1);
         return AIVM_SYSCALL_OK;
     }
-    if (strcmp(target, "sys.net.tcp.connectStart") == 0) {
+    if (strcmp(target, "sys.net.tcp.connectStart") == 0 ||
+        strcmp(target, "sys.net.tcp.connectTlsStart") == 0) {
         if (args == NULL || arg_count != 2U ||
             args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL ||
             args[1].type != AIVM_VAL_INT ||
@@ -4828,13 +5186,25 @@ static int native_syscall_net_start_op(
             return AIVM_SYSCALL_OK;
         }
         op->kind = 1;
+        op->use_tls = (strcmp(target, "sys.net.tcp.connectTlsStart") == 0);
+        if (op->use_tls) {
+            (void)snprintf(op->host, sizeof(op->host), "%s", args[0].string_value);
+        }
         op->socket_handle = handle;
         if (connect(socket_fd, (struct sockaddr*)&addr, sizeof(addr)) == 0) {
-            native_net_async_set_success_int(op, handle);
+            if (op->use_tls) {
+                native_net_async_process(op);
+            } else {
+                native_net_async_set_success_int(op, handle);
+            }
         } else if (!native_net_socket_would_block()) {
             (void)native_net_handle_close(handle);
             op->socket_handle = 0;
-            native_net_async_set_failure(op, "connect_failed");
+            if (op->use_tls) {
+                native_net_async_set_tls_failure(op, "connect_tls_failed");
+            } else {
+                native_net_async_set_failure(op, "connect_failed");
+            }
         }
     } else if (strcmp(target, "sys.net.tcp.readStart") == 0) {
         NativeNetHandleState* state;
@@ -4844,7 +5214,10 @@ static int native_syscall_net_start_op(
             return AIVM_SYSCALL_OK;
         }
         state = native_net_handle_lookup(args[0].int_value);
-        if (state == NULL || state->kind != NATIVE_NET_HANDLE_KIND_TCP_STREAM || !native_net_socket_set_nonblocking(state->socket)) {
+        if (state == NULL ||
+            (state->kind != NATIVE_NET_HANDLE_KIND_TCP_STREAM &&
+             state->kind != NATIVE_NET_HANDLE_KIND_TCP_TLS_STREAM) ||
+            !native_net_socket_set_nonblocking(state->socket)) {
             native_net_async_set_failure(op, "read_failed");
             *result = aivm_value_int(op_handle);
             return AIVM_SYSCALL_OK;
@@ -4861,7 +5234,10 @@ static int native_syscall_net_start_op(
             return AIVM_SYSCALL_OK;
         }
         state = native_net_handle_lookup(args[0].int_value);
-        if (state == NULL || state->kind != NATIVE_NET_HANDLE_KIND_TCP_STREAM || !native_net_socket_set_nonblocking(state->socket)) {
+        if (state == NULL ||
+            (state->kind != NATIVE_NET_HANDLE_KIND_TCP_STREAM &&
+             state->kind != NATIVE_NET_HANDLE_KIND_TCP_TLS_STREAM) ||
+            !native_net_socket_set_nonblocking(state->socket)) {
             native_net_async_set_failure(op, "write_failed");
             *result = aivm_value_int(op_handle);
             return AIVM_SYSCALL_OK;
@@ -7301,6 +7677,35 @@ static int native_syscall_bytes_to_utf8_string(
     return AIVM_SYSCALL_OK;
 }
 
+static int native_syscall_bytes_from_utf8_string(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    size_t in_len;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 1U || args == NULL || args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    in_len = strlen(args[0].string_value);
+    if (in_len == 0U) {
+        *result = aivm_value_bytes(NULL, 0U);
+        return AIVM_SYSCALL_OK;
+    }
+    if (in_len > NATIVE_BYTES_SCRATCH_CAPACITY) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    memcpy(g_native_bytes_scratch, args[0].string_value, in_len);
+    *result = aivm_value_bytes(g_native_bytes_scratch, in_len);
+    return AIVM_SYSCALL_OK;
+}
+
 static int native_syscall_str_from_codepoint(
     const char* target,
     const AivmValue* args,
@@ -8014,7 +8419,7 @@ static int run_native_compiled_program(
     size_t process_argv_count,
     const NativeDebugOptions* debug_options)
 {
-    AivmSyscallBinding bindings[102];
+    AivmSyscallBinding bindings[103];
     AivmVm vm;
     int ok;
     int exit_code = 0;
@@ -8081,6 +8486,8 @@ static int run_native_compiled_program(
     bindings[20].handler = native_syscall_str_decode_unicode_surrogate_pair_hex4;
     bindings[21].target = "sys.bytes.toUtf8String";
     bindings[21].handler = native_syscall_bytes_to_utf8_string;
+    bindings[102].target = "sys.bytes.fromUtf8String";
+    bindings[102].handler = native_syscall_bytes_from_utf8_string;
     bindings[22].target = "sys.str.substring";
     bindings[22].handler = native_syscall_str_substring;
     bindings[23].target = "sys.str.find";
@@ -8245,7 +8652,7 @@ static int run_native_compiled_program(
     ok = aivm_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        102U,
+        103U,
         process_argv,
         process_argv_count,
         &vm);

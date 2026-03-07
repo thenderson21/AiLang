@@ -1,4 +1,5 @@
 Program#std_http_p1 {
+  Import#std_http_im1(path="./bytes.aos")
   Let#std_http_l1(name=httpHeaders) {
     Fn#std_http_f1(params=req) {
       Block#std_http_b1 {
@@ -408,7 +409,7 @@ Program#std_http_p1 {
             Lit#std_http_i60(value=-1)
             Lit#std_http_i61(value="")
             Lit#std_http_i62(value="")
-            Lit#std_http_i114(value=600)
+            Lit#std_http_i114(value=5000)
           }
         }
       }
@@ -497,7 +498,7 @@ Program#std_http_p1 {
                 Let#std_http_l40(name=writeOp) {
                   Call#std_http_c25(target=sys.net.tcp.writeStart) {
                     Var#std_http_v90(name=connection)
-                    Call#std_http_c26(target=httpRequestText) { Var#std_http_v91(name=state) }
+                    Call#std_http_c26(target=fromUtf8String) { Call#std_http_c107(target=httpRequestText) { Var#std_http_v91(name=state) } }
                   }
                 }
                 Return#std_http_r28 {
@@ -672,7 +673,7 @@ Program#std_http_p1 {
                 }
               }
             }
-            Let#std_http_l50(name=response) { Call#std_http_c49(target=sys.net.async.resultBytes) { Var#std_http_v120(name=op) } }
+            Let#std_http_l50(name=response) { Call#std_http_c49(target=toUtf8String) { Call#std_http_c108(target=sys.net.async.resultBytes) { Var#std_http_v120(name=op) } } }
             Call#std_http_c50(target=sys.net.tcp.close) { Var#std_http_v121(name=connection) }
             Return#std_http_r34 {
               Call#std_http_c51(target=httpMakeRequestState) {
