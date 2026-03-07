@@ -108,6 +108,8 @@ static int native_bytes_from_base64(
     uint8_t* output,
     size_t output_capacity,
     size_t* out_len);
+static int native_host_open_url(const char* url);
+static char g_native_open_url_test_scratch[1024];
 
 #define AIRUN_NATIVE_CACHE_SCHEMA "airun-native-cache-v2"
 #define AIRUN_NATIVE_COMPILER_FINGERPRINT "native-compiler-2026-03-05-call-fixup-order-v2"
@@ -135,6 +137,38 @@ static int starts_with(const char* value, const char* prefix)
     }
     prefix_len = strlen(prefix);
     return strncmp(value, prefix, prefix_len) == 0;
+}
+
+static int native_host_open_url(const char* url)
+{
+    if (url == NULL ||
+        (!starts_with(url, "http://") &&
+         !starts_with(url, "https://"))) {
+        return 0;
+    }
+#ifdef AIRUN_TEST_FAKE_OPEN_URL
+    g_native_open_url_test_scratch[0] = '\0';
+    (void)snprintf(g_native_open_url_test_scratch, sizeof(g_native_open_url_test_scratch), "%s", url);
+    return 1;
+#elif defined(_WIN32)
+    return ((INT_PTR)ShellExecuteA(NULL, "open", url, NULL, NULL, SW_SHOWNORMAL)) > 32;
+#else
+    {
+        pid_t pid = fork();
+        if (pid < 0) {
+            return 0;
+        }
+        if (pid == 0) {
+#ifdef __APPLE__
+            execl("/usr/bin/open", "open", url, (char*)NULL);
+#else
+            execlp("xdg-open", "xdg-open", url, (char*)NULL);
+#endif
+            _exit(127);
+        }
+    }
+    return 1;
+#endif
 }
 
 static int file_exists(const char* path)
@@ -3102,6 +3136,24 @@ static int native_syscall_process_env_get(
     }
     value = getenv(args[0].string_value);
     *result = aivm_value_string((value == NULL) ? "" : value);
+    return AIVM_SYSCALL_OK;
+}
+
+static int native_syscall_host_open_url(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (args == NULL || arg_count != 1U || args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    *result = aivm_value_bool(native_host_open_url(args[0].string_value) ? 1 : 0);
     return AIVM_SYSCALL_OK;
 }
 
@@ -7962,7 +8014,7 @@ static int run_native_compiled_program(
     size_t process_argv_count,
     const NativeDebugOptions* debug_options)
 {
-    AivmSyscallBinding bindings[101];
+    AivmSyscallBinding bindings[102];
     AivmVm vm;
     int ok;
     int exit_code = 0;
@@ -8188,10 +8240,12 @@ static int run_native_compiled_program(
     bindings[99].handler = native_syscall_debug_capture_draw;
     bindings[100].target = "sys.debug.captureFrameEnd";
     bindings[100].handler = native_syscall_debug_capture_frame_end;
+    bindings[101].target = "sys.host.openUrl";
+    bindings[101].handler = native_syscall_host_open_url;
     ok = aivm_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        101U,
+        102U,
         process_argv,
         process_argv_count,
         &vm);
