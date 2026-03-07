@@ -75,9 +75,29 @@ From repository root:
 ./scripts/test-aivm-c.sh
 ```
 
+Direct preset usage from `src/AiVM.Core/native`:
+
+```bash
+cmake --preset aivm-native-unix --fresh
+cmake --build --preset aivm-native-unix-build
+ctest --preset aivm-native-unix-test
+```
+
+Common focused presets:
+
+- `aivm-native-unix-test-unit`
+- `aivm-native-unix-test-integration`
+- `aivm-native-unix-test-parity`
+- `aivm-native-unix-test-host`
+- `aivm-native-unix-test-wasm`
+- `aivm-native-windows-test-unit`
+- `aivm-native-windows-test-integration`
+- `aivm-native-windows-test-parity`
+- `aivm-native-windows-test-host`
+
 Optional environment variables:
 
-- `AIVM_C_BUILD_DIR`: override CMake build directory (default `.tmp/aivm-c-build`)
+- `AIVM_C_BUILD_DIR`: override CMake build directory (default `.tmp/aivm-c-build-native`)
 - `AIVM_PARITY_REPORT`: override parity manifest report path
 - `AIVM_BUILD_SHARED=1`: enable shared-library build in the test flow
 

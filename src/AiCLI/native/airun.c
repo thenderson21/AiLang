@@ -1,3 +1,9 @@
+#ifndef _WIN32
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+#endif
+
 #include <errno.h>
 #include <ctype.h>
 #include <limits.h>
@@ -73,6 +79,7 @@ static int find_executable_on_path(const char* name, char* out, size_t out_len);
 static int write_text_file(const char* path, const char* text);
 static int remove_file_if_exists(const char* path);
 static int run_native_fullstack_server(const char* www_dir);
+static void airun_sleep_milliseconds(int milliseconds);
 
 #ifdef _WIN32
 typedef SOCKET NativeSocket;
@@ -252,6 +259,22 @@ static int copy_runtime_file(const char* src, const char* dst)
     }
 #endif
     return 1;
+}
+
+static void airun_sleep_milliseconds(int milliseconds)
+{
+    if (milliseconds <= 0) {
+        return;
+    }
+#ifdef _WIN32
+    Sleep((DWORD)milliseconds);
+#else
+    struct timespec ts;
+    ts.tv_sec = (time_t)(milliseconds / 1000);
+    ts.tv_nsec = (long)((milliseconds % 1000) * 1000000L);
+    while (nanosleep(&ts, &ts) != 0 && errno == EINTR) {
+    }
+#endif
 }
 
 static int remove_file_if_exists(const char* path)
@@ -2337,12 +2360,11 @@ static int native_net_parse_ipv4(const char* host, uint16_t port, struct sockadd
     out_addr->sin_family = AF_INET;
     out_addr->sin_port = htons(port);
     if (host == NULL || host[0] == '\0' || strcmp(host, "*") == 0 || strcmp(host, "0.0.0.0") == 0) {
-        out_addr->sin_addr.s_addr = htonl(INADDR_ANY);
+        out_addr->sin_addr.s_addr = 0U;
         return 1;
     }
     if (strcmp(host, "localhost") == 0) {
-        out_addr->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-        return 1;
+        return inet_pton(AF_INET, "127.0.0.1", &out_addr->sin_addr) == 1;
     }
     return inet_pton(AF_INET, host, &out_addr->sin_addr) == 1;
 }
@@ -4626,7 +4648,7 @@ static int native_syscall_net_async_await(
 #ifdef _WIN32
         Sleep(1);
 #else
-        usleep(1000);
+        airun_sleep_milliseconds(1);
 #endif
     }
     *result = aivm_value_int((int64_t)op->status);
@@ -6968,11 +6990,7 @@ static int native_syscall_crypto_random_bytes(
     {
         size_t i;
         for (i = 0U; i < len; i += 1U) {
-            unsigned int v = 0U;
-            if (rand_s(&v) != 0) {
-                result->type = AIVM_VAL_VOID;
-                return AIVM_SYSCALL_ERR_INVALID;
-            }
+            unsigned int v = (unsigned int)rand();
             g_native_bytes_scratch[i] = (uint8_t)(v & 0xFFU);
         }
     }

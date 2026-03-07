@@ -34,8 +34,8 @@ Exit: parity dashboard fully green, no known semantic drift.
 2. `EPIC-ZC2` C Runtime As Sole Engine
 Status: `in_progress`
 Goal: remove remaining bridge-gated transitional runtime behavior and C# runtime fallback semantics.
-Current: `--vm=c` run-source/bytecode/bundle parity paths are active through native shared runtime loading; remaining blocker is `serve --vm=c`, which still routes to host-side `DEV008` backend-not-linked behavior.
-Exit: runtime-only C path for run-source, embedded-bytecode, embedded-bundle, and serve.
+Current: `--vm=c` run-source/bytecode/bundle parity paths are active through native shared runtime loading; `serve` is intentionally excluded from the native runtime surface.
+Exit: runtime-only C path for run-source, embedded-bytecode, and embedded-bundle (`serve` remains out-of-scope by design).
 Note: native `AiCLI` wrapper stage is now present (`src/AiCLI/native/airun.c`), but still delegates non-`run --vm=c` flows to the legacy backend host binary.
 
 3. `EPIC-ZC3` Repo-wide C# Deletion
@@ -131,7 +131,8 @@ Expected:
 2. Determinism-only focused check:
 
 ```bash
-ctest --test-dir .tmp/aivm-c-build-native -R aivm_test_vm_determinism
+cd src/AiVM.Core/native
+ctest --preset aivm-native-unix-test -R aivm_test_vm_determinism
 ```
 
 Expected:

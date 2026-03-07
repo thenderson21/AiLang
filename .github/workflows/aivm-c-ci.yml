@@ -16,6 +16,7 @@ on:
       - 'scripts/aivm-bench-gate.sh'
       - 'scripts/aivm-parity-dashboard.sh'
       - 'scripts/test-wasm-golden.sh'
+      - 'scripts/ci/wasm-ctest-smoke.sh'
       - 'scripts/build-aivm-wasm.sh'
       - 'scripts/aivm-mem-leak-check.sh'
       - 'src/AiVM.Core/native/tests/parity_commands.txt'
@@ -40,6 +41,7 @@ on:
       - 'scripts/aivm-bench-gate.sh'
       - 'scripts/aivm-parity-dashboard.sh'
       - 'scripts/test-wasm-golden.sh'
+      - 'scripts/ci/wasm-ctest-smoke.sh'
       - 'scripts/build-aivm-wasm.sh'
       - 'scripts/aivm-mem-leak-check.sh'
       - 'src/AiVM.Core/native/tests/parity_commands.txt'
@@ -73,7 +75,9 @@ jobs:
 
       - name: Verify bytes host syscall test (Unix)
         if: runner.os != 'Windows'
-        run: ctest --test-dir .tmp/aivm-c-build-native -R aivm_test_bytes_host --output-on-failure
+        run: |
+          cd src/AiVM.Core/native
+          ctest --preset aivm-native-unix-test-host -R aivm_test_bytes_host --output-on-failure
 
       - name: Perf smoke (Linux)
         if: runner.os == 'Linux'
@@ -123,6 +127,10 @@ jobs:
 
       - name: Configure + build + test (Windows)
         if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Run C native suite (Windows)
+        if: runner.os == 'Windows'
         shell: pwsh
         run: |
           ./scripts/test-aivm-c.ps1
@@ -131,7 +139,8 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          ctest --test-dir .tmp/aivm-c-build-native -C Debug -R aivm_test_bytes_host --output-on-failure
+          Set-Location src/AiVM.Core/native
+          ctest --preset aivm-native-windows-test-host -R aivm_test_bytes_host --output-on-failure
 
       - name: Upload parity report
         if: always()

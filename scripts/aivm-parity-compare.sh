@@ -25,7 +25,14 @@ if [[ ! -f "$RIGHT" ]]; then
   exit 2
 fi
 
-cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" >/dev/null
-cmake --build "${BUILD_DIR}" --target aivm_parity_cli >/dev/null
+if [[ -f "${AIVM_C_SOURCE_DIR}/CMakePresets.json" ]]; then
+  pushd "${AIVM_C_SOURCE_DIR}" >/dev/null
+  cmake --preset aivm-native-unix --fresh >/dev/null
+  cmake --build --preset aivm-native-unix-build --target aivm_parity_cli >/dev/null
+  popd >/dev/null
+else
+  cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" >/dev/null
+  cmake --build "${BUILD_DIR}" --target aivm_parity_cli >/dev/null
+fi
 
 "${BUILD_DIR}/aivm_parity_cli" "$LEFT" "$RIGHT"

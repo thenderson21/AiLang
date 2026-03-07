@@ -28,8 +28,15 @@ if [[ -z "${AIVM_TEST_VM_OPS_MEDIAN_MS_MAX:-}" ]]; then
   exit 2
 fi
 
-cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" >/dev/null
-cmake --build "${BUILD_DIR}" --target aivm_test_vm_ops >/dev/null
+if [[ -f "${AIVM_C_SOURCE_DIR}/CMakePresets.json" ]]; then
+  pushd "${AIVM_C_SOURCE_DIR}" >/dev/null
+  cmake --preset aivm-native-unix --fresh >/dev/null
+  cmake --build --preset aivm-native-unix-build --target aivm_test_vm_ops >/dev/null
+  popd >/dev/null
+else
+  cmake -S "${AIVM_C_SOURCE_DIR}" -B "${BUILD_DIR}" >/dev/null
+  cmake --build "${BUILD_DIR}" --target aivm_test_vm_ops >/dev/null
+fi
 
 python3 - "${BUILD_DIR}/aivm_test_vm_ops" "${RUNS}" "${AIVM_TEST_VM_OPS_MEDIAN_MS_MAX}" <<'PY'
 import statistics
