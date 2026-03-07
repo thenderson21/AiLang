@@ -19,6 +19,9 @@ typedef struct {
 static NativeUiWindowSlot g_native_ui_windows[8];
 static int64_t g_native_ui_next_handle = 1;
 static int g_native_ui_app_initialized = 0;
+static NativeHostUiEvent g_native_ui_event_queue[64];
+static size_t g_native_ui_event_queue_start = 0U;
+static size_t g_native_ui_event_queue_count = 0U;
 
 @interface NativeUiCanvasView : NSView
 @property(nonatomic, strong) NSImage* frameImage;
@@ -376,6 +379,113 @@ static void native_ui_set_text_from_event(char* out, size_t out_capacity, NSEven
     native_ui_set_string(out, out_capacity, [chars UTF8String]);
 }
 
+static int native_ui_queue_push(const NativeHostUiEvent* event)
+{
+    size_t write_index;
+    if (event == NULL) {
+        return 0;
+    }
+    if (g_native_ui_event_queue_count >= (sizeof(g_native_ui_event_queue) / sizeof(g_native_ui_event_queue[0]))) {
+        return 0;
+    }
+    write_index = (g_native_ui_event_queue_start + g_native_ui_event_queue_count) %
+                  (sizeof(g_native_ui_event_queue) / sizeof(g_native_ui_event_queue[0]));
+    g_native_ui_event_queue[write_index] = *event;
+    g_native_ui_event_queue_count += 1U;
+    return 1;
+}
+
+static int native_ui_queue_pop(NativeHostUiEvent* out_event)
+{
+    if (out_event == NULL || g_native_ui_event_queue_count == 0U) {
+        return 0;
+    }
+    *out_event = g_native_ui_event_queue[g_native_ui_event_queue_start];
+    g_native_ui_event_queue_start =
+        (g_native_ui_event_queue_start + 1U) % (sizeof(g_native_ui_event_queue) / sizeof(g_native_ui_event_queue[0]));
+    g_native_ui_event_queue_count -= 1U;
+    return 1;
+}
+
+static void native_ui_queue_reset(void)
+{
+    g_native_ui_event_queue_start = 0U;
+    g_native_ui_event_queue_count = 0U;
+}
+
+static int native_ui_translate_event(NativeUiWindowSlot* slot, NSEvent* event, NativeHostUiEvent* out_event, int* out_forward_to_appkit)
+{
+    NativeUiCanvasView* canvas;
+    if (slot == NULL || event == nil || out_event == NULL || out_forward_to_appkit == NULL) {
+        return 0;
+    }
+    memset(out_event, 0, sizeof(*out_event));
+    out_event->x = -1;
+    out_event->y = -1;
+    *out_forward_to_appkit = 1;
+    canvas = native_ui_canvas_for_slot(slot);
+    switch ([event type]) {
+        case NSEventTypeLeftMouseDown: {
+            NSWindow* source_window = [event window];
+            NSPoint location = [event locationInWindow];
+            NSRect content_bounds;
+            int y_top;
+            if (source_window == nil) {
+                source_window = slot->window;
+            }
+            if (canvas != nil) {
+                content_bounds = [canvas bounds];
+            } else {
+                content_bounds = [[source_window contentView] bounds];
+            }
+            y_top = (int)llround(content_bounds.size.height - location.y);
+            out_event->x = (int)llround(location.x);
+            out_event->y = y_top < 0 ? 0 : y_top;
+            native_ui_set_string(out_event->type, sizeof(out_event->type), "click");
+            return 1;
+        }
+        case NSEventTypeKeyDown: {
+            NSUInteger flags = [event modifierFlags];
+            const char* key_name = native_ui_normalize_key(event);
+            native_ui_set_string(out_event->type, sizeof(out_event->type), "key");
+            native_ui_set_string(out_event->key, sizeof(out_event->key), key_name);
+            native_ui_set_text_from_event(out_event->text, sizeof(out_event->text), event);
+            out_event->repeat = [event isARepeat] ? 1 : 0;
+            out_event->modifiers =
+                ((flags & NSEventModifierFlagShift) != 0 ? 1 : 0) |
+                ((flags & NSEventModifierFlagControl) != 0 ? 2 : 0) |
+                ((flags & NSEventModifierFlagOption) != 0 ? 4 : 0) |
+                ((flags & NSEventModifierFlagCommand) != 0 ? 8 : 0);
+            *out_forward_to_appkit = 0;
+            return 1;
+        }
+        default:
+            return 0;
+    }
+}
+
+static void native_ui_pump_events(NativeUiWindowSlot* slot)
+{
+    NSEvent* event;
+    if (slot == NULL) {
+        return;
+    }
+    while ((event = [NSApp nextEventMatchingMask:NSEventMaskAny
+                                       untilDate:[NSDate dateWithTimeIntervalSinceNow:0.0]
+                                          inMode:NSDefaultRunLoopMode
+                                         dequeue:YES]) != nil) {
+        NativeHostUiEvent translated;
+        int forward_to_appkit = 1;
+        if (native_ui_translate_event(slot, event, &translated, &forward_to_appkit)) {
+            (void)native_ui_queue_push(&translated);
+        }
+        if (forward_to_appkit != 0) {
+            [NSApp sendEvent:event];
+        }
+    }
+    [NSApp updateWindows];
+}
+
 void native_host_ui_reset(void)
 {
     size_t i;
@@ -387,6 +497,7 @@ void native_host_ui_reset(void)
         g_native_ui_windows[i].close_pending = 0;
     }
     g_native_ui_next_handle = 1;
+    native_ui_queue_reset();
 }
 
 void native_host_ui_shutdown(void)
@@ -402,6 +513,7 @@ void native_host_ui_shutdown(void)
             g_native_ui_windows[i].close_pending = 0;
         }
     }
+    native_ui_queue_reset();
 }
 
 int native_host_ui_create_window(const char* title, int width, int height, int64_t* out_handle)
@@ -508,6 +620,7 @@ int native_host_ui_present(int64_t handle)
         }
         [slot->window displayIfNeeded];
         [NSApp updateWindows];
+        native_ui_pump_events(slot);
         return 1;
     }
 }
@@ -515,10 +628,13 @@ int native_host_ui_present(int64_t handle)
 int native_host_ui_wait_frame(int64_t handle)
 {
     @autoreleasepool {
-        if (native_ui_find_slot(handle) == NULL) {
+        NativeUiWindowSlot* slot = native_ui_find_slot(handle);
+        if (slot == NULL) {
             return 0;
         }
+        native_ui_pump_events(slot);
         [NSThread sleepForTimeInterval:(1.0 / 60.0)];
+        native_ui_pump_events(slot);
         return 1;
     }
 }
@@ -710,70 +826,30 @@ int native_host_ui_poll_event(int64_t handle, NativeHostUiEvent* out_event)
 {
     @autoreleasepool {
         NativeUiWindowSlot* slot = native_ui_find_slot(handle);
-        NativeUiCanvasView* canvas;
-        NSEvent* event;
-        int forward_to_appkit;
         if (slot == NULL || out_event == NULL) {
             return 0;
         }
         memset(out_event, 0, sizeof(*out_event));
         native_ui_set_string(out_event->type, sizeof(out_event->type), "none");
+        out_event->x = -1;
+        out_event->y = -1;
         if (slot->close_pending != 0) {
             native_ui_set_string(out_event->type, sizeof(out_event->type), "closed");
             slot->close_pending = 0;
             return 1;
         }
-        event = [NSApp nextEventMatchingMask:NSEventMaskAny
-                                   untilDate:[NSDate dateWithTimeIntervalSinceNow:0.0]
-                                      inMode:NSDefaultRunLoopMode
-                                     dequeue:YES];
-        if (event == nil) {
+        if (native_ui_queue_pop(out_event)) {
             return 1;
         }
-        forward_to_appkit = 1;
-        canvas = native_ui_canvas_for_slot(slot);
-        switch ([event type]) {
-            case NSEventTypeLeftMouseDown: {
-                NSWindow* source_window = [event window];
-                NSPoint location = [event locationInWindow];
-                NSRect content_bounds;
-                int y_top;
-                if (source_window == nil) {
-                    source_window = slot->window;
-                }
-                if (canvas != nil) {
-                    content_bounds = [canvas bounds];
-                } else {
-                    content_bounds = [[source_window contentView] bounds];
-                }
-                y_top = (int)llround(content_bounds.size.height - location.y);
-                out_event->x = (int)llround(location.x);
-                out_event->y = y_top < 0 ? 0 : y_top;
-                native_ui_set_string(out_event->type, sizeof(out_event->type), "click");
-                break;
-            }
-            case NSEventTypeKeyDown: {
-                NSUInteger flags = [event modifierFlags];
-                const char* key_name = native_ui_normalize_key(event);
-                native_ui_set_string(out_event->type, sizeof(out_event->type), "key");
-                native_ui_set_string(out_event->key, sizeof(out_event->key), key_name);
-                native_ui_set_text_from_event(out_event->text, sizeof(out_event->text), event);
-                out_event->repeat = [event isARepeat] ? 1 : 0;
-                out_event->modifiers =
-                    ((flags & NSEventModifierFlagShift) != 0 ? 1 : 0) |
-                    ((flags & NSEventModifierFlagControl) != 0 ? 2 : 0) |
-                    ((flags & NSEventModifierFlagOption) != 0 ? 4 : 0) |
-                    ((flags & NSEventModifierFlagCommand) != 0 ? 8 : 0);
-                forward_to_appkit = 0;
-                break;
-            }
-            default:
-                break;
+        native_ui_pump_events(slot);
+        if (slot->close_pending != 0) {
+            native_ui_set_string(out_event->type, sizeof(out_event->type), "closed");
+            slot->close_pending = 0;
+            return 1;
         }
-        if (forward_to_appkit != 0) {
-            [NSApp sendEvent:event];
+        if (native_ui_queue_pop(out_event)) {
+            return 1;
         }
-        [NSApp updateWindows];
         return 1;
     }
 }
