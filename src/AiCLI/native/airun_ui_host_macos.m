@@ -571,6 +571,72 @@ int native_host_ui_draw_ellipse(int64_t handle, int x, int y, int width, int hei
     }
 }
 
+int native_host_ui_draw_image(
+    int64_t handle,
+    int x,
+    int y,
+    int width,
+    int height,
+    const uint8_t* rgba,
+    size_t rgba_length)
+{
+    @autoreleasepool {
+        NativeUiWindowSlot* slot = native_ui_find_slot(handle);
+        NSRect bounds;
+        NSRect rect;
+        NSBitmapImageRep* bitmap;
+        NSImage* image;
+        unsigned char* bitmap_data;
+        if (slot == NULL || rgba == NULL) {
+            return 0;
+        }
+        if (width <= 0 || height <= 0) {
+            return 1;
+        }
+        if (rgba_length != (size_t)width * (size_t)height * 4U) {
+            return 0;
+        }
+        if (!native_ui_lock_focus(slot, &bounds)) {
+            return 0;
+        }
+        bitmap = [[NSBitmapImageRep alloc]
+            initWithBitmapDataPlanes:NULL
+                          pixelsWide:width
+                          pixelsHigh:height
+                       bitsPerSample:8
+                     samplesPerPixel:4
+                            hasAlpha:YES
+                            isPlanar:NO
+                      colorSpaceName:NSCalibratedRGBColorSpace
+                         bitmapFormat:NSBitmapFormatAlphaNonpremultiplied
+                          bytesPerRow:width * 4
+                         bitsPerPixel:32];
+        if (bitmap == nil) {
+            native_ui_unlock_focus(slot);
+            return 0;
+        }
+        bitmap_data = [bitmap bitmapData];
+        if (bitmap_data == NULL) {
+            native_ui_unlock_focus(slot);
+            return 0;
+        }
+        memcpy(bitmap_data, rgba, rgba_length);
+        image = [[NSImage alloc] initWithSize:NSMakeSize((CGFloat)width, (CGFloat)height)];
+        if (image == nil) {
+            native_ui_unlock_focus(slot);
+            return 0;
+        }
+        [image addRepresentation:bitmap];
+        rect = NSMakeRect((CGFloat)x, native_ui_y_to_cocoa(bounds, y + height), (CGFloat)width, (CGFloat)height);
+        [image drawInRect:rect
+                 fromRect:NSZeroRect
+                operation:NSCompositingOperationSourceOver
+                 fraction:1.0];
+        native_ui_unlock_focus(slot);
+        return 1;
+    }
+}
+
 int native_host_ui_draw_text(int64_t handle, int x, int y, const char* text, const char* color, int font_size)
 {
     @autoreleasepool {

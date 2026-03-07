@@ -91,6 +91,57 @@ static unsigned long native_ui_linux_parse_color(const char* color, unsigned lon
     return xcolor.pixel;
 }
 
+static unsigned long native_ui_linux_scale_component(uint8_t component, unsigned long mask)
+{
+    unsigned long scaled = 0;
+    unsigned int shift = 0U;
+    unsigned int bits = 0U;
+    unsigned long max_value;
+    if (mask == 0UL) {
+        return 0UL;
+    }
+    while (((mask >> shift) & 1UL) == 0UL) {
+        shift += 1U;
+    }
+    while (((mask >> (shift + bits)) & 1UL) != 0UL) {
+        bits += 1U;
+    }
+    if (bits >= sizeof(unsigned long) * 8U) {
+        max_value = ~0UL;
+    } else {
+        max_value = (1UL << bits) - 1UL;
+    }
+    scaled = ((unsigned long)component * max_value + 127UL) / 255UL;
+    return (scaled << shift) & mask;
+}
+
+static uint8_t native_ui_linux_unpack_component(unsigned long pixel, unsigned long mask)
+{
+    unsigned int shift = 0U;
+    unsigned int bits = 0U;
+    unsigned long value;
+    unsigned long max_value;
+    if (mask == 0UL) {
+        return 0U;
+    }
+    while (((mask >> shift) & 1UL) == 0UL) {
+        shift += 1U;
+    }
+    while (((mask >> (shift + bits)) & 1UL) != 0UL) {
+        bits += 1U;
+    }
+    value = (pixel & mask) >> shift;
+    if (bits >= sizeof(unsigned long) * 8U) {
+        max_value = ~0UL;
+    } else {
+        max_value = (1UL << bits) - 1UL;
+    }
+    if (max_value == 0UL) {
+        return 0U;
+    }
+    return (uint8_t)((value * 255UL + (max_value / 2UL)) / max_value);
+}
+
 static const char* native_ui_linux_path_skip(const char* cursor)
 {
     while (cursor != NULL && *cursor != '\0') {
@@ -302,6 +353,98 @@ int native_host_ui_draw_ellipse(int64_t handle, int x, int y, int width, int hei
     pixel = native_ui_linux_parse_color(color, BlackPixel(g_native_ui_display, g_native_ui_screen));
     XSetForeground(g_native_ui_display, slot->gc, pixel);
     XFillArc(g_native_ui_display, slot->window, slot->gc, x, y, (unsigned int)width, (unsigned int)height, 0, 360 * 64);
+    return 1;
+}
+
+int native_host_ui_draw_image(
+    int64_t handle,
+    int x,
+    int y,
+    int width,
+    int height,
+    const uint8_t* rgba,
+    size_t rgba_length)
+{
+    NativeUiLinuxWindowSlot* slot = native_ui_linux_find_slot(handle);
+    Visual* visual;
+    XImage* image = NULL;
+    XImage* existing = NULL;
+    char* pixels = NULL;
+    int xi;
+    int yi;
+    if (slot == NULL || g_native_ui_display == NULL || rgba == NULL) {
+        return 0;
+    }
+    if (width <= 0 || height <= 0) {
+        return 1;
+    }
+    if (rgba_length != (size_t)width * (size_t)height * 4U) {
+        return 0;
+    }
+    visual = DefaultVisual(g_native_ui_display, g_native_ui_screen);
+    if (visual == NULL) {
+        return 0;
+    }
+    existing = XGetImage(g_native_ui_display, slot->window, x, y, (unsigned int)width, (unsigned int)height, AllPlanes, ZPixmap);
+    pixels = (char*)calloc((size_t)width * (size_t)height, sizeof(unsigned long));
+    if (pixels == NULL) {
+        if (existing != NULL) {
+            XDestroyImage(existing);
+        }
+        return 0;
+    }
+    image = XCreateImage(
+        g_native_ui_display,
+        visual,
+        (unsigned int)DefaultDepth(g_native_ui_display, g_native_ui_screen),
+        ZPixmap,
+        0,
+        pixels,
+        (unsigned int)width,
+        (unsigned int)height,
+        32,
+        0);
+    if (image == NULL) {
+        if (existing != NULL) {
+            XDestroyImage(existing);
+        }
+        free(pixels);
+        return 0;
+    }
+    for (yi = 0; yi < height; yi += 1) {
+        for (xi = 0; xi < width; xi += 1) {
+            size_t offset = ((size_t)yi * (size_t)width + (size_t)xi) * 4U;
+            uint8_t src_r = rgba[offset];
+            uint8_t src_g = rgba[offset + 1U];
+            uint8_t src_b = rgba[offset + 2U];
+            uint8_t src_a = rgba[offset + 3U];
+            uint8_t dst_r = 255U;
+            uint8_t dst_g = 255U;
+            uint8_t dst_b = 255U;
+            unsigned long pixel;
+            if (existing != NULL) {
+                unsigned long existing_pixel = XGetPixel(existing, xi, yi);
+                dst_r = native_ui_linux_unpack_component(existing_pixel, visual->red_mask);
+                dst_g = native_ui_linux_unpack_component(existing_pixel, visual->green_mask);
+                dst_b = native_ui_linux_unpack_component(existing_pixel, visual->blue_mask);
+            }
+            dst_r = (uint8_t)(((unsigned int)src_r * (unsigned int)src_a + (unsigned int)dst_r * (unsigned int)(255U - src_a) + 127U) / 255U);
+            dst_g = (uint8_t)(((unsigned int)src_g * (unsigned int)src_a + (unsigned int)dst_g * (unsigned int)(255U - src_a) + 127U) / 255U);
+            dst_b = (uint8_t)(((unsigned int)src_b * (unsigned int)src_a + (unsigned int)dst_b * (unsigned int)(255U - src_a) + 127U) / 255U);
+            pixel =
+                native_ui_linux_scale_component(dst_r, visual->red_mask) |
+                native_ui_linux_scale_component(dst_g, visual->green_mask) |
+                native_ui_linux_scale_component(dst_b, visual->blue_mask);
+            XPutPixel(image, xi, yi, pixel);
+        }
+    }
+    XPutImage(g_native_ui_display, slot->window, slot->gc, image, 0, 0, x, y, (unsigned int)width, (unsigned int)height);
+    image->data = NULL;
+    XDestroyImage(image);
+    if (existing != NULL) {
+        XDestroyImage(existing);
+    }
+    free(pixels);
     return 1;
 }
 

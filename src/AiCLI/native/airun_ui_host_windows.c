@@ -427,6 +427,90 @@ int native_host_ui_draw_ellipse(int64_t handle, int x, int y, int width, int hei
     return 1;
 }
 
+int native_host_ui_draw_image(
+    int64_t handle,
+    int x,
+    int y,
+    int width,
+    int height,
+    const uint8_t* rgba,
+    size_t rgba_length)
+{
+    NativeUiWindowsSlot* slot = native_ui_windows_find_slot(handle);
+    HDC dc;
+    BITMAPINFO bmi;
+    uint8_t* bgra = NULL;
+    int xi;
+    int yi;
+    if (slot == NULL || slot->hwnd == NULL || rgba == NULL) {
+        return 0;
+    }
+    if (width <= 0 || height <= 0) {
+        return 1;
+    }
+    if (rgba_length != (size_t)width * (size_t)height * 4U) {
+        return 0;
+    }
+    dc = GetDC(slot->hwnd);
+    if (dc == NULL) {
+        return 0;
+    }
+    bgra = (uint8_t*)malloc(rgba_length);
+    if (bgra == NULL) {
+        ReleaseDC(slot->hwnd, dc);
+        return 0;
+    }
+    for (yi = 0; yi < height; yi += 1) {
+        for (xi = 0; xi < width; xi += 1) {
+            size_t src_offset = ((size_t)yi * (size_t)width + (size_t)xi) * 4U;
+            size_t dst_offset = ((size_t)(height - 1 - yi) * (size_t)width + (size_t)xi) * 4U;
+            COLORREF existing = GetPixel(dc, x + xi, y + yi);
+            uint8_t dst_r = existing == CLR_INVALID ? 255U : (uint8_t)GetRValue(existing);
+            uint8_t dst_g = existing == CLR_INVALID ? 255U : (uint8_t)GetGValue(existing);
+            uint8_t dst_b = existing == CLR_INVALID ? 255U : (uint8_t)GetBValue(existing);
+            uint8_t src_r = rgba[src_offset];
+            uint8_t src_g = rgba[src_offset + 1U];
+            uint8_t src_b = rgba[src_offset + 2U];
+            uint8_t src_a = rgba[src_offset + 3U];
+            uint8_t out_r = (uint8_t)(((unsigned int)src_r * (unsigned int)src_a + (unsigned int)dst_r * (unsigned int)(255U - src_a) + 127U) / 255U);
+            uint8_t out_g = (uint8_t)(((unsigned int)src_g * (unsigned int)src_a + (unsigned int)dst_g * (unsigned int)(255U - src_a) + 127U) / 255U);
+            uint8_t out_b = (uint8_t)(((unsigned int)src_b * (unsigned int)src_a + (unsigned int)dst_b * (unsigned int)(255U - src_a) + 127U) / 255U);
+            bgra[dst_offset] = out_b;
+            bgra[dst_offset + 1U] = out_g;
+            bgra[dst_offset + 2U] = out_r;
+            bgra[dst_offset + 3U] = 0U;
+        }
+    }
+    memset(&bmi, 0, sizeof(bmi));
+    bmi.bmiHeader.biSize = sizeof(bmi.bmiHeader);
+    bmi.bmiHeader.biWidth = width;
+    bmi.bmiHeader.biHeight = height;
+    bmi.bmiHeader.biPlanes = 1;
+    bmi.bmiHeader.biBitCount = 32;
+    bmi.bmiHeader.biCompression = BI_RGB;
+    if (StretchDIBits(
+            dc,
+            x,
+            y,
+            width,
+            height,
+            0,
+            0,
+            width,
+            height,
+            bgra,
+            &bmi,
+            DIB_RGB_COLORS,
+            SRCCOPY) == GDI_ERROR) {
+        free(bgra);
+        ReleaseDC(slot->hwnd, dc);
+        return 0;
+    }
+    free(bgra);
+    ReleaseDC(slot->hwnd, dc);
+    return 1;
+}
+
 int native_host_ui_draw_text(int64_t handle, int x, int y, const char* text, const char* color, int font_size)
 {
     NativeUiWindowsSlot* slot = native_ui_windows_find_slot(handle);

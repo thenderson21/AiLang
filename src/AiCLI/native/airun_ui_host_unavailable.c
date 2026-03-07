@@ -45,6 +45,25 @@ int native_host_ui_draw_ellipse(int64_t handle, int x, int y, int width, int hei
     return 0;
 }
 
+int native_host_ui_draw_image(
+    int64_t handle,
+    int x,
+    int y,
+    int width,
+    int height,
+    const uint8_t* rgba,
+    size_t rgba_length)
+{
+    (void)handle;
+    (void)x;
+    (void)y;
+    (void)width;
+    (void)height;
+    (void)rgba;
+    (void)rgba_length;
+    return 0;
+}
+
 int native_host_ui_draw_text(int64_t handle, int x, int y, const char* text, const char* color, int font_size)
 {
     (void)handle;

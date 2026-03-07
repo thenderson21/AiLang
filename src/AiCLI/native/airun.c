@@ -102,6 +102,11 @@ static int native_bytes_to_base64(
     size_t in_len,
     char* output,
     size_t output_capacity);
+static int native_bytes_from_base64(
+    const char* input,
+    uint8_t* output,
+    size_t output_capacity,
+    size_t* out_len);
 
 #define AIRUN_NATIVE_CACHE_SCHEMA "airun-native-cache-v2"
 #define AIRUN_NATIVE_COMPILER_FINGERPRINT "native-compiler-2026-03-05-call-fixup-order-v2"
@@ -5475,6 +5480,11 @@ static int native_syscall_ui_draw_image(
     size_t arg_count,
     AivmValue* result)
 {
+    uint8_t* rgba = NULL;
+    size_t rgba_length = 0U;
+    size_t expected_length = 0U;
+    int width;
+    int height;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
     }
@@ -5492,8 +5502,69 @@ static int native_syscall_ui_draw_image(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_INVALID;
     }
-    result->type = AIVM_VAL_VOID;
-    return AIVM_SYSCALL_ERR_INVALID;
+    width = (int)args[3].int_value;
+    height = (int)args[4].int_value;
+    if (width <= 0 || height <= 0) {
+        native_scene_capture_emit_node(
+            "Image",
+            "",
+            "",
+            0,
+            "",
+            "",
+            0,
+            (int)args[1].int_value,
+            (int)args[2].int_value,
+            width,
+            height);
+        *result = aivm_value_void();
+        return AIVM_SYSCALL_OK;
+    }
+    if ((size_t)width > (SIZE_MAX / (size_t)height) ||
+        ((size_t)width * (size_t)height) > (SIZE_MAX / 4U)) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    expected_length = (size_t)width * (size_t)height * 4U;
+    if (!native_bytes_from_base64(args[5].string_value, NULL, 0U, &rgba_length) ||
+        rgba_length != expected_length) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    rgba = (uint8_t*)malloc(rgba_length > 0U ? rgba_length : 1U);
+    if (rgba == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    if (!native_bytes_from_base64(args[5].string_value, rgba, rgba_length, &rgba_length) ||
+        rgba_length != expected_length ||
+        !native_host_ui_draw_image(
+            args[0].int_value,
+            (int)args[1].int_value,
+            (int)args[2].int_value,
+            width,
+            height,
+            rgba,
+            rgba_length)) {
+        free(rgba);
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_INVALID;
+    }
+    free(rgba);
+    native_scene_capture_emit_node(
+        "Image",
+        "",
+        "",
+        0,
+        "",
+        "",
+        0,
+        (int)args[1].int_value,
+        (int)args[2].int_value,
+        width,
+        height);
+    *result = aivm_value_void();
+    return AIVM_SYSCALL_OK;
 }
 
 static int native_syscall_ui_draw_text(
