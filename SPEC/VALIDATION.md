@@ -113,7 +113,7 @@ This file is normative for semantic validation used by `aic check` (default path
 - args are `(int, string, string)`.
 - `sys.debug.taskReclaimStats()` contract:
 - no args; returns node task-reclaim telemetry payload.
-- `sys.host.openUrl(url)` contract:
+- `sys.host.openDefault(target)` contract:
 - args are `(string)` and returns `bool`.
 - current native host path accepts `http://` and `https://` only and must return quickly without blocking on external browser/app completion.
 

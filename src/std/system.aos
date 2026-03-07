@@ -31,8 +31,26 @@ Program#std_system_p1 {
     }
   }
 
+  Let#std_system_l5(name=openDefault) {
+    Fn#std_system_f5(params=target) {
+      Block#std_system_b5 {
+        Return#std_system_r5 { Call#std_system_c5(target=sys.host.openDefault) { Var#std_system_v1(name=target) } }
+      }
+    }
+  }
+
+  Let#std_system_l6(name=openUrl) {
+    Fn#std_system_f6(params=url) {
+      Block#std_system_b6 {
+        Return#std_system_r6 { Call#std_system_c6(target=openDefault) { Var#std_system_v2(name=url) } }
+      }
+    }
+  }
+
   Export#std_system_e1(name=platform)
   Export#std_system_e2(name=arch)
   Export#std_system_e3(name=osVersion)
   Export#std_system_e4(name=runtime)
+  Export#std_system_e5(name=openDefault)
+  Export#std_system_e6(name=openUrl)
 }

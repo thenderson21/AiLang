@@ -103,7 +103,7 @@ This file is normative for `aic run` evaluation behavior.
 - `sys.net.async.cancel(handle)` is best-effort and deterministic:
 - returns `false` for unknown/non-pending handles
 - returns `true` only when cancellation transitions a pending op to canceled
-- `sys.host.openUrl(url)` is a host launch action and must return promptly with success/failure without blocking evaluator progress on external app/browser lifetime.
+- `sys.host.openDefault(target)` is a host launch action and must return promptly with success/failure without blocking evaluator progress on external app/browser lifetime.
 - Library-level APIs (for example HTTP helpers) must not hide blocking waits in UI/event-loop hot paths; prefer poll-driven state machines.
 
 ## Worker Execution Contract (Phase 1)

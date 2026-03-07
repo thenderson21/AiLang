@@ -108,7 +108,7 @@ static int native_bytes_from_base64(
     uint8_t* output,
     size_t output_capacity,
     size_t* out_len);
-static int native_host_open_url(const char* url);
+static int native_host_open_default(const char* target);
 static char g_native_open_url_test_scratch[1024];
 
 #define AIRUN_NATIVE_CACHE_SCHEMA "airun-native-cache-v2"
@@ -139,19 +139,19 @@ static int starts_with(const char* value, const char* prefix)
     return strncmp(value, prefix, prefix_len) == 0;
 }
 
-static int native_host_open_url(const char* url)
+static int native_host_open_default(const char* target)
 {
-    if (url == NULL ||
-        (!starts_with(url, "http://") &&
-         !starts_with(url, "https://"))) {
+    if (target == NULL ||
+        (!starts_with(target, "http://") &&
+         !starts_with(target, "https://"))) {
         return 0;
     }
 #ifdef AIRUN_TEST_FAKE_OPEN_URL
     g_native_open_url_test_scratch[0] = '\0';
-    (void)snprintf(g_native_open_url_test_scratch, sizeof(g_native_open_url_test_scratch), "%s", url);
+    (void)snprintf(g_native_open_url_test_scratch, sizeof(g_native_open_url_test_scratch), "%s", target);
     return 1;
 #elif defined(_WIN32)
-    return ((INT_PTR)ShellExecuteA(NULL, "open", url, NULL, NULL, SW_SHOWNORMAL)) > 32;
+    return ((INT_PTR)ShellExecuteA(NULL, "open", target, NULL, NULL, SW_SHOWNORMAL)) > 32;
 #else
     {
         pid_t pid = fork();
@@ -160,9 +160,9 @@ static int native_host_open_url(const char* url)
         }
         if (pid == 0) {
 #ifdef __APPLE__
-            execl("/usr/bin/open", "open", url, (char*)NULL);
+            execl("/usr/bin/open", "open", target, (char*)NULL);
 #else
-            execlp("xdg-open", "xdg-open", url, (char*)NULL);
+            execlp("xdg-open", "xdg-open", target, (char*)NULL);
 #endif
             _exit(127);
         }
@@ -3139,7 +3139,7 @@ static int native_syscall_process_env_get(
     return AIVM_SYSCALL_OK;
 }
 
-static int native_syscall_host_open_url(
+static int native_syscall_host_open_default(
     const char* target,
     const AivmValue* args,
     size_t arg_count,
@@ -3153,7 +3153,7 @@ static int native_syscall_host_open_url(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
-    *result = aivm_value_bool(native_host_open_url(args[0].string_value) ? 1 : 0);
+    *result = aivm_value_bool(native_host_open_default(args[0].string_value) ? 1 : 0);
     return AIVM_SYSCALL_OK;
 }
 
@@ -8240,8 +8240,8 @@ static int run_native_compiled_program(
     bindings[99].handler = native_syscall_debug_capture_draw;
     bindings[100].target = "sys.debug.captureFrameEnd";
     bindings[100].handler = native_syscall_debug_capture_frame_end;
-    bindings[101].target = "sys.host.openUrl";
-    bindings[101].handler = native_syscall_host_open_url;
+    bindings[101].target = "sys.host.openDefault";
+    bindings[101].handler = native_syscall_host_open_default;
     ok = aivm_execute_program_with_syscalls_and_argv(
         program,
         bindings,
