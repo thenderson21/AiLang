@@ -63,6 +63,9 @@ This file is normative for semantic validation used by `aic check` (default path
 - indexing is by Unicode scalar sequence (not bytes).
 - `start` is clamped to valid range, `length <= 0` is a no-op (`""` for substring, original string for remove).
 - out-of-range inputs must not throw.
+- `sys.str.find(text,pattern,start)` is a deterministic UTF-8 text-search helper:
+- indexing is by Unicode scalar sequence (not bytes).
+- `start` is clamped to valid range, empty `pattern` returns the clamped start index, and a miss returns `-1`.
 
 - `sys.bytes.length(data)` contract:
 - args are `(bytes)` and returns int length.

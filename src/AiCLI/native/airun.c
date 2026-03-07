@@ -7041,6 +7041,65 @@ static int native_syscall_str_substring(
     return AIVM_SYSCALL_OK;
 }
 
+static int native_syscall_str_find(
+    const char* target,
+    const AivmValue* args,
+    size_t arg_count,
+    AivmValue* result)
+{
+    const char* text;
+    const char* pattern;
+    size_t text_runes;
+    size_t pattern_runes;
+    size_t start_rune;
+    size_t candidate_rune;
+    size_t candidate_byte;
+    size_t pattern_bytes;
+    size_t haystack_bytes;
+    (void)target;
+    if (result == NULL) {
+        return AIVM_SYSCALL_ERR_NULL_RESULT;
+    }
+    if (arg_count != 3U ||
+        args == NULL ||
+        args[0].type != AIVM_VAL_STRING ||
+        args[1].type != AIVM_VAL_STRING ||
+        args[2].type != AIVM_VAL_INT ||
+        args[0].string_value == NULL ||
+        args[1].string_value == NULL) {
+        result->type = AIVM_VAL_VOID;
+        return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    text = args[0].string_value;
+    pattern = args[1].string_value;
+    text_runes = native_utf8_rune_count(text);
+    pattern_runes = native_utf8_rune_count(pattern);
+    start_rune = native_clamp_rune_index(args[2].int_value, text_runes);
+    if (pattern_runes == 0U) {
+        *result = aivm_value_int((int64_t)start_rune);
+        return AIVM_SYSCALL_OK;
+    }
+    if (pattern_runes > text_runes || start_rune > text_runes - pattern_runes) {
+        *result = aivm_value_int(-1);
+        return AIVM_SYSCALL_OK;
+    }
+    pattern_bytes = strlen(pattern);
+    haystack_bytes = strlen(text);
+    candidate_byte = native_utf8_byte_offset_for_rune(text, start_rune);
+    for (candidate_rune = start_rune; candidate_byte + pattern_bytes <= haystack_bytes; candidate_rune += 1U) {
+        if (memcmp(text + candidate_byte, pattern, pattern_bytes) == 0) {
+            *result = aivm_value_int((int64_t)candidate_rune);
+            return AIVM_SYSCALL_OK;
+        }
+        if (candidate_rune >= text_runes - pattern_runes) {
+            break;
+        }
+        candidate_byte = native_utf8_byte_offset_for_rune(text, candidate_rune + 1U);
+    }
+    *result = aivm_value_int(-1);
+    return AIVM_SYSCALL_OK;
+}
+
 static int native_syscall_str_remove(
     const char* target,
     const AivmValue* args,
@@ -7576,7 +7635,7 @@ static int run_native_compiled_program(
     size_t process_argv_count,
     const NativeDebugOptions* debug_options)
 {
-    AivmSyscallBinding bindings[100];
+    AivmSyscallBinding bindings[101];
     AivmVm vm;
     int ok;
     int exit_code = 0;
@@ -7645,165 +7704,167 @@ static int run_native_compiled_program(
     bindings[21].handler = native_syscall_bytes_to_utf8_string;
     bindings[22].target = "sys.str.substring";
     bindings[22].handler = native_syscall_str_substring;
-    bindings[23].target = "sys.str.remove";
-    bindings[23].handler = native_syscall_str_remove;
-    bindings[24].target = "sys.ui.createWindow";
-    bindings[24].handler = native_syscall_ui_create_window;
-    bindings[25].target = "sys.ui.beginFrame";
-    bindings[25].handler = native_syscall_ui_void_1;
-    bindings[26].target = "sys.ui.drawRect";
-    bindings[26].handler = native_syscall_ui_draw_rect;
-    bindings[27].target = "sys.ui.drawText";
-    bindings[27].handler = native_syscall_ui_draw_text;
-    bindings[28].target = "sys.ui.endFrame";
-    bindings[28].handler = native_syscall_ui_void_1;
-    bindings[29].target = "sys.ui.pollEvent";
-    bindings[29].handler = native_syscall_ui_poll_event;
-    bindings[30].target = "sys.ui.present";
-    bindings[30].handler = native_syscall_ui_void_1;
-    bindings[31].target = "sys.ui.closeWindow";
+    bindings[23].target = "sys.str.find";
+    bindings[23].handler = native_syscall_str_find;
+    bindings[24].target = "sys.str.remove";
+    bindings[24].handler = native_syscall_str_remove;
+    bindings[25].target = "sys.ui.createWindow";
+    bindings[25].handler = native_syscall_ui_create_window;
+    bindings[26].target = "sys.ui.beginFrame";
+    bindings[26].handler = native_syscall_ui_void_1;
+    bindings[27].target = "sys.ui.drawRect";
+    bindings[27].handler = native_syscall_ui_draw_rect;
+    bindings[28].target = "sys.ui.drawText";
+    bindings[28].handler = native_syscall_ui_draw_text;
+    bindings[29].target = "sys.ui.endFrame";
+    bindings[29].handler = native_syscall_ui_void_1;
+    bindings[30].target = "sys.ui.pollEvent";
+    bindings[30].handler = native_syscall_ui_poll_event;
+    bindings[31].target = "sys.ui.present";
     bindings[31].handler = native_syscall_ui_void_1;
-    bindings[32].target = "sys.ui.drawLine";
-    bindings[32].handler = native_syscall_ui_draw_line;
-    bindings[33].target = "sys.ui.drawEllipse";
-    bindings[33].handler = native_syscall_ui_draw_ellipse;
-    bindings[34].target = "sys.ui.drawPath";
-    bindings[34].handler = native_syscall_ui_draw_path;
-    bindings[35].target = "sys.ui.drawImage";
-    bindings[35].handler = native_syscall_ui_draw_image;
-    bindings[36].target = "sys.ui.getWindowSize";
-    bindings[36].handler = native_syscall_ui_get_window_size;
-    bindings[37].target = "sys.ui.waitFrame";
-    bindings[37].handler = native_syscall_ui_void_1;
-    bindings[38].target = "sys.worker.start";
-    bindings[38].handler = native_syscall_worker_start;
-    bindings[39].target = "sys.worker.poll";
-    bindings[39].handler = native_syscall_worker_poll;
-    bindings[40].target = "sys.worker.result";
-    bindings[40].handler = native_syscall_worker_result;
-    bindings[41].target = "sys.worker.error";
-    bindings[41].handler = native_syscall_worker_error;
-    bindings[42].target = "sys.worker.cancel";
-    bindings[42].handler = native_syscall_worker_cancel;
-    bindings[43].target = "sys.remote.call";
-    bindings[43].handler = native_syscall_remote_call;
+    bindings[32].target = "sys.ui.closeWindow";
+    bindings[32].handler = native_syscall_ui_void_1;
+    bindings[33].target = "sys.ui.drawLine";
+    bindings[33].handler = native_syscall_ui_draw_line;
+    bindings[34].target = "sys.ui.drawEllipse";
+    bindings[34].handler = native_syscall_ui_draw_ellipse;
+    bindings[35].target = "sys.ui.drawPath";
+    bindings[35].handler = native_syscall_ui_draw_path;
+    bindings[36].target = "sys.ui.drawImage";
+    bindings[36].handler = native_syscall_ui_draw_image;
+    bindings[37].target = "sys.ui.getWindowSize";
+    bindings[37].handler = native_syscall_ui_get_window_size;
+    bindings[38].target = "sys.ui.waitFrame";
+    bindings[38].handler = native_syscall_ui_void_1;
+    bindings[39].target = "sys.worker.start";
+    bindings[39].handler = native_syscall_worker_start;
+    bindings[40].target = "sys.worker.poll";
+    bindings[40].handler = native_syscall_worker_poll;
+    bindings[41].target = "sys.worker.result";
+    bindings[41].handler = native_syscall_worker_result;
+    bindings[42].target = "sys.worker.error";
+    bindings[42].handler = native_syscall_worker_error;
+    bindings[43].target = "sys.worker.cancel";
+    bindings[43].handler = native_syscall_worker_cancel;
+    bindings[44].target = "sys.remote.call";
+    bindings[44].handler = native_syscall_remote_call;
     /* Legacy aliases retained for pre-release AiBC1 samples still using underscore style names. */
-    bindings[44].target = "sys.stdout_writeLine";
-    bindings[44].handler = native_syscall_stdout_write_line;
-    bindings[45].target = "sys.process_argv";
-    bindings[45].handler = native_syscall_process_argv;
-    bindings[46].target = "sys.process.cwd";
-    bindings[46].handler = native_syscall_process_cwd;
-    bindings[47].target = "sys.process.env.get";
-    bindings[47].handler = native_syscall_process_env_get;
-    bindings[48].target = "sys.platform";
-    bindings[48].handler = native_syscall_identity_0;
-    bindings[49].target = "sys.arch";
+    bindings[45].target = "sys.stdout_writeLine";
+    bindings[45].handler = native_syscall_stdout_write_line;
+    bindings[46].target = "sys.process_argv";
+    bindings[46].handler = native_syscall_process_argv;
+    bindings[47].target = "sys.process.cwd";
+    bindings[47].handler = native_syscall_process_cwd;
+    bindings[48].target = "sys.process.env.get";
+    bindings[48].handler = native_syscall_process_env_get;
+    bindings[49].target = "sys.platform";
     bindings[49].handler = native_syscall_identity_0;
-    bindings[50].target = "sys.os.version";
+    bindings[50].target = "sys.arch";
     bindings[50].handler = native_syscall_identity_0;
-    bindings[51].target = "sys.runtime";
+    bindings[51].target = "sys.os.version";
     bindings[51].handler = native_syscall_identity_0;
-    bindings[52].target = "sys.time.nowUnixMs";
-    bindings[52].handler = native_syscall_time_now_unix_ms;
-    bindings[53].target = "sys.time.monotonicMs";
-    bindings[53].handler = native_syscall_time_monotonic_ms;
-    bindings[54].target = "sys.time.sleepMs";
-    bindings[54].handler = native_syscall_time_sleep_ms;
-    bindings[55].target = "sys.fs.file.read";
-    bindings[55].handler = native_syscall_fs_file_read;
-    bindings[56].target = "sys.fs.file.exists";
-    bindings[56].handler = native_syscall_fs_file_exists;
-    bindings[57].target = "sys.fs.path.exists";
-    bindings[57].handler = native_syscall_fs_path_exists;
-    bindings[58].target = "sys.fs.file.write";
-    bindings[58].handler = native_syscall_fs_file_write;
-    bindings[59].target = "sys.fs.dir.create";
-    bindings[59].handler = native_syscall_fs_dir_create;
-    bindings[60].target = "sys.str.utf8ByteCount";
-    bindings[60].handler = native_syscall_str_utf8_byte_count;
-    bindings[61].target = "sys.console.write";
-    bindings[61].handler = native_syscall_console_write;
-    bindings[62].target = "sys.console.writeLine";
-    bindings[62].handler = native_syscall_console_write_line;
-    bindings[63].target = "sys.console.writeErrLine";
-    bindings[63].handler = native_syscall_console_write_err_line;
-    bindings[64].target = "sys.console.readLine";
-    bindings[64].handler = native_syscall_console_read_line;
-    bindings[65].target = "sys.console.readAllStdin";
-    bindings[65].handler = native_syscall_console_read_all_stdin;
-    bindings[66].target = "sys.process.exit";
-    bindings[66].handler = native_syscall_process_exit;
-    bindings[67].target = "sys.fs.dir.list";
-    bindings[67].handler = native_syscall_fs_dir_list;
-    bindings[68].target = "sys.fs.path.stat";
-    bindings[68].handler = native_syscall_fs_path_stat;
-    bindings[69].target = "sys.net.tcp.close";
-    bindings[69].handler = native_syscall_net_tcp_close;
-    bindings[70].target = "sys.net.tcp.connect";
-    bindings[70].handler = native_syscall_net_tcp_connect;
-    bindings[71].target = "sys.net.tcp.listen";
-    bindings[71].handler = native_syscall_net_tcp_listen;
-    bindings[72].target = "sys.net.tcp.listenTls";
-    bindings[72].handler = native_syscall_net_tcp_listen_tls;
-    bindings[73].target = "sys.net.tcp.accept";
-    bindings[73].handler = native_syscall_net_tcp_accept;
-    bindings[74].target = "sys.net.tcp.read";
-    bindings[74].handler = native_syscall_net_tcp_read;
-    bindings[75].target = "sys.net.tcp.write";
-    bindings[75].handler = native_syscall_net_tcp_write;
-    bindings[76].target = "sys.net.tcp.connectTls";
-    bindings[76].handler = native_syscall_net_tcp_connect_tls;
-    bindings[77].target = "sys.net.tcp.connectStart";
-    bindings[77].handler = native_syscall_net_start_op;
-    bindings[78].target = "sys.net.tcp.connectTlsStart";
-    bindings[78].handler = native_syscall_net_tcp_connect_tls_start;
-    bindings[79].target = "sys.net.tcp.readStart";
-    bindings[79].handler = native_syscall_net_start_op;
-    bindings[80].target = "sys.net.tcp.writeStart";
+    bindings[52].target = "sys.runtime";
+    bindings[52].handler = native_syscall_identity_0;
+    bindings[53].target = "sys.time.nowUnixMs";
+    bindings[53].handler = native_syscall_time_now_unix_ms;
+    bindings[54].target = "sys.time.monotonicMs";
+    bindings[54].handler = native_syscall_time_monotonic_ms;
+    bindings[55].target = "sys.time.sleepMs";
+    bindings[55].handler = native_syscall_time_sleep_ms;
+    bindings[56].target = "sys.fs.file.read";
+    bindings[56].handler = native_syscall_fs_file_read;
+    bindings[57].target = "sys.fs.file.exists";
+    bindings[57].handler = native_syscall_fs_file_exists;
+    bindings[58].target = "sys.fs.path.exists";
+    bindings[58].handler = native_syscall_fs_path_exists;
+    bindings[59].target = "sys.fs.file.write";
+    bindings[59].handler = native_syscall_fs_file_write;
+    bindings[60].target = "sys.fs.dir.create";
+    bindings[60].handler = native_syscall_fs_dir_create;
+    bindings[61].target = "sys.str.utf8ByteCount";
+    bindings[61].handler = native_syscall_str_utf8_byte_count;
+    bindings[62].target = "sys.console.write";
+    bindings[62].handler = native_syscall_console_write;
+    bindings[63].target = "sys.console.writeLine";
+    bindings[63].handler = native_syscall_console_write_line;
+    bindings[64].target = "sys.console.writeErrLine";
+    bindings[64].handler = native_syscall_console_write_err_line;
+    bindings[65].target = "sys.console.readLine";
+    bindings[65].handler = native_syscall_console_read_line;
+    bindings[66].target = "sys.console.readAllStdin";
+    bindings[66].handler = native_syscall_console_read_all_stdin;
+    bindings[67].target = "sys.process.exit";
+    bindings[67].handler = native_syscall_process_exit;
+    bindings[68].target = "sys.fs.dir.list";
+    bindings[68].handler = native_syscall_fs_dir_list;
+    bindings[69].target = "sys.fs.path.stat";
+    bindings[69].handler = native_syscall_fs_path_stat;
+    bindings[70].target = "sys.net.tcp.close";
+    bindings[70].handler = native_syscall_net_tcp_close;
+    bindings[71].target = "sys.net.tcp.connect";
+    bindings[71].handler = native_syscall_net_tcp_connect;
+    bindings[72].target = "sys.net.tcp.listen";
+    bindings[72].handler = native_syscall_net_tcp_listen;
+    bindings[73].target = "sys.net.tcp.listenTls";
+    bindings[73].handler = native_syscall_net_tcp_listen_tls;
+    bindings[74].target = "sys.net.tcp.accept";
+    bindings[74].handler = native_syscall_net_tcp_accept;
+    bindings[75].target = "sys.net.tcp.read";
+    bindings[75].handler = native_syscall_net_tcp_read;
+    bindings[76].target = "sys.net.tcp.write";
+    bindings[76].handler = native_syscall_net_tcp_write;
+    bindings[77].target = "sys.net.tcp.connectTls";
+    bindings[77].handler = native_syscall_net_tcp_connect_tls;
+    bindings[78].target = "sys.net.tcp.connectStart";
+    bindings[78].handler = native_syscall_net_start_op;
+    bindings[79].target = "sys.net.tcp.connectTlsStart";
+    bindings[79].handler = native_syscall_net_tcp_connect_tls_start;
+    bindings[80].target = "sys.net.tcp.readStart";
     bindings[80].handler = native_syscall_net_start_op;
-    bindings[81].target = "sys.net.async.poll";
-    bindings[81].handler = native_syscall_net_async_poll;
-    bindings[82].target = "sys.net.async.cancel";
-    bindings[82].handler = native_syscall_net_async_cancel;
-    bindings[83].target = "sys.net.async.await";
-    bindings[83].handler = native_syscall_net_async_await;
-    bindings[84].target = "sys.net.async.resultInt";
-    bindings[84].handler = native_syscall_net_async_result_int;
-    bindings[85].target = "sys.net.async.resultBytes";
-    bindings[85].handler = native_syscall_net_async_result_bytes;
-    bindings[86].target = "sys.net.async.error";
-    bindings[86].handler = native_syscall_net_async_error;
-    bindings[87].target = "sys.net.udp.bind";
-    bindings[87].handler = native_syscall_net_udp_bind;
-    bindings[88].target = "sys.net.udp.recv";
-    bindings[88].handler = native_syscall_net_udp_recv;
-    bindings[89].target = "sys.net.udp.send";
-    bindings[89].handler = native_syscall_net_udp_send;
-    bindings[90].target = "sys.crypto.base64Encode";
-    bindings[90].handler = native_syscall_crypto_string_base64_encode;
-    bindings[91].target = "sys.crypto.base64Decode";
-    bindings[91].handler = native_syscall_crypto_string_base64_decode;
-    bindings[92].target = "sys.crypto.sha1";
-    bindings[92].handler = native_syscall_crypto_sha1;
-    bindings[93].target = "sys.crypto.sha256";
-    bindings[93].handler = native_syscall_crypto_sha256;
-    bindings[94].target = "sys.crypto.hmacSha256";
-    bindings[94].handler = native_syscall_crypto_hmac_sha256;
-    bindings[95].target = "sys.crypto.randomBytes";
-    bindings[95].handler = native_syscall_crypto_random_bytes;
-    bindings[96].target = "sys.debug.mode";
-    bindings[96].handler = native_syscall_debug_mode;
-    bindings[97].target = "sys.debug.captureFrameBegin";
-    bindings[97].handler = native_syscall_debug_capture_frame_begin;
-    bindings[98].target = "sys.debug.captureDraw";
-    bindings[98].handler = native_syscall_debug_capture_draw;
-    bindings[99].target = "sys.debug.captureFrameEnd";
-    bindings[99].handler = native_syscall_debug_capture_frame_end;
+    bindings[81].target = "sys.net.tcp.writeStart";
+    bindings[81].handler = native_syscall_net_start_op;
+    bindings[82].target = "sys.net.async.poll";
+    bindings[82].handler = native_syscall_net_async_poll;
+    bindings[83].target = "sys.net.async.cancel";
+    bindings[83].handler = native_syscall_net_async_cancel;
+    bindings[84].target = "sys.net.async.await";
+    bindings[84].handler = native_syscall_net_async_await;
+    bindings[85].target = "sys.net.async.resultInt";
+    bindings[85].handler = native_syscall_net_async_result_int;
+    bindings[86].target = "sys.net.async.resultBytes";
+    bindings[86].handler = native_syscall_net_async_result_bytes;
+    bindings[87].target = "sys.net.async.error";
+    bindings[87].handler = native_syscall_net_async_error;
+    bindings[88].target = "sys.net.udp.bind";
+    bindings[88].handler = native_syscall_net_udp_bind;
+    bindings[89].target = "sys.net.udp.recv";
+    bindings[89].handler = native_syscall_net_udp_recv;
+    bindings[90].target = "sys.net.udp.send";
+    bindings[90].handler = native_syscall_net_udp_send;
+    bindings[91].target = "sys.crypto.base64Encode";
+    bindings[91].handler = native_syscall_crypto_string_base64_encode;
+    bindings[92].target = "sys.crypto.base64Decode";
+    bindings[92].handler = native_syscall_crypto_string_base64_decode;
+    bindings[93].target = "sys.crypto.sha1";
+    bindings[93].handler = native_syscall_crypto_sha1;
+    bindings[94].target = "sys.crypto.sha256";
+    bindings[94].handler = native_syscall_crypto_sha256;
+    bindings[95].target = "sys.crypto.hmacSha256";
+    bindings[95].handler = native_syscall_crypto_hmac_sha256;
+    bindings[96].target = "sys.crypto.randomBytes";
+    bindings[96].handler = native_syscall_crypto_random_bytes;
+    bindings[97].target = "sys.debug.mode";
+    bindings[97].handler = native_syscall_debug_mode;
+    bindings[98].target = "sys.debug.captureFrameBegin";
+    bindings[98].handler = native_syscall_debug_capture_frame_begin;
+    bindings[99].target = "sys.debug.captureDraw";
+    bindings[99].handler = native_syscall_debug_capture_draw;
+    bindings[100].target = "sys.debug.captureFrameEnd";
+    bindings[100].handler = native_syscall_debug_capture_frame_end;
     ok = aivm_execute_program_with_syscalls_and_argv(
         program,
         bindings,
-        100U,
+        101U,
         process_argv,
         process_argv_count,
         &vm);

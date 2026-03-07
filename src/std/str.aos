@@ -35,29 +35,43 @@ Program#std_str_p1 {
     }
   }
 
-  Let#std_str_l4(name=fromCodePoint) {
-    Fn#std_str_f4(params=codePoint) {
+  Let#std_str_l4(name=find) {
+    Fn#std_str_f4(params=text,pattern,start) {
       Block#std_str_b4 {
-        Return#std_str_r4 { Call#std_str_c3(target=sys.str.fromCodePoint) { Var#std_str_v9(name=codePoint) } }
+        Return#std_str_r4 {
+          Call#std_str_c3(target=sys.str.find) {
+            Var#std_str_v9(name=text)
+            Var#std_str_v10(name=pattern)
+            Var#std_str_v11(name=start)
+          }
+        }
       }
     }
   }
 
-  Let#std_str_l5(name=decodeUnicodeHex4) {
-    Fn#std_str_f5(params=hex4) {
+  Let#std_str_l5(name=fromCodePoint) {
+    Fn#std_str_f5(params=codePoint) {
       Block#std_str_b5 {
-        Return#std_str_r5 { Call#std_str_c4(target=sys.str.decodeUnicodeHex4) { Var#std_str_v10(name=hex4) } }
+        Return#std_str_r5 { Call#std_str_c4(target=sys.str.fromCodePoint) { Var#std_str_v12(name=codePoint) } }
       }
     }
   }
 
-  Let#std_str_l6(name=decodeUnicodeSurrogatePairHex4) {
-    Fn#std_str_f6(params=highHex4,lowHex4) {
+  Let#std_str_l6(name=decodeUnicodeHex4) {
+    Fn#std_str_f6(params=hex4) {
       Block#std_str_b6 {
-        Return#std_str_r6 {
-          Call#std_str_c5(target=sys.str.decodeUnicodeSurrogatePairHex4) {
-            Var#std_str_v11(name=highHex4)
-            Var#std_str_v12(name=lowHex4)
+        Return#std_str_r6 { Call#std_str_c5(target=sys.str.decodeUnicodeHex4) { Var#std_str_v13(name=hex4) } }
+      }
+    }
+  }
+
+  Let#std_str_l7(name=decodeUnicodeSurrogatePairHex4) {
+    Fn#std_str_f7(params=highHex4,lowHex4) {
+      Block#std_str_b7 {
+        Return#std_str_r7 {
+          Call#std_str_c6(target=sys.str.decodeUnicodeSurrogatePairHex4) {
+            Var#std_str_v14(name=highHex4)
+            Var#std_str_v15(name=lowHex4)
           }
         }
       }
@@ -67,7 +81,8 @@ Program#std_str_p1 {
   Export#std_str_e1(name=concat)
   Export#std_str_e2(name=substring)
   Export#std_str_e3(name=remove)
-  Export#std_str_e4(name=fromCodePoint)
-  Export#std_str_e5(name=decodeUnicodeHex4)
-  Export#std_str_e6(name=decodeUnicodeSurrogatePairHex4)
+  Export#std_str_e4(name=find)
+  Export#std_str_e5(name=fromCodePoint)
+  Export#std_str_e6(name=decodeUnicodeHex4)
+  Export#std_str_e7(name=decodeUnicodeSurrogatePairHex4)
 }
