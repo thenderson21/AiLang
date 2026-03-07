@@ -1,0 +1,22 @@
+Program#ghttpresp_p1 {
+  Import#ghttpresp_i1(path="./src/std/http.aos")
+  Import#ghttpresp_i2(path="./src/std/io.aos")
+
+  Let#ghttpresp_l1(name=responseText) {
+    Lit#ghttpresp_i1(value="HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nContent-Type: text/plain\r\n\r\n4\r\nWiki\r\n5\r\npedia\r\n0\r\n\r\n")
+  }
+
+  Call#ghttpresp_c1(target=io.print) {
+    Call#ghttpresp_c2(target=http.httpResponseStatusCode) { Var#ghttpresp_v1(name=responseText) }
+  }
+  Call#ghttpresp_c3(target=io.print) {
+    Call#ghttpresp_c4(target=http.httpResponseHeaderGet) {
+      Var#ghttpresp_v2(name=responseText)
+      Lit#ghttpresp_i2(value="Content-Type")
+      Lit#ghttpresp_i3(value="missing")
+    }
+  }
+  Call#ghttpresp_c5(target=io.print) {
+    Call#ghttpresp_c6(target=http.httpResponseBody) { Var#ghttpresp_v3(name=responseText) }
+  }
+}

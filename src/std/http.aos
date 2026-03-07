@@ -360,6 +360,295 @@ Program#std_http_p1 {
     }
   }
 
+  Let#std_http_l29ca(name=httpMul16) {
+    Fn#std_http_f20ca(params=value) {
+      Block#std_http_b26ca {
+        Return#std_http_r23ca {
+          Add#std_http_add1i {
+            Var#std_http_v60w(name=value)
+            Add#std_http_add1j {
+              Var#std_http_v60x(name=value)
+              Add#std_http_add1k {
+                Var#std_http_v60y(name=value)
+                Add#std_http_add1l {
+                  Var#std_http_v60z(name=value)
+                  Add#std_http_add1m {
+                    Var#std_http_v61a(name=value)
+                    Add#std_http_add1n {
+                      Var#std_http_v61b(name=value)
+                      Add#std_http_add1o {
+                        Var#std_http_v61c(name=value)
+                        Add#std_http_add1p {
+                          Var#std_http_v61d(name=value)
+                          Add#std_http_add1q {
+                            Var#std_http_v61e(name=value)
+                            Add#std_http_add1r {
+                              Var#std_http_v61f(name=value)
+                              Add#std_http_add1s {
+                                Var#std_http_v61g(name=value)
+                                Add#std_http_add1t {
+                                  Var#std_http_v61h(name=value)
+                                  Add#std_http_add1u {
+                                    Var#std_http_v61i(name=value)
+                                    Add#std_http_add1v {
+                                      Var#std_http_v61j(name=value)
+                                      Add#std_http_add1w {
+                                        Var#std_http_v61k(name=value)
+                                        Var#std_http_v61l(name=value)
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l29cb(name=httpHexDigitValue) {
+    Fn#std_http_f20cb(params=ch) {
+      Block#std_http_b26cb {
+        If#std_http_if61ca {
+          Eq#std_http_eq61ca { Var#std_http_v61m(name=ch) Lit#std_http_i46ca(value="0") }
+          Block#std_http_b26cc { Return#std_http_r23cb { Lit#std_http_i46cb(value=0) } }
+          Block#std_http_b26cd {
+            If#std_http_if61cb {
+              Eq#std_http_eq61cb { Var#std_http_v61n(name=ch) Lit#std_http_i46cc(value="1") }
+              Block#std_http_b26ce { Return#std_http_r23cc { Lit#std_http_i46cd(value=1) } }
+              Block#std_http_b26cf {
+                If#std_http_if61cc {
+                  Eq#std_http_eq61cc { Var#std_http_v61o(name=ch) Lit#std_http_i46ce(value="2") }
+                  Block#std_http_b26cg { Return#std_http_r23cd { Lit#std_http_i46cf(value=2) } }
+                  Block#std_http_b26ch {
+                    If#std_http_if61cd {
+                      Eq#std_http_eq61cd { Var#std_http_v61p(name=ch) Lit#std_http_i46cg(value="3") }
+                      Block#std_http_b26ci { Return#std_http_r23ce { Lit#std_http_i46ch(value=3) } }
+                      Block#std_http_b26cj {
+                        If#std_http_if61ce {
+                          Eq#std_http_eq61ce { Var#std_http_v61q(name=ch) Lit#std_http_i46ci(value="4") }
+                          Block#std_http_b26ck { Return#std_http_r23cf { Lit#std_http_i46cj(value=4) } }
+                          Block#std_http_b26cl {
+                            If#std_http_if61cf {
+                              Eq#std_http_eq61cf { Var#std_http_v61r(name=ch) Lit#std_http_i46ck(value="5") }
+                              Block#std_http_b26cm { Return#std_http_r23cg { Lit#std_http_i46cl(value=5) } }
+                              Block#std_http_b26cn {
+                                If#std_http_if61cg {
+                                  Eq#std_http_eq61cg { Var#std_http_v61s(name=ch) Lit#std_http_i46cm(value="6") }
+                                  Block#std_http_b26co { Return#std_http_r23ch { Lit#std_http_i46cn(value=6) } }
+                                  Block#std_http_b26cp {
+                                    If#std_http_if61ch {
+                                      Eq#std_http_eq61ch { Var#std_http_v61t(name=ch) Lit#std_http_i46co(value="7") }
+                                      Block#std_http_b26cq { Return#std_http_r23ci { Lit#std_http_i46cp(value=7) } }
+                                      Block#std_http_b26cr {
+                                        If#std_http_if61ci {
+                                          Eq#std_http_eq61ci { Var#std_http_v61u(name=ch) Lit#std_http_i46cq(value="8") }
+                                          Block#std_http_b26cs { Return#std_http_r23cj { Lit#std_http_i46cr(value=8) } }
+                                          Block#std_http_b26ct {
+                                            If#std_http_if61cj {
+                                              Eq#std_http_eq61cj { Var#std_http_v61v(name=ch) Lit#std_http_i46cs(value="9") }
+                                              Block#std_http_b26cu { Return#std_http_r23ck { Lit#std_http_i46ct(value=9) } }
+                                              Block#std_http_b26cv {
+                                                If#std_http_if61ck {
+                                                  Eq#std_http_eq61ck { Var#std_http_v61w(name=ch) Lit#std_http_i46cu(value="A") }
+                                                  Block#std_http_b26cw { Return#std_http_r23cl { Lit#std_http_i46cv(value=10) } }
+                                                  Block#std_http_b26cx {
+                                                    If#std_http_if61cl {
+                                                      Eq#std_http_eq61cl { Var#std_http_v61x(name=ch) Lit#std_http_i46cw(value="B") }
+                                                      Block#std_http_b26cy { Return#std_http_r23cm { Lit#std_http_i46cx(value=11) } }
+                                                      Block#std_http_b26cz {
+                                                        If#std_http_if61cm {
+                                                          Eq#std_http_eq61cm { Var#std_http_v61y(name=ch) Lit#std_http_i46cy(value="C") }
+                                                          Block#std_http_b26da { Return#std_http_r23cn { Lit#std_http_i46cz(value=12) } }
+                                                          Block#std_http_b26db {
+                                                            If#std_http_if61cn {
+                                                              Eq#std_http_eq61cn { Var#std_http_v61z(name=ch) Lit#std_http_i46da(value="D") }
+                                                              Block#std_http_b26dc { Return#std_http_r23co { Lit#std_http_i46db(value=13) } }
+                                                              Block#std_http_b26dd {
+                                                                If#std_http_if61co {
+                                                                  Eq#std_http_eq61co { Var#std_http_v62a(name=ch) Lit#std_http_i46dc(value="E") }
+                                                                  Block#std_http_b26de { Return#std_http_r23cp { Lit#std_http_i46dd(value=14) } }
+                                                                  Block#std_http_b26df {
+                                                                    If#std_http_if61cp {
+                                                                      Eq#std_http_eq61cp { Var#std_http_v62b(name=ch) Lit#std_http_i46de(value="F") }
+                                                                      Block#std_http_b26dg { Return#std_http_r23cq { Lit#std_http_i46df(value=15) } }
+                                                                      Block#std_http_b26dh {
+                                                                        If#std_http_if61cq {
+                                                                          Eq#std_http_eq61cq { Var#std_http_v62c(name=ch) Lit#std_http_i46dg(value="a") }
+                                                                          Block#std_http_b26di { Return#std_http_r23cr { Lit#std_http_i46dh(value=10) } }
+                                                                          Block#std_http_b26dj {
+                                                                            If#std_http_if61cr {
+                                                                              Eq#std_http_eq61cr { Var#std_http_v62d(name=ch) Lit#std_http_i46di(value="b") }
+                                                                              Block#std_http_b26dk { Return#std_http_r23cs { Lit#std_http_i46dj(value=11) } }
+                                                                              Block#std_http_b26dl {
+                                                                                If#std_http_if61cs {
+                                                                                  Eq#std_http_eq61cs { Var#std_http_v62e(name=ch) Lit#std_http_i46dk(value="c") }
+                                                                                  Block#std_http_b26dm { Return#std_http_r23ct { Lit#std_http_i46dl(value=12) } }
+                                                                                  Block#std_http_b26dn {
+                                                                                    If#std_http_if61ct {
+                                                                                      Eq#std_http_eq61ct { Var#std_http_v62f(name=ch) Lit#std_http_i46dm(value="d") }
+                                                                                      Block#std_http_b26do { Return#std_http_r23cu { Lit#std_http_i46dn(value=13) } }
+                                                                                      Block#std_http_b26dp {
+                                                                                        If#std_http_if61cu {
+                                                                                          Eq#std_http_eq61cu { Var#std_http_v62g(name=ch) Lit#std_http_i46do(value="e") }
+                                                                                          Block#std_http_b26dq { Return#std_http_r23cv { Lit#std_http_i46dp(value=14) } }
+                                                                                          Block#std_http_b26dr {
+                                                                                            If#std_http_if61cv {
+                                                                                              Eq#std_http_eq61cv { Var#std_http_v62h(name=ch) Lit#std_http_i46dq(value="f") }
+                                                                                              Block#std_http_b26ds { Return#std_http_r23cw { Lit#std_http_i46dr(value=15) } }
+                                                                                              Block#std_http_b26dt { Return#std_http_r23cx { Lit#std_http_i46ds(value=-1) } }
+                                                                                            }
+                                                                                          }
+                                                                                        }
+                                                                                      }
+                                                                                    }
+                                                                                  }
+                                                                                }
+                                                                              }
+                                                                            }
+                                                                          }
+                                                                        }
+                                                                      }
+                                                                    }
+                                                                  }
+                                                                }
+                                                              }
+                                                            }
+                                                          }
+                                                        }
+                                                      }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l29cc(name=httpParseHexStringAt) {
+    Fn#std_http_f20cc(params=text,index,acc) {
+      Block#std_http_b26du {
+        Let#std_http_l29cd(name=ch) {
+          Call#std_http_c11r(target=substring) {
+            Var#std_http_v62i(name=text)
+            Var#std_http_v62j(name=index)
+            Lit#std_http_i46dt(value=1)
+          }
+        }
+        If#std_http_if61cw {
+          Eq#std_http_eq61cw { Var#std_http_v62k(name=ch) Lit#std_http_i46du(value="") }
+          Block#std_http_b26dv { Return#std_http_r23cy { Var#std_http_v62l(name=acc) } }
+          Block#std_http_b26dw {
+            If#std_http_if61cx {
+              Eq#std_http_eq61cx { Var#std_http_v62m(name=ch) Lit#std_http_i46dv(value=";") }
+              Block#std_http_b26dx { Return#std_http_r23cz { Var#std_http_v62n(name=acc) } }
+              Block#std_http_b26dy {
+                Let#std_http_l29ce(name=digit) { Call#std_http_c11s(target=httpHexDigitValue) { Var#std_http_v62o(name=ch) } }
+                If#std_http_if61cy {
+                  Eq#std_http_eq61cy { Var#std_http_v62p(name=digit) Lit#std_http_i46dw(value=-1) }
+                  Block#std_http_b26dz { Return#std_http_r23da { Var#std_http_v62q(name=acc) } }
+                  Block#std_http_b26ea {
+                    Return#std_http_r23db {
+                      Call#std_http_c11t(target=httpParseHexStringAt) {
+                        Var#std_http_v62r(name=text)
+                        Add#std_http_add1x { Var#std_http_v62s(name=index) Lit#std_http_i46dx(value=1) }
+                        Add#std_http_add1y {
+                          Call#std_http_c11u(target=httpMul16) { Var#std_http_v62t(name=acc) }
+                          Var#std_http_v62u(name=digit)
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l29ce(name=httpChunkDecodeAt) {
+    Fn#std_http_f20cd(params=text,start,acc) {
+      Block#std_http_b26eb {
+        Let#std_http_l29cf(name=sizeLine) {
+          Call#std_http_c11v(target=httpCollectUntilCrLf) {
+            Var#std_http_v62v(name=text)
+            Var#std_http_v62w(name=start)
+            Lit#std_http_i46dy(value="")
+          }
+        }
+        Let#std_http_l29cg(name=size) {
+          Call#std_http_c11w(target=httpParseHexStringAt) {
+            Var#std_http_v62x(name=sizeLine)
+            Lit#std_http_i46dz(value=0)
+            Lit#std_http_i46ea(value=0)
+          }
+        }
+        If#std_http_if61cz {
+          Eq#std_http_eq61cz { Var#std_http_v62y(name=size) Lit#std_http_i46eb(value=0) }
+          Block#std_http_b26ec { Return#std_http_r23dc { Var#std_http_v62z(name=acc) } }
+          Block#std_http_b26ed {
+            Let#std_http_l29ch(name=dataStart) {
+              Add#std_http_add1z {
+                Var#std_http_v63a(name=start)
+                Add#std_http_add2a { Call#std_http_c11x(target=sys.str.utf8ByteCount) { Var#std_http_v63b(name=sizeLine) } Lit#std_http_i46ec(value=2) }
+              }
+            }
+            Let#std_http_l29ci(name=chunkData) {
+              Call#std_http_c11y(target=substring) {
+                Var#std_http_v63c(name=text)
+                Var#std_http_v63d(name=dataStart)
+                Var#std_http_v63e(name=size)
+              }
+            }
+            Return#std_http_r23dd {
+              Call#std_http_c11z(target=httpChunkDecodeAt) {
+                Var#std_http_v63f(name=text)
+                Add#std_http_add2b {
+                  Var#std_http_v63g(name=dataStart)
+                  Add#std_http_add2c { Var#std_http_v63h(name=size) Lit#std_http_i46ed(value=2) }
+                }
+                StrConcat#std_http_s10b {
+                  Var#std_http_v63i(name=acc)
+                  Var#std_http_v63j(name=chunkData)
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   Let#std_http_l29d(name=httpResponseBody) {
     Fn#std_http_f20d(params=responseText) {
       Block#std_http_b26d {
@@ -373,12 +662,32 @@ Program#std_http_p1 {
           Eq#std_http_eq61d { Var#std_http_v59g(name=marker) Lit#std_http_i46e(value=-1) }
           Block#std_http_b26e { Return#std_http_r23d { Lit#std_http_i46f(value="") } }
           Block#std_http_b26f {
-            Return#std_http_r23e {
-              Call#std_http_c11e(target=substring) {
-                Var#std_http_v59h(name=responseText)
-                Add#std_http_add1b { Var#std_http_v59i(name=marker) Lit#std_http_i46g(value=4) }
-                Lit#std_http_i46h(value=2147483647)
+            Let#std_http_l29ea(name=rawBody) {
+              Call#std_http_c11ea(target=substring) {
+                Var#std_http_v59ha(name=responseText)
+                Add#std_http_add1ba { Var#std_http_v59ia(name=marker) Lit#std_http_i46ga(value=4) }
+                Lit#std_http_i46ha(value=2147483647)
               }
+            }
+            Let#std_http_l29eb(name=transferEncoding) {
+              Call#std_http_c11eb(target=httpResponseHeaderGet) {
+                Var#std_http_v59ja(name=responseText)
+                Lit#std_http_i46hb(value="Transfer-Encoding")
+                Lit#std_http_i46hc(value="")
+              }
+            }
+            If#std_http_if61da {
+              Eq#std_http_eq61da { Var#std_http_v59ka(name=transferEncoding) Lit#std_http_i46hd(value="chunked") }
+              Block#std_http_b26fa {
+                Return#std_http_r23ea {
+                  Call#std_http_c11ec(target=httpChunkDecodeAt) {
+                    Var#std_http_v59la(name=rawBody)
+                    Lit#std_http_i46he(value=0)
+                    Lit#std_http_i46hf(value="")
+                  }
+                }
+              }
+              Block#std_http_b26fb { Return#std_http_r23eb { Var#std_http_v59ma(name=rawBody) } }
             }
           }
         }
