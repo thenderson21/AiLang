@@ -11,11 +11,13 @@
 #ifdef _WIN32
 #include <direct.h>
 #include <io.h>
+#include <objbase.h>
 #include <process.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <sys/stat.h>
 #include <windows.h>
+#include <wincodec.h>
 #ifndef PATH_MAX
 #define PATH_MAX 260
 #endif
@@ -6904,7 +6906,131 @@ static int native_image_decode_to_rgba_base64(
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_INVALID;
     }
-#ifdef __APPLE__
+#ifdef _WIN32
+    {
+        HRESULT init_hr;
+        int should_uninit = 0;
+        IWICImagingFactory* factory = NULL;
+        IWICStream* stream = NULL;
+        IWICBitmapDecoder* decoder = NULL;
+        IWICBitmapFrameDecode* frame = NULL;
+        IWICFormatConverter* converter = NULL;
+        UINT width = 0U;
+        UINT height = 0U;
+        uint8_t* rgba = NULL;
+        size_t rgba_length;
+        size_t base64_capacity;
+        int status = AIVM_SYSCALL_ERR_INVALID;
+
+        if (input_len > (size_t)UINT_MAX) {
+            result->type = AIVM_VAL_VOID;
+            return AIVM_SYSCALL_ERR_INVALID;
+        }
+        init_hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+        if (SUCCEEDED(init_hr)) {
+            should_uninit = 1;
+        } else if (init_hr != RPC_E_CHANGED_MODE) {
+            result->type = AIVM_VAL_VOID;
+            return AIVM_SYSCALL_ERR_INVALID;
+        }
+        if (FAILED(CoCreateInstance(
+                &CLSID_WICImagingFactory,
+                NULL,
+                CLSCTX_INPROC_SERVER,
+                &IID_IWICImagingFactory,
+                (LPVOID*)&factory))) {
+            goto cleanup_windows;
+        }
+        if (FAILED(factory->lpVtbl->CreateStream(factory, &stream))) {
+            goto cleanup_windows;
+        }
+        if (FAILED(stream->lpVtbl->InitializeFromMemory(stream, (WICInProcPointer)input, (DWORD)input_len))) {
+            goto cleanup_windows;
+        }
+        if (FAILED(factory->lpVtbl->CreateDecoderFromStream(
+                factory,
+                (IStream*)stream,
+                NULL,
+                WICDecodeMetadataCacheOnLoad,
+                &decoder))) {
+            goto cleanup_windows;
+        }
+        if (FAILED(decoder->lpVtbl->GetFrame(decoder, 0U, &frame))) {
+            goto cleanup_windows;
+        }
+        if (FAILED(factory->lpVtbl->CreateFormatConverter(factory, &converter))) {
+            goto cleanup_windows;
+        }
+        if (FAILED(converter->lpVtbl->Initialize(
+                converter,
+                (IWICBitmapSource*)frame,
+                &GUID_WICPixelFormat32bppRGBA,
+                WICBitmapDitherTypeNone,
+                NULL,
+                0.0,
+                WICBitmapPaletteTypeCustom))) {
+            goto cleanup_windows;
+        }
+        if (FAILED(converter->lpVtbl->GetSize(converter, &width, &height))) {
+            goto cleanup_windows;
+        }
+        if (width == 0U || height == 0U) {
+            goto cleanup_windows;
+        }
+        if ((size_t)width > (SIZE_MAX / 4U) || (size_t)height > (SIZE_MAX / ((size_t)width * 4U))) {
+            goto cleanup_windows;
+        }
+        rgba_length = (size_t)width * (size_t)height * 4U;
+        rgba = (uint8_t*)malloc(rgba_length);
+        if (rgba == NULL) {
+            goto cleanup_windows;
+        }
+        if (FAILED(converter->lpVtbl->CopyPixels(
+                converter,
+                NULL,
+                width * 4U,
+                (UINT)rgba_length,
+                rgba))) {
+            goto cleanup_windows;
+        }
+        if (!native_rgba_base64_capacity(rgba_length, &base64_capacity)) {
+            goto cleanup_windows;
+        }
+        if (!native_string_scratch_ensure_capacity(base64_capacity)) {
+            goto cleanup_windows;
+        }
+        if (!native_bytes_to_base64(rgba, rgba_length, g_native_string_scratch, base64_capacity)) {
+            goto cleanup_windows;
+        }
+        *result = aivm_value_string(g_native_string_scratch);
+        status = AIVM_SYSCALL_OK;
+
+cleanup_windows:
+        if (converter != NULL) {
+            converter->lpVtbl->Release(converter);
+        }
+        if (frame != NULL) {
+            frame->lpVtbl->Release(frame);
+        }
+        if (decoder != NULL) {
+            decoder->lpVtbl->Release(decoder);
+        }
+        if (stream != NULL) {
+            stream->lpVtbl->Release(stream);
+        }
+        if (factory != NULL) {
+            factory->lpVtbl->Release(factory);
+        }
+        free(rgba);
+        if (should_uninit != 0) {
+            CoUninitialize();
+        }
+        if (status != AIVM_SYSCALL_OK) {
+            result->type = AIVM_VAL_VOID;
+        }
+        return status;
+    }
+#elif defined(__APPLE__)
     CFDataRef data = NULL;
     CGImageSourceRef source = NULL;
     CGImageRef image = NULL;

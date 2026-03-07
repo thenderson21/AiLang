@@ -82,7 +82,7 @@ elif [[ "${TARGET_PLATFORM}" == "linux" ]]; then
   LD_EXTRA=(-lX11)
 elif [[ "${TARGET_PLATFORM}" == "windows" ]]; then
   UI_HOST_SRC="${NATIVE_UI_HOST_WINDOWS_SRC}"
-  LD_EXTRA=(-lgdi32 -luser32)
+  LD_EXTRA=(-lgdi32 -luser32 -lole32 -lwindowscodecs -luuid)
   if [[ "${TARGET_ARCH}" == "x64" && "${HOST_ARCH}" != "x64" ]] && command -v x86_64-w64-mingw32-gcc >/dev/null 2>&1; then
     CC_BIN="x86_64-w64-mingw32-gcc"
   elif [[ "${TARGET_ARCH}" == "arm64" ]] && command -v aarch64-w64-mingw32-gcc >/dev/null 2>&1; then
