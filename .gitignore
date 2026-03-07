@@ -68,6 +68,7 @@ out/
 # Temporary / scratch
 ############################################
 .tmp/
+.tmp/qemu-lab/
 .temp/
 .cache/
 *.local.*
