@@ -30,6 +30,35 @@ to behave like a production programming language.
 | Host capability boundary | `sys.*` | No | Keep low-level; app code should prefer `std.*` |
 | Toolchain/compiler internals | `compiler.*` | No | Not an app library namespace |
 
+## Namespace matrix
+
+| Area | Recommended namespace | Purpose |
+|---|---|---|
+| Generic text utilities | `std.text` | Generic string/text helpers shared across domains |
+| JSON | `std.json` | JSON parse, serialize, and JSON node helpers |
+| XML | `std.xml` | XML parse, serialize, and XML node helpers |
+| TOML | `std.toml` | TOML parse, serialize, and config helpers |
+| Markdown | `std.markdown` | Markdown parse/render/document helpers |
+| Bytes/binary | `std.bytes` | Binary payload handling |
+| HTTP | `std.http` | HTTP protocol/client/server helpers |
+| Raw networking | `std.net` | Lower-level networking primitives |
+| Filesystem | `std.fs` | File/path operations |
+| Process/runtime | `std.process` | Args, env, and child process control |
+| System metadata | `std.system` | Platform, arch, and runtime identity |
+| Time | `std.time` | Time and sleep primitives |
+| Debugging | `std.debug` | Diagnostics, tracing, replay, and capture |
+| Core helpers | `std.core` | Results, assertions, and shared structural helpers |
+| Console IO | `std.io` | Standard input/output helpers |
+| Math | `std.math` | Numeric helpers |
+
+## Shared parser internals
+
+| Internal shared area | Suggested namespace | Public surface |
+|---|---|---|
+| Parser cursor/token helpers | `std.parse_core` or `std.text.parse` | No |
+| Escape/unicode helpers | `std.text` or internal parse module | Usually no |
+| Shared parse result/error builders | `std.core` or internal parse module | Usually no |
+
 ## What is still needed
 
 | Need | Why it matters | Current direction |
