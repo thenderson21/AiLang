@@ -50,6 +50,7 @@ Status keys:
 | Canonical syscall ID coverage | implemented | C contract table now covers full `SyscallId` range (`0..89`) without missing/duplicate IDs. |
 | UI draw syscall contract parity | in_progress | C contracts aligned for `ui_drawRect/ui_drawText/ui_drawLine/ui_drawEllipse/ui_drawPath/ui_drawImage` arities/types and canonical IDs. |
 | UI lifecycle/window syscall parity | in_progress | Added C contracts for `ui_createWindow/ui_beginFrame/ui_endFrame/ui_pollEvent/ui_present/ui_closeWindow/ui_waitFrame`; `ui_getWindowSize` now matches C# shape (`1 int -> node`) and runtime dispatch tests enforce node returns for `ui_pollEvent/ui_getWindowSize`. |
+| Image decode syscall parity | in_progress | `sys.image.decodeToRgbaBase64(bytes,mimeType)` contract is wired; native macOS host implementation is real, other targets still deterministic unsupported. |
 | String syscall contracts (`sys.str_*`) | implemented | `utf8ByteCount`, `substring`, `remove` in C contract table and tests. |
 | Console syscall contracts (`sys.console_*`, `sys.stdout_*`) | in_progress | Added core write/read/writeErr/stdout contracts with canonical IDs and typed dispatch coverage. |
 | Process/runtime metadata syscall contracts | in_progress | Added `sys.process.cwd/sys.process.env.get/sys.process.args/sys.platform/sys.arch/sys.os.version/sys.runtime` with canonical IDs and return-kind coverage. |
