@@ -2106,7 +2106,13 @@ typedef struct NativeNetHandleState
 typedef struct NativeNetAsyncState
 {
     int used;
+    int kind; /* 1 connect, 2 read, 3 write */
     int status; /* 0 pending, 1 success, -1 failure, -2 canceled */
+    int64_t socket_handle;
+    int max_bytes;
+    uint8_t* pending_bytes;
+    size_t pending_bytes_len;
+    size_t pending_bytes_offset;
     int64_t result_int;
     uint8_t* result_bytes;
     size_t result_bytes_len;
@@ -2118,6 +2124,8 @@ static NativeNetAsyncState g_native_net_async_ops[NATIVE_NET_ASYNC_CAPACITY];
 static uint8_t g_native_net_bytes_scratch[NATIVE_NET_BYTES_CHUNK];
 static char g_native_net_text_scratch[NATIVE_NET_BYTES_CHUNK];
 static char g_native_net_host_scratch[64];
+static int native_net_handle_close(int64_t handle);
+static void native_net_async_release_pending_bytes(NativeNetAsyncState* op);
 
 static void native_worker_init_slot(NativeWorkerState* worker)
 {
@@ -2273,6 +2281,7 @@ static void native_net_reset(void)
         g_native_net_handles[i].socket = NATIVE_INVALID_SOCKET;
     }
     for (i = 0U; i < NATIVE_NET_ASYNC_CAPACITY; i += 1U) {
+        native_net_async_release_pending_bytes(&g_native_net_async_ops[i]);
         if (g_native_net_async_ops[i].result_bytes != NULL) {
             free(g_native_net_async_ops[i].result_bytes);
         }
@@ -2293,6 +2302,30 @@ static int native_net_platform_init(void)
     }
 #endif
     return 1;
+}
+
+static int native_net_socket_set_nonblocking(NativeSocket socket_fd)
+{
+#ifdef _WIN32
+    u_long mode = 1UL;
+    return ioctlsocket(socket_fd, FIONBIO, &mode) == 0;
+#else
+    int flags = fcntl(socket_fd, F_GETFL, 0);
+    if (flags < 0) {
+        return 0;
+    }
+    return fcntl(socket_fd, F_SETFL, flags | O_NONBLOCK) == 0;
+#endif
+}
+
+static int native_net_socket_would_block(void)
+{
+#ifdef _WIN32
+    int err = WSAGetLastError();
+    return err == WSAEWOULDBLOCK || err == WSAEINPROGRESS || err == WSAEALREADY;
+#else
+    return errno == EWOULDBLOCK || errno == EAGAIN || errno == EINPROGRESS || errno == EALREADY;
+#endif
 }
 
 static int native_net_parse_ipv4(const char* host, uint16_t port, struct sockaddr_in* out_addr)
@@ -2386,11 +2419,25 @@ static int64_t native_net_async_allocate(void)
     return -1;
 }
 
+static void native_net_async_release_pending_bytes(NativeNetAsyncState* op)
+{
+    if (op == NULL) {
+        return;
+    }
+    if (op->pending_bytes != NULL) {
+        free(op->pending_bytes);
+        op->pending_bytes = NULL;
+    }
+    op->pending_bytes_len = 0U;
+    op->pending_bytes_offset = 0U;
+}
+
 static void native_net_async_set_success_int(NativeNetAsyncState* op, int64_t value)
 {
     if (op == NULL) {
         return;
     }
+    native_net_async_release_pending_bytes(op);
     op->status = 1;
     op->result_int = value;
     op->error[0] = '\0';
@@ -2401,6 +2448,7 @@ static void native_net_async_set_success_bytes(NativeNetAsyncState* op, const ui
     if (op == NULL) {
         return;
     }
+    native_net_async_release_pending_bytes(op);
     if (op->result_bytes != NULL) {
         free(op->result_bytes);
         op->result_bytes = NULL;
@@ -2426,12 +2474,134 @@ static void native_net_async_set_failure(NativeNetAsyncState* op, const char* me
     if (op == NULL) {
         return;
     }
+    native_net_async_release_pending_bytes(op);
     op->status = -1;
     op->result_int = 0;
     if (message == NULL || message[0] == '\0') {
         (void)snprintf(op->error, sizeof(op->error), "failed");
     } else {
         (void)snprintf(op->error, sizeof(op->error), "%s", message);
+    }
+}
+
+static void native_net_async_cancel_pending_socket(NativeNetAsyncState* op)
+{
+    if (op == NULL) {
+        return;
+    }
+    if (op->kind == 1 && op->socket_handle > 0) {
+        (void)native_net_handle_close(op->socket_handle);
+    }
+    op->socket_handle = 0;
+}
+
+static void native_net_async_process(NativeNetAsyncState* op)
+{
+    NativeNetHandleState* state;
+    fd_set read_set;
+    fd_set write_set;
+    struct timeval timeout;
+    int select_rc;
+    if (op == NULL || op->status != 0) {
+        return;
+    }
+    state = native_net_handle_lookup(op->socket_handle);
+    if (state == NULL || state->kind != NATIVE_NET_HANDLE_KIND_TCP_STREAM) {
+        native_net_async_set_failure(op, "invalid_handle");
+        return;
+    }
+    FD_ZERO(&read_set);
+    FD_ZERO(&write_set);
+    timeout.tv_sec = 0;
+    timeout.tv_usec = 0;
+    if (op->kind == 1 || op->kind == 3) {
+        FD_SET(state->socket, &write_set);
+    }
+    if (op->kind == 2) {
+        FD_SET(state->socket, &read_set);
+    }
+#ifdef _WIN32
+    select_rc = select(0, &read_set, &write_set, NULL, &timeout);
+#else
+    select_rc = select((int)state->socket + 1, &read_set, &write_set, NULL, &timeout);
+#endif
+    if (select_rc <= 0) {
+        return;
+    }
+    if (op->kind == 1) {
+        int so_error = 0;
+#ifdef _WIN32
+        int so_error_len = (int)sizeof(so_error);
+#else
+        socklen_t so_error_len = (socklen_t)sizeof(so_error);
+#endif
+        if (getsockopt(state->socket, SOL_SOCKET, SO_ERROR, (char*)&so_error, &so_error_len) != 0 || so_error != 0) {
+            native_net_async_cancel_pending_socket(op);
+            native_net_async_set_failure(op, "connect_failed");
+            return;
+        }
+        native_net_async_set_success_int(op, op->socket_handle);
+        return;
+    }
+    if (op->kind == 2) {
+        int read_count;
+        int max_bytes = op->max_bytes;
+        if (max_bytes <= 0) {
+            max_bytes = 1;
+        }
+        if ((size_t)max_bytes > NATIVE_NET_BYTES_CHUNK) {
+            max_bytes = (int)NATIVE_NET_BYTES_CHUNK;
+        }
+#ifdef _WIN32
+        read_count = recv(state->socket, (char*)g_native_net_bytes_scratch, max_bytes, 0);
+#else
+        read_count = (int)recv(state->socket, g_native_net_bytes_scratch, (size_t)max_bytes, 0);
+#endif
+        if (read_count < 0) {
+            if (native_net_socket_would_block()) {
+                return;
+            }
+            native_net_async_set_failure(op, "read_failed");
+            return;
+        }
+        native_net_async_set_success_bytes(op, g_native_net_bytes_scratch, (size_t)((read_count > 0) ? read_count : 0));
+        return;
+    }
+    if (op->kind == 3) {
+        int wrote;
+        size_t remaining = op->pending_bytes_len - op->pending_bytes_offset;
+        if (remaining == 0U) {
+            native_net_async_set_success_int(op, (int64_t)op->pending_bytes_len);
+            return;
+        }
+#ifdef _WIN32
+        wrote = send(
+            state->socket,
+            (const char*)(op->pending_bytes + op->pending_bytes_offset),
+            (int)remaining,
+            0);
+#else
+        wrote = (int)send(
+            state->socket,
+            op->pending_bytes + op->pending_bytes_offset,
+            remaining,
+            0);
+#endif
+        if (wrote < 0) {
+            if (native_net_socket_would_block()) {
+                return;
+            }
+            native_net_async_set_failure(op, "write_failed");
+            return;
+        }
+        if (wrote == 0) {
+            native_net_async_set_failure(op, "write_failed");
+            return;
+        }
+        op->pending_bytes_offset += (size_t)wrote;
+        if (op->pending_bytes_offset >= op->pending_bytes_len) {
+            native_net_async_set_success_int(op, (int64_t)op->pending_bytes_len);
+        }
     }
 }
 
@@ -4394,6 +4564,9 @@ static int native_syscall_net_async_poll(
         return AIVM_SYSCALL_ERR_CONTRACT;
     }
     op = native_net_async_lookup(args[0].int_value);
+    if (op != NULL && op->status == 0) {
+        native_net_async_process(op);
+    }
     *result = aivm_value_int((op == NULL) ? -3 : (int64_t)op->status);
     return AIVM_SYSCALL_OK;
 }
@@ -4418,6 +4591,8 @@ static int native_syscall_net_async_cancel(
         *result = aivm_value_bool(0);
         return AIVM_SYSCALL_OK;
     }
+    native_net_async_cancel_pending_socket(op);
+    native_net_async_release_pending_bytes(op);
     op->status = -2;
     *result = aivm_value_bool(1);
     return AIVM_SYSCALL_OK;
@@ -4444,6 +4619,10 @@ static int native_syscall_net_async_await(
         return AIVM_SYSCALL_OK;
     }
     while (op->status == 0) {
+        native_net_async_process(op);
+        if (op->status != 0) {
+            break;
+        }
 #ifdef _WIN32
         Sleep(1);
 #else
@@ -4527,8 +4706,9 @@ static int native_syscall_net_start_op(
     int is_supported_target;
     int64_t op_handle;
     NativeNetAsyncState* op;
-    AivmValue inner_result = aivm_value_void();
-    int rc = AIVM_SYSCALL_ERR_INVALID;
+    struct sockaddr_in addr;
+    NativeSocket socket_fd;
+    int64_t handle;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
     }
@@ -4551,26 +4731,84 @@ static int native_syscall_net_start_op(
         return AIVM_SYSCALL_OK;
     }
     if (strcmp(target, "sys.net.tcp.connectStart") == 0) {
-        rc = native_syscall_net_tcp_connect("sys.net.tcp.connect", args, arg_count, &inner_result);
-        if (rc == AIVM_SYSCALL_OK && inner_result.type == AIVM_VAL_INT && inner_result.int_value >= 0) {
-            native_net_async_set_success_int(op, inner_result.int_value);
-        } else {
+        if (args == NULL || arg_count != 2U ||
+            args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL ||
+            args[1].type != AIVM_VAL_INT ||
+            !native_net_platform_init() ||
+            args[1].int_value <= 0 || args[1].int_value > 65535 ||
+            !native_net_parse_ipv4(args[0].string_value, (uint16_t)args[1].int_value, &addr)) {
+            native_net_async_set_failure(op, "connect_failed");
+            *result = aivm_value_int(op_handle);
+            return AIVM_SYSCALL_OK;
+        }
+        socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+        if (socket_fd == NATIVE_INVALID_SOCKET || !native_net_socket_set_nonblocking(socket_fd)) {
+            if (socket_fd != NATIVE_INVALID_SOCKET) {
+                native_socket_close(socket_fd);
+            }
+            native_net_async_set_failure(op, "connect_failed");
+            *result = aivm_value_int(op_handle);
+            return AIVM_SYSCALL_OK;
+        }
+        handle = native_net_handle_allocate(NATIVE_NET_HANDLE_KIND_TCP_STREAM, socket_fd);
+        if (handle < 0) {
+            native_socket_close(socket_fd);
+            native_net_async_set_failure(op, "connect_failed");
+            *result = aivm_value_int(op_handle);
+            return AIVM_SYSCALL_OK;
+        }
+        op->kind = 1;
+        op->socket_handle = handle;
+        if (connect(socket_fd, (struct sockaddr*)&addr, sizeof(addr)) == 0) {
+            native_net_async_set_success_int(op, handle);
+        } else if (!native_net_socket_would_block()) {
+            (void)native_net_handle_close(handle);
+            op->socket_handle = 0;
             native_net_async_set_failure(op, "connect_failed");
         }
     } else if (strcmp(target, "sys.net.tcp.readStart") == 0) {
-        rc = native_syscall_net_tcp_read("sys.net.tcp.read", args, arg_count, &inner_result);
-        if (rc == AIVM_SYSCALL_OK && inner_result.type == AIVM_VAL_BYTES) {
-            native_net_async_set_success_bytes(op, inner_result.bytes_value.data, inner_result.bytes_value.length);
-        } else {
+        NativeNetHandleState* state;
+        if (args == NULL || arg_count != 2U || args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT) {
             native_net_async_set_failure(op, "read_failed");
+            *result = aivm_value_int(op_handle);
+            return AIVM_SYSCALL_OK;
         }
+        state = native_net_handle_lookup(args[0].int_value);
+        if (state == NULL || state->kind != NATIVE_NET_HANDLE_KIND_TCP_STREAM || !native_net_socket_set_nonblocking(state->socket)) {
+            native_net_async_set_failure(op, "read_failed");
+            *result = aivm_value_int(op_handle);
+            return AIVM_SYSCALL_OK;
+        }
+        op->kind = 2;
+        op->socket_handle = args[0].int_value;
+        op->max_bytes = (int)args[1].int_value;
+        native_net_async_process(op);
     } else if (strcmp(target, "sys.net.tcp.writeStart") == 0) {
-        rc = native_syscall_net_tcp_write("sys.net.tcp.write", args, arg_count, &inner_result);
-        if (rc == AIVM_SYSCALL_OK && inner_result.type == AIVM_VAL_INT && inner_result.int_value >= 0) {
-            native_net_async_set_success_int(op, inner_result.int_value);
-        } else {
+        NativeNetHandleState* state;
+        if (args == NULL || arg_count != 2U || args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_BYTES) {
             native_net_async_set_failure(op, "write_failed");
+            *result = aivm_value_int(op_handle);
+            return AIVM_SYSCALL_OK;
         }
+        state = native_net_handle_lookup(args[0].int_value);
+        if (state == NULL || state->kind != NATIVE_NET_HANDLE_KIND_TCP_STREAM || !native_net_socket_set_nonblocking(state->socket)) {
+            native_net_async_set_failure(op, "write_failed");
+            *result = aivm_value_int(op_handle);
+            return AIVM_SYSCALL_OK;
+        }
+        op->kind = 3;
+        op->socket_handle = args[0].int_value;
+        if (args[1].bytes_value.length > 0U && args[1].bytes_value.data != NULL) {
+            op->pending_bytes = (uint8_t*)malloc(args[1].bytes_value.length);
+            if (op->pending_bytes == NULL) {
+                native_net_async_set_failure(op, "alloc_failed");
+                *result = aivm_value_int(op_handle);
+                return AIVM_SYSCALL_OK;
+            }
+            memcpy(op->pending_bytes, args[1].bytes_value.data, args[1].bytes_value.length);
+            op->pending_bytes_len = args[1].bytes_value.length;
+        }
+        native_net_async_process(op);
     }
     *result = aivm_value_int(op_handle);
     return AIVM_SYSCALL_OK;
