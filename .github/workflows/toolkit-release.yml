@@ -292,6 +292,7 @@ jobs:
           cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm "${PACKAGE_DIR}/.artifacts/aivm-wasm32/"
           cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.wasm "${PACKAGE_DIR}/.artifacts/aivm-wasm32/"
           cp ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.mjs "${PACKAGE_DIR}/.artifacts/aivm-wasm32/"
+          ./scripts/stage-sdk-docs.sh "${PACKAGE_DIR}"
           cp ./LICENSE "${PACKAGE_DIR}/"
           tar -czf "${PACKAGE_DIR}.tar.gz" "${PACKAGE_DIR}"
 
@@ -313,6 +314,7 @@ jobs:
           Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32.wasm "$packageDir\.artifacts\aivm-wasm32\"
           Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32-web.wasm "$packageDir\.artifacts\aivm-wasm32\"
           Copy-Item .\.artifacts\aivm-wasm32\aivm-runtime-wasm32-web.mjs "$packageDir\.artifacts\aivm-wasm32\"
+          .\scripts\stage-sdk-docs.ps1 $packageDir
           Compress-Archive -Path $packageDir -DestinationPath "$packageDir.zip" -Force
 
       - name: Upload packaged artifact

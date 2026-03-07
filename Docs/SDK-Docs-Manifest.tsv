@@ -1,0 +1,21 @@
+# source_path	target_path
+AGENTS.md	AGENTS.md
+Docs/README.md	Docs/README.md
+Docs/Overview.md	Docs/Overview.md
+Docs/Getting-Started.md	Docs/Getting-Started.md
+Docs/Project-Layout.md	Docs/Project-Layout.md
+Docs/HOST_BOUNDARY.md	Docs/HOST_BOUNDARY.md
+Docs/CLI-Wrapper-Contract.md	Docs/CLI-Wrapper-Contract.md
+Docs/Launch-Stdlib-0.0.1.md	Docs/Launch-Stdlib-0.0.1.md
+Docs/Stdlib-Baseline-Manifest.tsv	Docs/Stdlib-Baseline-Manifest.tsv
+Docs/Wasm-Limitations-And-Matrix.md	Docs/Wasm-Limitations-And-Matrix.md
+Docs/Versioning.md	Docs/Versioning.md
+Docs/Branching-Release-Policy.md	Docs/Branching-Release-Policy.md
+SPEC/IL.md	SPEC/IL.md
+SPEC/EVAL.md	SPEC/EVAL.md
+SPEC/VALIDATION.md	SPEC/VALIDATION.md
+SPEC/BYTECODE.md	SPEC/BYTECODE.md
+SPEC/CONCURRENCY.md	SPEC/CONCURRENCY.md
+SPEC/WASM_REMOTE_CHANNEL.md	SPEC/WASM_REMOTE_CHANNEL.md
+SPEC/WASM_REMOTE_SECURITY.md	SPEC/WASM_REMOTE_SECURITY.md
+SPEC/STYLE_AILANG.md	SPEC/STYLE_AILANG.md
