@@ -20,6 +20,8 @@ runtime work, the library split is still wrong.
 ## Production baseline
 
 These modules are the required minimum baseline for production AiLang programs.
+The baseline is enforced by `Docs/Stdlib-Baseline-Manifest.tsv` plus
+`scripts/test-stdlib-conformance.sh`.
 
 ### Tier 1: Language core
 
