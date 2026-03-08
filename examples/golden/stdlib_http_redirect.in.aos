@@ -1,0 +1,31 @@
+Program#ghttpredir_p1 {
+  Import#ghttpredir_i1(path="./src/std/http.aos")
+  Import#ghttpredir_i2(path="./src/std/io.aos")
+
+  Let#ghttpredir_l1(name=redirectText) {
+    Lit#ghttpredir_i1(value="HTTP/1.1 302 Found\r\nLocation: https://example.com/next?q=1\r\nContent-Length: 0\r\n\r\n")
+  }
+
+  Let#ghttpredir_l2(name=okText) {
+    Lit#ghttpredir_i2(value="HTTP/1.1 200 OK\r\nContent-Length: 0\r\n\r\n")
+  }
+
+  Call#ghttpredir_c1(target=io.print) {
+    Call#ghttpredir_c2(target=http.httpResponseIsRedirect) { Var#ghttpredir_v1(name=redirectText) }
+  }
+  Call#ghttpredir_c3(target=io.print) {
+    Call#ghttpredir_c4(target=http.httpResponseRedirectLocation) {
+      Var#ghttpredir_v2(name=redirectText)
+      Lit#ghttpredir_i3(value="missing")
+    }
+  }
+  Call#ghttpredir_c5(target=io.print) {
+    Call#ghttpredir_c6(target=http.httpResponseIsRedirect) { Var#ghttpredir_v3(name=okText) }
+  }
+  Call#ghttpredir_c7(target=io.print) {
+    Call#ghttpredir_c8(target=http.httpResponseRedirectLocation) {
+      Var#ghttpredir_v4(name=okText)
+      Lit#ghttpredir_i4(value="missing")
+    }
+  }
+}

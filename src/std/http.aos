@@ -1010,6 +1010,220 @@ Program#std_http_p1 {
     }
   }
 
+  Let#std_http_l29q(name=httpResponseRedirectLocation) {
+    Fn#std_http_f20h(params=responseText,fallback) {
+      Block#std_http_b26v {
+        Return#std_http_r23o {
+          Call#std_http_c11r(target=httpResponseHeaderGet) {
+            Var#std_http_v60w(name=responseText)
+            Lit#std_http_i46ac(value="Location")
+            Var#std_http_v60x(name=fallback)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l29r(name=httpResponseIsRedirect) {
+    Fn#std_http_f20i(params=responseText) {
+      Block#std_http_b26w {
+        Let#std_http_l29s(name=statusCode) { Call#std_http_c11s(target=httpResponseStatusCode) { Var#std_http_v60y(name=responseText) } }
+        Return#std_http_r23p {
+          If#std_http_if61k {
+            Eq#std_http_eq61k { Var#std_http_v60z(name=statusCode) Lit#std_http_i46ad(value=301) }
+            Block#std_http_b26x { Lit#std_http_i46ae(value=true) }
+            Block#std_http_b26y {
+              If#std_http_if61l {
+                Eq#std_http_eq61l { Var#std_http_v61a(name=statusCode) Lit#std_http_i46af(value=302) }
+                Block#std_http_b26z { Lit#std_http_i46ag(value=true) }
+                Block#std_http_b26za {
+                  If#std_http_if61m {
+                    Eq#std_http_eq61m { Var#std_http_v61b(name=statusCode) Lit#std_http_i46ah(value=303) }
+                    Block#std_http_b26zb { Lit#std_http_i46ai(value=true) }
+                    Block#std_http_b26zc {
+                      If#std_http_if61n {
+                        Eq#std_http_eq61n { Var#std_http_v61c(name=statusCode) Lit#std_http_i46aj(value=307) }
+                        Block#std_http_b26zd { Lit#std_http_i46ak(value=true) }
+                        Block#std_http_b26ze {
+                          Eq#std_http_eq61o { Var#std_http_v61d(name=statusCode) Lit#std_http_i46al(value=308) }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l29t(name=httpRedirectTargetHost) {
+    Fn#std_http_f20j(params=location,currentHost) {
+      Block#std_http_b26zf {
+        Let#std_http_l29u(name=httpStart) { Call#std_http_c11t(target=find) { Var#std_http_v61e(name=location) Lit#std_http_i46am(value="http://") Lit#std_http_i46an(value=0) } }
+        Let#std_http_l29v(name=httpsStart) { Call#std_http_c11u(target=find) { Var#std_http_v61f(name=location) Lit#std_http_i46ao(value="https://") Lit#std_http_i46ap(value=0) } }
+        If#std_http_if61p {
+          Eq#std_http_eq61p { Var#std_http_v61g(name=httpStart) Lit#std_http_i46aq(value=0) }
+          Block#std_http_b26zg {
+            Let#std_http_l29w(name=hostStart) { Lit#std_http_i46ar(value=7) }
+            Let#std_http_l29x(name=rest) { Call#std_http_c11v(target=substring) { Var#std_http_v61h(name=location) Var#std_http_v61i(name=hostStart) Lit#std_http_i46as(value=2147483647) } }
+            Let#std_http_l29xa(name=slashIndex) { Call#std_http_c11w(target=find) { Var#std_http_v61j(name=rest) Lit#std_http_i46at(value="/") Lit#std_http_i46au(value=0) } }
+            Let#std_http_l29xb(name=hostPort) {
+              If#std_http_if61q {
+                Eq#std_http_eq61q { Var#std_http_v61k(name=slashIndex) Lit#std_http_i46av(value=-1) }
+                Block#std_http_b26zh { Var#std_http_v61l(name=rest) }
+                Block#std_http_b26zi { Call#std_http_c11x(target=substring) { Var#std_http_v61m(name=rest) Lit#std_http_i46aw(value=0) Var#std_http_v61n(name=slashIndex) } }
+              }
+            }
+            Let#std_http_l29xc(name=colonIndex) { Call#std_http_c11y(target=find) { Var#std_http_v61o(name=hostPort) Lit#std_http_i46ax(value=":") Lit#std_http_i46ay(value=0) } }
+            If#std_http_if61qa {
+              Eq#std_http_eq61qa { Var#std_http_v61p(name=colonIndex) Lit#std_http_i46az(value=-1) }
+              Block#std_http_b26zj { Return#std_http_r23q { Var#std_http_v61q(name=hostPort) } }
+              Block#std_http_b26zk { Return#std_http_r23r { Call#std_http_c11z(target=substring) { Var#std_http_v61r(name=hostPort) Lit#std_http_i46ba(value=0) Var#std_http_v61s(name=colonIndex) } } }
+            }
+          }
+          Block#std_http_b26zl {
+            If#std_http_if61r {
+              Eq#std_http_eq61r { Var#std_http_v61t(name=httpsStart) Lit#std_http_i46bb(value=0) }
+              Block#std_http_b26zm {
+                Let#std_http_l29y(name=hostStart) { Lit#std_http_i46aw(value=8) }
+                Let#std_http_l29z(name=rest) { Call#std_http_c12a(target=substring) { Var#std_http_v61u(name=location) Var#std_http_v61v(name=hostStart) Lit#std_http_i46bc(value=2147483647) } }
+                Let#std_http_l29za(name=slashIndex) { Call#std_http_c12b(target=find) { Var#std_http_v61w(name=rest) Lit#std_http_i46bd(value="/") Lit#std_http_i46be(value=0) } }
+                Let#std_http_l29zb(name=hostPort) {
+                  If#std_http_if61s {
+                    Eq#std_http_eq61s { Var#std_http_v61x(name=slashIndex) Lit#std_http_i46bf(value=-1) }
+                    Block#std_http_b26zn { Var#std_http_v61y(name=rest) }
+                    Block#std_http_b26zo { Call#std_http_c12c(target=substring) { Var#std_http_v61z(name=rest) Lit#std_http_i46bg(value=0) Var#std_http_v62a(name=slashIndex) } }
+                  }
+                }
+                Let#std_http_l29zc(name=colonIndex) { Call#std_http_c12d(target=find) { Var#std_http_v62b(name=hostPort) Lit#std_http_i46bh(value=":") Lit#std_http_i46bi(value=0) } }
+                If#std_http_if61sa {
+                  Eq#std_http_eq61sa { Var#std_http_v62c(name=colonIndex) Lit#std_http_i46bj(value=-1) }
+                  Block#std_http_b26zp { Return#std_http_r23s { Var#std_http_v62d(name=hostPort) } }
+                  Block#std_http_b26zq { Return#std_http_r23t { Call#std_http_c12e(target=substring) { Var#std_http_v62e(name=hostPort) Lit#std_http_i46bk(value=0) Var#std_http_v62f(name=colonIndex) } } }
+                }
+              }
+              Block#std_http_b26zr { Return#std_http_r23u { Var#std_http_v62g(name=currentHost) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l29aa(name=httpRedirectTargetPort) {
+    Fn#std_http_f20k(params=location,currentPort) {
+      Block#std_http_b26zo {
+        Let#std_http_l29ab(name=httpStart) { Call#std_http_c12f(target=find) { Var#std_http_v62h(name=location) Lit#std_http_i46bl(value="http://") Lit#std_http_i46bm(value=0) } }
+        Let#std_http_l29ac(name=httpsStart) { Call#std_http_c12g(target=find) { Var#std_http_v62i(name=location) Lit#std_http_i46bn(value="https://") Lit#std_http_i46bo(value=0) } }
+        If#std_http_if61t {
+          Eq#std_http_eq61t { Var#std_http_v62j(name=httpStart) Lit#std_http_i46bp(value=0) }
+          Block#std_http_b26zp { Return#std_http_r23v { Lit#std_http_i46bq(value=80) } }
+          Block#std_http_b26zq {
+            If#std_http_if61u {
+              Eq#std_http_eq61u { Var#std_http_v62k(name=httpsStart) Lit#std_http_i46br(value=0) }
+              Block#std_http_b26zr { Return#std_http_r23w { Lit#std_http_i46bs(value=443) } }
+              Block#std_http_b26zs { Return#std_http_r23x { Var#std_http_v62l(name=currentPort) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l29ad(name=httpRedirectTargetPath) {
+    Fn#std_http_f20l(params=location,currentPath) {
+      Block#std_http_b26zt {
+        Let#std_http_l29ae(name=httpStart) { Call#std_http_c12h(target=find) { Var#std_http_v62m(name=location) Lit#std_http_i46bt(value="http://") Lit#std_http_i46bu(value=0) } }
+        Let#std_http_l29af(name=httpsStart) { Call#std_http_c12i(target=find) { Var#std_http_v62n(name=location) Lit#std_http_i46bv(value="https://") Lit#std_http_i46bw(value=0) } }
+        If#std_http_if61v {
+          Eq#std_http_eq61v { Var#std_http_v62o(name=httpStart) Lit#std_http_i46bx(value=0) }
+          Block#std_http_b26zu {
+            Let#std_http_l29ag(name=slashIndex) { Call#std_http_c12j(target=find) { Var#std_http_v62p(name=location) Lit#std_http_i46by(value="/") Lit#std_http_i46bz(value=7) } }
+            If#std_http_if61w {
+              Eq#std_http_eq61w { Var#std_http_v62q(name=slashIndex) Lit#std_http_i46ca(value=-1) }
+              Block#std_http_b26zv { Return#std_http_r23y { Lit#std_http_i46cb(value="/") } }
+              Block#std_http_b26zw { Return#std_http_r23z { Call#std_http_c12k(target=substring) { Var#std_http_v62r(name=location) Var#std_http_v62s(name=slashIndex) Lit#std_http_i46cc(value=2147483647) } } }
+            }
+          }
+          Block#std_http_b26zx {
+            If#std_http_if61x {
+              Eq#std_http_eq61x { Var#std_http_v62t(name=httpsStart) Lit#std_http_i46cd(value=0) }
+              Block#std_http_b26zy {
+                Let#std_http_l29ah(name=slashIndex) { Call#std_http_c12l(target=find) { Var#std_http_v62u(name=location) Lit#std_http_i46ce(value="/") Lit#std_http_i46cf(value=8) } }
+                If#std_http_if61y {
+                  Eq#std_http_eq61y { Var#std_http_v62v(name=slashIndex) Lit#std_http_i46cg(value=-1) }
+                  Block#std_http_b26zza { Return#std_http_r24a { Lit#std_http_i46ch(value="/") } }
+                  Block#std_http_b26zzb { Return#std_http_r24b { Call#std_http_c12m(target=substring) { Var#std_http_v62w(name=location) Var#std_http_v62x(name=slashIndex) Lit#std_http_i46ci(value=2147483647) } } }
+                }
+              }
+              Block#std_http_b26zzc {
+                If#std_http_if61z {
+                  Eq#std_http_eq61z { Call#std_http_c12n(target=find) { Var#std_http_v62y(name=location) Lit#std_http_i46cj(value="/") Lit#std_http_i46ck(value=0) } Lit#std_http_i46cl(value=0) }
+                  Block#std_http_b26zzd { Return#std_http_r24c { Var#std_http_v62z(name=location) } }
+                  Block#std_http_b26zze { Return#std_http_r24d { Var#std_http_v63aa(name=location) } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l29ai(name=httpRequestFollowRedirects) {
+    Fn#std_http_f20m(params=method,host,port,path,headers,body,maxBytes,maxRedirects) {
+      Block#std_http_b26zzf {
+        Let#std_http_l29aj(name=responseText) {
+          Call#std_http_c12o(target=httpRequestAwait) {
+            Call#std_http_c12p(target=httpRequest) {
+              Var#std_http_v62x(name=method)
+              Var#std_http_v62y(name=host)
+              Var#std_http_v62z(name=port)
+              Var#std_http_v63a(name=path)
+              Var#std_http_v63b(name=headers)
+              Var#std_http_v63c(name=body)
+              Var#std_http_v63d(name=maxBytes)
+            }
+          }
+        }
+        If#std_http_if62a {
+          Eq#std_http_eq62a { Var#std_http_v63e(name=maxRedirects) Lit#std_http_i46cb(value=0) }
+          Block#std_http_b26zzg { Return#std_http_r24e { Var#std_http_v63f(name=responseText) } }
+          Block#std_http_b26zzh {
+            If#std_http_if62b {
+              Call#std_http_c12q(target=httpResponseIsRedirect) { Var#std_http_v63g(name=responseText) }
+              Block#std_http_b26zzi {
+                Let#std_http_l29ak(name=location) { Call#std_http_c12r(target=httpResponseRedirectLocation) { Var#std_http_v63h(name=responseText) Lit#std_http_i46cc(value="") } }
+                If#std_http_if62c {
+                  Eq#std_http_eq62b { Var#std_http_v63i(name=location) Lit#std_http_i46cd(value="") }
+                  Block#std_http_b26zzj { Return#std_http_r24f { Var#std_http_v63j(name=responseText) } }
+                  Block#std_http_b26zzk {
+                    Return#std_http_r24g {
+                      Call#std_http_c12s(target=httpRequestFollowRedirects) {
+                        Var#std_http_v63k(name=method)
+                        Call#std_http_c12t(target=httpRedirectTargetHost) { Var#std_http_v63l(name=location) Var#std_http_v63m(name=host) }
+                        Call#std_http_c12u(target=httpRedirectTargetPort) { Var#std_http_v63n(name=location) Var#std_http_v63o(name=port) }
+                        Call#std_http_c12v(target=httpRedirectTargetPath) { Var#std_http_v63p(name=location) Var#std_http_v63q(name=path) }
+                        Var#std_http_v63r(name=headers)
+                        Var#std_http_v63s(name=body)
+                        Var#std_http_v63t(name=maxBytes)
+                        Add#std_http_add1l { Var#std_http_v63u(name=maxRedirects) Lit#std_http_i46ce(value=-1) }
+                      }
+                    }
+                  }
+                }
+              }
+              Block#std_http_b26zzl { Return#std_http_r24h { Var#std_http_v63v(name=responseText) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
   Let#std_http_l30(name=httpRequest) {
     Fn#std_http_f21(params=method,host,port,path,headers,body,maxBytes) {
       Block#std_http_b27 {
@@ -1577,9 +1791,12 @@ Program#std_http_p1 {
   Export#std_http_e30(name=httpResponseBodyBytes)
   Export#std_http_e31(name=httpResponseStatusCode)
   Export#std_http_e32(name=httpResponseHeaderGet)
+  Export#std_http_e32a(name=httpResponseRedirectLocation)
+  Export#std_http_e32b(name=httpResponseIsRedirect)
   Export#std_http_e33(name=httpRequestAwaitBody)
   Export#std_http_e34(name=httpRequestAwaitBytes)
   Export#std_http_e35(name=httpRequestAwaitBodyBytes)
   Export#std_http_e36(name=httpRequestAwaitStatusCode)
   Export#std_http_e37(name=httpRequestAwaitHeaderGet)
+  Export#std_http_e38(name=httpRequestFollowRedirects)
 }
