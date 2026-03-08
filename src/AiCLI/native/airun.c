@@ -5979,6 +5979,7 @@ static void native_ui_update_event_node(AivmVm* vm, const NativeHostUiEvent* eve
     (void)snprintf(g_native_ui_event_type, sizeof(g_native_ui_event_type), "%s", event->type);
     (void)snprintf(g_native_ui_event_key, sizeof(g_native_ui_event_key), "%s", event->key);
     (void)snprintf(g_native_ui_event_text, sizeof(g_native_ui_event_text), "%s", event->text);
+    (void)snprintf(g_native_ui_event_target_id, sizeof(g_native_ui_event_target_id), "%s", event->target_id);
     node = &vm->nodes[(size_t)(vm->ui_empty_event_node_handle - 1)];
     if (node->attr_count < 8U || node->attr_start + 7U >= vm->node_attr_count) {
         return;

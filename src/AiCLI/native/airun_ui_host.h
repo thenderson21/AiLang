@@ -6,6 +6,7 @@
 
 typedef struct {
     char type[16];
+    char target_id[48];
     char key[48];
     char text[128];
     int x;
