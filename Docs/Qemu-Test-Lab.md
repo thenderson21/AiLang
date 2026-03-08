@@ -21,7 +21,10 @@ The first iteration in this repo provides:
 - repo-local SSH key generation
 - Linux cloud-init generation
 - Linux and Windows ARM guest launch commands
+- background guest start/stop/status helpers
 - SSH wrappers for guest command execution
+- Linux desktop bootstrap for GUI automation
+- Linux GUI status checks
 - host screenshot capture helper
 
 Files:
@@ -85,6 +88,40 @@ That means:
 ./scripts/qemu-lab.sh windows-create-disk
 ```
 
+## Linux guest bring-up
+
+The current working path on Apple Silicon is:
+
+```bash
+./scripts/qemu-lab.sh init
+./scripts/qemu-lab.sh linux-cloud-init
+./scripts/qemu-lab.sh linux-create-disk
+./scripts/qemu-lab.sh linux-start
+./scripts/qemu-lab.sh linux-ssh
+```
+
+Once SSH works, bootstrap the desktop session:
+
+```bash
+./scripts/qemu-lab.sh linux-gui-bootstrap
+./scripts/qemu-lab.sh linux-gui-status
+```
+
+What this does:
+
+- uses a NoCloud `cidata` seed ISO
+- injects the repo-local SSH public key for user `ailang`
+- installs `xfce4`, `lightdm`, `xdotool`, `scrot`, `xterm`
+- sets the guest default target to `graphical.target`
+- brings up a `DISPLAY=:0` session suitable for automation
+
+Current verified Linux guest checks:
+
+- SSH login works as `ailang`
+- `DISPLAY=:0` is ready
+- `xdotool` works
+- `scrot` works
+
 ## Linux guest recommendation
 
 Use Linux first.
@@ -109,6 +146,7 @@ Once Linux guest SSH is working, these should become normal flows:
 ./scripts/qemu-lab.sh linux-ssh
 ./scripts/qemu-lab.sh linux-exec pwd
 ./scripts/qemu-lab.sh linux-exec ./scripts/test.sh
+./scripts/qemu-lab.sh linux-gui-status
 ```
 
 ## Windows guest recommendation
@@ -137,24 +175,23 @@ This first iteration does not yet provide:
 
 - guest window enumeration
 - deterministic host-side click/key injection into guest windows
-- guest-side screenshot capture helpers
-- VM lifecycle wrappers beyond direct `qemu-system-aarch64` launch
+- repo-level guest-side screenshot wrapper commands
 - automatic guest provisioning for Windows
+- Windows image bring-up
 
-Those should be the next steps after QEMU is installed and both guests boot.
+Those are the next steps after QEMU is installed and the Windows guest image is available.
 
 ## Recommended next steps after QEMU install
 
-1. Bring up Linux ARM64 guest and verify SSH.
-2. Add guest-side Linux automation helpers:
+1. Add guest-side Linux automation helpers:
    - screenshot
    - window list
    - focus
    - key/click injection
-3. Bring up Windows ARM64 guest and verify SSH.
-4. Add guest-side Windows automation helpers:
+2. Bring up Windows ARM64 guest and verify SSH.
+3. Add guest-side Windows automation helpers:
    - screenshot
    - window list
    - focus
    - key/click injection
-5. Add repo-level smoke commands that run AiLang build/test flows inside guests.
+4. Add repo-level smoke commands that run AiLang build/test flows inside guests.

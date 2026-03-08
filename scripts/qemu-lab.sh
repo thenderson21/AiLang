@@ -467,6 +467,48 @@ cmd_linux_exec() {
   exec ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" "$@"
 }
 
+cmd_linux_gui_bootstrap() {
+  load_config
+  ensure_ssh_key
+  require_cmd ssh
+  # shellcheck disable=SC2048,SC2086
+  ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" '
+    set -euo pipefail
+    sudo cloud-init status --wait >/dev/null 2>&1 || true
+    sudo apt-get update
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
+      xfce4 lightdm xdotool scrot x11-apps xterm
+    sudo install -d -m 0755 /etc/lightdm/lightdm.conf.d
+    cat <<EOF | sudo tee /etc/lightdm/lightdm.conf.d/50-ailang-autologin.conf >/dev/null
+[Seat:*]
+autologin-user='"${AIVM_QEMU_LINUX_USER}"'
+autologin-user-timeout=0
+user-session=xfce
+greeter-hide-users=false
+EOF
+    sudo systemctl enable lightdm
+    sudo systemctl set-default graphical.target
+    sudo systemctl restart lightdm || sudo systemctl start lightdm
+  '
+}
+
+cmd_linux_gui_status() {
+  load_config
+  ensure_ssh_key
+  require_cmd ssh
+  # shellcheck disable=SC2048,SC2086
+  exec ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" '
+    set -euo pipefail
+    printf "lightdm_enabled=%s\n" "$(systemctl is-enabled lightdm 2>/dev/null || echo no)"
+    printf "lightdm_active=%s\n" "$(systemctl is-active lightdm 2>/dev/null || echo no)"
+    printf "default_target=%s\n" "$(systemctl get-default 2>/dev/null || echo unknown)"
+    loginctl list-sessions --no-legend || true
+    if command -v xdpyinfo >/dev/null 2>&1; then
+      DISPLAY=:0 xdpyinfo >/dev/null 2>&1 && echo "display_0=ready" || echo "display_0=not-ready"
+    fi
+  '
+}
+
 cmd_windows_ssh() {
   load_config
   ensure_ssh_key
@@ -507,6 +549,8 @@ Commands:
   linux-stop           Stop Linux ARM guest
   linux-ssh            SSH into Linux guest on forwarded port
   linux-exec <cmd...>  Run command inside Linux guest over SSH
+  linux-gui-bootstrap  Install and enable Linux desktop + GUI automation tools
+  linux-gui-status     Show Linux guest desktop/session status
   windows-create-disk  Create Windows qcow2 disk
   windows-start        Launch Windows ARM guest in background
   windows-run          Launch Windows ARM guest
@@ -534,6 +578,8 @@ main() {
     linux-stop) cmd_linux_stop ;;
     linux-ssh) cmd_linux_ssh ;;
     linux-exec) cmd_linux_exec "$@" ;;
+    linux-gui-bootstrap) cmd_linux_gui_bootstrap ;;
+    linux-gui-status) cmd_linux_gui_status ;;
     windows-create-disk) cmd_windows_create_disk ;;
     windows-start) cmd_windows_start ;;
     windows-run) cmd_windows_run ;;
