@@ -656,7 +656,7 @@ cmd_linux_gui_status() {
   ensure_ssh_key
   require_cmd ssh
   # shellcheck disable=SC2048,SC2086
-  exec ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" '
+  ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" '
     set -euo pipefail
     printf "lightdm_enabled=%s\n" "$(systemctl is-enabled lightdm 2>/dev/null || echo no)"
     printf "lightdm_active=%s\n" "$(systemctl is-active lightdm 2>/dev/null || echo no)"
@@ -694,7 +694,7 @@ cmd_linux_gui_windows() {
   ensure_ssh_key
   require_cmd ssh
   # shellcheck disable=SC2048,SC2086
-  exec ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" '
+  ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" '
     set -euo pipefail
     DISPLAY=:0 bash -lc '"'"'
       ids=$(xdotool search --onlyvisible --name ".*" 2>/dev/null || true)
@@ -720,7 +720,7 @@ cmd_linux_gui_find() {
   ensure_ssh_key
   require_cmd ssh
   # shellcheck disable=SC2048,SC2086
-  exec ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" "
+  ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" "
     DISPLAY=:0 bash -lc '
       xdotool search --onlyvisible --name \"${pattern}\" 2>/dev/null || true
     '
@@ -737,7 +737,7 @@ cmd_linux_gui_wait() {
   ensure_ssh_key
   require_cmd ssh
   # shellcheck disable=SC2048,SC2086
-  exec ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" "
+  ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" "
     DISPLAY=:0 bash -lc '
       end=\$((SECONDS + ${timeout}))
       while (( SECONDS < end )); do
@@ -762,10 +762,11 @@ cmd_linux_gui_launch() {
   load_config
   ensure_ssh_key
   require_cmd ssh
-  guest_cmd="$*"
+  printf -v guest_cmd '%q ' "$@"
+  guest_cmd="${guest_cmd% }"
   remote_cmd="DISPLAY=:0 nohup ${guest_cmd} >/tmp/ailang-qemu-gui-launch.log 2>&1 </dev/null &"
   # shellcheck disable=SC2048,SC2086
-  exec ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" \
+  ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" \
     "bash -lc $(printf '%q' "$remote_cmd")"
 }
 
@@ -779,7 +780,7 @@ cmd_linux_gui_focus() {
   ensure_ssh_key
   require_cmd ssh
   # shellcheck disable=SC2048,SC2086
-  exec ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" \
+  ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" \
     "DISPLAY=:0 xdotool windowactivate --sync '${target}'"
 }
 
@@ -792,7 +793,7 @@ cmd_linux_gui_key() {
   ensure_ssh_key
   require_cmd ssh
   # shellcheck disable=SC2048,SC2086
-  exec ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" \
+  ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" \
     "DISPLAY=:0 xdotool key --delay 50 $*"
 }
 
@@ -806,7 +807,7 @@ cmd_linux_gui_type() {
   ensure_ssh_key
   require_cmd ssh
   # shellcheck disable=SC2048,SC2086
-  exec ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" \
+  ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" \
     "DISPLAY=:0 xdotool type --delay 30 -- '$text'"
 }
 
@@ -820,8 +821,35 @@ cmd_linux_gui_click() {
   ensure_ssh_key
   require_cmd ssh
   # shellcheck disable=SC2048,SC2086
-  exec ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" \
+  ssh $(guest_ssh_common "${AIVM_QEMU_LINUX_SSH_PORT}") "${AIVM_QEMU_LINUX_USER}@127.0.0.1" \
     "DISPLAY=:0 xdotool mousemove --sync '${x}' '${y}' click '${button}'"
+}
+
+cmd_linux_gui_smoke() {
+  local title="AiLangQemuGuiSmoke"
+  local text="AiLang QEMU GUI smoke"
+  local out_path id
+
+  load_config
+  ensure_ssh_key
+  require_cmd ssh
+  require_cmd scp
+  out_path="${1:-${LAB_DIR}/linux-gui-smoke-$(date +%Y%m%d-%H%M%S).png}"
+
+  cmd_linux_gui_launch xterm -title "${title}" -hold -e sh -lc "printf '%s\n' '${text}'; sleep 10" >/dev/null
+  id="$(cmd_linux_gui_wait "${title}" 15 | tr -d '\r')"
+  if [[ -z "${id}" ]]; then
+    echo "failed to detect smoke window" >&2
+    return 1
+  fi
+
+  cmd_linux_gui_focus "${id}" >/dev/null
+  cmd_linux_gui_type "${text}" >/dev/null
+  cmd_linux_gui_key Return >/dev/null
+  cmd_linux_gui_screenshot "${out_path}" >/dev/null
+
+  printf "window_id=%s\n" "${id}"
+  printf "screenshot=%s\n" "${out_path}"
 }
 
 cmd_windows_ssh() {
@@ -875,6 +903,7 @@ Commands:
   linux-gui-key <keys> Send xdotool key sequence to the guest
   linux-gui-type <text> Type text into the focused guest window
   linux-gui-click <x> <y> [button] Click inside the guest display
+  linux-gui-smoke [path] Run guest GUI smoke flow and capture screenshot
   windows-create-disk  Create Windows qcow2 disk
   windows-unattend     Generate Windows unattended install seed ISO
   windows-start        Launch Windows ARM guest in background
@@ -914,6 +943,7 @@ main() {
     linux-gui-key) cmd_linux_gui_key "$@" ;;
     linux-gui-type) cmd_linux_gui_type "$@" ;;
     linux-gui-click) cmd_linux_gui_click "$@" ;;
+    linux-gui-smoke) cmd_linux_gui_smoke "$@" ;;
     windows-create-disk) cmd_windows_create_disk ;;
     windows-unattend) cmd_windows_unattend ;;
     windows-start) cmd_windows_start ;;

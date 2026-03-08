@@ -136,7 +136,13 @@ Current repo-level Linux GUI helper commands:
 ./scripts/qemu-lab.sh linux-gui-key Ctrl+l
 ./scripts/qemu-lab.sh linux-gui-type "hello"
 ./scripts/qemu-lab.sh linux-gui-click 640 400
+./scripts/qemu-lab.sh linux-gui-smoke
 ```
+
+`linux-gui-smoke` is the first end-to-end guest GUI check. It launches a titled `xterm`,
+waits for the window, focuses it, types text, presses `Return`, and copies a guest
+screenshot back to the host under `.tmp/qemu-lab/` unless you pass an explicit output
+path.
 
 These are thin wrappers over guest-side `xdotool` and `scrot` running against `DISPLAY=:0`.
 
