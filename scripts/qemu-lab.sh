@@ -755,6 +755,46 @@ cmd_guest_screen_hash() {
   rm -f "${tmp_path}"
 }
 
+cmd_guest_boot_probe() {
+  local guest="$1" out_path="${2:-}" serial_lines="${3:-40}"
+  local screen_hash log_path serial_path monitor_path pid_path state pid
+  load_config
+  if [[ -z "${out_path}" ]]; then
+    out_path="${LAB_DIR}/${guest}-boot-probe-$(timestamp_utc).txt"
+  fi
+  mkdir -p "$(dirname "${out_path}")"
+  log_path="$(guest_log_path "${guest}")"
+  serial_path="$(guest_serial_log_path "${guest}")"
+  monitor_path="$(guest_monitor_path "${guest}")"
+  pid_path="$(guest_pid_path "${guest}")"
+  if guest_is_running "${guest}"; then
+    state="running"
+    pid="$(cat "${pid_path}")"
+  else
+    state="stopped"
+    pid="-"
+  fi
+  screen_hash="$(cmd_guest_screen_hash "${guest}" 2>/dev/null || echo unavailable)"
+  {
+    printf "guest=%s\n" "${guest}"
+    printf "state=%s\n" "${state}"
+    printf "pid=%s\n" "${pid}"
+    printf "log=%s\n" "${log_path}"
+    printf "serial=%s\n" "${serial_path}"
+    printf "monitor=%s\n" "${monitor_path}"
+    printf "screen_hash=%s\n" "${screen_hash}"
+    printf "timestamp_utc=%s\n" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+    echo "--- serial tail ---"
+    if [[ -f "${serial_path}" ]]; then
+      tail -n "${serial_lines}" "${serial_path}"
+    else
+      echo "missing serial log"
+    fi
+  } >"${out_path}"
+  printf "wrote %s\n" "${out_path}"
+  printf "screen_hash=%s\n" "${screen_hash}"
+}
+
 cmd_linux_screendump() {
   load_config
   cmd_guest_screendump "${AIVM_QEMU_LINUX_NAME}" "${1:-}"
@@ -773,6 +813,16 @@ cmd_linux_screen_hash() {
 cmd_windows_screen_hash() {
   load_config
   cmd_guest_screen_hash "${AIVM_QEMU_WINDOWS_NAME}"
+}
+
+cmd_linux_boot_probe() {
+  load_config
+  cmd_guest_boot_probe "${AIVM_QEMU_LINUX_NAME}" "${1:-}" "${2:-40}"
+}
+
+cmd_windows_boot_probe() {
+  load_config
+  cmd_guest_boot_probe "${AIVM_QEMU_WINDOWS_NAME}" "${1:-}" "${2:-40}"
 }
 
 cmd_linux_sendkey() {
@@ -1107,6 +1157,7 @@ Commands:
   linux-log-tail [lines] [qemu|serial] Tail Linux guest log
   linux-screendump [path] Capture host-side QEMU framebuffer dump for Linux guest
   linux-screen-hash    Capture Linux guest framebuffer and print content hash
+  linux-boot-probe [path] [serial-lines] Capture Linux boot-state report
   linux-monitor <cmd...> Send raw QEMU monitor command to Linux guest
   linux-sendkey <key>    Send QEMU key to Linux guest
   linux-wait-ssh [timeout] Wait for Linux guest SSH readiness
@@ -1133,6 +1184,7 @@ Commands:
   windows-log-tail [lines] [qemu|serial] Tail Windows guest log
   windows-screendump [path] Capture host-side QEMU framebuffer dump for Windows guest
   windows-screen-hash  Capture Windows guest framebuffer and print content hash
+  windows-boot-probe [path] [serial-lines] Capture Windows boot-state report
   windows-monitor <cmd...> Send raw QEMU monitor command to Windows guest
   windows-sendkey <key>  Send QEMU key to Windows guest
   windows-wait-ssh [timeout] Wait for Windows guest SSH readiness
@@ -1160,6 +1212,7 @@ main() {
     linux-log-tail) cmd_linux_log_tail "$@" ;;
     linux-screendump) cmd_linux_screendump "$@" ;;
     linux-screen-hash) cmd_linux_screen_hash ;;
+    linux-boot-probe) cmd_linux_boot_probe "$@" ;;
     linux-monitor) cmd_linux_monitor "$@" ;;
     linux-sendkey) cmd_linux_sendkey "$@" ;;
     linux-wait-ssh) cmd_linux_wait_ssh "$@" ;;
@@ -1186,6 +1239,7 @@ main() {
     windows-log-tail) cmd_windows_log_tail "$@" ;;
     windows-screendump) cmd_windows_screendump "$@" ;;
     windows-screen-hash) cmd_windows_screen_hash ;;
+    windows-boot-probe) cmd_windows_boot_probe "$@" ;;
     windows-monitor) cmd_windows_monitor "$@" ;;
     windows-sendkey) cmd_windows_sendkey "$@" ;;
     windows-wait-ssh) cmd_windows_wait_ssh "$@" ;;
