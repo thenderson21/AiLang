@@ -610,6 +610,37 @@ cmd_status() {
   guest_status "${AIVM_QEMU_WINDOWS_NAME}"
 }
 
+cmd_guest_wait_ssh() {
+  local user="$1" port="$2" timeout="${3:-120}" name="$4"
+  local end
+  load_config
+  ensure_ssh_key
+  require_cmd ssh
+  end=$((SECONDS + timeout))
+  while (( SECONDS < end )); do
+    # shellcheck disable=SC2048,SC2086
+    if ssh $(guest_ssh_common "${port}") "${user}@127.0.0.1" "printf ready" >/dev/null 2>&1; then
+      printf "%s ssh=ready port=%s\n" "${name}" "${port}"
+      return 0
+    fi
+    sleep 2
+  done
+  printf "%s ssh=timeout port=%s timeout=%s\n" "${name}" "${port}" "${timeout}" >&2
+  return 1
+}
+
+cmd_linux_wait_ssh() {
+  local timeout="${1:-120}"
+  load_config
+  cmd_guest_wait_ssh "${AIVM_QEMU_LINUX_USER}" "${AIVM_QEMU_LINUX_SSH_PORT}" "${timeout}" "${AIVM_QEMU_LINUX_NAME}"
+}
+
+cmd_windows_wait_ssh() {
+  local timeout="${1:-300}"
+  load_config
+  cmd_guest_wait_ssh "${AIVM_QEMU_WINDOWS_USER}" "${AIVM_QEMU_WINDOWS_SSH_PORT}" "${timeout}" "${AIVM_QEMU_WINDOWS_NAME}"
+}
+
 cmd_linux_ssh() {
   load_config
   ensure_ssh_key
@@ -890,6 +921,7 @@ Commands:
   linux-start          Launch Linux ARM guest in background
   linux-run            Launch Linux ARM guest
   linux-stop           Stop Linux ARM guest
+  linux-wait-ssh [timeout] Wait for Linux guest SSH readiness
   linux-ssh            SSH into Linux guest on forwarded port
   linux-exec <cmd...>  Run command inside Linux guest over SSH
   linux-gui-bootstrap  Install and enable Linux desktop + GUI automation tools
@@ -909,6 +941,7 @@ Commands:
   windows-start        Launch Windows ARM guest in background
   windows-run          Launch Windows ARM guest
   windows-stop         Stop Windows ARM guest
+  windows-wait-ssh [timeout] Wait for Windows guest SSH readiness
   windows-ssh          SSH into Windows guest on forwarded port
   windows-exec <cmd...> Run command inside Windows guest over SSH
   status               Show Linux/Windows guest status
@@ -930,6 +963,7 @@ main() {
     linux-start) cmd_linux_start ;;
     linux-run) cmd_linux_run ;;
     linux-stop) cmd_linux_stop ;;
+    linux-wait-ssh) cmd_linux_wait_ssh "$@" ;;
     linux-ssh) cmd_linux_ssh ;;
     linux-exec) cmd_linux_exec "$@" ;;
     linux-gui-bootstrap) cmd_linux_gui_bootstrap ;;
@@ -949,6 +983,7 @@ main() {
     windows-start) cmd_windows_start ;;
     windows-run) cmd_windows_run ;;
     windows-stop) cmd_windows_stop ;;
+    windows-wait-ssh) cmd_windows_wait_ssh "$@" ;;
     windows-ssh) cmd_windows_ssh ;;
     windows-exec) cmd_windows_exec "$@" ;;
     status) cmd_status ;;
