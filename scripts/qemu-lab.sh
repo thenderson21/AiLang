@@ -610,6 +610,33 @@ cmd_status() {
   guest_status "${AIVM_QEMU_WINDOWS_NAME}"
 }
 
+cmd_guest_log_tail() {
+  local guest="$1" lines="${2:-40}" kind="${3:-qemu}" path
+  load_config
+  case "${kind}" in
+    qemu) path="$(guest_log_path "${guest}")" ;;
+    serial) path="$(guest_serial_log_path "${guest}")" ;;
+    *) echo "unknown log kind: ${kind}" >&2; return 1 ;;
+  esac
+  if [[ ! -f "${path}" ]]; then
+    echo "missing ${kind} log: ${path}" >&2
+    return 1
+  fi
+  tail -n "${lines}" "${path}"
+}
+
+cmd_linux_log_tail() {
+  local lines="${1:-40}" kind="${2:-qemu}"
+  load_config
+  cmd_guest_log_tail "${AIVM_QEMU_LINUX_NAME}" "${lines}" "${kind}"
+}
+
+cmd_windows_log_tail() {
+  local lines="${1:-40}" kind="${2:-qemu}"
+  load_config
+  cmd_guest_log_tail "${AIVM_QEMU_WINDOWS_NAME}" "${lines}" "${kind}"
+}
+
 cmd_guest_wait_ssh() {
   local user="$1" port="$2" timeout="${3:-120}" name="$4"
   local end
@@ -921,6 +948,7 @@ Commands:
   linux-start          Launch Linux ARM guest in background
   linux-run            Launch Linux ARM guest
   linux-stop           Stop Linux ARM guest
+  linux-log-tail [lines] [qemu|serial] Tail Linux guest log
   linux-wait-ssh [timeout] Wait for Linux guest SSH readiness
   linux-ssh            SSH into Linux guest on forwarded port
   linux-exec <cmd...>  Run command inside Linux guest over SSH
@@ -941,6 +969,7 @@ Commands:
   windows-start        Launch Windows ARM guest in background
   windows-run          Launch Windows ARM guest
   windows-stop         Stop Windows ARM guest
+  windows-log-tail [lines] [qemu|serial] Tail Windows guest log
   windows-wait-ssh [timeout] Wait for Windows guest SSH readiness
   windows-ssh          SSH into Windows guest on forwarded port
   windows-exec <cmd...> Run command inside Windows guest over SSH
@@ -963,6 +992,7 @@ main() {
     linux-start) cmd_linux_start ;;
     linux-run) cmd_linux_run ;;
     linux-stop) cmd_linux_stop ;;
+    linux-log-tail) cmd_linux_log_tail "$@" ;;
     linux-wait-ssh) cmd_linux_wait_ssh "$@" ;;
     linux-ssh) cmd_linux_ssh ;;
     linux-exec) cmd_linux_exec "$@" ;;
@@ -983,6 +1013,7 @@ main() {
     windows-start) cmd_windows_start ;;
     windows-run) cmd_windows_run ;;
     windows-stop) cmd_windows_stop ;;
+    windows-log-tail) cmd_windows_log_tail "$@" ;;
     windows-wait-ssh) cmd_windows_wait_ssh "$@" ;;
     windows-ssh) cmd_windows_ssh ;;
     windows-exec) cmd_windows_exec "$@" ;;
