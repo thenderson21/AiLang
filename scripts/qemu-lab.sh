@@ -33,6 +33,7 @@ load_config() {
   : "${AIVM_QEMU_LINUX_USER:=ailang}"
   : "${AIVM_QEMU_WINDOWS_USER:=ailang}"
   : "${AIVM_QEMU_WINDOWS_PASSWORD:=AiLangQemu!23}"
+  : "${AIVM_QEMU_WINDOWS_ATTACH_VIRTIO:=0}"
 
   if [[ -z "${AIVM_QEMU_EFI_CODE:-}" && -f /opt/homebrew/share/qemu/edk2-aarch64-code.fd ]]; then
     AIVM_QEMU_EFI_CODE=/opt/homebrew/share/qemu/edk2-aarch64-code.fd
@@ -193,7 +194,7 @@ build_windows_storage_args() {
   guest_dir_path="$(guest_dir "${AIVM_QEMU_WINDOWS_NAME}")"
   WINDOWS_STORAGE_ARGS=(
     -drive "if=none,id=win_disk,format=qcow2,file=${AIVM_QEMU_WINDOWS_IMAGE}"
-    -device virtio-blk-pci,drive=win_disk,bootindex=1
+    -device nvme,serial=ailang-win,drive=win_disk,bootindex=1
   )
 
   if [[ -n "${AIVM_QEMU_WINDOWS_INSTALL_ISO:-}" ]]; then
@@ -210,7 +211,7 @@ build_windows_storage_args() {
     )
   fi
 
-  if [[ -n "${AIVM_QEMU_WINDOWS_VIRTIO_ISO:-}" ]]; then
+  if [[ "${AIVM_QEMU_WINDOWS_ATTACH_VIRTIO}" == "1" && -n "${AIVM_QEMU_WINDOWS_VIRTIO_ISO:-}" ]]; then
     WINDOWS_STORAGE_ARGS+=(
       -drive "if=none,id=win_virtio,media=cdrom,file=${AIVM_QEMU_WINDOWS_VIRTIO_ISO}"
       -device usb-storage,drive=win_virtio,bootindex=3
@@ -578,7 +579,7 @@ cmd_windows_run() {
     -drive if=pflash,format=raw,file="${vars_path}" \
     "${WINDOWS_STORAGE_ARGS[@]}" \
     -netdev "user,id=net0,hostfwd=tcp::${AIVM_QEMU_WINDOWS_SSH_PORT}-:22" \
-    -device virtio-net-pci,netdev=net0
+    -device e1000,netdev=net0
 }
 
 cmd_windows_start() {
@@ -622,7 +623,7 @@ cmd_windows_start() {
     -drive if=pflash,format=raw,file="${vars_path}" \
     "${WINDOWS_STORAGE_ARGS[@]}" \
     -netdev "user,id=net0,hostfwd=tcp::${AIVM_QEMU_WINDOWS_SSH_PORT}-:22" \
-    -device virtio-net-pci,netdev=net0 \
+    -device e1000,netdev=net0 \
     -D "${log_path}"
   guest_status "${AIVM_QEMU_WINDOWS_NAME}"
 }

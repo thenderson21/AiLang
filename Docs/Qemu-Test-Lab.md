@@ -216,6 +216,7 @@ Current intent of that seed:
 - auto-log in for first boot
 - install and enable OpenSSH Server
 - write the repo-local SSH public key into the configured user profile
+- bootstrap with inbox-friendly devices first; virtio media is optional and disabled by default
 
 Current default local credentials in the example config:
 
