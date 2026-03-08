@@ -16,6 +16,10 @@ load_config() {
   : "${AIVM_QEMU_CPU:=host}"
   : "${AIVM_QEMU_DISPLAY:=cocoa}"
   : "${AIVM_QEMU_BG_DISPLAY:=none}"
+  : "${AIVM_QEMU_LINUX_DISPLAY:=${AIVM_QEMU_DISPLAY}}"
+  : "${AIVM_QEMU_LINUX_BG_DISPLAY:=${AIVM_QEMU_BG_DISPLAY}}"
+  : "${AIVM_QEMU_WINDOWS_DISPLAY:=${AIVM_QEMU_DISPLAY}}"
+  : "${AIVM_QEMU_WINDOWS_BG_DISPLAY:=${AIVM_QEMU_BG_DISPLAY}}"
   : "${AIVM_QEMU_LINUX_NAME:=linux-arm64}"
   : "${AIVM_QEMU_WINDOWS_NAME:=windows-arm64}"
   : "${AIVM_QEMU_LINUX_SSH_PORT:=2222}"
@@ -284,7 +288,7 @@ cmd_linux_run() {
     -cpu "${AIVM_QEMU_CPU}" \
     -smp "${AIVM_QEMU_LINUX_CPUS}" \
     -m "${AIVM_QEMU_LINUX_RAM_MB}" \
-    -display "${AIVM_QEMU_DISPLAY}" \
+    -display "${AIVM_QEMU_LINUX_DISPLAY}" \
     -device virtio-gpu-pci \
     -device virtio-rng-pci \
     -device qemu-xhci \
@@ -327,7 +331,7 @@ cmd_linux_start() {
     -m "${AIVM_QEMU_LINUX_RAM_MB}" \
     -daemonize \
     -pidfile "${pid_path}" \
-    -display "${AIVM_QEMU_BG_DISPLAY}" \
+    -display "${AIVM_QEMU_LINUX_BG_DISPLAY}" \
     -device virtio-gpu-pci \
     -device virtio-rng-pci \
     -device qemu-xhci \
@@ -376,7 +380,7 @@ cmd_windows_run() {
     -cpu "${AIVM_QEMU_CPU}" \
     -smp "${AIVM_QEMU_WINDOWS_CPUS}" \
     -m "${AIVM_QEMU_WINDOWS_RAM_MB}" \
-    -display "${AIVM_QEMU_DISPLAY}" \
+    -display "${AIVM_QEMU_WINDOWS_DISPLAY}" \
     -device virtio-gpu-pci \
     -device virtio-rng-pci \
     -device qemu-xhci \
@@ -404,6 +408,10 @@ cmd_windows_start() {
     guest_status "${AIVM_QEMU_WINDOWS_NAME}"
     return 0
   fi
+  if [[ "${AIVM_QEMU_WINDOWS_BG_DISPLAY}" != "none" ]]; then
+    echo "windows-start requires AIVM_QEMU_WINDOWS_BG_DISPLAY=none; use windows-run for visible installer sessions" >&2
+    return 1
+  fi
   vars_path="$(guest_vars_path "${AIVM_QEMU_WINDOWS_NAME}")"
   pid_path="$(guest_pid_path "${AIVM_QEMU_WINDOWS_NAME}")"
   log_path="$(guest_log_path "${AIVM_QEMU_WINDOWS_NAME}")"
@@ -417,7 +425,7 @@ cmd_windows_start() {
     -m "${AIVM_QEMU_WINDOWS_RAM_MB}" \
     -daemonize \
     -pidfile "${pid_path}" \
-    -display "${AIVM_QEMU_BG_DISPLAY}" \
+    -display "${AIVM_QEMU_WINDOWS_BG_DISPLAY}" \
     -device virtio-gpu-pci \
     -device virtio-rng-pci \
     -device qemu-xhci \

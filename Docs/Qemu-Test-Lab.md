@@ -69,6 +69,7 @@ That means:
    - `AIVM_QEMU_EFI_VARS_TEMPLATE`
    - Linux image paths
    - Windows image paths
+   - optional per-guest display overrides if one guest should be visible and the other headless
 4. Initialize the lab:
 
 ```bash
@@ -167,6 +168,20 @@ Once guest SSH is working, these should become normal flows:
 ```bash
 ./scripts/qemu-lab.sh windows-ssh
 ./scripts/qemu-lab.sh windows-exec pwd
+```
+
+For installer bring-up on macOS, use `windows-run` for the visible session. `windows-start` is intended for headless/background use only.
+
+Visible installer session:
+
+```bash
+./scripts/qemu-lab.sh windows-run
+```
+
+Headless/background session after install:
+
+```bash
+AIVM_QEMU_WINDOWS_BG_DISPLAY=none ./scripts/qemu-lab.sh windows-start
 ```
 
 ## Current limitations
