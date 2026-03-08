@@ -2174,6 +2174,7 @@ typedef struct NativeNetAsyncState
     int kind; /* 1 connect, 2 read, 3 write */
     int status; /* 0 pending, 1 success, -1 failure, -2 canceled */
     int64_t socket_handle;
+    int port;
     int max_bytes;
     uint8_t* pending_bytes;
     size_t pending_bytes_len;
@@ -2850,12 +2851,65 @@ static void native_net_async_cancel_pending_socket(NativeNetAsyncState* op)
 static void native_net_async_process(NativeNetAsyncState* op)
 {
     NativeNetHandleState* state;
+    struct sockaddr_in addr;
     fd_set read_set;
     fd_set write_set;
     struct timeval timeout;
     int select_rc;
     if (op == NULL || op->status != 0) {
         return;
+    }
+    if (op->kind == 1 && op->socket_handle == 0) {
+        NativeSocket socket_fd;
+        int64_t handle;
+        if (!native_net_platform_init() ||
+            op->port <= 0 || op->port > 65535 ||
+            !native_net_resolve_ipv4(op->host, (uint16_t)op->port, SOCK_STREAM, 0, &addr)) {
+            if (op->use_tls) {
+                native_net_async_set_tls_failure(op, "connect_tls_failed");
+            } else {
+                native_net_async_set_failure(op, "connect_failed");
+            }
+            return;
+        }
+        socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+        if (socket_fd == NATIVE_INVALID_SOCKET || !native_net_socket_set_nonblocking(socket_fd)) {
+            if (socket_fd != NATIVE_INVALID_SOCKET) {
+                native_socket_close(socket_fd);
+            }
+            if (op->use_tls) {
+                native_net_async_set_tls_failure(op, "connect_tls_failed");
+            } else {
+                native_net_async_set_failure(op, "connect_failed");
+            }
+            return;
+        }
+        handle = native_net_handle_allocate(NATIVE_NET_HANDLE_KIND_TCP_STREAM, socket_fd);
+        if (handle < 0) {
+            native_socket_close(socket_fd);
+            if (op->use_tls) {
+                native_net_async_set_tls_failure(op, "connect_tls_failed");
+            } else {
+                native_net_async_set_failure(op, "connect_failed");
+            }
+            return;
+        }
+        op->socket_handle = handle;
+        if (connect(socket_fd, (struct sockaddr*)&addr, sizeof(addr)) == 0) {
+            if (!op->use_tls) {
+                native_net_async_set_success_int(op, handle);
+                return;
+            }
+        } else if (!native_net_socket_would_block()) {
+            (void)native_net_handle_close(handle);
+            op->socket_handle = 0;
+            if (op->use_tls) {
+                native_net_async_set_tls_failure(op, "connect_tls_failed");
+            } else {
+                native_net_async_set_failure(op, "connect_failed");
+            }
+            return;
+        }
     }
     state = native_net_handle_lookup(op->socket_handle);
     if (state == NULL ||
@@ -5143,9 +5197,6 @@ static int native_syscall_net_start_op(
     int is_supported_target;
     int64_t op_handle;
     NativeNetAsyncState* op;
-    struct sockaddr_in addr;
-    NativeSocket socket_fd;
-    int64_t handle;
     if (result == NULL) {
         return AIVM_SYSCALL_ERR_NULL_RESULT;
     }
@@ -5174,49 +5225,16 @@ static int native_syscall_net_start_op(
             args[0].type != AIVM_VAL_STRING || args[0].string_value == NULL ||
             args[1].type != AIVM_VAL_INT ||
             !native_net_platform_init() ||
-            args[1].int_value <= 0 || args[1].int_value > 65535 ||
-            !native_net_resolve_ipv4(args[0].string_value, (uint16_t)args[1].int_value, SOCK_STREAM, 0, &addr)) {
-            native_net_async_set_failure(op, "connect_failed");
-            *result = aivm_value_int(op_handle);
-            return AIVM_SYSCALL_OK;
-        }
-        socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-        if (socket_fd == NATIVE_INVALID_SOCKET || !native_net_socket_set_nonblocking(socket_fd)) {
-            if (socket_fd != NATIVE_INVALID_SOCKET) {
-                native_socket_close(socket_fd);
-            }
-            native_net_async_set_failure(op, "connect_failed");
-            *result = aivm_value_int(op_handle);
-            return AIVM_SYSCALL_OK;
-        }
-        handle = native_net_handle_allocate(NATIVE_NET_HANDLE_KIND_TCP_STREAM, socket_fd);
-        if (handle < 0) {
-            native_socket_close(socket_fd);
+            args[1].int_value <= 0 || args[1].int_value > 65535) {
             native_net_async_set_failure(op, "connect_failed");
             *result = aivm_value_int(op_handle);
             return AIVM_SYSCALL_OK;
         }
         op->kind = 1;
         op->use_tls = (strcmp(target, "sys.net.tcp.connectTlsStart") == 0);
-        if (op->use_tls) {
-            (void)snprintf(op->host, sizeof(op->host), "%s", args[0].string_value);
-        }
-        op->socket_handle = handle;
-        if (connect(socket_fd, (struct sockaddr*)&addr, sizeof(addr)) == 0) {
-            if (op->use_tls) {
-                native_net_async_process(op);
-            } else {
-                native_net_async_set_success_int(op, handle);
-            }
-        } else if (!native_net_socket_would_block()) {
-            (void)native_net_handle_close(handle);
-            op->socket_handle = 0;
-            if (op->use_tls) {
-                native_net_async_set_tls_failure(op, "connect_tls_failed");
-            } else {
-                native_net_async_set_failure(op, "connect_failed");
-            }
-        }
+        op->port = (int)args[1].int_value;
+        (void)snprintf(op->host, sizeof(op->host), "%s", args[0].string_value);
+        op->socket_handle = 0;
     } else if (strcmp(target, "sys.net.tcp.readStart") == 0) {
         NativeNetHandleState* state;
         if (args == NULL || arg_count != 2U || args[0].type != AIVM_VAL_INT || args[1].type != AIVM_VAL_INT) {
