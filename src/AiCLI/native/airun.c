@@ -8668,38 +8668,11 @@ static int emit_vm_error_with_context(const AivmProgram* program, const AivmVm* 
             call_target = infer_call_target(program, &vm_for_target);
         }
     }
-    if (vm->error == AIVM_VM_ERR_SYSCALL && program->instructions != NULL && program->instruction_count > 0U) {
-        size_t cursor = (pc == 0U) ? 0U : (pc - 1U);
-        if (cursor >= program->instruction_count) {
-            cursor = program->instruction_count - 1U;
-        }
-        while (1) {
-            const AivmInstruction* probe = &program->instructions[cursor];
-            if (probe->opcode == AIVM_OP_CALL_SYS || probe->opcode == AIVM_OP_ASYNC_CALL_SYS) {
-                display_pc = cursor;
-                opcode_name = aivm_opcode_name(probe->opcode);
-                if (probe->operand_int >= 0) {
-                    size_t arg_count = (size_t)probe->operand_int;
-                    if (cursor > arg_count) {
-                        size_t target_inst_index = cursor - arg_count - 1U;
-                        const AivmInstruction* target_inst = &program->instructions[target_inst_index];
-                        if (target_inst->opcode == AIVM_OP_CONST &&
-                            target_inst->operand_int >= 0 &&
-                            (size_t)target_inst->operand_int < program->constant_count) {
-                            AivmValue target_value = program->constants[target_inst->operand_int];
-                            if (target_value.type == AIVM_VAL_STRING && target_value.string_value != NULL) {
-                                call_target = target_value.string_value;
-                            }
-                        }
-                    }
-                }
-                break;
-            }
-            if (cursor == 0U) {
-                break;
-            }
-            cursor -= 1U;
-        }
+    if (vm->error == AIVM_VM_ERR_SYSCALL &&
+        inst != NULL &&
+        (inst->opcode == AIVM_OP_CALL_SYS || inst->opcode == AIVM_OP_ASYNC_CALL_SYS)) {
+        display_pc = pc;
+        opcode_name = aivm_opcode_name(inst->opcode);
     }
 
     if (vm->error == AIVM_VM_ERR_SYSCALL && detail != NULL && detail[0] != '\0') {
