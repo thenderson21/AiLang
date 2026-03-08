@@ -1549,8 +1549,8 @@ Program#std_http_p1 {
     }
   }
 
-  Let#std_http_l30(name=httpRequest) {
-    Fn#std_http_f21(params=method,host,port,path,headers,body,maxBytes) {
+  Let#std_http_l30(name=httpRequestWithTimeoutPolls) {
+    Fn#std_http_f21(params=method,host,port,path,headers,body,maxBytes,timeoutPolls) {
       Block#std_http_b27 {
         Let#std_http_l31(name=headerText) {
           If#std_http_if62 {
@@ -1627,7 +1627,26 @@ Program#std_http_p1 {
             Lit#std_http_i61(value="")
             Lit#std_http_i62(value="")
             Lit#std_http_i62a(value="")
-            Lit#std_http_i114(value=5000)
+            Var#std_http_v78a(name=timeoutPolls)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l30a(name=httpRequest) {
+    Fn#std_http_f21a(params=method,host,port,path,headers,body,maxBytes) {
+      Block#std_http_b27a {
+        Return#std_http_r24a {
+          Call#std_http_c15a(target=httpRequestWithTimeoutPolls) {
+            Var#std_http_v78b(name=method)
+            Var#std_http_v78c(name=host)
+            Var#std_http_v78d(name=port)
+            Var#std_http_v78e(name=path)
+            Var#std_http_v78f(name=headers)
+            Var#std_http_v78g(name=body)
+            Var#std_http_v78h(name=maxBytes)
+            Lit#std_http_i114a(value=5000)
           }
         }
       }
@@ -2108,6 +2127,7 @@ Program#std_http_p1 {
   Export#std_http_e8(name=httpErrorJson)
   Export#std_http_e9(name=httpEmitRaw)
   Export#std_http_e10(name=httpRequest)
+  Export#std_http_e10a(name=httpRequestWithTimeoutPolls)
   Export#std_http_e11(name=httpRequestPoll)
   Export#std_http_e12(name=httpRequestAwait)
   Export#std_http_e13(name=httpRequestDone)

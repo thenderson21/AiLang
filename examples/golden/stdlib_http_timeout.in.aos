@@ -1,0 +1,24 @@
+Program#ghttptimeout_p1 {
+  Import#ghttptimeout_i1(path="./src/std/http.aos")
+  Import#ghttptimeout_i2(path="./src/std/io.aos")
+
+  Let#ghttptimeout_l1(name=state) {
+    Call#ghttptimeout_c1(target=http.httpRequestWithTimeoutPolls) {
+      Lit#ghttptimeout_i1(value="GET")
+      Lit#ghttptimeout_i2(value="example.com")
+      Lit#ghttptimeout_i3(value=80)
+      Lit#ghttptimeout_i4(value="/")
+      Lit#ghttptimeout_i5(value="")
+      Lit#ghttptimeout_i6(value="")
+      Lit#ghttptimeout_i7(value=4096)
+      Lit#ghttptimeout_i8(value=17)
+    }
+  }
+
+  Call#ghttptimeout_c2(target=io.print) {
+    Call#ghttptimeout_c3(target=http.httpRequestPhase) { Var#ghttptimeout_v1(name=state) }
+  }
+  Call#ghttptimeout_c4(target=io.print) {
+    Call#ghttptimeout_c5(target=http.httpRequestRemaining) { Var#ghttptimeout_v2(name=state) }
+  }
+}
