@@ -42,6 +42,27 @@ Program#ghttpinfo_p1 {
   Call#ghttpinfo_c10(target=io.print) {
     Call#ghttpinfo_c11(target=mapGetStringOr) {
       Var#ghttpinfo_v6(name=info)
+      Lit#ghttpinfo_i12(value="redirectHost")
+      Lit#ghttpinfo_i13(value="missing")
+    }
+  }
+  Call#ghttpinfo_c12(target=io.print) {
+    Call#ghttpinfo_c13(target=mapGetIntOr) {
+      Var#ghttpinfo_v7(name=info)
+      Lit#ghttpinfo_i14(value="redirectPort")
+      Lit#ghttpinfo_i15(value=-1)
+    }
+  }
+  Call#ghttpinfo_c14(target=io.print) {
+    Call#ghttpinfo_c15(target=mapGetStringOr) {
+      Var#ghttpinfo_v8(name=info)
+      Lit#ghttpinfo_i16(value="redirectPath")
+      Lit#ghttpinfo_i17(value="missing")
+    }
+  }
+  Call#ghttpinfo_c16(target=io.print) {
+    Call#ghttpinfo_c17(target=mapGetStringOr) {
+      Var#ghttpinfo_v9(name=info)
       Lit#ghttpinfo_i10(value="body")
       Lit#ghttpinfo_i11(value="missing")
     }

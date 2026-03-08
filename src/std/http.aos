@@ -734,6 +734,146 @@ Program#std_http_p1 {
     }
   }
 
+  Let#std_http_l29ccd(name=httpDigitValue) {
+    Fn#std_http_f20ccd(params=ch) {
+      Block#std_http_b26dua {
+        If#std_http_if61cz1 {
+          Eq#std_http_eq61cz1 { Var#std_http_v62ua(name=ch) Lit#std_http_i46ea1(value="0") }
+          Block#std_http_b26dub { Return#std_http_r23db1 { Lit#std_http_i46ea2(value=0) } }
+          Block#std_http_b26duc {
+            If#std_http_if61cz2 {
+              Eq#std_http_eq61cz2 { Var#std_http_v62ub(name=ch) Lit#std_http_i46ea3(value="1") }
+              Block#std_http_b26dud { Return#std_http_r23db2 { Lit#std_http_i46ea4(value=1) } }
+              Block#std_http_b26due {
+                If#std_http_if61cz3 {
+                  Eq#std_http_eq61cz3 { Var#std_http_v62uc(name=ch) Lit#std_http_i46ea5(value="2") }
+                  Block#std_http_b26duf { Return#std_http_r23db3 { Lit#std_http_i46ea6(value=2) } }
+                  Block#std_http_b26dug {
+                    If#std_http_if61cz4 {
+                      Eq#std_http_eq61cz4 { Var#std_http_v62ud(name=ch) Lit#std_http_i46ea7(value="3") }
+                      Block#std_http_b26duh { Return#std_http_r23db4 { Lit#std_http_i46ea8(value=3) } }
+                      Block#std_http_b26dui {
+                        If#std_http_if61cz5 {
+                          Eq#std_http_eq61cz5 { Var#std_http_v62ue(name=ch) Lit#std_http_i46ea9(value="4") }
+                          Block#std_http_b26duj { Return#std_http_r23db5 { Lit#std_http_i46eaa(value=4) } }
+                          Block#std_http_b26duk {
+                            If#std_http_if61cz6 {
+                              Eq#std_http_eq61cz6 { Var#std_http_v62uf(name=ch) Lit#std_http_i46eab(value="5") }
+                              Block#std_http_b26dul { Return#std_http_r23db6 { Lit#std_http_i46eac(value=5) } }
+                              Block#std_http_b26dum {
+                                If#std_http_if61cz7 {
+                                  Eq#std_http_eq61cz7 { Var#std_http_v62ug(name=ch) Lit#std_http_i46ead(value="6") }
+                                  Block#std_http_b26dun { Return#std_http_r23db7 { Lit#std_http_i46eae(value=6) } }
+                                  Block#std_http_b26duo {
+                                    If#std_http_if61cz8 {
+                                      Eq#std_http_eq61cz8 { Var#std_http_v62uh(name=ch) Lit#std_http_i46eaf(value="7") }
+                                      Block#std_http_b26dup { Return#std_http_r23db8 { Lit#std_http_i46eag(value=7) } }
+                                      Block#std_http_b26duq {
+                                        If#std_http_if61cz9 {
+                                          Eq#std_http_eq61cz9 { Var#std_http_v62ui(name=ch) Lit#std_http_i46eah(value="8") }
+                                          Block#std_http_b26dur { Return#std_http_r23db9 { Lit#std_http_i46eai(value=8) } }
+                                          Block#std_http_b26dus {
+                                            If#std_http_if61cza {
+                                              Eq#std_http_eq61cza { Var#std_http_v62uj(name=ch) Lit#std_http_i46eaj(value="9") }
+                                              Block#std_http_b26dut { Return#std_http_r23dba { Lit#std_http_i46eak(value=9) } }
+                                              Block#std_http_b26duu { Return#std_http_r23dbb { Lit#std_http_i46eal(value=-1) } }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l29cce(name=httpMul10) {
+    Fn#std_http_f20cce(params=value) {
+      Block#std_http_b26duv {
+        Return#std_http_r23dbc {
+          Add#std_http_add10a {
+            Var#std_http_v62uk(name=value)
+            Add#std_http_add10b {
+              Var#std_http_v62ul(name=value)
+              Add#std_http_add10c {
+                Var#std_http_v62um(name=value)
+                Add#std_http_add10d {
+                  Var#std_http_v62un(name=value)
+                  Add#std_http_add10e {
+                    Var#std_http_v62uo(name=value)
+                    Add#std_http_add10f {
+                      Var#std_http_v62up(name=value)
+                      Add#std_http_add10g {
+                        Var#std_http_v62uq(name=value)
+                        Add#std_http_add10h {
+                          Var#std_http_v62ur(name=value)
+                          Add#std_http_add10i {
+                            Var#std_http_v62us(name=value)
+                            Var#std_http_v62ut(name=value)
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l29ccf(name=httpParseDecimalStringAt) {
+    Fn#std_http_f20ccf(params=text,index,acc) {
+      Block#std_http_b26duw {
+        Let#std_http_l29ccg(name=ch) {
+          Call#std_http_c11ua(target=substring) {
+            Var#std_http_v62uu(name=text)
+            Var#std_http_v62uv(name=index)
+            Lit#std_http_i46eam(value=1)
+          }
+        }
+        If#std_http_if61czb {
+          Eq#std_http_eq61czb { Var#std_http_v62uw(name=ch) Lit#std_http_i46ean(value="") }
+          Block#std_http_b26dux { Return#std_http_r23dbd { Var#std_http_v62ux(name=acc) } }
+          Block#std_http_b26duy {
+            Let#std_http_l29cch(name=digit) { Call#std_http_c11ub(target=httpDigitValue) { Var#std_http_v62uy(name=ch) } }
+            If#std_http_if61czc {
+              Eq#std_http_eq61czc { Var#std_http_v62uz(name=digit) Lit#std_http_i46eao(value=-1) }
+              Block#std_http_b26duz { Return#std_http_r23dbe { Var#std_http_v62va(name=acc) } }
+              Block#std_http_b26dva {
+                Return#std_http_r23dbf {
+                  Call#std_http_c11uc(target=httpParseDecimalStringAt) {
+                    Var#std_http_v62vb(name=text)
+                    Add#std_http_add10j { Var#std_http_v62vc(name=index) Lit#std_http_i46eap(value=1) }
+                    Add#std_http_add10k {
+                      Call#std_http_c11ud(target=httpMul10) { Var#std_http_v62vd(name=acc) }
+                      Var#std_http_v62ve(name=digit)
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   Let#std_http_l29ce(name=httpChunkDecodeAt) {
     Fn#std_http_f20cd(params=text,start,acc) {
       Block#std_http_b26eb {
@@ -1029,6 +1169,12 @@ Program#std_http_p1 {
     Fn#std_http_f20ha(params=responseText) {
       Block#std_http_b26va {
         Let#std_http_l29q2(name=base) { Call#std_http_c11ra(target=nodeEmpty) { Lit#std_http_i46ac0(value="Map") } }
+        Let#std_http_l29q2a(name=redirectLocation) {
+          Call#std_http_c11raa(target=httpResponseRedirectLocation) {
+            Var#std_http_v60waa(name=responseText)
+            Lit#std_http_i46ac00(value="")
+          }
+        }
         Let#std_http_l29q3(name=withStatus) {
           Call#std_http_c11rb(target=mapSet) {
             Var#std_http_v60wa(name=base)
@@ -1051,10 +1197,7 @@ Program#std_http_p1 {
           Call#std_http_c11rf(target=mapSet) {
             Var#std_http_v60we(name=withContentType)
             Lit#std_http_i46ac5(value="redirectLocation")
-            Call#std_http_c11rg(target=httpResponseRedirectLocation) {
-              Var#std_http_v60wf(name=responseText)
-              Lit#std_http_i46ac6(value="")
-            }
+            Var#std_http_v60wf(name=redirectLocation)
           }
         }
         Let#std_http_l29q6(name=withIsRedirect) {
@@ -1064,11 +1207,41 @@ Program#std_http_p1 {
             Call#std_http_c11ri(target=httpResponseIsRedirect) { Var#std_http_v60wh(name=responseText) }
           }
         }
-        Return#std_http_r23oa {
+        Let#std_http_l29q7(name=withRedirectHost) {
           Call#std_http_c11rj(target=mapSet) {
             Var#std_http_v60wi(name=withIsRedirect)
+            Lit#std_http_i46ac81(value="redirectHost")
+            Call#std_http_c11rk(target=httpRedirectTargetHost) {
+              Var#std_http_v60wj(name=redirectLocation)
+              Lit#std_http_i46ac82(value="")
+            }
+          }
+        }
+        Let#std_http_l29q8(name=withRedirectPort) {
+          Call#std_http_c11rl(target=mapSet) {
+            Var#std_http_v60wk(name=withRedirectHost)
+            Lit#std_http_i46ac83(value="redirectPort")
+            Call#std_http_c11rm(target=httpRedirectTargetPort) {
+              Var#std_http_v60wl(name=redirectLocation)
+              Lit#std_http_i46ac84(value=0)
+            }
+          }
+        }
+        Let#std_http_l29q9(name=withRedirectPath) {
+          Call#std_http_c11rn(target=mapSet) {
+            Var#std_http_v60wm(name=withRedirectPort)
+            Lit#std_http_i46ac85(value="redirectPath")
+            Call#std_http_c11ro(target=httpRedirectTargetPath) {
+              Var#std_http_v60wn(name=redirectLocation)
+              Lit#std_http_i46ac86(value="")
+            }
+          }
+        }
+        Return#std_http_r23oa {
+          Call#std_http_c11rp(target=mapSet) {
+            Var#std_http_v60wo(name=withRedirectPath)
             Lit#std_http_i46ac8(value="body")
-            Call#std_http_c11rk(target=httpResponseBody) { Var#std_http_v60wj(name=responseText) }
+            Call#std_http_c11rq(target=httpResponseBody) { Var#std_http_v60wp(name=responseText) }
           }
         }
       }
@@ -1171,11 +1344,59 @@ Program#std_http_p1 {
         Let#std_http_l29ac(name=httpsStart) { Call#std_http_c12g(target=find) { Var#std_http_v62i(name=location) Lit#std_http_i46bn(value="https://") Lit#std_http_i46bo(value=0) } }
         If#std_http_if61t {
           Eq#std_http_eq61t { Var#std_http_v62j(name=httpStart) Lit#std_http_i46bp(value=0) }
-          Block#std_http_b26zp { Return#std_http_r23v { Lit#std_http_i46bq(value=80) } }
+          Block#std_http_b26zp {
+            Let#std_http_l29aba(name=rest) { Call#std_http_c12ga(target=substring) { Var#std_http_v62m(name=location) Lit#std_http_i46bpa(value=7) Lit#std_http_i46bpb(value=2147483647) } }
+            Let#std_http_l29abb(name=slashIndex) { Call#std_http_c12gb(target=find) { Var#std_http_v62n(name=rest) Lit#std_http_i46bpc(value="/") Lit#std_http_i46bpd(value=0) } }
+            Let#std_http_l29abc(name=hostPort) {
+              If#std_http_if61ua {
+                Eq#std_http_eq61ua { Var#std_http_v62o(name=slashIndex) Lit#std_http_i46bpe(value=-1) }
+                Block#std_http_b26zpa { Var#std_http_v62p(name=rest) }
+                Block#std_http_b26zpb { Call#std_http_c12gc(target=substring) { Var#std_http_v62q(name=rest) Lit#std_http_i46bpf(value=0) Var#std_http_v62r(name=slashIndex) } }
+              }
+            }
+            Let#std_http_l29abd(name=colonIndex) { Call#std_http_c12gd(target=find) { Var#std_http_v62s(name=hostPort) Lit#std_http_i46bpg(value=":") Lit#std_http_i46bph(value=0) } }
+            If#std_http_if61ub {
+              Eq#std_http_eq61ub { Var#std_http_v62t(name=colonIndex) Lit#std_http_i46bpi(value=-1) }
+              Block#std_http_b26zpc { Return#std_http_r23v { Lit#std_http_i46bq(value=80) } }
+              Block#std_http_b26zpd {
+                Return#std_http_r23va {
+                  Call#std_http_c12ge(target=httpParseDecimalStringAt) {
+                    Var#std_http_v62u(name=hostPort)
+                    Add#std_http_add10l { Var#std_http_v62v(name=colonIndex) Lit#std_http_i46bpj(value=1) }
+                    Lit#std_http_i46bpk(value=0)
+                  }
+                }
+              }
+            }
+          }
           Block#std_http_b26zq {
             If#std_http_if61u {
               Eq#std_http_eq61u { Var#std_http_v62k(name=httpsStart) Lit#std_http_i46br(value=0) }
-              Block#std_http_b26zr { Return#std_http_r23w { Lit#std_http_i46bs(value=443) } }
+              Block#std_http_b26zr {
+                Let#std_http_l29abe(name=rest) { Call#std_http_c12gf(target=substring) { Var#std_http_v62w(name=location) Lit#std_http_i46bpl(value=8) Lit#std_http_i46bpm(value=2147483647) } }
+                Let#std_http_l29abf(name=slashIndex) { Call#std_http_c12gg(target=find) { Var#std_http_v62x(name=rest) Lit#std_http_i46bpn(value="/") Lit#std_http_i46bpo(value=0) } }
+                Let#std_http_l29abg(name=hostPort) {
+                  If#std_http_if61uc {
+                    Eq#std_http_eq61uc { Var#std_http_v62y(name=slashIndex) Lit#std_http_i46bpp(value=-1) }
+                    Block#std_http_b26zra { Var#std_http_v62z(name=rest) }
+                    Block#std_http_b26zrb { Call#std_http_c12gh(target=substring) { Var#std_http_v63a(name=rest) Lit#std_http_i46bpq(value=0) Var#std_http_v63b(name=slashIndex) } }
+                  }
+                }
+                Let#std_http_l29abh(name=colonIndex) { Call#std_http_c12gi(target=find) { Var#std_http_v63c(name=hostPort) Lit#std_http_i46bpr(value=":") Lit#std_http_i46bps(value=0) } }
+                If#std_http_if61ud {
+                  Eq#std_http_eq61ud { Var#std_http_v63d(name=colonIndex) Lit#std_http_i46bpt(value=-1) }
+                  Block#std_http_b26zrc { Return#std_http_r23w { Lit#std_http_i46bs(value=443) } }
+                  Block#std_http_b26zrd {
+                    Return#std_http_r23wa {
+                      Call#std_http_c12gj(target=httpParseDecimalStringAt) {
+                        Var#std_http_v63e(name=hostPort)
+                        Add#std_http_add10m { Var#std_http_v63f(name=colonIndex) Lit#std_http_i46bpu(value=1) }
+                        Lit#std_http_i46bpv(value=0)
+                      }
+                    }
+                  }
+                }
+              }
               Block#std_http_b26zs { Return#std_http_r23x { Var#std_http_v62l(name=currentPort) } }
             }
           }
