@@ -100,6 +100,7 @@ The current working path on Apple Silicon is:
 ./scripts/qemu-lab.sh linux-start
 ./scripts/qemu-lab.sh linux-log-tail 40 serial
 ./scripts/qemu-lab.sh linux-screendump .tmp/qemu-lab/linux-screen.ppm
+./scripts/qemu-lab.sh linux-screen-hash
 ./scripts/qemu-lab.sh linux-sendkey ret
 ./scripts/qemu-lab.sh linux-wait-ssh 120
 ./scripts/qemu-lab.sh linux-ssh
@@ -196,6 +197,7 @@ Once guest SSH is working, these should become normal flows:
 ./scripts/qemu-lab.sh windows-wait-ssh 300
 ./scripts/qemu-lab.sh windows-log-tail 80 serial
 ./scripts/qemu-lab.sh windows-screendump .tmp/qemu-lab/windows-screen.ppm
+./scripts/qemu-lab.sh windows-screen-hash
 ./scripts/qemu-lab.sh windows-sendkey ret
 ./scripts/qemu-lab.sh windows-ssh
 ./scripts/qemu-lab.sh windows-exec pwd
@@ -230,6 +232,12 @@ Current default local credentials in the example config:
 You can override both in `scripts/qemu-lab.env`.
 
 For installer bring-up on macOS, use `windows-run` for the visible session. `windows-start` is intended for headless/background use only.
+
+If you need to isolate media issues, you can temporarily disable the unattended seed attach:
+
+```bash
+AIVM_QEMU_WINDOWS_ATTACH_UNATTEND=0 ./scripts/qemu-lab.sh windows-start
+```
 
 Visible installer session:
 

@@ -33,6 +33,7 @@ load_config() {
   : "${AIVM_QEMU_LINUX_USER:=ailang}"
   : "${AIVM_QEMU_WINDOWS_USER:=ailang}"
   : "${AIVM_QEMU_WINDOWS_PASSWORD:=AiLangQemu!23}"
+  : "${AIVM_QEMU_WINDOWS_ATTACH_UNATTEND:=1}"
   : "${AIVM_QEMU_WINDOWS_ATTACH_VIRTIO:=0}"
 
   if [[ -z "${AIVM_QEMU_EFI_CODE:-}" && -f /opt/homebrew/share/qemu/edk2-aarch64-code.fd ]]; then
@@ -224,10 +225,12 @@ guest_scp_common() {
 }
 
 WINDOWS_STORAGE_ARGS=()
+WINDOWS_CONTROLLER_ARGS=()
 
 build_windows_storage_args() {
   local guest_dir_path
   guest_dir_path="$(guest_dir "${AIVM_QEMU_WINDOWS_NAME}")"
+  WINDOWS_CONTROLLER_ARGS=()
   WINDOWS_STORAGE_ARGS=(
     -drive "if=none,id=win_disk,format=qcow2,file=${AIVM_QEMU_WINDOWS_IMAGE}"
     -device nvme,serial=ailang-win,drive=win_disk,bootindex=1
@@ -240,17 +243,17 @@ build_windows_storage_args() {
     )
   fi
 
-  if [[ -f "${guest_dir_path}/autounattend.iso" ]]; then
+  if [[ "${AIVM_QEMU_WINDOWS_ATTACH_UNATTEND}" == "1" && -f "${guest_dir_path}/autounattend.iso" ]]; then
     WINDOWS_STORAGE_ARGS+=(
       -drive "if=none,id=win_autounattend,media=cdrom,file=${guest_dir_path}/autounattend.iso"
-      -device usb-storage,drive=win_autounattend,bootindex=2
+      -device usb-storage,drive=win_autounattend
     )
   fi
 
   if [[ "${AIVM_QEMU_WINDOWS_ATTACH_VIRTIO}" == "1" && -n "${AIVM_QEMU_WINDOWS_VIRTIO_ISO:-}" ]]; then
     WINDOWS_STORAGE_ARGS+=(
       -drive "if=none,id=win_virtio,media=cdrom,file=${AIVM_QEMU_WINDOWS_VIRTIO_ISO}"
-      -device usb-storage,drive=win_virtio,bootindex=3
+      -device usb-storage,drive=win_virtio
     )
   fi
 }
@@ -380,6 +383,7 @@ cmd_linux_run() {
     -device qemu-xhci \
     -device usb-kbd \
     -device usb-tablet \
+    "${WINDOWS_CONTROLLER_ARGS[@]}" \
     -serial "file:${serial_log_path}" \
     -monitor "unix:${monitor_path},server,nowait" \
     -drive if=pflash,format=raw,readonly=on,file="${AIVM_QEMU_EFI_CODE}" \
@@ -426,6 +430,7 @@ cmd_linux_start() {
     -device qemu-xhci \
     -device usb-kbd \
     -device usb-tablet \
+    "${WINDOWS_CONTROLLER_ARGS[@]}" \
     -serial "file:${serial_log_path}" \
     -monitor "unix:${monitor_path},server,nowait" \
     -drive if=pflash,format=raw,readonly=on,file="${AIVM_QEMU_EFI_CODE}" \
@@ -739,6 +744,17 @@ cmd_guest_screendump() {
   echo "wrote ${out_path}"
 }
 
+cmd_guest_screen_hash() {
+  local guest="$1"
+  local tmp_path
+  load_config
+  require_cmd shasum
+  tmp_path="${LAB_DIR}/${guest}-screen-hash-$$.ppm"
+  cmd_guest_screendump "${guest}" "${tmp_path}" >/dev/null
+  shasum "${tmp_path}" | awk '{print $1}'
+  rm -f "${tmp_path}"
+}
+
 cmd_linux_screendump() {
   load_config
   cmd_guest_screendump "${AIVM_QEMU_LINUX_NAME}" "${1:-}"
@@ -747,6 +763,16 @@ cmd_linux_screendump() {
 cmd_windows_screendump() {
   load_config
   cmd_guest_screendump "${AIVM_QEMU_WINDOWS_NAME}" "${1:-}"
+}
+
+cmd_linux_screen_hash() {
+  load_config
+  cmd_guest_screen_hash "${AIVM_QEMU_LINUX_NAME}"
+}
+
+cmd_windows_screen_hash() {
+  load_config
+  cmd_guest_screen_hash "${AIVM_QEMU_WINDOWS_NAME}"
 }
 
 cmd_linux_sendkey() {
@@ -1080,6 +1106,7 @@ Commands:
   linux-stop           Stop Linux ARM guest
   linux-log-tail [lines] [qemu|serial] Tail Linux guest log
   linux-screendump [path] Capture host-side QEMU framebuffer dump for Linux guest
+  linux-screen-hash    Capture Linux guest framebuffer and print content hash
   linux-monitor <cmd...> Send raw QEMU monitor command to Linux guest
   linux-sendkey <key>    Send QEMU key to Linux guest
   linux-wait-ssh [timeout] Wait for Linux guest SSH readiness
@@ -1105,6 +1132,7 @@ Commands:
   windows-stop         Stop Windows ARM guest
   windows-log-tail [lines] [qemu|serial] Tail Windows guest log
   windows-screendump [path] Capture host-side QEMU framebuffer dump for Windows guest
+  windows-screen-hash  Capture Windows guest framebuffer and print content hash
   windows-monitor <cmd...> Send raw QEMU monitor command to Windows guest
   windows-sendkey <key>  Send QEMU key to Windows guest
   windows-wait-ssh [timeout] Wait for Windows guest SSH readiness
@@ -1131,6 +1159,7 @@ main() {
     linux-stop) cmd_linux_stop ;;
     linux-log-tail) cmd_linux_log_tail "$@" ;;
     linux-screendump) cmd_linux_screendump "$@" ;;
+    linux-screen-hash) cmd_linux_screen_hash ;;
     linux-monitor) cmd_linux_monitor "$@" ;;
     linux-sendkey) cmd_linux_sendkey "$@" ;;
     linux-wait-ssh) cmd_linux_wait_ssh "$@" ;;
@@ -1156,6 +1185,7 @@ main() {
     windows-stop) cmd_windows_stop ;;
     windows-log-tail) cmd_windows_log_tail "$@" ;;
     windows-screendump) cmd_windows_screendump "$@" ;;
+    windows-screen-hash) cmd_windows_screen_hash ;;
     windows-monitor) cmd_windows_monitor "$@" ;;
     windows-sendkey) cmd_windows_sendkey "$@" ;;
     windows-wait-ssh) cmd_windows_wait_ssh "$@" ;;
