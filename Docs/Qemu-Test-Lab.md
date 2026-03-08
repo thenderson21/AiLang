@@ -102,6 +102,7 @@ The current working path on Apple Silicon is:
 ./scripts/qemu-lab.sh linux-screendump .tmp/qemu-lab/linux-screen.ppm
 ./scripts/qemu-lab.sh linux-screen-hash
 ./scripts/qemu-lab.sh linux-boot-probe
+./scripts/qemu-lab.sh linux-boot-watch
 ./scripts/qemu-lab.sh linux-sendkey ret
 ./scripts/qemu-lab.sh linux-wait-ssh 120
 ./scripts/qemu-lab.sh linux-ssh
@@ -200,10 +201,18 @@ Once guest SSH is working, these should become normal flows:
 ./scripts/qemu-lab.sh windows-screendump .tmp/qemu-lab/windows-screen.ppm
 ./scripts/qemu-lab.sh windows-screen-hash
 ./scripts/qemu-lab.sh windows-boot-probe
+./scripts/qemu-lab.sh windows-boot-watch
 ./scripts/qemu-lab.sh windows-sendkey ret
 ./scripts/qemu-lab.sh windows-ssh
 ./scripts/qemu-lab.sh windows-exec pwd
 ```
+
+`*-boot-watch` reports framebuffer motion only:
+
+- `screen_state=stable` means sampled hashes did not change
+- `screen_state=changed` means at least one sampled hash changed
+
+It does not claim boot success on its own; use it together with serial and SSH state.
 
 Windows unattended seed support now exists in the repo:
 

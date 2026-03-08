@@ -795,6 +795,57 @@ cmd_guest_boot_probe() {
   printf "screen_hash=%s\n" "${screen_hash}"
 }
 
+cmd_guest_boot_watch() {
+  local guest="$1" out_path="${2:-}" samples="${3:-3}" interval="${4:-5}" serial_lines="${5:-12}"
+  local hashes=() i hash prev_hash screen_state distinct_hashes
+  if [[ -z "${out_path}" ]]; then
+    out_path="${LAB_DIR}/${guest}-boot-watch-$(timestamp_utc).txt"
+  fi
+  mkdir -p "$(dirname "${out_path}")"
+  : >"${out_path}"
+
+  for (( i = 1; i <= samples; i++ )); do
+    hash="$(cmd_guest_screen_hash "${guest}" 2>/dev/null || echo unavailable)"
+    hashes+=("${hash}")
+    {
+      printf "sample=%s\n" "${i}"
+      printf "timestamp_utc=%s\n" "$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+      printf "screen_hash=%s\n" "${hash}"
+      echo "---"
+    } >>"${out_path}"
+    if (( i < samples )); then
+      sleep "${interval}"
+    fi
+  done
+
+  screen_state="stable"
+  prev_hash="${hashes[0]}"
+  for hash in "${hashes[@]:1}"; do
+    if [[ "${hash}" != "${prev_hash}" ]]; then
+      screen_state="changed"
+      break
+    fi
+  done
+  distinct_hashes="$(printf '%s\n' "${hashes[@]}" | sort -u | wc -l | tr -d ' ')"
+
+  {
+    printf "screen_state=%s\n" "${screen_state}"
+    printf "distinct_hashes=%s\n" "${distinct_hashes}"
+    printf "samples=%s\n" "${samples}"
+    printf "interval_seconds=%s\n" "${interval}"
+    echo "--- serial tail ---"
+    if [[ -f "$(guest_serial_log_path "${guest}")" ]]; then
+      tail -n "${serial_lines}" "$(guest_serial_log_path "${guest}")"
+    else
+      echo "missing serial log"
+    fi
+  } >>"${out_path}"
+
+  printf "wrote %s\n" "${out_path}"
+  printf "screen_state=%s\n" "${screen_state}"
+  printf "distinct_hashes=%s\n" "${distinct_hashes}"
+}
+
 cmd_linux_screendump() {
   load_config
   cmd_guest_screendump "${AIVM_QEMU_LINUX_NAME}" "${1:-}"
@@ -823,6 +874,16 @@ cmd_linux_boot_probe() {
 cmd_windows_boot_probe() {
   load_config
   cmd_guest_boot_probe "${AIVM_QEMU_WINDOWS_NAME}" "${1:-}" "${2:-40}"
+}
+
+cmd_linux_boot_watch() {
+  load_config
+  cmd_guest_boot_watch "${AIVM_QEMU_LINUX_NAME}" "${1:-}" "${2:-3}" "${3:-5}" "${4:-12}"
+}
+
+cmd_windows_boot_watch() {
+  load_config
+  cmd_guest_boot_watch "${AIVM_QEMU_WINDOWS_NAME}" "${1:-}" "${2:-3}" "${3:-5}" "${4:-12}"
 }
 
 cmd_linux_sendkey() {
@@ -1158,6 +1219,7 @@ Commands:
   linux-screendump [path] Capture host-side QEMU framebuffer dump for Linux guest
   linux-screen-hash    Capture Linux guest framebuffer and print content hash
   linux-boot-probe [path] [serial-lines] Capture Linux boot-state report
+  linux-boot-watch [path] [samples] [interval] [serial-lines] Track Linux boot progress
   linux-monitor <cmd...> Send raw QEMU monitor command to Linux guest
   linux-sendkey <key>    Send QEMU key to Linux guest
   linux-wait-ssh [timeout] Wait for Linux guest SSH readiness
@@ -1185,6 +1247,7 @@ Commands:
   windows-screendump [path] Capture host-side QEMU framebuffer dump for Windows guest
   windows-screen-hash  Capture Windows guest framebuffer and print content hash
   windows-boot-probe [path] [serial-lines] Capture Windows boot-state report
+  windows-boot-watch [path] [samples] [interval] [serial-lines] Track Windows boot progress
   windows-monitor <cmd...> Send raw QEMU monitor command to Windows guest
   windows-sendkey <key>  Send QEMU key to Windows guest
   windows-wait-ssh [timeout] Wait for Windows guest SSH readiness
@@ -1213,6 +1276,7 @@ main() {
     linux-screendump) cmd_linux_screendump "$@" ;;
     linux-screen-hash) cmd_linux_screen_hash ;;
     linux-boot-probe) cmd_linux_boot_probe "$@" ;;
+    linux-boot-watch) cmd_linux_boot_watch "$@" ;;
     linux-monitor) cmd_linux_monitor "$@" ;;
     linux-sendkey) cmd_linux_sendkey "$@" ;;
     linux-wait-ssh) cmd_linux_wait_ssh "$@" ;;
@@ -1240,6 +1304,7 @@ main() {
     windows-screendump) cmd_windows_screendump "$@" ;;
     windows-screen-hash) cmd_windows_screen_hash ;;
     windows-boot-probe) cmd_windows_boot_probe "$@" ;;
+    windows-boot-watch) cmd_windows_boot_watch "$@" ;;
     windows-monitor) cmd_windows_monitor "$@" ;;
     windows-sendkey) cmd_windows_sendkey "$@" ;;
     windows-wait-ssh) cmd_windows_wait_ssh "$@" ;;
