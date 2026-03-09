@@ -169,10 +169,10 @@ Ok#ok4(type=int value=5)
 Run C runtime test suite:
 
 ```bash
-./scripts/test.sh
+./test.sh
 ```
 
-`scripts/test.sh` is C-only and does not invoke dotnet.
+`test.sh` is the canonical verification entrypoint. It is C-only and does not invoke dotnet.
 
 ## Build Launcher
 

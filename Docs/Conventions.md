@@ -26,7 +26,7 @@
 
 ## Validation Checklist
 
-- Run `./scripts/test.sh`.
+- Run `./test.sh`.
 - If runtime host changes are involved, also rebuild and re-run:
-  - `./scripts/build-airun.sh`
-  - `./scripts/test.sh`
+  - `./build.sh`
+  - `./test.sh`

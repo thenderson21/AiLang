@@ -17,7 +17,7 @@ Run build and verification flows with deterministic outputs.
 ```
 2. Execute golden suite:
 ```bash
-./scripts/test.sh
+./test.sh
 ```
 3. Run a program:
 ```bash
@@ -45,7 +45,7 @@ cat examples/golden/run_var.in.aos | ./tools/airun run --vm=ast src/compiler/aic
 - `build.sh shared`: builds the shared AiVM native library.
 - `build.sh wasm`: builds wasm runtime artifacts.
 - `build.sh all`: builds all bootstrap artifacts.
-- `test.sh`: prints `PASS/FAIL` per golden and final `Ok#ok1(type=int value=0)` on success.
+- `test.sh`: canonical verification entrypoint. Prints `PASS/FAIL` per golden and final `Ok#ok1(type=int value=0)` on success.
 - `aic fmt/check/run`: emits canonical AOS only.
 - Source node ids are optional; canonical ids are assigned deterministically.
 - `publish --target wasm32`:
@@ -61,7 +61,7 @@ cat examples/golden/run_var.in.aos | ./tools/airun run --vm=ast src/compiler/aic
 ## Failure Codes
 
 - `airun run`: `0` success, `2` parse/validation error, `3` runtime error.
-- `scripts/test.sh`: nonzero if any golden fails.
+- `test.sh`: nonzero if any golden fails.
 - Update-path blocking guard:
   - `VAL340` at validation-time
   - `RUN031` at runtime/VM-time

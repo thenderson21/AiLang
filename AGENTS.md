@@ -67,7 +67,7 @@ AiLang exists to let AI agents create, understand, modify, debug, and ship softw
 ## Development workflow
 
 - Work in small, reviewable changes.
-- Run `./scripts/test.sh` frequently.
+- Run `./test.sh` frequently.
 - Keep diffs minimal and focused.
 - Prefer editing existing code over rewriting files.
 - When unsure, stop and ask for clarification.
@@ -78,7 +78,8 @@ AiLang exists to let AI agents create, understand, modify, debug, and ship softw
 - VM is default for `run`; use `--vm=ast` only for debugging unsupported bytecode paths.
 - Production runtime builds (`AosDevMode=false`) disable `--vm=ast` and source-mode commands.
 - Use `./build.sh` or `./build.ps1` as the canonical tooling bootstrap entrypoint.
-- Use `./scripts/test.sh` for golden test validation.
+- Use `./test.sh` or `./test.ps1` as the canonical verification entrypoint.
+- Treat `scripts/test*.sh` and `scripts/test*.ps1` as internal implementation details behind the canonical verification entrypoint unless the task is specifically about test-harness maintenance.
 - Treat `scripts/build-*.sh` and `scripts/build-*.ps1` as internal implementation details behind the canonical bootstrap entrypoint unless the task is specifically about build-script maintenance.
 - Do not use `dotnet run` or `dotnet test` for normal workflow.
 - Frontend parsing is provided by standalone `tools/aos_frontend`.
