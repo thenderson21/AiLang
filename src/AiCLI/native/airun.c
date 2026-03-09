@@ -12243,6 +12243,21 @@ static int build_input_to_aibc1(
         return 1;
     }
 
+    /* Prefer an existing canonical bytecode artifact over recompiling source through
+       the native simple compiler. This keeps run/build aligned with AiBC1 when the
+       project already ships a resolved sibling app.aibc1. */
+    if (resolve_input_to_aibc1(program_input, resolved_program, sizeof(resolved_program)) &&
+        file_exists(resolved_program)) {
+        if (strcmp(resolved_program, out_app_path) == 0) {
+            return 1;
+        }
+        if (!copy_file(resolved_program, out_app_path)) {
+            set_native_build_error("failed to copy resolved sibling app.aibc1");
+            return 0;
+        }
+        return 1;
+    }
+
     if (!resolve_input_to_aos(program_input, source_aos, sizeof(source_aos))) {
         set_native_build_error("could not resolve source .aos from input");
         return 0;
