@@ -13333,6 +13333,7 @@ static int build_input_to_aibc1(
     char cache_app_path[PATH_MAX];
     AivmProgram program;
     int explicit_aibc1_input;
+    int explicit_aos_input;
 
     g_native_build_error[0] = '\0';
 
@@ -13350,6 +13351,7 @@ static int build_input_to_aibc1(
     }
 
     explicit_aibc1_input = ends_with(program_input, ".aibc1");
+    explicit_aos_input = ends_with(program_input, ".aos");
     if (explicit_aibc1_input) {
         if (!resolve_input_to_aibc1(program_input, resolved_program, sizeof(resolved_program))) {
             set_native_build_error("could not resolve explicit .aibc1 input");
@@ -13366,9 +13368,10 @@ static int build_input_to_aibc1(
     }
 
     /* Prefer an existing canonical bytecode artifact over recompiling source through
-       the native simple compiler. This keeps run/build aligned with AiBC1 when the
-       project already ships a resolved sibling app.aibc1. */
-    if (resolve_input_to_aibc1(program_input, resolved_program, sizeof(resolved_program)) &&
+       the native simple compiler for project-level inputs. Explicit .aos builds must
+       rebuild that source file instead of silently copying a sibling app.aibc1. */
+    if (!explicit_aos_input &&
+        resolve_input_to_aibc1(program_input, resolved_program, sizeof(resolved_program)) &&
         file_exists(resolved_program)) {
         if (same_file_path(resolved_program, out_app_path)) {
             resolved_program[0] = '\0';
