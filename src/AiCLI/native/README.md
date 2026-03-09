@@ -3,6 +3,7 @@
 Native C CLI entrypoint for zero-C# migration.
 
 Current:
+- Canonical client-tool execution chain is `AiLang -> compiled AiVectra -> AiRun -> compiled app`.
 - `airun.c` provides the deterministic native C runtime executable for `tools/airun`.
 - C VM is the default runtime (no flag required).
 - `--vm=c` is an explicit alias of the default runtime.
@@ -12,8 +13,11 @@ Current:
 - `scripts/build-airun.ps1` compiles Windows targets (`windows-x64`, `windows-arm64`).
 - `.aibc1` runtime execution is C-only.
 - `build` command is available: `airun build <program|project-dir> [--out <dir>] [--no-cache]` and emits `app.aibc1`.
-- `run` supports deterministic build cache bypass: `airun run <program|project-dir> [--no-cache]`.
+- `run` supports deterministic build cache bypass and compiled-app argv passthrough:
+  - `airun run <program|project-dir> [--no-cache] [--] [app-args...]`
+  - higher-layer compiled CLIs must preserve indefinite subcommand depth in app argv
 - `clean` command clears native build cache for a project: `airun clean [program|project-dir]`.
+- Canonical higher-layer CLI option syntax is GNU-style `--full-name` / `-f`; slash-prefixed flags are not part of the AiVectra CLI contract.
 - Source/project `run` compiles through native C paths only (no backend delegation).
 - `.aibundle` runtime execution is native-only (Bytecode# bundle shape).
 - Native `Bytecode#...` `.aos` inputs run directly in C VM without backend fallback.

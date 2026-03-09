@@ -87,6 +87,7 @@ extern int kill(pid_t pid, int sig);
 static int join_path(const char* left, const char* right, char* out, size_t out_len);
 static int find_executable_on_path(const char* name, char* out, size_t out_len);
 static int write_text_file(const char* path, const char* text);
+static int same_file_path(const char* left, const char* right);
 static int remove_file_if_exists(const char* path);
 static int run_native_fullstack_server(const char* www_dir);
 static int ensure_directory_recursive(const char* path);
@@ -738,6 +739,9 @@ static int copy_file(const char* src, const char* dst)
     if (src == NULL || dst == NULL) {
         return 0;
     }
+    if (same_file_path(src, dst)) {
+        return 1;
+    }
 
     in = fopen(src, "rb");
     if (in == NULL) {
@@ -760,6 +764,54 @@ static int copy_file(const char* src, const char* dst)
     fclose(in);
     fclose(out);
     return 1;
+}
+
+static int same_file_path(const char* left, const char* right)
+{
+    if (left == NULL || right == NULL) {
+        return 0;
+    }
+#ifdef _WIN32
+    {
+        char full_left[PATH_MAX];
+        char full_right[PATH_MAX];
+        size_t i;
+        if (_fullpath(full_left, left, PATH_MAX) == NULL ||
+            _fullpath(full_right, right, PATH_MAX) == NULL) {
+            return 0;
+        }
+        for (i = 0U; full_left[i] != '\0'; i += 1U) {
+            if (full_left[i] == '\\') {
+                full_left[i] = '/';
+            }
+        }
+        for (i = 0U; full_right[i] != '\0'; i += 1U) {
+            if (full_right[i] == '\\') {
+                full_right[i] = '/';
+            }
+        }
+        return _stricmp(full_left, full_right) == 0;
+    }
+#else
+    {
+        struct stat left_stat;
+        struct stat right_stat;
+        char real_left[PATH_MAX];
+        char real_right[PATH_MAX];
+        if (stat(left, &left_stat) == 0 &&
+            stat(right, &right_stat) == 0 &&
+            left_stat.st_dev == right_stat.st_dev &&
+            left_stat.st_ino == right_stat.st_ino) {
+            return 1;
+        }
+        if (realpath(left, real_left) != NULL &&
+            realpath(right, real_right) != NULL &&
+            strcmp(real_left, real_right) == 0) {
+            return 1;
+        }
+        return 0;
+    }
+#endif
 }
 
 static int copy_runtime_file(const char* src, const char* dst)
@@ -1774,7 +1826,7 @@ static void print_usage(void)
         "Usage: aivm-runtime <command> [options]\n"
         "\n"
         "Commands:\n"
-        "  run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--no-cache]\n"
+        "  run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--no-cache] [--] [app-args...]\n"
         "  version | --version\n"
         "\n"
         "VM selectors:\n"
@@ -1785,15 +1837,15 @@ static void print_usage(void)
         "Usage: airun <command> [options]\n"
         "\n"
         "Commands:\n"
-        "  run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--no-cache]\n"
+        "  run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--no-cache] [--] [app-args...]\n"
         "  build <program(.aibc1|.aos|project-dir|project.aiproj)> [--out <dir>] [--no-cache]\n"
         "  clean [program(.aibc1|.aos|project-dir|project.aiproj)]\n"
         "  repl\n"
         "  bench [--iterations <n>] [--human]\n"
-        "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>]\n"
-        "  debug trace run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>]\n"
-        "  debug capture run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>]\n"
-        "  debug interact run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>]\n"
+        "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>] [--] [app-args...]\n"
+        "  debug trace run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>] [--] [app-args...]\n"
+        "  debug capture run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>] [--] [app-args...]\n"
+        "  debug interact run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--] [app-args...]\n"
         "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--wasm-profile <cli|spa|fullstack>] [--wasm-fullstack-host-target <rid>] [--out <dir>]\n"
         "  version | --version\n"
         "\n"
@@ -4156,6 +4208,14 @@ static int native_syscall_process_argv(
     if (arg_count != 0U) {
         result->type = AIVM_VAL_VOID;
         return AIVM_SYSCALL_ERR_CONTRACT;
+    }
+    if (g_native_active_vm != NULL) {
+        airun_log_message(
+            AIRUN_LOG_TRACE,
+            "runtime",
+            "sys.process.args count=%llu handle=%lld",
+            (unsigned long long)g_native_active_vm->process_argv_count,
+            (long long)g_native_active_vm->process_argv_node_handle);
     }
     *result = aivm_value_node(1);
     return AIVM_SYSCALL_OK;
@@ -9523,6 +9583,14 @@ static int run_native_compiled_program(
     airun_log_capture_configure(
         (debug_options == NULL) ? 0 : debug_options->emit_bundle,
         (debug_options == NULL) ? NULL : debug_options->out_dir);
+    airun_log_message(
+        AIRUN_LOG_TRACE,
+        "runtime",
+        "compiled-program argv-count=%llu arg0=%s arg1=%s arg2=%s",
+        (unsigned long long)process_argv_count,
+        (process_argv_count > 0U && process_argv != NULL && process_argv[0] != NULL) ? process_argv[0] : "",
+        (process_argv_count > 1U && process_argv != NULL && process_argv[1] != NULL) ? process_argv[1] : "",
+        (process_argv_count > 2U && process_argv != NULL && process_argv[2] != NULL) ? process_argv[2] : "");
     native_ui_runtime_reset_handles();
     native_host_ui_reset();
     native_net_reset();
@@ -13051,14 +13119,15 @@ static int build_input_to_aibc1(
        project already ships a resolved sibling app.aibc1. */
     if (resolve_input_to_aibc1(program_input, resolved_program, sizeof(resolved_program)) &&
         file_exists(resolved_program)) {
-        if (strcmp(resolved_program, out_app_path) == 0) {
-            return 1;
-        }
-        if (!copy_file(resolved_program, out_app_path)) {
+        if (same_file_path(resolved_program, out_app_path)) {
+            resolved_program[0] = '\0';
+        } else if (!copy_file(resolved_program, out_app_path)) {
             set_native_build_error("failed to copy resolved sibling app.aibc1");
             return 0;
         }
-        return 1;
+        if (resolved_program[0] != '\0') {
+            return 1;
+        }
     }
 
     if (!resolve_input_to_aos(program_input, source_aos, sizeof(source_aos))) {
