@@ -129,11 +129,14 @@ static int native_image_decode_to_rgba_base64(
     size_t input_len,
     const char* mime_type,
     AivmValue* result);
+typedef struct NativeNetAsyncState NativeNetAsyncState;
 static int native_syscall_net_start_op(
     const char* target,
     const AivmValue* args,
     size_t arg_count,
     AivmValue* result);
+static void native_net_async_close_worker_socket(NativeNetAsyncState* op);
+static void native_net_async_maybe_finalize_worker(NativeNetAsyncState* op);
 #ifdef AIRUN_TEST_FAKE_OPEN_URL
 static char g_native_open_url_test_scratch[1024];
 #endif
@@ -2505,6 +2508,9 @@ static void native_net_reset(void)
         }
     }
     for (i = 0U; i < NATIVE_NET_ASYNC_CAPACITY; i += 1U) {
+        g_native_net_async_ops[i].canceled = 1;
+        native_net_async_maybe_finalize_worker(&g_native_net_async_ops[i]);
+        native_net_async_close_worker_socket(&g_native_net_async_ops[i]);
         native_net_async_release_pending_bytes(&g_native_net_async_ops[i]);
         if (g_native_net_async_ops[i].result_bytes != NULL) {
             free(g_native_net_async_ops[i].result_bytes);
