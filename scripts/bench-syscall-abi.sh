@@ -61,7 +61,7 @@ bench_ref() {
 
   if ! (
     cd "${worktree}"
-    ./scripts/build-airun.sh >"${build_log}" 2>&1
+    ./build.sh >"${build_log}" 2>&1
   ); then
     echo "build failed for ref ${ref_name}" >&2
     tail -n 80 "${build_log}" >&2

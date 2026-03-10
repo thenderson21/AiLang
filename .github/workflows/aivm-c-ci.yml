@@ -69,7 +69,7 @@ jobs:
           AIVM_LEAK_CHECK_ITERATIONS=50 \
           AIVM_LEAK_MAX_GROWTH_KB=2048 \
           AIVM_LEAK_REPORT=.tmp/leak-reports/aivm-c-ci-${{ matrix.os }}.txt \
-          ./scripts/test-aivm-c.sh
+          ./test-aivm-c.sh
 
       - name: Verify bytes host syscall test (Unix)
         if: runner.os != 'Windows'
@@ -77,12 +77,12 @@ jobs:
 
       - name: Perf smoke (Linux)
         if: runner.os == 'Linux'
-        run: AIVM_PERF_SMOKE=1 AIVM_PERF_RUNS=10 ./scripts/test-aivm-c.sh
+        run: AIVM_PERF_SMOKE=1 AIVM_PERF_RUNS=10 ./test-aivm-c.sh
 
       - name: Benchmark gate (Linux)
         if: runner.os == 'Linux'
         run: |
-          ./scripts/build-airun.sh
+          ./build.sh
           ./scripts/aivm-bench-gate.sh
 
       - name: Setup Emscripten (Linux)
@@ -125,7 +125,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          ./scripts/test-aivm-c.ps1
+          ./test-aivm-c.ps1
 
       - name: Verify bytes host syscall test (Windows)
         if: runner.os == 'Windows'

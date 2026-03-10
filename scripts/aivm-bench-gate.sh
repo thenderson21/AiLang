@@ -13,7 +13,7 @@ mkdir -p "${TMP_DIR}"
 cd "${ROOT_DIR}"
 
 if [[ ! -x "${ROOT_DIR}/tools/airun" ]]; then
-  echo "missing runtime: ./tools/airun (run ./scripts/build-airun.sh first)" >&2
+  echo "missing runtime: ./tools/airun (run ./build.sh first)" >&2
   exit 2
 fi
 
