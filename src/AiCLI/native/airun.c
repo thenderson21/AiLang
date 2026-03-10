@@ -10032,6 +10032,12 @@ static int write_native_debug_bundle(
     const char* diagnostics_line)
 {
     char path[PATH_MAX];
+    char local0_preview[128];
+    char local1_preview[128];
+    char local2_preview[128];
+    char stack0_preview[128];
+    char stack1_preview[128];
+    char stack2_preview[128];
     FILE* f;
     if (options == NULL || !options->emit_bundle || options->out_dir == NULL) {
         return 1;
@@ -10066,9 +10072,53 @@ static int write_native_debug_bundle(
     fprintf(f, "trace = []\n");
     if (vm != NULL && program != NULL && vm->instruction_pointer < program->instruction_count && program->instructions != NULL) {
         const AivmInstruction* inst = &program->instructions[vm->instruction_pointer];
+        size_t locals_base = 0U;
+        size_t local0_index = 0U;
+        size_t local1_index = 0U;
+        size_t local2_index = 0U;
+        local0_preview[0] = '\0';
+        local1_preview[0] = '\0';
+        local2_preview[0] = '\0';
+        stack0_preview[0] = '\0';
+        stack1_preview[0] = '\0';
+        stack2_preview[0] = '\0';
+        if (vm->call_frame_count > 0U) {
+            locals_base = vm->call_frames[vm->call_frame_count - 1U].locals_base;
+        }
+        local0_index = locals_base;
+        local1_index = locals_base + 1U;
+        local2_index = locals_base + 2U;
+        if (local0_index < vm->locals_count) {
+            airun_format_value_preview(&vm->locals[local0_index], local0_preview, sizeof(local0_preview));
+        }
+        if (local1_index < vm->locals_count) {
+            airun_format_value_preview(&vm->locals[local1_index], local1_preview, sizeof(local1_preview));
+        }
+        if (local2_index < vm->locals_count) {
+            airun_format_value_preview(&vm->locals[local2_index], local2_preview, sizeof(local2_preview));
+        }
+        if (vm->stack_count > 0U) {
+            airun_format_value_preview(&vm->stack[vm->stack_count - 1U], stack0_preview, sizeof(stack0_preview));
+        }
+        if (vm->stack_count > 1U) {
+            airun_format_value_preview(&vm->stack[vm->stack_count - 2U], stack1_preview, sizeof(stack1_preview));
+        }
+        if (vm->stack_count > 2U) {
+            airun_format_value_preview(&vm->stack[vm->stack_count - 3U], stack2_preview, sizeof(stack2_preview));
+        }
         fprintf(f, "last = { function = \"main\", pc = %llu, op = \"%s\", node_id = \"unknown\" }\n",
             (unsigned long long)vm->instruction_pointer,
             aivm_opcode_name(inst->opcode));
+        fprintf(f, "locals = { count = %llu, local0 = \"%s\", local1 = \"%s\", local2 = \"%s\" }\n",
+            (unsigned long long)vm->locals_count,
+            local0_preview,
+            local1_preview,
+            local2_preview);
+        fprintf(f, "stack = { count = %llu, top0 = \"%s\", top1 = \"%s\", top2 = \"%s\" }\n",
+            (unsigned long long)vm->stack_count,
+            stack0_preview,
+            stack1_preview,
+            stack2_preview);
     }
     fclose(f);
 
