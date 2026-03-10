@@ -1,0 +1,65 @@
+Program#std_number_p1 {
+  Let#std_number_l1(name=zero) {
+    Fn#std_number_f1(params=_) {
+      Block#std_number_b1 {
+        Return#std_number_r1 { Lit#std_number_i1(value=0) }
+      }
+    }
+  }
+
+  Let#std_number_l2(name=one) {
+    Fn#std_number_f2(params=_) {
+      Block#std_number_b2 {
+        Return#std_number_r2 { Lit#std_number_i2(value=1) }
+      }
+    }
+  }
+
+  Let#std_number_l3(name=add) {
+    Fn#std_number_f3(params=a,b) {
+      Block#std_number_b3 {
+        Return#std_number_r3 { Add#std_number_a1 { Var#std_number_v1(name=a) Var#std_number_v2(name=b) } }
+      }
+    }
+  }
+
+  Let#std_number_l4(name=inc) {
+    Fn#std_number_f4(params=value) {
+      Block#std_number_b4 {
+        Return#std_number_r4 { Add#std_number_a2 { Var#std_number_v3(name=value) Lit#std_number_i3(value=1) } }
+      }
+    }
+  }
+
+  Let#std_number_l5(name=dec) {
+    Fn#std_number_f5(params=value) {
+      Block#std_number_b5 {
+        Return#std_number_r5 { Add#std_number_a3 { Var#std_number_v4(name=value) Lit#std_number_i4(value=-1) } }
+      }
+    }
+  }
+
+  Let#std_number_l6(name=equals) {
+    Fn#std_number_f6(params=a,b) {
+      Block#std_number_b6 {
+        Return#std_number_r6 { Eq#std_number_e1 { Var#std_number_v5(name=a) Var#std_number_v6(name=b) } }
+      }
+    }
+  }
+
+  Let#std_number_l7(name=toString) {
+    Fn#std_number_f7(params=value) {
+      Block#std_number_b7 {
+        Return#std_number_r7 { ToString#std_number_t1 { Var#std_number_v7(name=value) } }
+      }
+    }
+  }
+
+  Export#std_number_e1(name=zero)
+  Export#std_number_e2(name=one)
+  Export#std_number_e3(name=add)
+  Export#std_number_e4(name=inc)
+  Export#std_number_e5(name=dec)
+  Export#std_number_e6(name=equals)
+  Export#std_number_e7(name=toString)
+}

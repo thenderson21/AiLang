@@ -29,6 +29,7 @@ This file is normative for `aic run` evaluation behavior.
 - `Eq`: evaluate both sides, then compare by primitive type and value.
 - `StrConcat`: evaluate both sides, convert to string form, concatenate.
 - `Add`: evaluate both sides, both must be exact whole-number literals.
+- The current canonical stdlib surface for these exact whole-number operations is `src/std/number.aos`.
 - `bytes` values are first-class runtime values and participate in equality by length+byte-content.
 - `null` is a first-class runtime value distinct from `void`.
 - `Call`: evaluate arguments, then dispatch:
