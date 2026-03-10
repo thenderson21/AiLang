@@ -30,6 +30,20 @@ Program#ghttperr_p1 {
     }
   }
 
+  Let#ghttperr_l2b(name=connectTlsDetailState) {
+    Call#ghttperr_c2b(target=http.httpMakeRequestState) {
+      Lit#ghttperr_i18a(value="error")
+      Lit#ghttperr_i18b(value="GET / HTTP/1.1")
+      Lit#ghttperr_i18c(value=4096)
+      Lit#ghttperr_i18d(value=0)
+      Lit#ghttperr_i18e(value=-1)
+      Lit#ghttperr_i18f(value="")
+      Lit#ghttperr_i18g(value="")
+      Lit#ghttperr_i18h(value="connect_tls_failed:dns_failed:No such host")
+      Lit#ghttperr_i18i(value=0)
+    }
+  }
+
   Let#ghttperr_l3(name=writeState) {
     Call#ghttperr_c3(target=http.httpMakeRequestState) {
       Lit#ghttperr_i19(value="error")
@@ -61,6 +75,7 @@ Program#ghttperr_p1 {
   Call#ghttperr_c5(target=io.print) { Call#ghttperr_c6(target=http.httpRequestTimedOut) { Var#ghttperr_v1(name=timeoutState) } }
   Call#ghttperr_c7(target=io.print) { Call#ghttperr_c8(target=http.httpRequestFailedConnect) { Var#ghttperr_v2(name=timeoutState) } }
   Call#ghttperr_c9(target=io.print) { Call#ghttperr_c10(target=http.httpRequestFailedConnect) { Var#ghttperr_v3(name=connectState) } }
+  Call#ghttperr_c10b(target=io.print) { Call#ghttperr_c10c(target=http.httpRequestFailedConnect) { Var#ghttperr_v3b(name=connectTlsDetailState) } }
   Call#ghttperr_c11(target=io.print) { Call#ghttperr_c12(target=http.httpRequestFailedWrite) { Var#ghttperr_v4(name=writeState) } }
   Call#ghttperr_c13(target=io.print) { Call#ghttperr_c14(target=http.httpRequestFailedRead) { Var#ghttperr_v5(name=readState) } }
 }

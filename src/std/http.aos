@@ -356,14 +356,40 @@ Program#std_http_p1 {
     }
   }
 
+  Let#std_http_l27aa(name=httpErrorStartsWith) {
+    Fn#std_http_f18aa(params=error,prefix) {
+      Block#std_http_b24aa {
+        Return#std_http_r21aa {
+          Eq#std_http_eq61aa {
+            Call#std_http_c10aaa(target=sys.str.find) {
+              Var#std_http_v57aa(name=error)
+              Var#std_http_v57ab(name=prefix)
+              Lit#std_http_i44aa(value=0)
+            }
+            Lit#std_http_i44ab(value=0)
+          }
+        }
+      }
+    }
+  }
+
   Let#std_http_l27b(name=httpRequestFailedConnect) {
     Fn#std_http_f18b(params=state) {
       Block#std_http_b24b {
         Let#std_http_l27c(name=error) { Call#std_http_c10ab(target=httpRequestError) { Var#std_http_v57b(name=state) } }
         Return#std_http_r21b {
           Or#std_http_or1 {
-            Eq#std_http_eq61b { Var#std_http_v57c(name=error) Lit#std_http_i44b(value="connect_failed") }
-            Eq#std_http_eq61c { Var#std_http_v57d(name=error) Lit#std_http_i44c(value="connect_invalid") }
+            Or#std_http_or1a {
+              Eq#std_http_eq61b { Var#std_http_v57c(name=error) Lit#std_http_i44b(value="connect_failed") }
+              Call#std_http_c10aba(target=httpErrorStartsWith) { Var#std_http_v57c1(name=error) Lit#std_http_i44b1(value="connect_failed:") }
+            }
+            Or#std_http_or1b {
+              Eq#std_http_eq61c { Var#std_http_v57d(name=error) Lit#std_http_i44c(value="connect_invalid") }
+              Or#std_http_or1c {
+                Eq#std_http_eq61ca { Var#std_http_v57da(name=error) Lit#std_http_i44ca(value="connect_tls_failed") }
+                Call#std_http_c10abb(target=httpErrorStartsWith) { Var#std_http_v57db(name=error) Lit#std_http_i44cb(value="connect_tls_failed:") }
+              }
+            }
           }
         }
       }

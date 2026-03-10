@@ -3700,14 +3700,25 @@ static int native_net_stream_write(
     return -1;
 }
 
-static int native_net_resolve_ipv4(const char* host, uint16_t port, int socket_type, int passive, struct sockaddr_in* out_addr)
+static int native_net_resolve_ipv4_detail(
+    const char* host,
+    uint16_t port,
+    int socket_type,
+    int passive,
+    struct sockaddr_in* out_addr,
+    char* error_text,
+    size_t error_text_size)
 {
     struct addrinfo hints;
     struct addrinfo* results = NULL;
     struct addrinfo* cursor = NULL;
     char port_text[16];
+    int gai_result;
     if (out_addr == NULL) {
         return 0;
+    }
+    if (error_text != NULL && error_text_size > 0U) {
+        error_text[0] = '\0';
     }
     memset(out_addr, 0, sizeof(*out_addr));
     memset(&hints, 0, sizeof(hints));
@@ -3716,11 +3727,15 @@ static int native_net_resolve_ipv4(const char* host, uint16_t port, int socket_t
     hints.ai_protocol = (socket_type == SOCK_DGRAM) ? IPPROTO_UDP : IPPROTO_TCP;
     hints.ai_flags = passive ? AI_PASSIVE : 0;
     (void)snprintf(port_text, sizeof(port_text), "%u", (unsigned)port);
-    if (getaddrinfo(
+    gai_result = getaddrinfo(
             (host == NULL || host[0] == '\0' || strcmp(host, "*") == 0) ? NULL : host,
             port_text,
             &hints,
-            &results) != 0) {
+            &results);
+    if (gai_result != 0) {
+        if (error_text != NULL && error_text_size > 0U) {
+            (void)snprintf(error_text, error_text_size, "dns_failed:%s", gai_strerror(gai_result));
+        }
         return 0;
     }
     for (cursor = results; cursor != NULL; cursor = cursor->ai_next) {
@@ -3733,7 +3748,15 @@ static int native_net_resolve_ipv4(const char* host, uint16_t port, int socket_t
         }
     }
     freeaddrinfo(results);
+    if (error_text != NULL && error_text_size > 0U) {
+        (void)snprintf(error_text, error_text_size, "dns_failed:no_ipv4_result");
+    }
     return 0;
+}
+
+static int native_net_resolve_ipv4(const char* host, uint16_t port, int socket_type, int passive, struct sockaddr_in* out_addr)
+{
+    return native_net_resolve_ipv4_detail(host, port, socket_type, passive, out_addr, NULL, 0U);
 }
 
 static NativeNetHandleState* native_net_handle_lookup(int64_t handle)
@@ -3947,21 +3970,38 @@ static void native_net_async_worker_connect_execute(NativeNetAsyncConnectWorkerC
         ctx->use_tls,
         (unsigned long long)ctx->generation);
     worker_error[0] = '\0';
-    if (!native_net_platform_init() ||
-        ctx->port <= 0 || ctx->port > 65535 ||
-        !native_net_resolve_ipv4(ctx->host, (uint16_t)ctx->port, SOCK_STREAM, 0, &addr)) {
-        (void)snprintf(worker_error, sizeof(worker_error), "%s", ctx->use_tls ? "connect_tls_failed" : "connect_failed");
+    if (!native_net_platform_init()) {
+        (void)snprintf(worker_error, sizeof(worker_error), "%s:platform_init", ctx->use_tls ? "connect_tls_failed" : "connect_failed");
+        goto finalize;
+    }
+    if (ctx->port <= 0 || ctx->port > 65535) {
+        (void)snprintf(worker_error, sizeof(worker_error), "%s:invalid_port", ctx->use_tls ? "connect_tls_failed" : "connect_failed");
+        goto finalize;
+    }
+    if (!native_net_resolve_ipv4_detail(ctx->host, (uint16_t)ctx->port, SOCK_STREAM, 0, &addr, worker_error, sizeof(worker_error))) {
+        if (worker_error[0] == '\0') {
+            (void)snprintf(worker_error, sizeof(worker_error), "%s:dns_failed", ctx->use_tls ? "connect_tls_failed" : "connect_failed");
+        } else if (ctx->use_tls) {
+            char detail[128];
+            (void)snprintf(detail, sizeof(detail), "connect_tls_failed:%s", worker_error);
+            (void)snprintf(worker_error, sizeof(worker_error), "%s", detail);
+        } else {
+            char detail[128];
+            (void)snprintf(detail, sizeof(detail), "connect_failed:%s", worker_error);
+            (void)snprintf(worker_error, sizeof(worker_error), "%s", detail);
+        }
         goto finalize;
     }
     socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (socket_fd == NATIVE_INVALID_SOCKET) {
-        (void)snprintf(worker_error, sizeof(worker_error), "%s", ctx->use_tls ? "connect_tls_failed" : "connect_failed");
+        (void)snprintf(worker_error, sizeof(worker_error), "%s:socket_errno_%d", ctx->use_tls ? "connect_tls_failed" : "connect_failed", errno);
         goto finalize;
     }
     if (connect(socket_fd, (struct sockaddr*)&addr, sizeof(addr)) != 0) {
+        int connect_errno = errno;
         native_socket_close(socket_fd);
         socket_fd = NATIVE_INVALID_SOCKET;
-        (void)snprintf(worker_error, sizeof(worker_error), "%s", ctx->use_tls ? "connect_tls_failed" : "connect_failed");
+        (void)snprintf(worker_error, sizeof(worker_error), "%s:connect_errno_%d", ctx->use_tls ? "connect_tls_failed" : "connect_failed", connect_errno);
         goto finalize;
     }
     if (ctx->use_tls) {
@@ -3974,7 +4014,7 @@ static void native_net_async_worker_connect_execute(NativeNetAsyncConnectWorkerC
         if (tls_state == NULL) {
             native_socket_close(socket_fd);
             socket_fd = NATIVE_INVALID_SOCKET;
-            (void)snprintf(worker_error, sizeof(worker_error), "connect_tls_failed");
+            (void)snprintf(worker_error, sizeof(worker_error), "connect_tls_failed:tls_create");
             goto finalize;
         }
         temp_state.tls_state = tls_state;
@@ -3983,13 +4023,13 @@ static void native_net_async_worker_connect_execute(NativeNetAsyncConnectWorkerC
             native_socket_close(socket_fd);
             tls_state = NULL;
             socket_fd = NATIVE_INVALID_SOCKET;
-            (void)snprintf(worker_error, sizeof(worker_error), "connect_tls_failed");
+            (void)snprintf(worker_error, sizeof(worker_error), "connect_tls_failed:tls_handshake");
             goto finalize;
         }
 #else
         native_socket_close(socket_fd);
         socket_fd = NATIVE_INVALID_SOCKET;
-        (void)snprintf(worker_error, sizeof(worker_error), "connect_tls_failed");
+        (void)snprintf(worker_error, sizeof(worker_error), "connect_tls_failed:tls_unsupported");
         goto finalize;
 #endif
     }
