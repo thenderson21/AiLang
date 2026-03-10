@@ -1,0 +1,24 @@
+Program#gnumber_signed_p1 {
+  Import#gnumber_signed_i1(path="./src/std/number.aos")
+  Import#gnumber_signed_i2(path="./src/std/io.aos")
+
+  Call#gnumber_signed_c1(target=io.print) {
+    ToString#gnumber_signed_t1 { Call#gnumber_signed_c2(target=isSignedWholeString) { Lit#gnumber_signed_i1(value="-42") } }
+  }
+
+  Call#gnumber_signed_c3(target=io.print) {
+    ToString#gnumber_signed_t2 { Call#gnumber_signed_c4(target=isNumberString) { Lit#gnumber_signed_i2(value="42") } }
+  }
+
+  Call#gnumber_signed_c5(target=io.print) {
+    ToString#gnumber_signed_t3 { Call#gnumber_signed_c6(target=isNumberString) { Lit#gnumber_signed_i3(value="-") } }
+  }
+
+  Call#gnumber_signed_c7(target=io.print) {
+    Call#gnumber_signed_c8(target=toString) { Call#gnumber_signed_c9(target=parseNumberOr) { Lit#gnumber_signed_i4(value="-42") Lit#gnumber_signed_i5(value=7) } }
+  }
+
+  Call#gnumber_signed_c10(target=io.print) {
+    Call#gnumber_signed_c11(target=toString) { Call#gnumber_signed_c12(target=parseNumberOr) { Lit#gnumber_signed_i6(value="-") Lit#gnumber_signed_i7(value=7) } }
+  }
+}

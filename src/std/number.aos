@@ -209,6 +209,149 @@ Program#std_number_p1 {
     }
   }
 
+  Let#std_number_l16(name=parseSignedWholeCore) {
+    Fn#std_number_f12(params=text,index,negative) {
+      Block#std_number_b40 {
+        Let#std_number_l17(name=parsed) {
+          Call#std_number_c6(target=parseWholeAt) {
+            Var#std_number_v36(name=text)
+            Var#std_number_v37(name=index)
+            Lit#std_number_i48(value=0)
+          }
+        }
+        If#std_number_if15 {
+          Eq#std_number_eq15 { Var#std_number_v38(name=parsed) Lit#std_number_i49(value=-1) }
+          Block#std_number_b41 { Return#std_number_r26 { Lit#std_number_i50(value=-1) } }
+          Block#std_number_b42 {
+            If#std_number_if16 {
+              Var#std_number_v39(name=negative)
+              Block#std_number_b43 {
+                Return#std_number_r27 {
+                  Add#std_number_a14 {
+                    Lit#std_number_i51(value=0)
+                    Add#std_number_a15 {
+                      Lit#std_number_i52(value=0)
+                      Add#std_number_a16 { Lit#std_number_i53(value=-1) Var#std_number_v40(name=parsed) }
+                    }
+                  }
+                }
+              }
+              Block#std_number_b44 { Return#std_number_r28 { Var#std_number_v41(name=parsed) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l18(name=isSignedWholeString) {
+    Fn#std_number_f13(params=text) {
+      Block#std_number_b45 {
+        Let#std_number_l19(name=first) {
+          Call#std_number_c7(target=sys.str.substring) {
+            Var#std_number_v42(name=text)
+            Lit#std_number_i54(value=0)
+            Lit#std_number_i55(value=1)
+          }
+        }
+        If#std_number_if17 {
+          Eq#std_number_eq16 { Var#std_number_v43(name=first) Lit#std_number_i56(value="-") }
+          Block#std_number_b46 {
+            If#std_number_if18 {
+              Eq#std_number_eq17 {
+                Call#std_number_c8(target=sys.str.substring) {
+                  Var#std_number_v44(name=text)
+                  Lit#std_number_i57(value=1)
+                  Lit#std_number_i58(value=1)
+                }
+                Lit#std_number_i59(value="")
+              }
+              Block#std_number_b47 { Return#std_number_r29 { Lit#std_number_i60(value=false) } }
+              Block#std_number_b48 {
+                Return#std_number_r30 {
+                  Call#std_number_c9(target=isWholeString) {
+                    Call#std_number_c10(target=sys.str.substring) {
+                      Var#std_number_v45(name=text)
+                      Lit#std_number_i61(value=1)
+                      Call#std_number_c11(target=sub) {
+                        Call#std_number_c12(target=textLen) { Var#std_number_v46(name=text) }
+                        Lit#std_number_i62(value=1)
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          Block#std_number_b49 { Return#std_number_r31 { Call#std_number_c13(target=isWholeString) { Var#std_number_v47(name=text) } } }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l20(name=isNumberString) {
+    Fn#std_number_f14(params=text) {
+      Block#std_number_b50 { Return#std_number_r32 { Call#std_number_c14(target=isSignedWholeString) { Var#std_number_v48(name=text) } } }
+    }
+  }
+
+  Let#std_number_l21(name=parseNumberOr) {
+    Fn#std_number_f15(params=text,fallback) {
+      Block#std_number_b51 {
+        Let#std_number_l22(name=first) {
+          Call#std_number_c15(target=sys.str.substring) {
+            Var#std_number_v49(name=text)
+            Lit#std_number_i63(value=0)
+            Lit#std_number_i64(value=1)
+          }
+        }
+        If#std_number_if19 {
+          Eq#std_number_eq18 { Var#std_number_v50(name=first) Lit#std_number_i65(value="-") }
+          Block#std_number_b52 {
+            Let#std_number_l23(name=rest) {
+              Call#std_number_c16(target=sys.str.substring) {
+                Var#std_number_v51(name=text)
+                Lit#std_number_i66(value=1)
+                Call#std_number_c17(target=sub) {
+                  Call#std_number_c18(target=textLen) { Var#std_number_v52(name=text) }
+                  Lit#std_number_i67(value=1)
+                }
+              }
+            }
+            If#std_number_if20 {
+              Call#std_number_c19(target=isWholeString) { Var#std_number_v53(name=rest) }
+              Block#std_number_b53 {
+                Return#std_number_r33 {
+                  Call#std_number_c20(target=parseSignedWholeCore) {
+                    Var#std_number_v54(name=text)
+                    Lit#std_number_i68(value=1)
+                    Lit#std_number_i69(value=true)
+                  }
+                }
+              }
+              Block#std_number_b54 { Return#std_number_r34 { Var#std_number_v55(name=fallback) } }
+            }
+          }
+          Block#std_number_b55 {
+            If#std_number_if21 {
+              Call#std_number_c21(target=isWholeString) { Var#std_number_v56(name=text) }
+              Block#std_number_b56 {
+                Return#std_number_r35 {
+                  Call#std_number_c22(target=parseSignedWholeCore) {
+                    Var#std_number_v57(name=text)
+                    Lit#std_number_i70(value=0)
+                    Lit#std_number_i71(value=false)
+                  }
+                }
+              }
+              Block#std_number_b57 { Return#std_number_r36 { Var#std_number_v58(name=fallback) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
   Export#std_number_e1(name=zero)
   Export#std_number_e2(name=one)
   Export#std_number_e3(name=add)
@@ -219,4 +362,7 @@ Program#std_number_p1 {
   Export#std_number_e8(name=digitValue)
   Export#std_number_e9(name=isWholeString)
   Export#std_number_e10(name=parseWholeOr)
+  Export#std_number_e11(name=isSignedWholeString)
+  Export#std_number_e12(name=isNumberString)
+  Export#std_number_e13(name=parseNumberOr)
 }
