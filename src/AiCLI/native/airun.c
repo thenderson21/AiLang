@@ -2970,6 +2970,12 @@ typedef struct NativeProcessState
     int exit_code;
     int stdout_closed;
     int stderr_closed;
+    uint8_t* stdout_buffer;
+    size_t stdout_buffer_len;
+    size_t stdout_buffer_pos;
+    uint8_t* stderr_buffer;
+    size_t stderr_buffer_len;
+    size_t stderr_buffer_pos;
 #ifdef _WIN32
     HANDLE process_handle;
     HANDLE stdout_read;
@@ -3293,11 +3299,153 @@ static void native_process_init_slot(NativeProcessState* process)
 #endif
 }
 
+static int native_process_append_buffer(
+    uint8_t** buffer,
+    size_t* length,
+    size_t* position,
+    const uint8_t* chunk,
+    size_t chunk_len)
+{
+    uint8_t* grown;
+    size_t unread_len;
+    if (buffer == NULL || length == NULL || position == NULL || chunk == NULL || chunk_len == 0U) {
+        return 1;
+    }
+    if (*position > 0U && *position < *length) {
+        unread_len = *length - *position;
+        memmove(*buffer, *buffer + *position, unread_len);
+        *length = unread_len;
+        *position = 0U;
+    } else if (*position >= *length) {
+        *length = 0U;
+        *position = 0U;
+    }
+    grown = (uint8_t*)realloc(*buffer, *length + chunk_len);
+    if (grown == NULL) {
+        return 0;
+    }
+    memcpy(grown + *length, chunk, chunk_len);
+    *buffer = grown;
+    *length += chunk_len;
+    return 1;
+}
+
+static AivmValue native_process_consume_buffer(
+    uint8_t** buffer,
+    size_t* length,
+    size_t* position)
+{
+    size_t unread_len;
+    AivmValue value;
+    value = aivm_value_bytes(NULL, 0U);
+    if (buffer == NULL || length == NULL || position == NULL || *buffer == NULL || *position >= *length) {
+        return value;
+    }
+    unread_len = *length - *position;
+    value = aivm_value_bytes(*buffer + *position, unread_len);
+    free(*buffer);
+    *buffer = NULL;
+    *length = 0U;
+    *position = 0U;
+    return value;
+}
+
+static int native_process_drain_stream(NativeProcessState* process, int read_stdout)
+{
+    int drained_any = 0;
+    if (process == NULL) {
+        return 0;
+    }
+#ifdef _WIN32
+    {
+        HANDLE stream = read_stdout ? process->stdout_read : process->stderr_read;
+        int* closed_flag = read_stdout ? &process->stdout_closed : &process->stderr_closed;
+        uint8_t** buffer = read_stdout ? &process->stdout_buffer : &process->stderr_buffer;
+        size_t* length = read_stdout ? &process->stdout_buffer_len : &process->stderr_buffer_len;
+        size_t* position = read_stdout ? &process->stdout_buffer_pos : &process->stderr_buffer_pos;
+        while (!*closed_flag && stream != NULL) {
+            DWORD available = 0;
+            DWORD read_count = 0;
+            if (!PeekNamedPipe(stream, NULL, 0, NULL, &available, NULL)) {
+                DWORD err = GetLastError();
+                if (err == ERROR_BROKEN_PIPE) {
+                    CloseHandle(stream);
+                    if (read_stdout) {
+                        process->stdout_read = NULL;
+                    } else {
+                        process->stderr_read = NULL;
+                    }
+                    *closed_flag = 1;
+                }
+                break;
+            }
+            if (available == 0) {
+                break;
+            }
+            if (available > (DWORD)NATIVE_PROCESS_READ_CHUNK) {
+                available = (DWORD)NATIVE_PROCESS_READ_CHUNK;
+            }
+            if (!ReadFile(stream, g_native_process_read_scratch, available, &read_count, NULL) || read_count == 0) {
+                break;
+            }
+            if (!native_process_append_buffer(buffer, length, position, g_native_process_read_scratch, (size_t)read_count)) {
+                break;
+            }
+            drained_any = 1;
+        }
+    }
+#else
+    {
+        int fd = read_stdout ? process->stdout_fd : process->stderr_fd;
+        int* closed_flag = read_stdout ? &process->stdout_closed : &process->stderr_closed;
+        uint8_t** buffer = read_stdout ? &process->stdout_buffer : &process->stderr_buffer;
+        size_t* length = read_stdout ? &process->stdout_buffer_len : &process->stderr_buffer_len;
+        size_t* position = read_stdout ? &process->stdout_buffer_pos : &process->stderr_buffer_pos;
+        while (!*closed_flag && fd >= 0) {
+            ssize_t read_count = read(fd, g_native_process_read_scratch, NATIVE_PROCESS_READ_CHUNK);
+            if (read_count > 0) {
+                if (!native_process_append_buffer(buffer, length, position, g_native_process_read_scratch, (size_t)read_count)) {
+                    break;
+                }
+                drained_any = 1;
+                continue;
+            }
+            if (read_count == 0) {
+                close(fd);
+                *closed_flag = 1;
+                if (read_stdout) {
+                    process->stdout_fd = -1;
+                } else {
+                    process->stderr_fd = -1;
+                }
+            }
+            break;
+        }
+    }
+#endif
+    return drained_any;
+}
+
+static int native_process_drain_output(NativeProcessState* process)
+{
+    int drained_stdout = native_process_drain_stream(process, 1);
+    int drained_stderr = native_process_drain_stream(process, 0);
+    return drained_stdout || drained_stderr;
+}
+
 static void native_process_release_slot(NativeProcessState* process)
 {
     if (process == NULL || !process->used) {
         return;
     }
+    free(process->stdout_buffer);
+    process->stdout_buffer = NULL;
+    process->stdout_buffer_len = 0U;
+    process->stdout_buffer_pos = 0U;
+    free(process->stderr_buffer);
+    process->stderr_buffer = NULL;
+    process->stderr_buffer_len = 0U;
+    process->stderr_buffer_pos = 0U;
 #ifdef _WIN32
     if (process->process_handle != NULL) {
         CloseHandle(process->process_handle);
@@ -5218,15 +5366,29 @@ static int native_syscall_process_wait(
     }
 #ifdef _WIN32
     if (!process->finished) {
-        DWORD wait_status = WaitForSingleObject(process->process_handle, INFINITE);
-        if (wait_status == WAIT_OBJECT_0) {
-            DWORD process_exit_code;
-            process->finished = 1;
-            if (GetExitCodeProcess(process->process_handle, &process_exit_code) != 0) {
-                process->exit_code = (int)process_exit_code;
-            } else {
-                process->exit_code = -1;
+        for (;;) {
+            DWORD wait_status;
+            native_process_drain_output(process);
+            wait_status = WaitForSingleObject(process->process_handle, 0);
+            if (wait_status == WAIT_OBJECT_0) {
+                DWORD process_exit_code;
+                process->finished = 1;
+                if (GetExitCodeProcess(process->process_handle, &process_exit_code) != 0) {
+                    process->exit_code = (int)process_exit_code;
+                } else {
+                    process->exit_code = -1;
+                }
+                break;
             }
+            Sleep(1);
+        }
+        while (native_process_drain_output(process)) {
+        }
+        if (process->stdout_read != NULL && !process->stdout_closed) {
+            native_process_drain_output(process);
+        }
+        if (process->stderr_read != NULL && !process->stderr_closed) {
+            native_process_drain_output(process);
         }
     }
     exit_code = process->exit_code;
@@ -5235,17 +5397,25 @@ static int native_syscall_process_wait(
     return AIVM_SYSCALL_OK;
 #else
     if (!process->finished) {
-        int status;
-        pid_t wait_result = waitpid(process->pid, &status, 0);
-        if (wait_result == process->pid) {
-            process->finished = 1;
-            if (WIFEXITED(status)) {
-                process->exit_code = WEXITSTATUS(status);
-            } else if (WIFSIGNALED(status)) {
-                process->exit_code = 128 + WTERMSIG(status);
-            } else {
-                process->exit_code = -1;
+        for (;;) {
+            int status;
+            pid_t wait_result;
+            native_process_drain_output(process);
+            wait_result = waitpid(process->pid, &status, WNOHANG);
+            if (wait_result == process->pid) {
+                process->finished = 1;
+                if (WIFEXITED(status)) {
+                    process->exit_code = WEXITSTATUS(status);
+                } else if (WIFSIGNALED(status)) {
+                    process->exit_code = 128 + WTERMSIG(status);
+                } else {
+                    process->exit_code = -1;
+                }
+                break;
             }
+            usleep(1000);
+        }
+        while (native_process_drain_output(process)) {
         }
     }
     exit_code = process->exit_code;
@@ -5368,6 +5538,23 @@ static int native_syscall_process_stream_read(
     }
 #ifdef _WIN32
     {
+        if (read_stdout) {
+            if (process->stdout_buffer_pos < process->stdout_buffer_len) {
+                *result = native_process_consume_buffer(
+                    &process->stdout_buffer,
+                    &process->stdout_buffer_len,
+                    &process->stdout_buffer_pos);
+                return AIVM_SYSCALL_OK;
+            }
+        } else {
+            if (process->stderr_buffer_pos < process->stderr_buffer_len) {
+                *result = native_process_consume_buffer(
+                    &process->stderr_buffer,
+                    &process->stderr_buffer_len,
+                    &process->stderr_buffer_pos);
+                return AIVM_SYSCALL_OK;
+            }
+        }
         HANDLE stream = read_stdout ? process->stdout_read : process->stderr_read;
         int* closed_flag = read_stdout ? &process->stdout_closed : &process->stderr_closed;
         DWORD available = 0;
@@ -5422,6 +5609,23 @@ static int native_syscall_process_stream_read(
     }
 #else
     {
+        if (read_stdout) {
+            if (process->stdout_buffer_pos < process->stdout_buffer_len) {
+                *result = native_process_consume_buffer(
+                    &process->stdout_buffer,
+                    &process->stdout_buffer_len,
+                    &process->stdout_buffer_pos);
+                return AIVM_SYSCALL_OK;
+            }
+        } else {
+            if (process->stderr_buffer_pos < process->stderr_buffer_len) {
+                *result = native_process_consume_buffer(
+                    &process->stderr_buffer,
+                    &process->stderr_buffer_len,
+                    &process->stderr_buffer_pos);
+                return AIVM_SYSCALL_OK;
+            }
+        }
         int fd = read_stdout ? process->stdout_fd : process->stderr_fd;
         int* closed_flag = read_stdout ? &process->stdout_closed : &process->stderr_closed;
         ssize_t read_count;
