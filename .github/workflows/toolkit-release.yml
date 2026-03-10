@@ -343,7 +343,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ./scripts/build-aivm-wasm.sh
+          ./build.sh wasm
 
       - name: Setup wasmtime
         shell: bash

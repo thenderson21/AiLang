@@ -3479,7 +3479,7 @@ if ! command -v node >/dev/null 2>&1; then
   exit 1
 fi
 
-./scripts/build-aivm-wasm.sh >/dev/null
+./build.sh wasm >/dev/null
 
 rm -rf "${TMP_DIR}"
 mkdir -p "${PUBLISH_DIR}"

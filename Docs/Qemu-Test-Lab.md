@@ -163,7 +163,7 @@ Once Linux guest SSH is working, these should become normal flows:
 ```bash
 ./scripts/qemu-lab.sh linux-ssh
 ./scripts/qemu-lab.sh linux-exec pwd
-./scripts/qemu-lab.sh linux-exec ./scripts/test.sh
+./scripts/qemu-lab.sh linux-exec ./test.sh
 ./scripts/qemu-lab.sh linux-gui-status
 ```
 

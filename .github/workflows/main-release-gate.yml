@@ -215,7 +215,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ./scripts/build-aivm-wasm.sh
+          ./build.sh wasm
           test -f ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm
 
       - name: Setup wasmtime
