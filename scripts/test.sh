@@ -22,7 +22,7 @@ else
   fi
 fi
 
-./scripts/test-aivm-c.sh
+./test-aivm-c.sh
 if command -v emcc >/dev/null 2>&1 && command -v wasmtime >/dev/null 2>&1; then
   ./scripts/test-wasm-golden.sh
 else

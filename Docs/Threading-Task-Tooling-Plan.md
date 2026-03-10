@@ -19,7 +19,7 @@ Primary completion evidence:
 - `src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_await_edge_invalid.aos`
 - `src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_par_join_edge_invalid.aos`
 - `src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_par_cancel_edge_noop.aos`
-- `scripts/test-aivm-c.sh`
+- `./test-aivm-c.sh`
 - `scripts/aivm-parity-dashboard.sh`
 - `Docs/SyscallCoverageSummary.md`
 - `Docs/AiVM-C-Replacement-Tasks.md`
@@ -99,7 +99,7 @@ Tasks:
 
 Validation commands:
 - `./test.sh`
-- `./scripts/test-aivm-c.sh`
+- `./test-aivm-c.sh`
 - `rg -n "sys.worker_|poll|result|cancel|event queue" src/AiVM.Core/native Docs -S`
 
 ## Milestone M4: Local Stress + Determinism Tooling
@@ -121,7 +121,7 @@ Tasks:
    - DoD: one local runbook section for repeatable validation commands and expected outcomes.
 
 Validation commands:
-- `./scripts/test.sh`
+- `./test.sh`
 - `./scripts/aivm-parity-dashboard.sh`
 - `./scripts/aivm-c-perf-smoke.sh`
 

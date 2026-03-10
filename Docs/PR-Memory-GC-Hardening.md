@@ -36,7 +36,7 @@ This PR hardens deterministic memory behavior for AiVM C runtime and increases m
 - `src/AiVM.Core/native/tests/test_vm_core.c`
 - `src/AiVM.Core/native/tests/test_vm_ops.c`
 - `src/AiVM.Core/native/tests/test_process_lifecycle_stress.c`
-- `scripts/test-aivm-c.sh`
+- `./test-aivm-c.sh`
 - `.github/workflows/aivm-c-ci.yml`
 - `.github/workflows/main-release-gate.yml`
 - `.github/workflows/toolkit-release.yml`

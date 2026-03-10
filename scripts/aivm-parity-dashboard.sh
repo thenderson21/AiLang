@@ -32,7 +32,7 @@ ensure_runtime() {
   if [[ -x "${ROOT_DIR}/tools/airun" ]]; then
     return 0
   fi
-  ./scripts/build-airun.sh >/dev/null
+  ./build.sh >/dev/null
   if [[ ! -x "${ROOT_DIR}/tools/airun" ]]; then
     echo "missing runtime: ${ROOT_DIR}/tools/airun" >&2
     exit 2
@@ -163,9 +163,9 @@ TEST_FULL_STATUS="not-run"
 DETERMINISM_STATUS="not-run"
 if [[ "${RUN_TESTS}" == "1" ]]; then
   set +e
-  ./scripts/test-aivm-c.sh > "${TMP_DIR}/test-aivm-c.log" 2>&1
+  ./test-aivm-c.sh > "${TMP_DIR}/test-aivm-c.log" 2>&1
   t1=$?
-  ./scripts/test.sh > "${TMP_DIR}/test-full.log" 2>&1
+  ./test.sh > "${TMP_DIR}/test-full.log" 2>&1
   t2=$?
   ctest --test-dir "${BUILD_DIR}" -R aivm_test_vm_determinism > "${TMP_DIR}/test-determinism.log" 2>&1
   t3=$?
