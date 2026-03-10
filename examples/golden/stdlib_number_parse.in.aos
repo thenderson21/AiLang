@@ -1,0 +1,20 @@
+Program#gnumber_parse_p1 {
+  Import#gnumber_parse_i1(path="./src/std/number.aos")
+  Import#gnumber_parse_i2(path="./src/std/io.aos")
+
+  Call#gnumber_parse_c1(target=io.print) {
+    Call#gnumber_parse_c2(target=toString) { Call#gnumber_parse_c3(target=parseWholeOr) { Lit#gnumber_parse_i1(value="76103") Lit#gnumber_parse_i2(value=0) } }
+  }
+
+  Call#gnumber_parse_c4(target=io.print) {
+    ToString#gnumber_parse_t1 { Call#gnumber_parse_c5(target=isWholeString) { Lit#gnumber_parse_i3(value="76103") } }
+  }
+
+  Call#gnumber_parse_c6(target=io.print) {
+    ToString#gnumber_parse_t2 { Call#gnumber_parse_c7(target=isWholeString) { Lit#gnumber_parse_i4(value="76a03") } }
+  }
+
+  Call#gnumber_parse_c8(target=io.print) {
+    Call#gnumber_parse_c9(target=toString) { Call#gnumber_parse_c10(target=parseWholeOr) { Lit#gnumber_parse_i5(value="76a03") Lit#gnumber_parse_i6(value=99) } }
+  }
+}

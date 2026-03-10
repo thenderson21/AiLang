@@ -55,6 +55,160 @@ Program#std_number_p1 {
     }
   }
 
+
+  Let#std_number_l8(name=digitValue) {
+    Fn#std_number_f8(params=ch) {
+      Block#std_number_b8 {
+        If#std_number_if1 {
+          Eq#std_number_eq1 { Var#std_number_v8(name=ch) Lit#std_number_i5(value="0") }
+          Block#std_number_b9 { Return#std_number_r8 { Lit#std_number_i6(value=0) } }
+          Block#std_number_b10 { Lit#std_number_i7(value=0) }
+        }
+        If#std_number_if2 {
+          Eq#std_number_eq2 { Var#std_number_v9(name=ch) Lit#std_number_i8(value="1") }
+          Block#std_number_b11 { Return#std_number_r9 { Lit#std_number_i9(value=1) } }
+          Block#std_number_b12 { Lit#std_number_i10(value=0) }
+        }
+        If#std_number_if3 {
+          Eq#std_number_eq3 { Var#std_number_v10(name=ch) Lit#std_number_i11(value="2") }
+          Block#std_number_b13 { Return#std_number_r10 { Lit#std_number_i12(value=2) } }
+          Block#std_number_b14 { Lit#std_number_i13(value=0) }
+        }
+        If#std_number_if4 {
+          Eq#std_number_eq4 { Var#std_number_v11(name=ch) Lit#std_number_i14(value="3") }
+          Block#std_number_b15 { Return#std_number_r11 { Lit#std_number_i15(value=3) } }
+          Block#std_number_b16 { Lit#std_number_i16(value=0) }
+        }
+        If#std_number_if5 {
+          Eq#std_number_eq5 { Var#std_number_v12(name=ch) Lit#std_number_i17(value="4") }
+          Block#std_number_b17 { Return#std_number_r12 { Lit#std_number_i18(value=4) } }
+          Block#std_number_b18 { Lit#std_number_i19(value=0) }
+        }
+        If#std_number_if6 {
+          Eq#std_number_eq6 { Var#std_number_v13(name=ch) Lit#std_number_i20(value="5") }
+          Block#std_number_b19 { Return#std_number_r13 { Lit#std_number_i21(value=5) } }
+          Block#std_number_b20 { Lit#std_number_i22(value=0) }
+        }
+        If#std_number_if7 {
+          Eq#std_number_eq7 { Var#std_number_v14(name=ch) Lit#std_number_i23(value="6") }
+          Block#std_number_b21 { Return#std_number_r14 { Lit#std_number_i24(value=6) } }
+          Block#std_number_b22 { Lit#std_number_i25(value=0) }
+        }
+        If#std_number_if8 {
+          Eq#std_number_eq8 { Var#std_number_v15(name=ch) Lit#std_number_i26(value="7") }
+          Block#std_number_b23 { Return#std_number_r15 { Lit#std_number_i27(value=7) } }
+          Block#std_number_b24 { Lit#std_number_i28(value=0) }
+        }
+        If#std_number_if9 {
+          Eq#std_number_eq9 { Var#std_number_v16(name=ch) Lit#std_number_i29(value="8") }
+          Block#std_number_b25 { Return#std_number_r16 { Lit#std_number_i30(value=8) } }
+          Block#std_number_b26 { Lit#std_number_i31(value=0) }
+        }
+        If#std_number_if10 {
+          Eq#std_number_eq10 { Var#std_number_v17(name=ch) Lit#std_number_i32(value="9") }
+          Block#std_number_b27 { Return#std_number_r17 { Lit#std_number_i33(value=9) } }
+          Block#std_number_b28 { Return#std_number_r18 { Lit#std_number_i34(value=-1) } }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l9(name=parseWholeAt) {
+    Fn#std_number_f9(params=text,index,acc) {
+      Block#std_number_b29 {
+        Let#std_number_l10(name=ch) {
+          Call#std_number_c1(target=sys.str.substring) {
+            Var#std_number_v18(name=text)
+            Var#std_number_v19(name=index)
+            Lit#std_number_i35(value=1)
+          }
+        }
+        If#std_number_if11 {
+          Eq#std_number_eq11 { Var#std_number_v20(name=ch) Lit#std_number_i36(value="") }
+          Block#std_number_b30 { Return#std_number_r19 { Var#std_number_v21(name=acc) } }
+          Block#std_number_b31 {
+            Let#std_number_l11(name=digit) { Call#std_number_c2(target=digitValue) { Var#std_number_v22(name=ch) } }
+            If#std_number_if12 {
+              Eq#std_number_eq12 { Var#std_number_v23(name=digit) Lit#std_number_i37(value=-1) }
+              Block#std_number_b32 { Return#std_number_r20 { Lit#std_number_i38(value=-1) } }
+              Block#std_number_b33 {
+                Return#std_number_r21 {
+                  Call#std_number_c3(target=parseWholeAt) {
+                    Var#std_number_v24(name=text)
+                    Add#std_number_a4 { Var#std_number_v25(name=index) Lit#std_number_i39(value=1) }
+                    Add#std_number_a5 {
+                      Add#std_number_a6 {
+                        Add#std_number_a7 {
+                          Add#std_number_a8 {
+                            Add#std_number_a9 {
+                              Add#std_number_a10 {
+                                Add#std_number_a11 {
+                                  Add#std_number_a12 {
+                                    Add#std_number_a13 { Var#std_number_v26(name=acc) Var#std_number_v26(name=acc) }
+                                    Var#std_number_v26(name=acc)
+                                  }
+                                  Var#std_number_v26(name=acc)
+                                }
+                                Var#std_number_v26(name=acc)
+                              }
+                              Var#std_number_v26(name=acc)
+                            }
+                            Var#std_number_v26(name=acc)
+                          }
+                          Var#std_number_v26(name=acc)
+                        }
+                        Var#std_number_v26(name=acc)
+                      }
+                      Var#std_number_v27(name=digit)
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l12(name=isWholeString) {
+    Fn#std_number_f10(params=text) {
+      Block#std_number_b34 {
+        Let#std_number_l13(name=parsed) {
+          Call#std_number_c4(target=parseWholeAt) {
+            Var#std_number_v28(name=text)
+            Lit#std_number_i40(value=0)
+            Lit#std_number_i41(value=0)
+          }
+        }
+        If#std_number_if13 {
+          Eq#std_number_eq13 { Var#std_number_v29(name=parsed) Lit#std_number_i42(value=-1) }
+          Block#std_number_b35 { Return#std_number_r22 { Lit#std_number_i43(value=false) } }
+          Block#std_number_b36 { Return#std_number_r23 { Lit#std_number_i44(value=true) } }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l14(name=parseWholeOr) {
+    Fn#std_number_f11(params=text,fallback) {
+      Block#std_number_b37 {
+        Let#std_number_l15(name=parsed) {
+          Call#std_number_c5(target=parseWholeAt) {
+            Var#std_number_v32(name=text)
+            Lit#std_number_i45(value=0)
+            Lit#std_number_i46(value=0)
+          }
+        }
+        If#std_number_if14 {
+          Eq#std_number_eq14 { Var#std_number_v33(name=parsed) Lit#std_number_i47(value=-1) }
+          Block#std_number_b38 { Return#std_number_r24 { Var#std_number_v34(name=fallback) } }
+          Block#std_number_b39 { Return#std_number_r25 { Var#std_number_v35(name=parsed) } }
+        }
+      }
+    }
+  }
+
   Export#std_number_e1(name=zero)
   Export#std_number_e2(name=one)
   Export#std_number_e3(name=add)
@@ -62,4 +216,7 @@ Program#std_number_p1 {
   Export#std_number_e5(name=dec)
   Export#std_number_e6(name=equals)
   Export#std_number_e7(name=toString)
+  Export#std_number_e8(name=digitValue)
+  Export#std_number_e9(name=isWholeString)
+  Export#std_number_e10(name=parseWholeOr)
 }
