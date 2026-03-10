@@ -309,10 +309,24 @@ static int native_syscall_dispatch_traced(
     char arg1_preview[96];
     char arg2_preview[96];
     char result_preview[96];
+    char local0_preview[96];
+    char local1_preview[96];
+    char local2_preview[96];
+    char caller0_preview[96];
+    char caller1_preview[96];
+    char caller2_preview[96];
+    size_t locals_base = 0U;
+    size_t caller_locals_base = 0U;
     arg0_preview[0] = '\0';
     arg1_preview[0] = '\0';
     arg2_preview[0] = '\0';
     result_preview[0] = '\0';
+    local0_preview[0] = '\0';
+    local1_preview[0] = '\0';
+    local2_preview[0] = '\0';
+    caller0_preview[0] = '\0';
+    caller1_preview[0] = '\0';
+    caller2_preview[0] = '\0';
     if (arg_count > 0U) {
         airun_format_value_preview(&args[0], arg0_preview, sizeof(arg0_preview));
     }
@@ -322,15 +336,45 @@ static int native_syscall_dispatch_traced(
     if (arg_count > 2U) {
         airun_format_value_preview(&args[2], arg2_preview, sizeof(arg2_preview));
     }
+    if (g_airun_live_debug_vm != NULL && g_airun_live_debug_vm->call_frame_count > 0U) {
+        locals_base = g_airun_live_debug_vm->call_frames[g_airun_live_debug_vm->call_frame_count - 1U].locals_base;
+        if (locals_base < g_airun_live_debug_vm->locals_count) {
+            airun_format_value_preview(&g_airun_live_debug_vm->locals[locals_base], local0_preview, sizeof(local0_preview));
+        }
+        if (locals_base + 1U < g_airun_live_debug_vm->locals_count) {
+            airun_format_value_preview(&g_airun_live_debug_vm->locals[locals_base + 1U], local1_preview, sizeof(local1_preview));
+        }
+        if (locals_base + 2U < g_airun_live_debug_vm->locals_count) {
+            airun_format_value_preview(&g_airun_live_debug_vm->locals[locals_base + 2U], local2_preview, sizeof(local2_preview));
+        }
+    }
+    if (g_airun_live_debug_vm != NULL && g_airun_live_debug_vm->call_frame_count > 1U) {
+        caller_locals_base = g_airun_live_debug_vm->call_frames[g_airun_live_debug_vm->call_frame_count - 2U].locals_base;
+        if (caller_locals_base < g_airun_live_debug_vm->locals_count) {
+            airun_format_value_preview(&g_airun_live_debug_vm->locals[caller_locals_base], caller0_preview, sizeof(caller0_preview));
+        }
+        if (caller_locals_base + 1U < g_airun_live_debug_vm->locals_count) {
+            airun_format_value_preview(&g_airun_live_debug_vm->locals[caller_locals_base + 1U], caller1_preview, sizeof(caller1_preview));
+        }
+        if (caller_locals_base + 2U < g_airun_live_debug_vm->locals_count) {
+            airun_format_value_preview(&g_airun_live_debug_vm->locals[caller_locals_base + 2U], caller2_preview, sizeof(caller2_preview));
+        }
+    }
     airun_log_message(
         AIRUN_LOG_TRACE,
         "syscall",
-        "enter target=%s argCount=%llu arg0=%s arg1=%s arg2=%s",
+        "enter target=%s argCount=%llu arg0=%s arg1=%s arg2=%s local0=%s local1=%s local2=%s caller0=%s caller1=%s caller2=%s",
         (target == NULL) ? "<null>" : target,
         (unsigned long long)arg_count,
         arg_count > 0U ? arg0_preview : "<none>",
         arg_count > 1U ? arg1_preview : "<none>",
-        arg_count > 2U ? arg2_preview : "<none>");
+        arg_count > 2U ? arg2_preview : "<none>",
+        local0_preview[0] == '\0' ? "<none>" : local0_preview,
+        local1_preview[0] == '\0' ? "<none>" : local1_preview,
+        local2_preview[0] == '\0' ? "<none>" : local2_preview,
+        caller0_preview[0] == '\0' ? "<none>" : caller0_preview,
+        caller1_preview[0] == '\0' ? "<none>" : caller1_preview,
+        caller2_preview[0] == '\0' ? "<none>" : caller2_preview);
     if (handler == NULL) {
         if (result != NULL) {
             *result = aivm_value_void();
