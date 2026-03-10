@@ -118,7 +118,7 @@ Native runtime expects AiBC1 bytecode input:
 Publish wasm artifacts (web profile default):
 
 ```bash
-./scripts/build-aivm-wasm.sh
+./build.sh wasm
 ./tools/airun publish samples/cli-fetch/project.aiproj --target wasm32 --out ./dist-wasm
 
 # wasm fullstack + explicit host runtime target for self-contained app binary

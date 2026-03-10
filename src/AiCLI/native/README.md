@@ -9,8 +9,8 @@ Current:
 - `--vm=c` is an explicit alias of the default runtime.
 - `--vm=cvN` is reserved for future C VM profile/version selection; currently it maps to `c`.
 - `--vm=ast` remains debug-only and is not supported by native runtime execution.
-- `scripts/build-airun.sh` compiles Unix targets (`osx-x64`, `osx-arm64`, `linux-x64`, `linux-arm64`).
-- `scripts/build-airun.ps1` compiles Windows targets (`windows-x64`, `windows-arm64`).
+- `build.sh` is the canonical bootstrap entrypoint on Unix-like hosts.
+- `build.ps1` is the canonical bootstrap entrypoint on Windows hosts.
 - `.aibc1` runtime execution is C-only.
 - `build` command is available: `airun build <program|project-dir> [--out <dir>] [--no-cache]` and emits `app.aibc1`.
 - `run` supports deterministic build cache bypass and compiled-app argv passthrough:

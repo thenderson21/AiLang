@@ -45,7 +45,7 @@ This PR hardens deterministic memory behavior for AiVM C runtime and increases m
 
 ## Validation
 
-- `./scripts/test.sh` passes.
+- `./test.sh` passes.
 - Native C test suite passes including:
 - `aivm_test_vm_core`
 - `aivm_test_vm_ops`

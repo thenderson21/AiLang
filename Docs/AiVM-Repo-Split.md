@@ -47,4 +47,4 @@ Then:
 
 - remove tracked `src/AiVM.Core` files from the monorepo index (once submodule is added),
 - keep existing `ProjectReference` paths (`..\AiVM.Core\AiVM.Core.csproj`) unchanged,
-- run `./scripts/test.sh` to verify deterministic behavior and golden output.
+- run `./test.sh` to verify deterministic behavior and golden output.

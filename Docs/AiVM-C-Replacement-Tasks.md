@@ -119,7 +119,7 @@ Use this sequence to reproduce threading/task readiness checks locally with dete
 1. Core deterministic test gate:
 
 ```bash
-./scripts/test.sh
+./test.sh
 ```
 
 Expected:

@@ -62,4 +62,4 @@ Implement AiVectra helpers that compile down to existing VM primitives:
   - paint/opacity composition
   - blur-style composition
   - grouped transforms
-- `./scripts/test.sh` passes.
+- `./test.sh` passes.

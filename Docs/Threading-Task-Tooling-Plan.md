@@ -53,7 +53,7 @@ Tasks:
    - DoD: status rows for async/par and worker contracts match current implementation state.
 
 Validation commands:
-- `./scripts/test.sh`
+- `./test.sh`
 - `rg -n "ASYNC_CALL|AWAIT|PAR_|worker_|owner thread|determin" SPEC Docs -S`
 
 ## Milestone M2: AiVM Task Manager Tooling Surface
@@ -75,7 +75,7 @@ Tasks:
    - DoD: all semantic state transitions route through guarded owner path.
 
 Validation commands:
-- `./scripts/test.sh`
+- `./test.sh`
 - `./scripts/test-c-vm.sh`
 - `rg -n "PAR_JOIN|AWAIT|task|owner" src/AiVM.Core/native/src src/AiVM.Core/native/tests -S`
 
@@ -98,7 +98,7 @@ Tasks:
    - DoD: clear integration path for web-host and UI-host adapters using same deterministic queue semantics.
 
 Validation commands:
-- `./scripts/test.sh`
+- `./test.sh`
 - `./scripts/test-aivm-c.sh`
 - `rg -n "sys.worker_|poll|result|cancel|event queue" src/AiVM.Core/native Docs -S`
 
@@ -134,7 +134,7 @@ Validation commands:
 
 ## Release Readiness Checklist (Tooling Scope)
 
-1. `./scripts/test.sh` passes.
+1. `./test.sh` passes.
 2. Async/par determinism tests pass across repeated runs.
 3. `sys.worker_*` contracts and error paths are fully tested.
 4. Local stress harness validates 1000+ in-flight management deterministically.
