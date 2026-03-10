@@ -126,6 +126,8 @@ This file is normative for `aic run` evaluation behavior.
   - `command` is the executable path/name.
   - `argsNode` uses the same node shape returned by `sys.process.args`: a block/list of string-bearing child nodes, one child per argv entry after `command`.
   - Native runtime launches `command` with `argv = [command] + argsNode`.
+  - If a caller is already holding `start(args)`, it may pass that node directly as `argsNode`.
+  - If a caller rebuilds argv manually, it must start from an empty block/list; do not seed a placeholder child such as `"args"`, because every child becomes a real forwarded argv entry.
 - `sys.process_poll(processHandle) -> status`
 - `sys.process_wait(processHandle) -> status`
 - `sys.process.stdout.read(processHandle) -> bytes`
