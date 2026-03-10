@@ -5107,6 +5107,28 @@ static int native_syscall_process_spawn(
             return AIVM_SYSCALL_OK;
         }
 
+        if (g_airun_log_level >= AIRUN_LOG_TRACE) {
+            const char* arg0 = (argv_count > 0U && argv_values != NULL && argv_values[0] != NULL)
+                ? argv_values[0]
+                : "";
+            const char* arg1 = (argv_count > 1U && argv_values != NULL && argv_values[1] != NULL)
+                ? argv_values[1]
+                : "";
+            const char* arg2 = (argv_count > 2U && argv_values != NULL && argv_values[2] != NULL)
+                ? argv_values[2]
+                : "";
+            airun_log_message(
+                AIRUN_LOG_TRACE,
+                "process",
+                "spawn command=%s cwd=%s argv_count=%llu arg0=%s arg1=%s arg2=%s",
+                args[0].string_value,
+                args[2].string_value[0] != '\0' ? args[2].string_value : ".",
+                (unsigned long long)argv_count,
+                arg0,
+                arg1,
+                arg2);
+        }
+
         pid = fork();
         if (pid == 0) {
             (void)signal(SIGPIPE, SIG_IGN);
@@ -5133,6 +5155,13 @@ static int native_syscall_process_spawn(
             *result = aivm_value_int(-1);
             return AIVM_SYSCALL_OK;
         }
+
+        airun_log_message(
+            AIRUN_LOG_TRACE,
+            "process",
+            "spawned pid=%lld command=%s",
+            (long long)pid,
+            args[0].string_value);
 
         slot_handle = native_process_allocate_slot();
         if (slot_handle < 0) {
