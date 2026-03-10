@@ -1,0 +1,21 @@
+Program#gcore_null_p1 {
+  Import#gcore_null_i1(path="./src/std/core.aos")
+  Import#gcore_null_i2(path="./src/std/io.aos")
+
+  Let#gcore_null_l1(name=r) {
+    Call#gcore_null_c1(target=resultOkNull) { Lit#gcore_null_i1(value=0) }
+  }
+
+  Call#gcore_null_c2(target=io.print) {
+    ToString#gcore_null_t1 { Call#gcore_null_c3(target=resultIsOk) { Var#gcore_null_v1(name=r) } }
+  }
+
+  Call#gcore_null_c4(target=io.print) {
+    NodeKind#gcore_null_nk1 {
+      Call#gcore_null_c5(target=resultNodeOr) {
+        Var#gcore_null_v2(name=r)
+        Lit#gcore_null_i2(value=null)
+      }
+    }
+  }
+}

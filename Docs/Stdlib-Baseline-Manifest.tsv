@@ -1,5 +1,5 @@
 # module_path	exports_csv
-src/std/core.aos	assert,resultOkString,resultOkInt,resultOkBool,resultOkNode,resultErr,resultIsOk,resultValueOr,resultCodeOr,resultMessageOr,resultNodeOr,optionSomeString,optionNone,optionHas,optionValueOr,nodeEmpty,nodeWithString,nodeWithInt,nodeWithBool,mapFieldKey,mapFieldValue,mapHasAt,mapHas,mapGetNodeOrAt,mapGetNodeOr,mapGetStringOrAt,mapGetStringOr,mapGetIntOrAt,mapGetIntOr,mapGetBoolOrAt,mapGetBoolOr,mapSetFold,mapSet
+src/std/core.aos	assert,resultOkString,resultOkInt,resultOkBool,resultOkNode,resultOkNull,resultErr,resultIsOk,resultValueOr,resultCodeOr,resultMessageOr,resultNodeOr,optionSomeString,optionNone,optionHas,optionValueOr,nodeEmpty,nodeWithString,nodeWithInt,nodeWithBool,mapFieldKey,mapFieldValue,mapHasAt,mapHas,mapGetNodeOrAt,mapGetNodeOr,mapGetStringOrAt,mapGetStringOr,mapGetIntOrAt,mapGetIntOr,mapGetBoolOrAt,mapGetBoolOr,mapSetFold,mapSet
 src/std/io.aos	print,println
 src/std/str.aos	concat,substring,remove,find,fromCodePoint,decodeUnicodeHex4,decodeUnicodeSurrogatePairHex4
 src/std/bytes.aos	length,at,slice,concat,fromBase64,toBase64,toUtf8String,fromUtf8String
@@ -8,7 +8,7 @@ src/std/json.aos	encode,parse,parseNode
 src/std/system.aos	platform,arch,osVersion,runtime,openDefault,openUrl
 src/std/process.aos	args,cwd,envGet,spawn,wait,poll,kill,stdoutRead,stderrRead,exit
 src/std/fs.aos	fileRead,fileWrite,fileExists,fileDelete,dirCreate,dirList,dirDelete,pathExists,pathStat
-src/std/time.aos	nowUnixMs,monotonicMs,sleepMs,timeZoneId,timeZoneOffsetMinutesAt,timeFromUnixMs,now,timeUnixMs,timeZone,timeOffsetMinutes
+src/std/time.aos	nowUnixMs,monotonicMs,sleepMs,timeZoneId,timeZoneOffsetMinutesAt,timeFromUnixMs,now,nowUtc,timeLocal,timeUnixMs,timeZone,timeUtc,timeIsUtc,timeOffsetMinutes
 src/std/debug.aos	debugEmit,debugMode,captureFrameBegin,captureFrameEnd,captureDraw,captureInput,captureState,replayLoad,replayNext,debugAssert,artifactWrite,traceAsync
 src/std/net.aos	udpBind,udpSend,udpRecv
 src/std/http.aos	httpHeaders,httpQuery,httpPath,httpMapGetString,httpHeaderGet,httpQueryGet,httpResponse,httpErrorJson,httpEmitRaw,httpRequest,httpRequestWithTimeoutPolls,httpRequestPoll,httpRequestAwait,httpRequestDone,httpRequestFailed,httpRequestResponse,httpRequestResponseBytesBase64,httpRequestResponseBytes,httpRequestError,httpRequestTimedOut,httpRequestFailedConnect,httpRequestFailedWrite,httpRequestFailedRead,httpMakeRequestState,httpRequestPhase,httpRequestText,httpRequestMaxBytes,httpRequestOp,httpRequestConnection,httpRequestPollConnecting,httpRequestPollWriting,httpRequestPollReading,httpRequestRemaining,httpResponseBody,httpResponseBodyBytes,httpResponseStatusCode,httpResponseHeaderGet,httpResponseInfo,httpResponseRedirectLocation,httpResponseIsRedirect,httpRequestAwaitBody,httpRequestAwaitBytes,httpRequestAwaitBodyBytes,httpRequestAwaitStatusCode,httpRequestAwaitHeaderGet,httpRequestFollowRedirects,httpRequestAwaitInfo

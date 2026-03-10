@@ -87,6 +87,26 @@ Program#std_core_p1 {
     }
   }
 
+  Let#std_core_l30a(name=resultOkNull) {
+    Fn#std_core_f18a(params=_) {
+      Block#std_core_b26a {
+        Let#std_core_l31a(name=base) { MakeBlock#std_core_mb8a { Lit#std_core_i37a(value="result") } }
+        Let#std_core_l32a(name=withOk) {
+          AppendChild#std_core_ap17a {
+            Var#std_core_v49a(name=base)
+            MakeLitBool#std_core_mlb9a { Lit#std_core_i38a(value="ok") Lit#std_core_i39a(value=true) }
+          }
+        }
+        Return#std_core_r22a {
+          AppendChild#std_core_ap17b {
+            Var#std_core_v49b(name=withOk)
+            Lit#std_core_i39b(value=null)
+          }
+        }
+      }
+    }
+  }
+
   Let#std_core_l5(name=resultErr) {
     Fn#std_core_f3(params=code,message) {
       Block#std_core_b3 {
@@ -797,6 +817,7 @@ Program#std_core_p1 {
   Export#std_core_e14(name=resultOkInt)
   Export#std_core_e15(name=resultOkBool)
   Export#std_core_e18(name=resultOkNode)
+  Export#std_core_e18a(name=resultOkNull)
   Export#std_core_e3(name=resultErr)
   Export#std_core_e4(name=resultIsOk)
   Export#std_core_e5(name=resultValueOr)
