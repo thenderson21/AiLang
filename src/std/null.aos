@@ -1,0 +1,46 @@
+Program#std_null_p1 {
+  Let#std_null_l1(name=value) {
+    Fn#std_null_f1(params=_) {
+      Block#std_null_b1 {
+        Return#std_null_r1 { Lit#std_null_i1(value=null) }
+      }
+    }
+  }
+
+  Let#std_null_l2(name=isNull) {
+    Fn#std_null_f2(params=input) {
+      Block#std_null_b2 {
+        Return#std_null_r2 { Eq#std_null_e1 { Var#std_null_v1(name=input) Lit#std_null_i2(value=null) } }
+      }
+    }
+  }
+
+  Let#std_null_l3(name=isNotNull) {
+    Fn#std_null_f3(params=input) {
+      Block#std_null_b3 {
+        If#std_null_if1 {
+          Call#std_null_c1(target=isNull) { Var#std_null_v2(name=input) }
+          Block#std_null_b4 { Return#std_null_r3 { Lit#std_null_i3(value=false) } }
+          Block#std_null_b5 { Return#std_null_r4 { Lit#std_null_i4(value=true) } }
+        }
+      }
+    }
+  }
+
+  Let#std_null_l4(name=coalesce) {
+    Fn#std_null_f4(params=input,fallback) {
+      Block#std_null_b6 {
+        If#std_null_if2 {
+          Call#std_null_c2(target=isNull) { Var#std_null_v3(name=input) }
+          Block#std_null_b7 { Return#std_null_r5 { Var#std_null_v4(name=fallback) } }
+          Block#std_null_b8 { Return#std_null_r6 { Var#std_null_v5(name=input) } }
+        }
+      }
+    }
+  }
+
+  Export#std_null_e1(name=value)
+  Export#std_null_e2(name=isNull)
+  Export#std_null_e3(name=isNotNull)
+  Export#std_null_e4(name=coalesce)
+}

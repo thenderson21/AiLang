@@ -1,0 +1,24 @@
+Program#gnull_p1 {
+  Import#gnull_i1(path="./src/std/null.aos")
+  Import#gnull_i2(path="./src/std/io.aos")
+
+  Call#gnull_c1(target=io.print) {
+    ToString#gnull_t1 { Call#gnull_c2(target=value) { Lit#gnull_i1(value=0) } }
+  }
+
+  Call#gnull_c3(target=io.print) {
+    ToString#gnull_t2 { Call#gnull_c4(target=isNull) { Lit#gnull_i2(value=null) } }
+  }
+
+  Call#gnull_c5(target=io.print) {
+    ToString#gnull_t3 { Call#gnull_c6(target=isNotNull) { Lit#gnull_i3(value="x") } }
+  }
+
+  Call#gnull_c7(target=io.print) {
+    ToString#gnull_t4 { Call#gnull_c8(target=coalesce) { Lit#gnull_i4(value=null) Lit#gnull_i5(value="fallback") } }
+  }
+
+  Call#gnull_c9(target=io.print) {
+    ToString#gnull_t5 { Call#gnull_c10(target=coalesce) { Lit#gnull_i6(value=42) Lit#gnull_i7(value=0) } }
+  }
+}

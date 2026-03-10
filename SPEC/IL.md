@@ -28,7 +28,7 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 
 - Runtime values are represented as nodes:
 - `Lit(value=...)` for primitive values.
-- Primitive runtime kinds are `string`, `number`, `bool`, `null`, and `bytes`.
+- Primitive runtime kinds are `string`, `number`, `bool`, `null`, and `bytes`. Canonical null helpers can be provided by `src/std/null.aos`.
 - Current AiBC1 numeric execution is exact integer-only; `number` is the canonical language-facing numeric family and currently lowers to exact whole-number runtime values. Canonical language-facing helpers for this exact whole-number surface live in `src/std/number.aos`.
 - `Block#void` as the canonical void value.
 - `Err(code=... message="..." nodeId=...)` for runtime errors.

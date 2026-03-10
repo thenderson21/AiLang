@@ -32,6 +32,7 @@ This file is normative for `aic run` evaluation behavior.
 - The current canonical stdlib surface for these exact whole-number operations is `src/std/number.aos`.
 - `bytes` values are first-class runtime values and participate in equality by length+byte-content.
 - `null` is a first-class runtime value distinct from `void`.
+- `null` equality is value-stable and can back generic coalesce-style stdlib helpers.
 - `Call`: evaluate arguments, then dispatch:
 - native target (`io.*`, `compiler.*`) dispatches directly.
 - otherwise resolve function binding, apply closure with captured env.
