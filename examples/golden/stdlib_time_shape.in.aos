@@ -20,4 +20,17 @@ Program#gtime_p1 {
   Call#gtime_c6(target=io.print) {
     Call#gtime_c7(target=timeOffsetMinutes) { Var#gtime_v3(name=t) }
   }
+
+  Let#gtime_l2(name=tUtc) {
+    Call#gtime_c10(target=timeUtc) { Lit#gtime_i3(value=1700000000000) }
+  }
+
+  Call#gtime_c11(target=io.print) {
+    Call#gtime_c12(target=timeZone) { Var#gtime_v5(name=tUtc) }
+  }
+
+  Call#gtime_c13(target=io.print) {
+    ToString#gtime_t1 { Call#gtime_c14(target=timeIsUtc) { Var#gtime_v6(name=tUtc) } }
+  }
+
 }
