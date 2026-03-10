@@ -308,9 +308,11 @@ static int native_syscall_dispatch_traced(
     char arg0_preview[96];
     char arg1_preview[96];
     char arg2_preview[96];
+    char result_preview[96];
     arg0_preview[0] = '\0';
     arg1_preview[0] = '\0';
     arg2_preview[0] = '\0';
+    result_preview[0] = '\0';
     if (arg_count > 0U) {
         airun_format_value_preview(&args[0], arg0_preview, sizeof(arg0_preview));
     }
@@ -336,20 +338,25 @@ static int native_syscall_dispatch_traced(
         airun_log_message(
             AIRUN_LOG_TRACE,
             "syscall",
-            "exit target=%s status=%s resultType=%s",
+            "exit target=%s status=%s resultType=%s result=%s",
             (target == NULL) ? "<null>" : target,
             aivm_syscall_status_code(AIVM_SYSCALL_ERR_NOT_FOUND),
-            (result == NULL) ? "null" : airun_value_type_name(result->type));
+            (result == NULL) ? "null" : airun_value_type_name(result->type),
+            "<none>");
         return AIVM_SYSCALL_ERR_NOT_FOUND;
     }
     status = handler(target, args, arg_count, result);
+    if (result != NULL) {
+        airun_format_value_preview(result, result_preview, sizeof(result_preview));
+    }
     airun_log_message(
         AIRUN_LOG_TRACE,
         "syscall",
-        "exit target=%s status=%s resultType=%s",
+        "exit target=%s status=%s resultType=%s result=%s",
         (target == NULL) ? "<null>" : target,
         aivm_syscall_status_code((AivmSyscallStatus)status),
-        (result == NULL) ? "null" : airun_value_type_name(result->type));
+        (result == NULL) ? "null" : airun_value_type_name(result->type),
+        (result == NULL) ? "<none>" : result_preview);
     g_airun_live_debug_refresh_counter += 1U;
     if ((g_airun_live_debug_refresh_counter % 128U) == 0U) {
         airun_refresh_live_debug_bundle("status=running");
