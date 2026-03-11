@@ -5433,7 +5433,7 @@ static int parse_simple_program_aos_to_program_file(const char* aos_path, AivmPr
 }
 
 #define SIMPLE_MAX_SOURCES 64
-#define SIMPLE_MAX_FUNCS 512
+#define SIMPLE_MAX_FUNCS 1024
 #define SIMPLE_MAX_FIXUPS 2048
 #define SIMPLE_MAX_LOCALS 1024
 #define SIMPLE_MAX_LOOP_DEPTH 128
@@ -5918,11 +5918,13 @@ static int simple_collect_from_file(SimpleCompileContext* ctx, const char* path,
     const char* open_brace;
     const char* close_brace;
     const char* cursor;
+    const char* trace;
     int source_index = -1;
 
     if (ctx == NULL || path == NULL) {
         return simple_fail("collect: invalid args");
     }
+    trace = getenv("AIVM_NATIVE_BUILD_TRACE");
     if (!read_text_file(path, text, sizeof(text))) {
         return simple_failf("collect: failed reading %s", path);
     }
@@ -5951,7 +5953,27 @@ static int simple_collect_from_file(SimpleCompileContext* ctx, const char* path,
     while (cursor < close_brace) {
         SimpleNodeView node;
         if (!simple_parse_next_node(cursor, close_brace, &node)) {
-            break;
+            const char* rest = cursor;
+            while (rest < close_brace && (*rest == ' ' || *rest == '\t' || *rest == '\r' || *rest == '\n')) {
+                rest += 1;
+            }
+            if (rest >= close_brace) {
+                break;
+            }
+            return simple_failf(
+                "collect: parse failed in %s near offset %llu",
+                path,
+                (unsigned long long)(rest - ctx->sources[(size_t)source_index].text));
+        }
+        if (trace != NULL && trace[0] != '\0') {
+            fprintf(
+                stderr,
+                "[airun-native-compile] collect-node kind=%s source=%s start=%llu next=%llu end=%llu\n",
+                node.kind,
+                path,
+                (unsigned long long)(cursor - ctx->sources[(size_t)source_index].text),
+                (unsigned long long)(node.next - ctx->sources[(size_t)source_index].text),
+                (unsigned long long)(close_brace - ctx->sources[(size_t)source_index].text));
         }
         if (strcmp(node.kind, "Import") == 0) {
             char import_path[PATH_MAX];
@@ -5974,6 +5996,9 @@ static int simple_collect_from_file(SimpleCompileContext* ctx, const char* path,
                 ctx->entry_export[0] == '\0' &&
                 parse_attr_span(node.attrs, "name", export_name, sizeof(export_name))) {
                 (void)snprintf(ctx->entry_export, sizeof(ctx->entry_export), "%s", export_name);
+                if (trace != NULL && trace[0] != '\0') {
+                    fprintf(stderr, "[airun-native-compile] collect-export=%s source=%s\n", ctx->entry_export, path);
+                }
             }
             cursor = node.next;
             continue;
@@ -5992,6 +6017,9 @@ static int simple_collect_from_file(SimpleCompileContext* ctx, const char* path,
                 }
                 if (!simple_add_func(ctx, let_name, params_raw, expr.body_start, expr.body_end, source_index)) {
                     return simple_failf("collect: failed adding function %s from %s", let_name, path);
+                }
+                if (trace != NULL && trace[0] != '\0') {
+                    fprintf(stderr, "[airun-native-compile] collect-fn=%s source=%s\n", let_name, path);
                 }
             }
             cursor = node.next;
@@ -7228,9 +7256,13 @@ static int handle_debug_run_mode(
     const char* out_dir = default_out_dir;
     const char* debug_mode = "off";
     const char* log_level = default_log_level;
+    int use_cache = 1;
     NativeDebugOptions debug_options;
     int rc;
+    int build_rc;
     char config_path[PATH_MAX];
+    char build_out_dir[PATH_MAX];
+    char built_app_path[PATH_MAX];
     debug_options.emit_bundle = default_emit_bundle;
     debug_options.out_dir = NULL;
     debug_options.input_path = NULL;
@@ -7261,6 +7293,7 @@ static int handle_debug_run_mode(
             continue;
         }
         if (strcmp(arg, "--no-cache") == 0 && app_arg_start < 0) {
+            use_cache = 0;
             continue;
         }
         if (strcmp(arg, "--debug-mode") == 0 && app_arg_start < 0) {
@@ -7506,11 +7539,39 @@ static int handle_debug_run_mode(
         (debug_options.out_dir == NULL) ? "" : debug_options.out_dir,
         argc - app_arg_start,
         interact_mode);
-    rc = run_via_resolved_input(
-        program_path,
-        (const char* const*)&argv[app_arg_start],
-        (size_t)(argc - app_arg_start),
-        &debug_options);
+
+    if (program_path != NULL &&
+        !ends_with(program_path, ".aibc1") &&
+        !ends_with(program_path, ".aibundle")) {
+        if (!derive_build_out_dir(program_path, build_out_dir, sizeof(build_out_dir))) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Native build failed: could not derive output directory.\" nodeId=build)\n");
+            return 2;
+        }
+        build_rc = build_input_to_aibc1(
+            program_path,
+            build_out_dir,
+            built_app_path,
+            sizeof(built_app_path),
+            use_cache);
+        if (build_rc != 1) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Native build failed: %s\" nodeId=build)\n",
+                native_build_error());
+            return 2;
+        }
+        rc = run_native_aibc1(
+            built_app_path,
+            (const char* const*)&argv[app_arg_start],
+            (size_t)(argc - app_arg_start),
+            &debug_options);
+    } else {
+        rc = run_via_resolved_input(
+            program_path,
+            (const char* const*)&argv[app_arg_start],
+            (size_t)(argc - app_arg_start),
+            &debug_options);
+    }
     airun_log_message(AIRUN_LOG_TRACE, "debug", "debug-run done rc=%d program=%s", rc, (program_path == NULL) ? "" : program_path);
     if (debug_options.emit_bundle &&
         debug_options.out_dir != NULL &&
