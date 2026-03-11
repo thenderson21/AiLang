@@ -3373,6 +3373,32 @@ static void native_net_record_last_failure(const NativeNetAsyncState* op, const 
         (message == NULL || message[0] == '\0') ? "failed" : message);
 }
 
+static const char* native_net_error_stage(const char* error_text)
+{
+    if (error_text == NULL || error_text[0] == '\0') {
+        return "unknown";
+    }
+    if (strstr(error_text, "dns_failed") != NULL) {
+        return "dns";
+    }
+    if (strstr(error_text, "tls_") != NULL || strstr(error_text, "connect_tls_failed") != NULL) {
+        return "tls";
+    }
+    if (strstr(error_text, "connect_errno_") != NULL || strstr(error_text, "connect_failed") != NULL) {
+        return "connect";
+    }
+    if (strstr(error_text, "read_failed") != NULL) {
+        return "read";
+    }
+    if (strstr(error_text, "write_failed") != NULL) {
+        return "write";
+    }
+    if (strstr(error_text, "socket_errno_") != NULL) {
+        return "socket";
+    }
+    return "unknown";
+}
+
 #ifdef __APPLE__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -10751,9 +10777,10 @@ static int write_native_debug_bundle(
     if (g_native_net_last_failure.valid != 0) {
         fprintf(
             f,
-            "network = { kind = %d, tls = %s, host = \"%s\", resolved_ip = \"%s\", port = %d, error = \"%s\" }\n",
+            "network = { kind = %d, tls = %s, stage = \"%s\", host = \"%s\", resolved_ip = \"%s\", port = %d, error = \"%s\" }\n",
             g_native_net_last_failure.kind,
             g_native_net_last_failure.use_tls ? "true" : "false",
+            native_net_error_stage(g_native_net_last_failure.error),
             g_native_net_last_failure.host,
             g_native_net_last_failure.resolved_ip,
             g_native_net_last_failure.port,

@@ -42,6 +42,11 @@ if ! grep -q 'host = "definitely.invalid"' "${OUT_DIR}/diagnostics.toml"; then
   exit 1
 fi
 
+if ! grep -q 'stage = "dns"' "${OUT_DIR}/diagnostics.toml"; then
+  echo "debug bundle regression: dns failure stage not captured" >&2
+  exit 1
+fi
+
 cat > "${TMP_DIR}/app_localhost.aos" <<'EOF'
 Program#p1 {
   Export#e1(name=start)
@@ -68,5 +73,10 @@ OUT_DIR_LOCAL="${TMP_DIR}/bundle_localhost"
 
 if ! grep -Eq 'resolved_ip = "(127\.0\.0\.1|::1)"' "${OUT_DIR_LOCAL}/diagnostics.toml"; then
   echo "debug bundle regression: network summary missing resolved localhost ip" >&2
+  exit 1
+fi
+
+if ! grep -q 'stage = "connect"' "${OUT_DIR_LOCAL}/diagnostics.toml"; then
+  echo "debug bundle regression: connect failure stage not captured" >&2
   exit 1
 fi
