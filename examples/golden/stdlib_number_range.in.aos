@@ -1,0 +1,20 @@
+Program#gnumber_range_p1 {
+  Import#gnumber_range_i1(path="./src/std/number.aos")
+  Import#gnumber_range_i2(path="./src/std/io.aos")
+
+  Call#gnumber_range_c1(target=io.print) {
+    Call#gnumber_range_c2(target=toString) { Call#gnumber_range_c3(target=clamp) { Lit#gnumber_range_i1(value=12) Lit#gnumber_range_i2(value=0) Lit#gnumber_range_i3(value=10) } }
+  }
+
+  Call#gnumber_range_c4(target=io.print) {
+    Call#gnumber_range_c5(target=toString) { Call#gnumber_range_c6(target=clamp) { Lit#gnumber_range_i4(value=-3) Lit#gnumber_range_i5(value=0) Lit#gnumber_range_i6(value=10) } }
+  }
+
+  Call#gnumber_range_c7(target=io.print) {
+    ToString#gnumber_range_t1 { Call#gnumber_range_c8(target=betweenInclusive) { Lit#gnumber_range_i7(value=5) Lit#gnumber_range_i8(value=0) Lit#gnumber_range_i9(value=10) } }
+  }
+
+  Call#gnumber_range_c9(target=io.print) {
+    ToString#gnumber_range_t2 { Call#gnumber_range_c10(target=betweenInclusive) { Lit#gnumber_range_i10(value=12) Lit#gnumber_range_i11(value=0) Lit#gnumber_range_i12(value=10) } }
+  }
+}

@@ -122,6 +122,42 @@ Program#std_number_p1 {
     }
   }
 
+  Let#std_number_l7f(name=clamp) {
+    Fn#std_number_f7f(params=value,minimum,maximum) {
+      Block#std_number_b7p {
+        Let#std_number_l7g(name=lowerBounded) {
+          Call#std_number_c0e(target=max) {
+            Var#std_number_v7o(name=value)
+            Var#std_number_v7p(name=minimum)
+          }
+        }
+        Return#std_number_r7k {
+          Call#std_number_c0f(target=min) {
+            Var#std_number_v7q(name=lowerBounded)
+            Var#std_number_v7r(name=maximum)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l7h(name=betweenInclusive) {
+    Fn#std_number_f7g(params=value,minimum,maximum) {
+      Block#std_number_b7q {
+        Return#std_number_r7l {
+          Eq#std_number_eq0a {
+            Call#std_number_c0g(target=clamp) {
+              Var#std_number_v7s(name=value)
+              Var#std_number_v7t(name=minimum)
+              Var#std_number_v7u(name=maximum)
+            }
+            Var#std_number_v7v(name=value)
+          }
+        }
+      }
+    }
+  }
+
 
   Let#std_number_l8(name=digitValue) {
     Fn#std_number_f8(params=ch) {
@@ -431,6 +467,8 @@ Program#std_number_p1 {
   Export#std_number_e7c(name=sign)
   Export#std_number_e7d(name=min)
   Export#std_number_e7e(name=max)
+  Export#std_number_e7f(name=clamp)
+  Export#std_number_e7g(name=betweenInclusive)
   Export#std_number_e8(name=digitValue)
   Export#std_number_e9(name=isWholeString)
   Export#std_number_e10(name=parseWholeOr)
