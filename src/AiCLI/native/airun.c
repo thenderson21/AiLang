@@ -3265,6 +3265,7 @@ typedef struct NativeWorkerState
 static NativeWorkerState g_native_workers[NATIVE_WORKER_CAPACITY];
 
 #include "airun_net_host.inc"
+#include "airun_process_host.inc"
 
 static int native_syscall_worker_start(
     const char* target,
