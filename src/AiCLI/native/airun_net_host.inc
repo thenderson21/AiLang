@@ -53,6 +53,9 @@ typedef struct NativeNetAsyncConnectWorkerContext
     uint64_t generation;
     int port;
     int use_tls;
+    int has_resolved_addr;
+    struct sockaddr_in resolved_addr;
+    char resolved_ip[INET_ADDRSTRLEN];
     char host[256];
 } NativeNetAsyncConnectWorkerContext;
 
@@ -801,22 +804,27 @@ static void native_net_async_worker_connect_execute(NativeNetAsyncConnectWorkerC
         (void)snprintf(worker_error, sizeof(worker_error), "%s:invalid_port", ctx->use_tls ? "connect_tls_failed" : "connect_failed");
         goto finalize;
     }
-    if (!native_net_resolve_ipv4_detail(ctx->host, (uint16_t)ctx->port, SOCK_STREAM, 0, &addr, worker_error, sizeof(worker_error))) {
-        if (worker_error[0] == '\0') {
-            (void)snprintf(worker_error, sizeof(worker_error), "%s:dns_failed", ctx->use_tls ? "connect_tls_failed" : "connect_failed");
-        } else if (ctx->use_tls) {
-            char detail[128];
-            (void)snprintf(detail, sizeof(detail), "connect_tls_failed:%s", worker_error);
-            (void)snprintf(worker_error, sizeof(worker_error), "%s", detail);
-        } else {
-            char detail[128];
-            (void)snprintf(detail, sizeof(detail), "connect_failed:%s", worker_error);
-            (void)snprintf(worker_error, sizeof(worker_error), "%s", detail);
+    if (ctx->has_resolved_addr) {
+        memcpy(&addr, &ctx->resolved_addr, sizeof(addr));
+        (void)snprintf(resolved_ip, sizeof(resolved_ip), "%s", ctx->resolved_ip);
+    } else {
+        if (!native_net_resolve_ipv4_detail(ctx->host, (uint16_t)ctx->port, SOCK_STREAM, 0, &addr, worker_error, sizeof(worker_error))) {
+            if (worker_error[0] == '\0') {
+                (void)snprintf(worker_error, sizeof(worker_error), "%s:dns_failed", ctx->use_tls ? "connect_tls_failed" : "connect_failed");
+            } else if (ctx->use_tls) {
+                char detail[128];
+                (void)snprintf(detail, sizeof(detail), "connect_tls_failed:%s", worker_error);
+                (void)snprintf(worker_error, sizeof(worker_error), "%s", detail);
+            } else {
+                char detail[128];
+                (void)snprintf(detail, sizeof(detail), "connect_failed:%s", worker_error);
+                (void)snprintf(worker_error, sizeof(worker_error), "%s", detail);
+            }
+            goto finalize;
         }
-        goto finalize;
-    }
-    if (inet_ntop(AF_INET, &addr.sin_addr, resolved_ip, sizeof(resolved_ip)) == NULL) {
-        resolved_ip[0] = '\0';
+        if (inet_ntop(AF_INET, &addr.sin_addr, resolved_ip, sizeof(resolved_ip)) == NULL) {
+            resolved_ip[0] = '\0';
+        }
     }
     socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (socket_fd == NATIVE_INVALID_SOCKET) {
@@ -2357,6 +2365,25 @@ static int native_syscall_net_start_op(
         worker_ctx->port = op->port;
         worker_ctx->use_tls = op->use_tls;
         (void)snprintf(worker_ctx->host, sizeof(worker_ctx->host), "%s", op->host);
+#ifdef __APPLE__
+        if (native_net_resolve_ipv4_detail(op->host, (uint16_t)op->port, SOCK_STREAM, 0, &worker_ctx->resolved_addr, op->worker_error, sizeof(op->worker_error))) {
+            worker_ctx->has_resolved_addr = 1;
+            if (inet_ntop(AF_INET, &worker_ctx->resolved_addr.sin_addr, worker_ctx->resolved_ip, sizeof(worker_ctx->resolved_ip)) == NULL) {
+                worker_ctx->resolved_ip[0] = '\0';
+            }
+        } else {
+            worker_ctx->has_resolved_addr = 0;
+            if (op->worker_error[0] != '\0') {
+                char detail[128];
+                if (op->use_tls) {
+                    (void)snprintf(detail, sizeof(detail), "connect_tls_failed:%s", op->worker_error);
+                } else {
+                    (void)snprintf(detail, sizeof(detail), "connect_failed:%s", op->worker_error);
+                }
+                (void)snprintf(op->worker_error, sizeof(op->worker_error), "%s", detail);
+            }
+        }
+#endif
 #ifdef _WIN32
         op->worker_thread = CreateThread(NULL, 0, native_net_async_connect_thread, worker_ctx, 0, NULL);
         if (op->worker_thread == NULL) {
