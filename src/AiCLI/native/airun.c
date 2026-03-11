@@ -263,6 +263,7 @@ static void airun_log_message(AirunLogLevel level, const char* category, const c
 
 static AivmSyscallBinding g_native_trace_real_bindings[128];
 static size_t g_native_trace_real_binding_count = 0U;
+static char g_airun_runtime_exe_path[PATH_MAX];
 static const NativeDebugOptions* g_airun_live_debug_options = NULL;
 static const AivmProgram* g_airun_live_debug_program = NULL;
 static const AivmVm* g_airun_live_debug_vm = NULL;
@@ -10539,6 +10540,9 @@ static int write_native_debug_bundle(
     fprintf(f, "mode = \"debug-run-native\"\n");
     fprintf(f, "debug_mode = \"%s\"\n", (options->debug_mode == NULL) ? "off" : options->debug_mode);
     fprintf(f, "app_path = \"%s\"\n", (options->input_path == NULL) ? "" : options->input_path);
+    fprintf(f, "runtime_name = \"airun-native-c\"\n");
+    fprintf(f, "runtime_abi = %u\n", aivm_c_abi_version());
+    fprintf(f, "runtime_exe = \"%s\"\n", g_airun_runtime_exe_path[0] == '\0' ? "" : g_airun_runtime_exe_path);
     fprintf(f, "status = \"%s\"\n", (vm != NULL && vm->status == AIVM_VM_STATUS_ERROR) ? "error" : "ok");
     fprintf(f, "exit_code = %d\n", has_exit_code ? exit_code : 0);
     fprintf(f, "node_gc_interval_allocations = %d\n", AIVM_VM_NODE_GC_INTERVAL_ALLOCATIONS);
@@ -10682,6 +10686,9 @@ static int write_native_debug_bundle(
     } else {
         fprintf(f, "diagnostics = []\n");
     }
+    fprintf(f, "runtime = { name = \"airun-native-c\", abi = %u, exe = \"%s\" }\n",
+        aivm_c_abi_version(),
+        g_airun_runtime_exe_path[0] == '\0' ? "" : g_airun_runtime_exe_path);
     fprintf(f, "memory = { string_arena_used = %llu, string_arena_high_water = %llu, bytes_arena_used = %llu, bytes_arena_high_water = %llu, node_count = %llu, node_high_water = %llu, node_gc_compactions = %llu, node_gc_attempts = %llu, node_gc_reclaimed_nodes = %llu, node_gc_allocations_since_gc = %llu, node_gc_interval_allocations = %d, node_gc_pressure_threshold_nodes = %d, string_arena_pressure_count = %llu, bytes_arena_pressure_count = %llu, node_arena_pressure_count = %llu }\n",
         (unsigned long long)((vm == NULL) ? 0U : vm->string_arena_used),
         (unsigned long long)((vm == NULL) ? 0U : vm->string_arena_high_water),
@@ -15244,11 +15251,14 @@ int main(int argc, char** argv)
     char bundled_www_index[PATH_MAX];
     const char* exe_base;
 
+    g_airun_runtime_exe_path[0] = '\0';
+
     if (argv != NULL &&
         resolve_executable_path(argv[0], exe_path, sizeof(exe_path)) &&
         dirname_of(exe_path, exe_dir, sizeof(exe_dir)) &&
         join_path(exe_dir, "app.aibc1", bundled_aibc1, sizeof(bundled_aibc1)) &&
         file_exists(bundled_aibc1)) {
+        (void)snprintf(g_airun_runtime_exe_path, sizeof(g_airun_runtime_exe_path), "%s", exe_path);
         exe_base = path_basename_ptr(exe_path);
         if (exe_base != NULL && strcmp(exe_base, "airun") != 0 && strcmp(exe_base, "airun.exe") != 0) {
             if (join_path(exe_dir, "www", bundled_www_dir, sizeof(bundled_www_dir)) &&
@@ -15265,6 +15275,12 @@ int main(int argc, char** argv)
     if (argc <= 1 || argv == NULL) {
         print_usage();
         return 2;
+    }
+
+    if (argv != NULL && argv[0] != NULL && g_airun_runtime_exe_path[0] == '\0') {
+        if (!resolve_executable_path(argv[0], g_airun_runtime_exe_path, sizeof(g_airun_runtime_exe_path))) {
+            (void)snprintf(g_airun_runtime_exe_path, sizeof(g_airun_runtime_exe_path), "%s", argv[0]);
+        }
     }
 
     if (strcmp(argv[1], "version") == 0 || strcmp(argv[1], "--version") == 0) {
