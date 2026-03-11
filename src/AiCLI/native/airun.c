@@ -53,6 +53,7 @@ extern int kill(pid_t pid, int sig);
 #ifdef __APPLE__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+#include <CFNetwork/CFHost.h>
 #include <CoreGraphics/CoreGraphics.h>
 #include <CoreFoundation/CoreFoundation.h>
 #include <ImageIO/ImageIO.h>
@@ -4043,6 +4044,7 @@ static int native_net_resolve_ipv4_detail(
     struct addrinfo* cursor = NULL;
     char port_text[16];
     int gai_result;
+    const char* lookup_host;
     if (out_addr == NULL) {
         return 0;
     }
@@ -4050,6 +4052,16 @@ static int native_net_resolve_ipv4_detail(
         error_text[0] = '\0';
     }
     memset(out_addr, 0, sizeof(*out_addr));
+    lookup_host = (host == NULL || host[0] == '\0' || strcmp(host, "*") == 0) ? NULL : host;
+    if (lookup_host != NULL) {
+        struct in_addr numeric_addr;
+        if (inet_pton(AF_INET, lookup_host, &numeric_addr) == 1) {
+            out_addr->sin_family = AF_INET;
+            out_addr->sin_port = htons(port);
+            out_addr->sin_addr = numeric_addr;
+            return 1;
+        }
+    }
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_INET;
     hints.ai_socktype = socket_type;
@@ -4057,11 +4069,54 @@ static int native_net_resolve_ipv4_detail(
     hints.ai_flags = passive ? AI_PASSIVE : 0;
     (void)snprintf(port_text, sizeof(port_text), "%u", (unsigned)port);
     gai_result = getaddrinfo(
-            (host == NULL || host[0] == '\0' || strcmp(host, "*") == 0) ? NULL : host,
+            lookup_host,
             port_text,
             &hints,
             &results);
     if (gai_result != 0) {
+#ifdef __APPLE__
+        if (!passive && lookup_host != NULL) {
+            CFStringRef host_name = NULL;
+            CFHostRef cf_host = NULL;
+            Boolean resolved = false;
+            CFStreamError cf_error;
+            CFArrayRef addresses = NULL;
+            CFIndex index;
+            host_name = CFStringCreateWithCString(kCFAllocatorDefault, lookup_host, kCFStringEncodingUTF8);
+            if (host_name != NULL) {
+                cf_host = CFHostCreateWithName(kCFAllocatorDefault, host_name);
+                CFRelease(host_name);
+                host_name = NULL;
+            }
+            if (cf_host != NULL) {
+                memset(&cf_error, 0, sizeof(cf_error));
+                if (CFHostStartInfoResolution(cf_host, kCFHostAddresses, &cf_error)) {
+                    addresses = CFHostGetAddressing(cf_host, &resolved);
+                    if (resolved && addresses != NULL) {
+                        for (index = 0; index < CFArrayGetCount(addresses); index += 1) {
+                            CFDataRef address_data = (CFDataRef)CFArrayGetValueAtIndex(addresses, index);
+                            const struct sockaddr* addr_ptr;
+                            if (address_data == NULL || CFGetTypeID(address_data) != CFDataGetTypeID()) {
+                                continue;
+                            }
+                            if (CFDataGetLength(address_data) < (CFIndex)sizeof(struct sockaddr_in)) {
+                                continue;
+                            }
+                            addr_ptr = (const struct sockaddr*)CFDataGetBytePtr(address_data);
+                            if (addr_ptr == NULL || addr_ptr->sa_family != AF_INET) {
+                                continue;
+                            }
+                            memcpy(out_addr, addr_ptr, sizeof(*out_addr));
+                            out_addr->sin_port = htons(port);
+                            CFRelease(cf_host);
+                            return 1;
+                        }
+                    }
+                }
+                CFRelease(cf_host);
+            }
+        }
+#endif
         if (error_text != NULL && error_text_size > 0U) {
             (void)snprintf(error_text, error_text_size, "dns_failed:%s", gai_strerror(gai_result));
         }
