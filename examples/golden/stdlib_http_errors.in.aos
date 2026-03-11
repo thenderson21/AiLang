@@ -76,6 +76,8 @@ Program#ghttperr_p1 {
   Call#ghttperr_c7(target=io.print) { Call#ghttperr_c8(target=http.httpRequestFailedConnect) { Var#ghttperr_v2(name=timeoutState) } }
   Call#ghttperr_c9(target=io.print) { Call#ghttperr_c10(target=http.httpRequestFailedConnect) { Var#ghttperr_v3(name=connectState) } }
   Call#ghttperr_c10b(target=io.print) { Call#ghttperr_c10c(target=http.httpRequestFailedConnect) { Var#ghttperr_v3b(name=connectTlsDetailState) } }
+  Call#ghttperr_c10d(target=io.print) { Call#ghttperr_c10e(target=http.httpRequestFailedDns) { Var#ghttperr_v3c(name=connectTlsDetailState) } }
+  Call#ghttperr_c10f(target=io.print) { Call#ghttperr_c10g(target=http.httpRequestFailedTls) { Var#ghttperr_v3d(name=connectTlsDetailState) } }
   Call#ghttperr_c11(target=io.print) { Call#ghttperr_c12(target=http.httpRequestFailedWrite) { Var#ghttperr_v4(name=writeState) } }
   Call#ghttperr_c13(target=io.print) { Call#ghttperr_c14(target=http.httpRequestFailedRead) { Var#ghttperr_v5(name=readState) } }
 }

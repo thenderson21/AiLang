@@ -422,6 +422,34 @@ Program#std_http_p1 {
     }
   }
 
+  Let#std_http_l27f(name=httpRequestFailedDns) {
+    Fn#std_http_f18e(params=state) {
+      Block#std_http_b24e {
+        Let#std_http_l27g(name=error) { Call#std_http_c10ae(target=httpRequestError) { Var#std_http_v57g(name=state) } }
+        Return#std_http_r21e {
+          Or#std_http_or1d {
+            Call#std_http_c10af(target=httpErrorStartsWith) { Var#std_http_v57h(name=error) Lit#std_http_i44f(value="dns_failed:") }
+            Or#std_http_or1e {
+              Call#std_http_c10ag(target=httpErrorStartsWith) { Var#std_http_v57i(name=error) Lit#std_http_i44g(value="connect_failed:dns_failed:") }
+              Call#std_http_c10ah(target=httpErrorStartsWith) { Var#std_http_v57j(name=error) Lit#std_http_i44h(value="connect_tls_failed:dns_failed:") }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_http_l27g(name=httpRequestFailedTls) {
+    Fn#std_http_f18f(params=state) {
+      Block#std_http_b24f {
+        Let#std_http_l27h(name=error) { Call#std_http_c10ai(target=httpRequestError) { Var#std_http_v57k(name=state) } }
+        Return#std_http_r21f {
+          Call#std_http_c10aj(target=httpErrorStartsWith) { Var#std_http_v57l(name=error) Lit#std_http_i44i(value="connect_tls_failed:") }
+        }
+      }
+    }
+  }
+
   Let#std_http_l61(name=httpRequestRemaining) {
     Fn#std_http_f27(params=state) {
       Block#std_http_b69 { Return#std_http_r45 { AttrValueInt#std_http_ai4 { ChildAt#std_http_ca14 { Var#std_http_v148(name=state) Lit#std_http_i112(value=8) } Lit#std_http_i113(value=0) } } }
@@ -2166,6 +2194,8 @@ Program#std_http_p1 {
   Export#std_http_e18b(name=httpRequestFailedConnect)
   Export#std_http_e18c(name=httpRequestFailedWrite)
   Export#std_http_e18d(name=httpRequestFailedRead)
+  Export#std_http_e18e(name=httpRequestFailedDns)
+  Export#std_http_e18f(name=httpRequestFailedTls)
   Export#std_http_e19(name=httpMakeRequestState)
   Export#std_http_e20(name=httpRequestPhase)
   Export#std_http_e21(name=httpRequestText)
