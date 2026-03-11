@@ -164,6 +164,10 @@ typedef struct {
     size_t next_index;
 } AirunInjectedEventQueue;
 typedef struct {
+    NativeHostUiEvent events[512];
+    size_t count;
+} AirunCapturedEventLog;
+typedef struct {
     int enabled;
     int eof_reached;
     char pending[2048];
@@ -187,6 +191,7 @@ static AirunLogLevel g_airun_log_level = AIRUN_LOG_ERROR;
 static FILE* g_airun_log_file = NULL;
 static AirunInjectedClick g_airun_injected_click = {0, 0, 0, 0};
 static AirunInjectedEventQueue g_airun_injected_events = {{{0}}, 0U, 0U};
+static AirunCapturedEventLog g_airun_captured_events = {{{0}}, 0U};
 static AirunInteractState g_airun_interact_state = {0, 0, {0}, 0U};
 static void airun_format_value_preview(const AivmValue* value, char* buffer, size_t buffer_size);
 
@@ -534,7 +539,20 @@ static void airun_reset_injected_events(void)
 {
     memset(&g_airun_injected_click, 0, sizeof(g_airun_injected_click));
     memset(&g_airun_injected_events, 0, sizeof(g_airun_injected_events));
+    memset(&g_airun_captured_events, 0, sizeof(g_airun_captured_events));
     memset(&g_airun_interact_state, 0, sizeof(g_airun_interact_state));
+}
+
+static void airun_record_captured_event(const NativeHostUiEvent* event)
+{
+    if (event == NULL || strcmp(event->type, "none") == 0) {
+        return;
+    }
+    if (g_airun_captured_events.count >= (sizeof(g_airun_captured_events.events) / sizeof(g_airun_captured_events.events[0]))) {
+        return;
+    }
+    g_airun_captured_events.events[g_airun_captured_events.count] = *event;
+    g_airun_captured_events.count += 1U;
 }
 
 static int airun_queue_injected_event(const NativeHostUiEvent* event)
@@ -8450,6 +8468,7 @@ static int native_syscall_ui_poll_event(
             return AIVM_SYSCALL_ERR_INVALID;
         }
         native_ui_update_event_node(g_native_active_vm, &event);
+        airun_record_captured_event(&event);
         if (strcmp(event.type, "none") != 0) {
             airun_log_message(AIRUN_LOG_INFO, "ui", "poll-event handle=%lld type=%s x=%d y=%d key=%s text=%s target=%s",
                 (long long)args[0].int_value,
@@ -10635,7 +10654,20 @@ static int write_native_debug_bundle(
     if (f == NULL) {
         return 0;
     }
-    fprintf(f, "events = []\n");
+    fprintf(f, "events = [\n");
+    for (size_t i = 0U; i < g_airun_captured_events.count; ++i) {
+        const NativeHostUiEvent* event = &g_airun_captured_events.events[i];
+        fprintf(
+            f,
+            "  { type = \"%s\", x = %d, y = %d, key = \"%s\", text = \"%s\", target = \"%s\" },\n",
+            event->type,
+            event->x,
+            event->y,
+            event->key,
+            event->text,
+            event->target_id);
+    }
+    fprintf(f, "]\n");
     fclose(f);
 
     if (!join_path(options->out_dir, "diagnostics.toml", path, sizeof(path))) {
