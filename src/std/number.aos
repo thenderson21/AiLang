@@ -47,6 +47,170 @@ Program#std_number_p1 {
     }
   }
 
+  Let#std_number_l6n(name=natLt) {
+    Fn#std_number_f6n(params=a,b) {
+      Block#std_number_b6n {
+        If#std_number_ifnat0 {
+          Eq#std_number_eqnat0 { Var#std_number_v6q(name=a) Var#std_number_v6r(name=b) }
+          Block#std_number_b6na { Return#std_number_r6na { Lit#std_number_i3g(value=false) } }
+          Block#std_number_b6nb {
+            If#std_number_ifnat1 {
+              Eq#std_number_eqnat1 { Var#std_number_v6s(name=a) Lit#std_number_i3h(value=0) }
+              Block#std_number_b6nc { Return#std_number_r6nb { Lit#std_number_i3i(value=true) } }
+              Block#std_number_b6nd {
+                If#std_number_ifnat2 {
+                  Eq#std_number_eqnat2 { Var#std_number_v6t(name=b) Lit#std_number_i3j(value=0) }
+                  Block#std_number_b6ne { Return#std_number_r6nc { Lit#std_number_i3k(value=false) } }
+                  Block#std_number_b6nf {
+                    Return#std_number_r6nd {
+                      Call#std_number_c0r(target=natLt) {
+                        Add#std_number_a3c { Var#std_number_v6u(name=a) Lit#std_number_i3l(value=-1) }
+                        Add#std_number_a3d { Var#std_number_v6v(name=b) Lit#std_number_i3m(value=-1) }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l6o(name=textLen) {
+    Fn#std_number_f6o(params=textValue) {
+      Block#std_number_b6o {
+        If#std_number_iftextlen0 {
+          Eq#std_number_eqtextlen0 { Var#std_number_v6w(name=textValue) Lit#std_number_i3n(value="") }
+          Block#std_number_b6og { Return#std_number_r6ne { Lit#std_number_i3o(value=0) } }
+          Block#std_number_b6oh {
+            Return#std_number_r6nf {
+              Add#std_number_a3e {
+                Lit#std_number_i3p(value=1)
+                Call#std_number_c0s(target=textLen) {
+                  Call#std_number_c0t(target=sys.str.remove) {
+                    Var#std_number_v6x(name=textValue)
+                    Lit#std_number_i3q(value=0)
+                    Lit#std_number_i3r(value=1)
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l6p(name=textFirst) {
+    Fn#std_number_f6p(params=textValue) {
+      Block#std_number_b6p {
+        Return#std_number_r6ng {
+          Call#std_number_c0u(target=sys.str.substring) {
+            Var#std_number_v6y(name=textValue)
+            Lit#std_number_i3s(value=0)
+            Lit#std_number_i3t(value=1)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l6q(name=textRest) {
+    Fn#std_number_f6q(params=textValue) {
+      Block#std_number_b6q {
+        Return#std_number_r6nh {
+          Call#std_number_c0v(target=sys.str.remove) {
+            Var#std_number_v6z(name=textValue)
+            Lit#std_number_i3u(value=0)
+            Lit#std_number_i3v(value=1)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l6r(name=isNegativeText) {
+    Fn#std_number_f6r(params=textValue) {
+      Block#std_number_b6r {
+        If#std_number_ifnegtext0 {
+          Eq#std_number_eqnegtext0 { Var#std_number_v6aa(name=textValue) Lit#std_number_i3w(value="") }
+          Block#std_number_b6ra { Return#std_number_r6ni { Lit#std_number_i3x(value=false) } }
+          Block#std_number_b6rb {
+            Return#std_number_r6nj {
+              Eq#std_number_eqnegtext1 {
+                Call#std_number_c0w(target=textFirst) { Var#std_number_v6ab(name=textValue) }
+                Lit#std_number_i3y(value="-")
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l6s(name=absText) {
+    Fn#std_number_f6s(params=textValue) {
+      Block#std_number_b6s {
+        If#std_number_ifabstext0 {
+          Call#std_number_c0x(target=isNegativeText) { Var#std_number_v6ac(name=textValue) }
+          Block#std_number_b6sa {
+            Return#std_number_r6nk { Call#std_number_c0y(target=textRest) { Var#std_number_v6ad(name=textValue) } }
+          }
+          Block#std_number_b6sb { Return#std_number_r6nl { Var#std_number_v6ae(name=textValue) } }
+        }
+      }
+    }
+  }
+
+  Let#std_number_l6t(name=positiveTextLt) {
+    Fn#std_number_f6t(params=aText,bText) {
+      Block#std_number_b6t {
+        If#std_number_ifpt0 {
+          Eq#std_number_eqpt0 { Var#std_number_v6af(name=aText) Var#std_number_v6ag(name=bText) }
+          Block#std_number_b6ta { Return#std_number_r6nm { Lit#std_number_i3z(value=false) } }
+          Block#std_number_b6tb {
+            Let#std_number_l6u(name=aLen) { Call#std_number_c0z(target=textLen) { Var#std_number_v6ah(name=aText) } }
+            Let#std_number_l6v(name=bLen) { Call#std_number_c1a(target=textLen) { Var#std_number_v6ai(name=bText) } }
+            If#std_number_ifpt1 {
+              Eq#std_number_eqpt1 { Var#std_number_v6aj(name=aLen) Var#std_number_v6ak(name=bLen) }
+              Block#std_number_b6tc {
+                Let#std_number_l6w(name=aDigit) {
+                  Call#std_number_c1b(target=digitValue) {
+                    Call#std_number_c1c(target=textFirst) { Var#std_number_v6al(name=aText) }
+                  }
+                }
+                Let#std_number_l6x(name=bDigit) {
+                  Call#std_number_c1d(target=digitValue) {
+                    Call#std_number_c1e(target=textFirst) { Var#std_number_v6am(name=bText) }
+                  }
+                }
+                If#std_number_ifpt2 {
+                  Eq#std_number_eqpt2 { Var#std_number_v6an(name=aDigit) Var#std_number_v6ao(name=bDigit) }
+                  Block#std_number_b6td {
+                    Return#std_number_r6nn {
+                      Call#std_number_c1f(target=positiveTextLt) {
+                        Call#std_number_c1g(target=textRest) { Var#std_number_v6ap(name=aText) }
+                        Call#std_number_c1h(target=textRest) { Var#std_number_v6aq(name=bText) }
+                      }
+                    }
+                  }
+                  Block#std_number_b6te {
+                    Return#std_number_r6no { Call#std_number_c1i(target=natLt) { Var#std_number_v6ar(name=aDigit) Var#std_number_v6as(name=bDigit) } }
+                  }
+                }
+              }
+              Block#std_number_b6tf {
+                Return#std_number_r6np { Call#std_number_c1j(target=natLt) { Var#std_number_v6at(name=aLen) Var#std_number_v6au(name=bLen) } }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   Let#std_number_l6e(name=isZero) {
     Fn#std_number_f6e(params=value) {
       Block#std_number_b6i {
@@ -82,7 +246,47 @@ Program#std_number_p1 {
   Let#std_number_l6a(name=lt) {
     Fn#std_number_f6a(params=a,b) {
       Block#std_number_b6a {
-        Return#std_number_r6a { Call#std_number_c0h(target=intLt) { Var#std_number_v6a(name=a) Var#std_number_v6b(name=b) } }
+        If#std_number_iflt0 {
+          Eq#std_number_eqlt0 { Var#std_number_v6a(name=a) Var#std_number_v6b(name=b) }
+          Block#std_number_b6ua { Return#std_number_r6a { Lit#std_number_i3aa(value=false) } }
+          Block#std_number_b6ub {
+            Let#std_number_l6y(name=aText) { ToString#std_number_t1a { Var#std_number_v6av(name=a) } }
+            Let#std_number_l6z(name=bText) { ToString#std_number_t1b { Var#std_number_v6aw(name=b) } }
+            Let#std_number_l6aa(name=aNegative) { Call#std_number_c1k(target=isNegativeText) { Var#std_number_v6ax(name=aText) } }
+            Let#std_number_l6ab(name=bNegative) { Call#std_number_c1l(target=isNegativeText) { Var#std_number_v6ay(name=bText) } }
+            If#std_number_iflt1a {
+              Var#std_number_v6az(name=aNegative)
+              Block#std_number_b6uc {
+                If#std_number_iflt1b {
+                  Var#std_number_v6ba(name=bNegative)
+                  Block#std_number_b6ud {
+                    Return#std_number_r6aq {
+                      Call#std_number_c1m(target=positiveTextLt) {
+                        Call#std_number_c1n(target=absText) { Var#std_number_v6bb(name=bText) }
+                        Call#std_number_c1o(target=absText) { Var#std_number_v6bc(name=aText) }
+                      }
+                    }
+                  }
+                  Block#std_number_b6ue { Return#std_number_r6ar { Lit#std_number_i3ab(value=true) } }
+                }
+              }
+              Block#std_number_b6uf {
+                If#std_number_iflt1c {
+                  Var#std_number_v6bd(name=bNegative)
+                  Block#std_number_b6ug { Return#std_number_r6as { Lit#std_number_i3ac(value=false) } }
+                  Block#std_number_b6uh {
+                    Return#std_number_r6at {
+                      Call#std_number_c1p(target=positiveTextLt) {
+                        Call#std_number_c1q(target=absText) { Var#std_number_v6be(name=aText) }
+                        Call#std_number_c1r(target=absText) { Var#std_number_v6bf(name=bText) }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     }
   }
@@ -144,7 +348,7 @@ Program#std_number_p1 {
     Fn#std_number_f7b(params=value) {
       Block#std_number_b7b {
         If#std_number_if0 {
-          Call#std_number_c0(target=intLt) { Var#std_number_v7b(name=value) Lit#std_number_i4c(value=0) }
+          Call#std_number_c0(target=lt) { Var#std_number_v7b(name=value) Lit#std_number_i4c(value=0) }
           Block#std_number_b7c { Return#std_number_r7b { Call#std_number_c0a(target=negate) { Var#std_number_v7c(name=value) } } }
           Block#std_number_b7d { Return#std_number_r7c { Var#std_number_v7d(name=value) } }
         }
@@ -156,7 +360,7 @@ Program#std_number_p1 {
     Fn#std_number_f7c(params=value) {
       Block#std_number_b7e {
         If#std_number_if0a {
-          Call#std_number_c0b(target=intLt) { Var#std_number_v7e(name=value) Lit#std_number_i4d(value=0) }
+          Call#std_number_c0b(target=lt) { Var#std_number_v7e(name=value) Lit#std_number_i4d(value=0) }
           Block#std_number_b7f { Return#std_number_r7d { Lit#std_number_i4e(value=-1) } }
           Block#std_number_b7g {
             If#std_number_if0b {
@@ -174,7 +378,7 @@ Program#std_number_p1 {
     Fn#std_number_f7d(params=a,b) {
       Block#std_number_b7j {
         If#std_number_if0c {
-          Call#std_number_c0c(target=intLt) { Var#std_number_v7g(name=a) Var#std_number_v7h(name=b) }
+          Call#std_number_c0c(target=lt) { Var#std_number_v7g(name=a) Var#std_number_v7h(name=b) }
           Block#std_number_b7k { Return#std_number_r7g { Var#std_number_v7i(name=a) } }
           Block#std_number_b7l { Return#std_number_r7h { Var#std_number_v7j(name=b) } }
         }
@@ -186,7 +390,7 @@ Program#std_number_p1 {
     Fn#std_number_f7e(params=a,b) {
       Block#std_number_b7m {
         If#std_number_if0d {
-          Call#std_number_c0d(target=intLt) { Var#std_number_v7k(name=a) Var#std_number_v7l(name=b) }
+          Call#std_number_c0d(target=lt) { Var#std_number_v7k(name=a) Var#std_number_v7l(name=b) }
           Block#std_number_b7n { Return#std_number_r7i { Var#std_number_v7m(name=b) } }
           Block#std_number_b7o { Return#std_number_r7j { Var#std_number_v7n(name=a) } }
         }

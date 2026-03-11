@@ -17,4 +17,16 @@ Program#gnumber_compare_p1 {
   Call#gnumber_compare_c7(target=io.print) {
     ToString#gnumber_compare_t4 { Call#gnumber_compare_c8(target=gte) { Lit#gnumber_compare_i7(value=1) Lit#gnumber_compare_i8(value=5) } }
   }
+
+  Call#gnumber_compare_c9(target=io.print) {
+    ToString#gnumber_compare_t5 { Call#gnumber_compare_c10(target=lt) { Lit#gnumber_compare_i9(value=-2) Lit#gnumber_compare_i10(value=-1) } }
+  }
+
+  Call#gnumber_compare_c11(target=io.print) {
+    ToString#gnumber_compare_t6 { Call#gnumber_compare_c12(target=lt) { Lit#gnumber_compare_i11(value=-1) Lit#gnumber_compare_i12(value=0) } }
+  }
+
+  Call#gnumber_compare_c13(target=io.print) {
+    ToString#gnumber_compare_t7 { Call#gnumber_compare_c14(target=gt) { Lit#gnumber_compare_i13(value=0) Lit#gnumber_compare_i14(value=-1) } }
+  }
 }
