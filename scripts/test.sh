@@ -8,6 +8,7 @@ cd "${ROOT_DIR}"
 ./scripts/test-stdlib-capabilities.sh
 ./scripts/test-airun-init.sh
 ./scripts/test-airun-build-source.sh
+./scripts/test-airun-traced-syscalls.sh
 
 # Samples are language-level showcases: direct syscall targets are forbidden.
 if command -v rg >/dev/null 2>&1; then
