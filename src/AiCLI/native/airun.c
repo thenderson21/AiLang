@@ -3399,6 +3399,30 @@ static const char* native_net_error_stage(const char* error_text)
     return "unknown";
 }
 
+static const char* native_net_error_classification(const char* error_text)
+{
+    const char* stage = native_net_error_stage(error_text);
+    if (strcmp(stage, "dns") == 0) {
+        return "dns_resolution";
+    }
+    if (strcmp(stage, "connect") == 0) {
+        return "tcp_connect";
+    }
+    if (strcmp(stage, "tls") == 0) {
+        return "tls_handshake";
+    }
+    if (strcmp(stage, "socket") == 0) {
+        return "socket_setup";
+    }
+    if (strcmp(stage, "read") == 0) {
+        return "read_io";
+    }
+    if (strcmp(stage, "write") == 0) {
+        return "write_io";
+    }
+    return "unknown";
+}
+
 #ifdef __APPLE__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -10777,10 +10801,11 @@ static int write_native_debug_bundle(
     if (g_native_net_last_failure.valid != 0) {
         fprintf(
             f,
-            "network = { kind = %d, tls = %s, stage = \"%s\", host = \"%s\", resolved_ip = \"%s\", port = %d, error = \"%s\" }\n",
+            "network = { kind = %d, tls = %s, stage = \"%s\", classification = \"%s\", host = \"%s\", resolved_ip = \"%s\", port = %d, error = \"%s\" }\n",
             g_native_net_last_failure.kind,
             g_native_net_last_failure.use_tls ? "true" : "false",
             native_net_error_stage(g_native_net_last_failure.error),
+            native_net_error_classification(g_native_net_last_failure.error),
             g_native_net_last_failure.host,
             g_native_net_last_failure.resolved_ip,
             g_native_net_last_failure.port,
