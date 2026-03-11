@@ -10674,7 +10674,7 @@ static int run_native_compiled_program(
     size_t process_argv_count,
     const NativeDebugOptions* debug_options)
 {
-    AivmSyscallBinding bindings[105];
+    AivmSyscallBinding bindings[106];
     AivmVm vm;
     int ok;
     int exit_code = 0;
@@ -10764,8 +10764,6 @@ static int run_native_compiled_program(
     bindings[20].handler = native_syscall_str_decode_unicode_surrogate_pair_hex4;
     bindings[21].target = "sys.bytes.toUtf8String";
     bindings[21].handler = native_syscall_bytes_to_utf8_string;
-    bindings[102].target = "sys.bytes.fromUtf8String";
-    bindings[102].handler = native_syscall_bytes_from_utf8_string;
     bindings[22].target = "sys.str.substring";
     bindings[22].handler = native_syscall_str_substring;
     bindings[23].target = "sys.str.find";
@@ -10933,6 +10931,8 @@ static int run_native_compiled_program(
     bindings[103].handler = native_syscall_host_open_default;
     bindings[104].target = "sys.image.decodeToRgbaBase64";
     bindings[104].handler = native_syscall_image_decode_to_rgba_base64;
+    bindings[105].target = "sys.bytes.fromUtf8String";
+    bindings[105].handler = native_syscall_bytes_from_utf8_string;
     if (g_airun_log_level >= AIRUN_LOG_TRACE) {
         native_prepare_traced_bindings(bindings, 105U);
     } else {
