@@ -10892,6 +10892,12 @@ static int run_native_compiled_program(
     airun_log_capture_configure(
         (debug_options == NULL) ? 0 : debug_options->emit_bundle,
         (debug_options == NULL) ? NULL : debug_options->out_dir);
+    airun_log_message(
+        AIRUN_LOG_INFO,
+        "runtime",
+        "runtime-identity name=airun-native-c abi=%u exe=%s",
+        aivm_c_abi_version(),
+        g_airun_runtime_exe_path[0] == '\0' ? "" : g_airun_runtime_exe_path);
     (void)write_native_debug_bundle(
         debug_options,
         program,
