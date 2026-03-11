@@ -603,6 +603,55 @@ static int airun_queue_injected_text(const char* text)
     return 1;
 }
 
+static int airun_queue_injected_text_at(int x, int y, const char* text)
+{
+    if (!airun_queue_injected_click(x, y)) {
+        return 0;
+    }
+    return airun_queue_injected_text(text);
+}
+
+static int airun_parse_text_at_value(const char* value, int* out_x, int* out_y, const char** out_text)
+{
+    const char* first_comma;
+    const char* second_comma;
+    char x_buf[32];
+    char y_buf[32];
+    char* end = NULL;
+    long parsed = 0L;
+    if (value == NULL || out_x == NULL || out_y == NULL || out_text == NULL) {
+        return 0;
+    }
+    first_comma = strchr(value, ',');
+    if (first_comma == NULL) {
+        return 0;
+    }
+    second_comma = strchr(first_comma + 1, ',');
+    if (second_comma == NULL) {
+        return 0;
+    }
+    if ((size_t)(first_comma - value) >= sizeof(x_buf) ||
+        (size_t)(second_comma - first_comma - 1) >= sizeof(y_buf)) {
+        return 0;
+    }
+    memcpy(x_buf, value, (size_t)(first_comma - value));
+    x_buf[first_comma - value] = '\0';
+    memcpy(y_buf, first_comma + 1, (size_t)(second_comma - first_comma - 1));
+    y_buf[second_comma - first_comma - 1] = '\0';
+    parsed = strtol(x_buf, &end, 10);
+    if (end == x_buf || *end != '\0' || parsed < -1000000L || parsed > 1000000L) {
+        return 0;
+    }
+    *out_x = (int)parsed;
+    parsed = strtol(y_buf, &end, 10);
+    if (end == y_buf || *end != '\0' || parsed < -1000000L || parsed > 1000000L) {
+        return 0;
+    }
+    *out_y = (int)parsed;
+    *out_text = second_comma + 1;
+    return 1;
+}
+
 static int airun_pop_injected_event(NativeHostUiEvent* out_event)
 {
     int kind;
@@ -670,6 +719,13 @@ static int airun_parse_interact_line(const char* line)
     }
     if (starts_with(line, "text ")) {
         return airun_queue_injected_text(line + 5);
+    }
+    if (starts_with(line, "textat ")) {
+        const char* text = NULL;
+        if (!airun_parse_text_at_value(line + 7, &x, &y, &text)) {
+            return 0;
+        }
+        return airun_queue_injected_text_at(x, y, text);
     }
     if (starts_with(line, "wait ")) {
         char* end = NULL;
@@ -2009,9 +2065,9 @@ static void print_usage(void)
         "  clean [program(.aibc1|.aos|project-dir|project.aiproj)]\n"
         "  repl\n"
         "  bench [--iterations <n>] [--human]\n"
-        "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>] [--inject-wait <polls>] [--inject-close] [--inject-script <path>] [--] [app-args...]\n"
-        "  debug trace run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>] [--inject-wait <polls>] [--inject-close] [--inject-script <path>] [--] [app-args...]\n"
-        "  debug capture run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>] [--inject-wait <polls>] [--inject-close] [--inject-script <path>] [--] [app-args...]\n"
+        "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>] [--inject-text-at <x,y,text>] [--inject-wait <polls>] [--inject-close] [--inject-script <path>] [--] [app-args...]\n"
+        "  debug trace run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>] [--inject-text-at <x,y,text>] [--inject-wait <polls>] [--inject-close] [--inject-script <path>] [--] [app-args...]\n"
+        "  debug capture run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>] [--inject-text-at <x,y,text>] [--inject-wait <polls>] [--inject-close] [--inject-script <path>] [--] [app-args...]\n"
         "  debug interact run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--] [app-args...]\n"
         "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--wasm-profile <cli|spa|fullstack>] [--wasm-fullstack-host-target <rid>] [--out <dir>]\n"
         "  version | --version\n"
@@ -13869,6 +13925,31 @@ static int handle_debug_run_mode(
             if (!airun_queue_injected_text(arg + 14)) {
                 fprintf(stderr,
                     "Err#err1(code=RUN001 message=\"Invalid --inject-text value.\" nodeId=argv)\n");
+                return 2;
+            }
+            continue;
+        }
+        if (strcmp(arg, "--inject-text-at") == 0 && app_arg_start < 0) {
+            int x = 0;
+            int y = 0;
+            const char* text = NULL;
+            if ((i + 1) >= argc || !airun_parse_text_at_value(argv[i + 1], &x, &y, &text) ||
+                !airun_queue_injected_text_at(x, y, text)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Missing or invalid --inject-text-at value. Expected x,y,text.\" nodeId=argv)\n");
+                return 2;
+            }
+            i += 1;
+            continue;
+        }
+        if (starts_with(arg, "--inject-text-at=") && app_arg_start < 0) {
+            int x = 0;
+            int y = 0;
+            const char* text = NULL;
+            if (!airun_parse_text_at_value(arg + 17, &x, &y, &text) ||
+                !airun_queue_injected_text_at(x, y, text)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Invalid --inject-text-at value. Expected x,y,text.\" nodeId=argv)\n");
                 return 2;
             }
             continue;
