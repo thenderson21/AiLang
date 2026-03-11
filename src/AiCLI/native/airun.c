@@ -308,6 +308,9 @@ static int native_syscall_dispatch_traced(
     char arg0_preview[96];
     char arg1_preview[96];
     char arg2_preview[96];
+    char arg3_preview[96];
+    char arg4_preview[96];
+    char arg5_preview[96];
     char result_preview[96];
     char local0_preview[96];
     char local1_preview[96];
@@ -320,6 +323,9 @@ static int native_syscall_dispatch_traced(
     arg0_preview[0] = '\0';
     arg1_preview[0] = '\0';
     arg2_preview[0] = '\0';
+    arg3_preview[0] = '\0';
+    arg4_preview[0] = '\0';
+    arg5_preview[0] = '\0';
     result_preview[0] = '\0';
     local0_preview[0] = '\0';
     local1_preview[0] = '\0';
@@ -335,6 +341,15 @@ static int native_syscall_dispatch_traced(
     }
     if (arg_count > 2U) {
         airun_format_value_preview(&args[2], arg2_preview, sizeof(arg2_preview));
+    }
+    if (arg_count > 3U) {
+        airun_format_value_preview(&args[3], arg3_preview, sizeof(arg3_preview));
+    }
+    if (arg_count > 4U) {
+        airun_format_value_preview(&args[4], arg4_preview, sizeof(arg4_preview));
+    }
+    if (arg_count > 5U) {
+        airun_format_value_preview(&args[5], arg5_preview, sizeof(arg5_preview));
     }
     if (g_airun_live_debug_vm != NULL && g_airun_live_debug_vm->call_frame_count > 0U) {
         locals_base = g_airun_live_debug_vm->call_frames[g_airun_live_debug_vm->call_frame_count - 1U].locals_base;
@@ -363,12 +378,15 @@ static int native_syscall_dispatch_traced(
     airun_log_message(
         AIRUN_LOG_TRACE,
         "syscall",
-        "enter target=%s argCount=%llu arg0=%s arg1=%s arg2=%s local0=%s local1=%s local2=%s caller0=%s caller1=%s caller2=%s",
+        "enter target=%s argCount=%llu arg0=%s arg1=%s arg2=%s arg3=%s arg4=%s arg5=%s local0=%s local1=%s local2=%s caller0=%s caller1=%s caller2=%s",
         (target == NULL) ? "<null>" : target,
         (unsigned long long)arg_count,
         arg_count > 0U ? arg0_preview : "<none>",
         arg_count > 1U ? arg1_preview : "<none>",
         arg_count > 2U ? arg2_preview : "<none>",
+        arg_count > 3U ? arg3_preview : "<none>",
+        arg_count > 4U ? arg4_preview : "<none>",
+        arg_count > 5U ? arg5_preview : "<none>",
         local0_preview[0] == '\0' ? "<none>" : local0_preview,
         local1_preview[0] == '\0' ? "<none>" : local1_preview,
         local2_preview[0] == '\0' ? "<none>" : local2_preview,
