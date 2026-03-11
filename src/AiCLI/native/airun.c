@@ -3295,6 +3295,7 @@ typedef struct NativeNetAsyncState
     size_t result_bytes_len;
     int use_tls;
     char host[256];
+    char resolved_ip[INET_ADDRSTRLEN];
     char error[128];
     uint64_t generation;
     volatile int worker_done;
@@ -3327,6 +3328,7 @@ typedef struct NativeNetLastFailure
     int use_tls;
     int port;
     char host[256];
+    char resolved_ip[INET_ADDRSTRLEN];
     char error[128];
 } NativeNetLastFailure;
 
@@ -3363,6 +3365,7 @@ static void native_net_record_last_failure(const NativeNetAsyncState* op, const 
     g_native_net_last_failure.use_tls = op->use_tls;
     g_native_net_last_failure.port = op->port;
     (void)snprintf(g_native_net_last_failure.host, sizeof(g_native_net_last_failure.host), "%s", op->host);
+    (void)snprintf(g_native_net_last_failure.resolved_ip, sizeof(g_native_net_last_failure.resolved_ip), "%s", op->resolved_ip);
     (void)snprintf(
         g_native_net_last_failure.error,
         sizeof(g_native_net_last_failure.error),
@@ -4225,6 +4228,7 @@ static void native_net_async_worker_connect_execute(NativeNetAsyncConnectWorkerC
     NativeNetAsyncState* op;
     int worker_result_status = -1;
     char worker_error[128];
+    char resolved_ip[INET_ADDRSTRLEN];
     if (ctx == NULL || ctx->op == NULL) {
         return;
     }
@@ -4236,6 +4240,7 @@ static void native_net_async_worker_connect_execute(NativeNetAsyncConnectWorkerC
         ctx->use_tls,
         (unsigned long long)ctx->generation);
     worker_error[0] = '\0';
+    resolved_ip[0] = '\0';
     if (!native_net_platform_init()) {
         (void)snprintf(worker_error, sizeof(worker_error), "%s:platform_init", ctx->use_tls ? "connect_tls_failed" : "connect_failed");
         goto finalize;
@@ -4257,6 +4262,9 @@ static void native_net_async_worker_connect_execute(NativeNetAsyncConnectWorkerC
             (void)snprintf(worker_error, sizeof(worker_error), "%s", detail);
         }
         goto finalize;
+    }
+    if (inet_ntop(AF_INET, &addr.sin_addr, resolved_ip, sizeof(resolved_ip)) == NULL) {
+        resolved_ip[0] = '\0';
     }
     socket_fd = socket(AF_INET, SOCK_STREAM, 0);
     if (socket_fd == NATIVE_INVALID_SOCKET) {
@@ -4321,6 +4329,7 @@ finalize:
     }
     op->worker_result_status = worker_result_status;
     (void)snprintf(op->worker_error, sizeof(op->worker_error), "%s", worker_error);
+    (void)snprintf(op->resolved_ip, sizeof(op->resolved_ip), "%s", resolved_ip);
     op->worker_socket = socket_fd;
     op->worker_tls_state = tls_state;
     op->worker_done = 1;
@@ -10742,10 +10751,11 @@ static int write_native_debug_bundle(
     if (g_native_net_last_failure.valid != 0) {
         fprintf(
             f,
-            "network = { kind = %d, tls = %s, host = \"%s\", port = %d, error = \"%s\" }\n",
+            "network = { kind = %d, tls = %s, host = \"%s\", resolved_ip = \"%s\", port = %d, error = \"%s\" }\n",
             g_native_net_last_failure.kind,
             g_native_net_last_failure.use_tls ? "true" : "false",
             g_native_net_last_failure.host,
+            g_native_net_last_failure.resolved_ip,
             g_native_net_last_failure.port,
             g_native_net_last_failure.error);
     }
