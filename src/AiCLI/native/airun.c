@@ -611,6 +611,14 @@ static int airun_queue_injected_text_at(int x, int y, const char* text)
     return airun_queue_injected_text(text);
 }
 
+static int airun_queue_injected_key_at(int x, int y, const char* key_name, const char* text_value)
+{
+    if (!airun_queue_injected_click(x, y)) {
+        return 0;
+    }
+    return airun_queue_injected_key(key_name, text_value);
+}
+
 static int airun_parse_text_at_value(const char* value, int* out_x, int* out_y, const char** out_text)
 {
     const char* first_comma;
@@ -649,6 +657,68 @@ static int airun_parse_text_at_value(const char* value, int* out_x, int* out_y, 
     }
     *out_y = (int)parsed;
     *out_text = second_comma + 1;
+    return 1;
+}
+
+static int airun_parse_key_at_value(
+    const char* value,
+    int* out_x,
+    int* out_y,
+    char* out_key,
+    size_t out_key_size,
+    const char** out_text)
+{
+    const char* first_comma;
+    const char* second_comma;
+    const char* third_comma;
+    char x_buf[32];
+    char y_buf[32];
+    char* end = NULL;
+    long parsed = 0L;
+    if (value == NULL || out_x == NULL || out_y == NULL || out_key == NULL || out_key_size == 0U || out_text == NULL) {
+        return 0;
+    }
+    first_comma = strchr(value, ',');
+    if (first_comma == NULL) {
+        return 0;
+    }
+    second_comma = strchr(first_comma + 1, ',');
+    if (second_comma == NULL) {
+        return 0;
+    }
+    third_comma = strchr(second_comma + 1, ',');
+    if ((size_t)(first_comma - value) >= sizeof(x_buf) ||
+        (size_t)(second_comma - first_comma - 1) >= sizeof(y_buf)) {
+        return 0;
+    }
+    memcpy(x_buf, value, (size_t)(first_comma - value));
+    x_buf[first_comma - value] = '\0';
+    memcpy(y_buf, first_comma + 1, (size_t)(second_comma - first_comma - 1));
+    y_buf[second_comma - first_comma - 1] = '\0';
+    parsed = strtol(x_buf, &end, 10);
+    if (end == x_buf || *end != '\0' || parsed < -1000000L || parsed > 1000000L) {
+        return 0;
+    }
+    *out_x = (int)parsed;
+    parsed = strtol(y_buf, &end, 10);
+    if (end == y_buf || *end != '\0' || parsed < -1000000L || parsed > 1000000L) {
+        return 0;
+    }
+    *out_y = (int)parsed;
+    if (third_comma == NULL) {
+        if (strlen(second_comma + 1) >= out_key_size) {
+            return 0;
+        }
+        (void)snprintf(out_key, out_key_size, "%s", second_comma + 1);
+        *out_text = "";
+        return 1;
+    }
+    if ((size_t)(third_comma - second_comma - 1) >= out_key_size) {
+        return 0;
+    }
+    memcpy(out_key, second_comma + 1, (size_t)(third_comma - second_comma - 1));
+    out_key[third_comma - second_comma - 1] = '\0';
+    *out_text = third_comma + 1;
     return 1;
 }
 
@@ -726,6 +796,14 @@ static int airun_parse_interact_line(const char* line)
             return 0;
         }
         return airun_queue_injected_text_at(x, y, text);
+    }
+    if (starts_with(line, "keyat ")) {
+        char key_name[64];
+        const char* text_value = NULL;
+        if (!airun_parse_key_at_value(line + 6, &x, &y, key_name, sizeof(key_name), &text_value)) {
+            return 0;
+        }
+        return airun_queue_injected_key_at(x, y, key_name, text_value);
     }
     if (starts_with(line, "wait ")) {
         char* end = NULL;
@@ -2065,9 +2143,9 @@ static void print_usage(void)
         "  clean [program(.aibc1|.aos|project-dir|project.aiproj)]\n"
         "  repl\n"
         "  bench [--iterations <n>] [--human]\n"
-        "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>] [--inject-text-at <x,y,text>] [--inject-wait <polls>] [--inject-close] [--inject-script <path>] [--] [app-args...]\n"
-        "  debug trace run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>] [--inject-text-at <x,y,text>] [--inject-wait <polls>] [--inject-close] [--inject-script <path>] [--] [app-args...]\n"
-        "  debug capture run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-text <text>] [--inject-text-at <x,y,text>] [--inject-wait <polls>] [--inject-close] [--inject-script <path>] [--] [app-args...]\n"
+        "  debug run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-key-at <x,y,key[,text]>] [--inject-text <text>] [--inject-text-at <x,y,text>] [--inject-wait <polls>] [--inject-close] [--inject-script <path>] [--] [app-args...]\n"
+        "  debug trace run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-key-at <x,y,key[,text]>] [--inject-text <text>] [--inject-text-at <x,y,text>] [--inject-wait <polls>] [--inject-close] [--inject-script <path>] [--] [app-args...]\n"
+        "  debug capture run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-key-at <x,y,key[,text]>] [--inject-text <text>] [--inject-text-at <x,y,text>] [--inject-wait <polls>] [--inject-close] [--inject-script <path>] [--] [app-args...]\n"
         "  debug interact run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--] [app-args...]\n"
         "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--wasm-profile <cli|spa|fullstack>] [--wasm-fullstack-host-target <rid>] [--out <dir>]\n"
         "  version | --version\n"
@@ -13908,6 +13986,34 @@ static int handle_debug_run_mode(
             if (!airun_queue_injected_key(arg + 13, "")) {
                 fprintf(stderr,
                     "Err#err1(code=RUN001 message=\"Invalid --inject-key value.\" nodeId=argv)\n");
+                return 2;
+            }
+            continue;
+        }
+        if (strcmp(arg, "--inject-key-at") == 0 && app_arg_start < 0) {
+            int x = 0;
+            int y = 0;
+            char key_name[64];
+            const char* text_value = NULL;
+            if ((i + 1) >= argc ||
+                !airun_parse_key_at_value(argv[i + 1], &x, &y, key_name, sizeof(key_name), &text_value) ||
+                !airun_queue_injected_key_at(x, y, key_name, text_value)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Missing or invalid --inject-key-at value. Expected x,y,key[,text].\" nodeId=argv)\n");
+                return 2;
+            }
+            i += 1;
+            continue;
+        }
+        if (starts_with(arg, "--inject-key-at=") && app_arg_start < 0) {
+            int x = 0;
+            int y = 0;
+            char key_name[64];
+            const char* text_value = NULL;
+            if (!airun_parse_key_at_value(arg + 16, &x, &y, key_name, sizeof(key_name), &text_value) ||
+                !airun_queue_injected_key_at(x, y, key_name, text_value)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Invalid --inject-key-at value. Expected x,y,key[,text].\" nodeId=argv)\n");
                 return 2;
             }
             continue;
