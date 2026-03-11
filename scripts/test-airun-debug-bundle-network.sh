@@ -52,6 +52,11 @@ if ! grep -q 'classification = "dns_resolution"' "${OUT_DIR}/diagnostics.toml"; 
   exit 1
 fi
 
+if ! grep -q 'resolution = "unresolved"' "${OUT_DIR}/diagnostics.toml"; then
+  echo "debug bundle regression: dns resolution state not captured" >&2
+  exit 1
+fi
+
 cat > "${TMP_DIR}/app_localhost.aos" <<'EOF'
 Program#p1 {
   Export#e1(name=start)
@@ -88,5 +93,10 @@ fi
 
 if ! grep -q 'classification = "tcp_connect"' "${OUT_DIR_LOCAL}/diagnostics.toml"; then
   echo "debug bundle regression: connect failure classification not captured" >&2
+  exit 1
+fi
+
+if ! grep -q 'resolution = "resolved"' "${OUT_DIR_LOCAL}/diagnostics.toml"; then
+  echo "debug bundle regression: connect resolution state not captured" >&2
   exit 1
 fi

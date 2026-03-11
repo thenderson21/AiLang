@@ -3423,6 +3423,17 @@ static const char* native_net_error_classification(const char* error_text)
     return "unknown";
 }
 
+static const char* native_net_resolution_state(const char* resolved_ip, const char* error_text)
+{
+    if (resolved_ip != NULL && resolved_ip[0] != '\0') {
+        return "resolved";
+    }
+    if (strcmp(native_net_error_stage(error_text), "dns") == 0) {
+        return "unresolved";
+    }
+    return "unknown";
+}
+
 #ifdef __APPLE__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -10801,11 +10812,12 @@ static int write_native_debug_bundle(
     if (g_native_net_last_failure.valid != 0) {
         fprintf(
             f,
-            "network = { kind = %d, tls = %s, stage = \"%s\", classification = \"%s\", host = \"%s\", resolved_ip = \"%s\", port = %d, error = \"%s\" }\n",
+            "network = { kind = %d, tls = %s, stage = \"%s\", classification = \"%s\", resolution = \"%s\", host = \"%s\", resolved_ip = \"%s\", port = %d, error = \"%s\" }\n",
             g_native_net_last_failure.kind,
             g_native_net_last_failure.use_tls ? "true" : "false",
             native_net_error_stage(g_native_net_last_failure.error),
             native_net_error_classification(g_native_net_last_failure.error),
+            native_net_resolution_state(g_native_net_last_failure.resolved_ip, g_native_net_last_failure.error),
             g_native_net_last_failure.host,
             g_native_net_last_failure.resolved_ip,
             g_native_net_last_failure.port,
