@@ -3935,6 +3935,7 @@ static const char* aivm_opcode_name(AivmOpcode opcode)
         case AIVM_OP_MAKE_ERR: return "MAKE_ERR";
         case AIVM_OP_MAKE_LIT_STRING: return "MAKE_LIT_STRING";
         case AIVM_OP_MAKE_LIT_INT: return "MAKE_LIT_INT";
+        case AIVM_OP_MAKE_LIT_BOOL: return "MAKE_LIT_BOOL";
         case AIVM_OP_MAKE_NODE: return "MAKE_NODE";
         case AIVM_OP_MAKE_FIELD_STRING: return "MAKE_FIELD_STRING";
         case AIVM_OP_MAKE_MAP: return "MAKE_MAP";
@@ -6317,12 +6318,15 @@ static int simple_compile_expr_ext(
         return 1;
     }
     if (starts_with(node->kind, "MakeLitString") || starts_with(node->kind, "MakeLitInt") ||
+        starts_with(node->kind, "MakeLitBool") ||
         starts_with(node->kind, "MakeFieldString")) {
         SimpleNodeView id_node;
         SimpleNodeView value_node;
         AivmOpcode make_opcode = AIVM_OP_MAKE_LIT_INT;
         if (starts_with(node->kind, "MakeLitString")) {
             make_opcode = AIVM_OP_MAKE_LIT_STRING;
+        } else if (starts_with(node->kind, "MakeLitBool")) {
+            make_opcode = AIVM_OP_MAKE_LIT_BOOL;
         } else if (starts_with(node->kind, "MakeFieldString")) {
             make_opcode = AIVM_OP_MAKE_FIELD_STRING;
         }
