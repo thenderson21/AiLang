@@ -2162,6 +2162,7 @@ static void print_usage(void)
         "  debug capture run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--inject-click <x,y>] [--inject-key <name>] [--inject-key-at <x,y,key[,text]>] [--inject-text <text>] [--inject-text-at <x,y,text>] [--inject-wait <polls>] [--inject-close] [--inject-script <path>] [--] [app-args...]\n"
         "  debug interact run <program(.aibc1|.aos|project-dir|project.aiproj)> [--vm=<selector>] [--out <dir>] [--log-level <off|error|info|trace>] [--] [app-args...]\n"
         "  debug dns <host> [port]\n"
+        "  debug disasm <program(.aibc1|.aos|project-dir|project.aiproj)> [start] [end]\n"
         "  publish <program(.aibc1|.aos|project-dir|project.aiproj)> [--target <rid>] [--wasm-profile <cli|spa|fullstack>] [--wasm-fullstack-host-target <rid>] [--out <dir>]\n"
         "  version | --version\n"
         "\n"
@@ -2185,6 +2186,7 @@ static int print_unsupported_vm_mode(const char* mode)
 }
 
 static int parse_int(const char* text, int* out);
+static int parse_nonnegative_int(const char* text, int* out);
 
 typedef struct {
     const char* name;
@@ -7588,6 +7590,82 @@ static int handle_debug_run_mode(
 
 static AIRUN_MAYBE_UNUSED int handle_debug(int argc, char** argv)
 {
+    if (argc >= 4 && strcmp(argv[2], "disasm") == 0) {
+        const char* input = argv[3];
+        char resolved_program[PATH_MAX];
+        unsigned char* bytes = NULL;
+        size_t byte_count = 0U;
+        AivmProgram program;
+        AivmProgramLoadResult load_result;
+        size_t start = 0U;
+        size_t end = 0U;
+        int parsed_index = 0;
+        size_t i = 0U;
+        if (input == NULL || input[0] == '\0') {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Missing debug disasm input.\" nodeId=argv)\n");
+            return 2;
+        }
+        if (!resolve_input_to_aibc1(input, resolved_program, sizeof(resolved_program))) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Could not resolve .aibc1 input for debug disasm.\" nodeId=argv)\n");
+            return 2;
+        }
+        if (argc >= 5) {
+            if (!parse_nonnegative_int(argv[4], &parsed_index) || parsed_index < 0) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Invalid debug disasm start index.\" nodeId=argv)\n");
+                return 2;
+            }
+            start = (size_t)parsed_index;
+        }
+        if (argc >= 6) {
+            if (!parse_nonnegative_int(argv[5], &parsed_index) || parsed_index < 0) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Invalid debug disasm end index.\" nodeId=argv)\n");
+                return 2;
+            }
+            end = (size_t)parsed_index;
+        }
+        if (!read_binary_file(resolved_program, &bytes, &byte_count)) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"Could not read .aibc1 input for debug disasm.\" nodeId=argv)\n");
+            return 2;
+        }
+        aivm_program_init(&program, NULL, 0U);
+        load_result = aivm_program_load_aibc1(bytes, byte_count, &program);
+        free(bytes);
+        if (load_result.status != AIVM_PROGRAM_OK) {
+            fprintf(stderr,
+                "Err#err1(code=RUN001 message=\"AiBC1 load failed for debug disasm.\" detail=\"%s\" nodeId=disasm)\n",
+                aivm_program_status_code(load_result.status));
+            aivm_program_clear(&program);
+            return 2;
+        }
+        if (program.instruction_count == 0U) {
+            printf("Ok#ok1(type=string value=\"\")\n");
+            aivm_program_clear(&program);
+            return 0;
+        }
+        if (argc < 6) {
+            end = start + 32U;
+        }
+        if (start >= program.instruction_count) {
+            start = program.instruction_count - 1U;
+        }
+        if (end >= program.instruction_count) {
+            end = program.instruction_count - 1U;
+        }
+        for (i = start; i <= end && i < program.instruction_count; i += 1U) {
+            const AivmInstruction* inst = &program.instructions[i];
+            printf("%llu\t%s\t%lld\n",
+                (unsigned long long)i,
+                aivm_opcode_name(inst->opcode),
+                (long long)inst->operand_int);
+        }
+        aivm_program_clear(&program);
+        return 0;
+    }
     if (argc >= 4 && strcmp(argv[2], "dns") == 0) {
         const char* host = argv[3];
         uint16_t port = 443U;
@@ -7638,7 +7716,7 @@ static AIRUN_MAYBE_UNUSED int handle_debug(int argc, char** argv)
         return handle_debug_run_mode(argc, argv, 4, "trace", 0, NULL, 1);
     }
     fprintf(stderr,
-        "Err#err1(code=DEV008 message=\"Native debug supports: debug run <program>, debug trace run <program>, debug capture run <program>, debug interact run <program>, debug dns <host> [port]\" nodeId=command)\n");
+        "Err#err1(code=DEV008 message=\"Native debug supports: debug run <program>, debug trace run <program>, debug capture run <program>, debug interact run <program>, debug dns <host> [port], debug disasm <program.aibc1> [start] [end]\" nodeId=command)\n");
     return 2;
 }
 
@@ -7684,6 +7762,23 @@ static int parse_int(const char* text, int* out)
 
     v = strtol(text, &end, 10);
     if (end == text || *end != '\0' || v <= 0L || v > 100000000L) {
+        return 0;
+    }
+    *out = (int)v;
+    return 1;
+}
+
+static int parse_nonnegative_int(const char* text, int* out)
+{
+    char* end = NULL;
+    long v;
+
+    if (text == NULL || out == NULL) {
+        return 0;
+    }
+
+    v = strtol(text, &end, 10);
+    if (end == text || *end != '\0' || v < 0L || v > 100000000L) {
         return 0;
     }
     *out = (int)v;
@@ -8164,8 +8259,10 @@ static AIRUN_MAYBE_UNUSED int handle_build(int argc, char** argv)
 {
     const char* program_input = NULL;
     const char* out_dir = NULL;
+    const char* build_target_input = NULL;
     char default_out[PATH_MAX];
     char app_path[PATH_MAX];
+    char resolved_source_input[PATH_MAX];
     int use_cache = 1;
     int i;
     int build_rc;
@@ -8205,7 +8302,13 @@ static AIRUN_MAYBE_UNUSED int handle_build(int argc, char** argv)
         out_dir = default_out;
     }
 
-    build_rc = build_input_to_aibc1(program_input, out_dir, app_path, sizeof(app_path), use_cache);
+    build_target_input = program_input;
+    if (!ends_with(program_input, ".aibc1") &&
+        resolve_input_to_aos(program_input, resolved_source_input, sizeof(resolved_source_input))) {
+        build_target_input = resolved_source_input;
+    }
+
+    build_rc = build_input_to_aibc1(build_target_input, out_dir, app_path, sizeof(app_path), use_cache);
     if (build_rc == 1) {
         printf("Ok#ok1(type=string value=\"%s\")\n", app_path);
         return 0;

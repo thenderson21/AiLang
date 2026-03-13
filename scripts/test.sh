@@ -10,6 +10,7 @@ cd "${ROOT_DIR}"
 ./scripts/test-airun-build-source.sh
 ./scripts/test-airun-traced-syscalls.sh
 bash ./scripts/test-airun-debug-dns.sh
+bash ./scripts/test-airun-debug-disasm.sh
 bash ./scripts/test-airun-debug-bundle-network.sh
 
 # Samples are language-level showcases: direct syscall targets are forbidden.
