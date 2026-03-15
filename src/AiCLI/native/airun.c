@@ -6993,7 +6993,7 @@ static int write_program_as_aibc1(const AivmProgram* program, const char* out_pa
     }
 
     (void)fwrite("AIBC", 1U, 4U, f);
-    write_u32_le(f, 1U);
+    write_u32_le(f, 2U);
     write_u32_le(f, 0U);
     write_u32_le(f, section_count);
 
