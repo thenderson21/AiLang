@@ -208,7 +208,7 @@ EOF
     echo '  Func#f1(name=main params="argv" locals="") {'
     n=1
     inst_id=1
-    while [[ $n -le 300 ]]; do
+    while [[ $n -le 600 ]]; do
       echo "    Inst#c${inst_id}(op=CONST a=0)"
       inst_id=$((inst_id + 1))
       echo "    Inst#m${inst_id}(op=MAKE_BLOCK)"
@@ -239,8 +239,16 @@ EOF
     echo "native debug memory smoke failed: unexpected gc interval policy value in config.toml" >&2
     exit 1
   fi
-  if ! grep -q "node_gc_pressure_threshold_nodes = 192" "${TMP_NATIVE_DEBUG_MEM_OUT}/config.toml"; then
+  if ! grep -q "node_gc_pressure_threshold_nodes = 384" "${TMP_NATIVE_DEBUG_MEM_OUT}/config.toml"; then
     echo "native debug memory smoke failed: unexpected gc pressure threshold value in config.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_pressure_threshold_attrs = 1536" "${TMP_NATIVE_DEBUG_MEM_OUT}/config.toml"; then
+    echo "native debug memory smoke failed: unexpected attr gc pressure threshold value in config.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_pressure_threshold_children = 3072" "${TMP_NATIVE_DEBUG_MEM_OUT}/config.toml"; then
+    echo "native debug memory smoke failed: unexpected child gc pressure threshold value in config.toml" >&2
     exit 1
   fi
   if ! grep -q "vm_code=AIVM011" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
@@ -275,20 +283,28 @@ EOF
     echo "native debug memory smoke failed: expected gc allocation counter reset in state_snapshots.toml" >&2
     exit 1
   fi
-  if ! grep -q "node_count = 256" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
-    echo "native debug memory smoke failed: expected node_count=256 in state_snapshots.toml" >&2
+  if ! grep -q "node_count = 512" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: expected node_count=512 in state_snapshots.toml" >&2
     exit 1
   fi
-  if ! grep -q "node_high_water = 256" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
-    echo "native debug memory smoke failed: expected node_high_water=256 in state_snapshots.toml" >&2
+  if ! grep -q "node_high_water = 512" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: expected node_high_water=512 in state_snapshots.toml" >&2
     exit 1
   fi
   if ! grep -q "node_gc_pressure_threshold_nodes" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
     echo "native debug memory smoke failed: gc pressure threshold missing in state_snapshots.toml" >&2
     exit 1
   fi
-  if ! grep -q "node_gc_pressure_threshold_nodes = 192" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+  if ! grep -q "node_gc_pressure_threshold_nodes = 384" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
     echo "native debug memory smoke failed: unexpected gc pressure threshold value in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_pressure_threshold_attrs = 1536" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: unexpected attr gc pressure threshold value in state_snapshots.toml" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_pressure_threshold_children = 3072" "${TMP_NATIVE_DEBUG_MEM_OUT}/state_snapshots.toml"; then
+    echo "native debug memory smoke failed: unexpected child gc pressure threshold value in state_snapshots.toml" >&2
     exit 1
   fi
   if ! grep -q "node_gc_allocations_since_gc" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
@@ -323,12 +339,12 @@ EOF
     echo "native debug memory smoke failed: expected bytes_arena_pressure_count=0 in state_snapshots.toml" >&2
     exit 1
   fi
-  if ! grep -q "node_count = 256" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
-    echo "native debug memory smoke failed: expected node_count=256 in diagnostics.toml memory telemetry" >&2
+  if ! grep -q "node_count = 512" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected node_count=512 in diagnostics.toml memory telemetry" >&2
     exit 1
   fi
-  if ! grep -q "node_high_water = 256" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
-    echo "native debug memory smoke failed: expected node_high_water=256 in diagnostics.toml memory telemetry" >&2
+  if ! grep -q "node_high_water = 512" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: expected node_high_water=512 in diagnostics.toml memory telemetry" >&2
     exit 1
   fi
   if ! grep -q "node_gc_allocations_since_gc = 0" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
@@ -355,8 +371,16 @@ EOF
     echo "native debug memory smoke failed: unexpected gc interval policy value in diagnostics.toml memory telemetry" >&2
     exit 1
   fi
-  if ! grep -q "node_gc_pressure_threshold_nodes = 192" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+  if ! grep -q "node_gc_pressure_threshold_nodes = 384" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
     echo "native debug memory smoke failed: unexpected gc pressure threshold value in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_pressure_threshold_attrs = 1536" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: unexpected attr gc pressure threshold value in diagnostics.toml memory telemetry" >&2
+    exit 1
+  fi
+  if ! grep -q "node_gc_pressure_threshold_children = 3072" "${TMP_NATIVE_DEBUG_MEM_OUT}/diagnostics.toml"; then
+    echo "native debug memory smoke failed: unexpected child gc pressure threshold value in diagnostics.toml memory telemetry" >&2
     exit 1
   fi
 

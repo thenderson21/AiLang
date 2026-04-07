@@ -155,6 +155,8 @@ static int write_native_debug_bundle(
     fprintf(f, "exit_code = %d\n", has_exit_code ? exit_code : 0);
     fprintf(f, "node_gc_interval_allocations = %d\n", AIVM_VM_NODE_GC_INTERVAL_ALLOCATIONS);
     fprintf(f, "node_gc_pressure_threshold_nodes = %d\n", AIVM_VM_NODE_GC_PRESSURE_THRESHOLD);
+    fprintf(f, "node_gc_pressure_threshold_attrs = %d\n", AIVM_VM_NODE_ATTR_GC_PRESSURE_THRESHOLD);
+    fprintf(f, "node_gc_pressure_threshold_children = %d\n", AIVM_VM_NODE_CHILD_GC_PRESSURE_THRESHOLD);
     fclose(f);
 
     if (!join_path(options->out_dir, "vm_trace.toml", path, sizeof(path))) {
@@ -244,6 +246,8 @@ static int write_native_debug_bundle(
     fprintf(f, "node_gc_allocations_since_gc = %llu\n", (unsigned long long)((vm == NULL) ? 0U : vm->node_allocations_since_gc));
     fprintf(f, "node_gc_interval_allocations = %d\n", AIVM_VM_NODE_GC_INTERVAL_ALLOCATIONS);
     fprintf(f, "node_gc_pressure_threshold_nodes = %d\n", AIVM_VM_NODE_GC_PRESSURE_THRESHOLD);
+    fprintf(f, "node_gc_pressure_threshold_attrs = %d\n", AIVM_VM_NODE_ATTR_GC_PRESSURE_THRESHOLD);
+    fprintf(f, "node_gc_pressure_threshold_children = %d\n", AIVM_VM_NODE_CHILD_GC_PRESSURE_THRESHOLD);
     fprintf(f, "string_arena_pressure_count = %llu\n", (unsigned long long)((vm == NULL) ? 0U : vm->string_arena_pressure_count));
     fprintf(f, "bytes_arena_pressure_count = %llu\n", (unsigned long long)((vm == NULL) ? 0U : vm->bytes_arena_pressure_count));
     fprintf(f, "node_arena_pressure_count = %llu\n", (unsigned long long)((vm == NULL) ? 0U : vm->node_arena_pressure_count));
@@ -297,19 +301,25 @@ static int write_native_debug_bundle(
     fprintf(f, "runtime = { name = \"airun-native-c\", abi = %u, exe = \"%s\" }\n",
         aivm_c_abi_version(),
         g_airun_runtime_exe_path[0] == '\0' ? "" : g_airun_runtime_exe_path);
-    fprintf(f, "memory = { string_arena_used = %llu, string_arena_high_water = %llu, bytes_arena_used = %llu, bytes_arena_high_water = %llu, node_count = %llu, node_high_water = %llu, node_gc_compactions = %llu, node_gc_attempts = %llu, node_gc_reclaimed_nodes = %llu, node_gc_allocations_since_gc = %llu, node_gc_interval_allocations = %d, node_gc_pressure_threshold_nodes = %d, string_arena_pressure_count = %llu, bytes_arena_pressure_count = %llu, node_arena_pressure_count = %llu }\n",
+    fprintf(f, "memory = { string_arena_used = %llu, string_arena_high_water = %llu, bytes_arena_used = %llu, bytes_arena_high_water = %llu, node_count = %llu, node_high_water = %llu, node_attr_count = %llu, node_attr_high_water = %llu, node_child_count = %llu, node_child_high_water = %llu, node_gc_compactions = %llu, node_gc_attempts = %llu, node_gc_reclaimed_nodes = %llu, node_gc_allocations_since_gc = %llu, node_gc_interval_allocations = %d, node_gc_pressure_threshold_nodes = %d, node_gc_pressure_threshold_attrs = %d, node_gc_pressure_threshold_children = %d, string_arena_pressure_count = %llu, bytes_arena_pressure_count = %llu, node_arena_pressure_count = %llu }\n",
         (unsigned long long)((vm == NULL) ? 0U : vm->string_arena_used),
         (unsigned long long)((vm == NULL) ? 0U : vm->string_arena_high_water),
         (unsigned long long)((vm == NULL) ? 0U : vm->bytes_arena_used),
         (unsigned long long)((vm == NULL) ? 0U : vm->bytes_arena_high_water),
         (unsigned long long)((vm == NULL) ? 0U : vm->node_count),
         (unsigned long long)((vm == NULL) ? 0U : vm->node_high_water),
+        (unsigned long long)((vm == NULL) ? 0U : vm->node_attr_count),
+        (unsigned long long)((vm == NULL) ? 0U : vm->node_attr_high_water),
+        (unsigned long long)((vm == NULL) ? 0U : vm->node_child_count),
+        (unsigned long long)((vm == NULL) ? 0U : vm->node_child_high_water),
         (unsigned long long)((vm == NULL) ? 0U : vm->node_gc_compaction_count),
         (unsigned long long)((vm == NULL) ? 0U : vm->node_gc_attempt_count),
         (unsigned long long)((vm == NULL) ? 0U : vm->node_gc_reclaimed_nodes),
         (unsigned long long)((vm == NULL) ? 0U : vm->node_allocations_since_gc),
         AIVM_VM_NODE_GC_INTERVAL_ALLOCATIONS,
         AIVM_VM_NODE_GC_PRESSURE_THRESHOLD,
+        AIVM_VM_NODE_ATTR_GC_PRESSURE_THRESHOLD,
+        AIVM_VM_NODE_CHILD_GC_PRESSURE_THRESHOLD,
         (unsigned long long)((vm == NULL) ? 0U : vm->string_arena_pressure_count),
         (unsigned long long)((vm == NULL) ? 0U : vm->bytes_arena_pressure_count),
         (unsigned long long)((vm == NULL) ? 0U : vm->node_arena_pressure_count));

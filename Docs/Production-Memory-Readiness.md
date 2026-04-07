@@ -11,7 +11,9 @@ This document is an execution checklist, not a roadmap narrative.
 - VM memory is deterministic and bounded by explicit capacities in `src/AiVM.Core/native/include/aivm_vm.h`.
 - Node graph memory uses deterministic tracing compaction with fixed policy:
   - `node_gc_interval_allocations = 64`
-  - `node_gc_pressure_threshold_nodes = 192`
+  - `node_gc_pressure_threshold_nodes = 384`
+  - `node_gc_pressure_threshold_attrs = 1536`
+  - `node_gc_pressure_threshold_children = 3072`
   - hard-cap path compacts before emitting `AIVMM005`.
 - Memory pressure telemetry is emitted in debug artifacts:
   - `string_arena_pressure_count`

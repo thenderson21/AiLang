@@ -285,7 +285,9 @@ This file is normative for `aic run` evaluation behavior.
 - Node arena hard cap failure emits `AIVM011` detail `AIVMM005: node arena capacity exceeded.`
 - Node GC compaction is deterministic and may run proactively before hard-cap:
 - policy interval `node_gc_interval_allocations = 64`
-- pressure threshold `node_gc_pressure_threshold_nodes = 192`
+- pressure threshold `node_gc_pressure_threshold_nodes = 384`
+- pressure threshold `node_gc_pressure_threshold_attrs = 1536`
+- pressure threshold `node_gc_pressure_threshold_children = 3072`
 - proactive compaction runs only when both interval and threshold conditions are met.
 - Hard-cap node creation path must attempt compaction before emitting `AIVMM005`.
 - Node compaction semantics:

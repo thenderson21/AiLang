@@ -1489,6 +1489,25 @@ static int read_binary_file(const char* path, unsigned char** out_bytes, size_t*
     return 1;
 }
 
+static int is_supported_aibc1_file(const char* path)
+{
+    unsigned char* bytes = NULL;
+    size_t byte_count = 0U;
+    AivmProgram program;
+    AivmProgramLoadResult load_result;
+    if (path == NULL || !file_exists(path)) {
+        return 0;
+    }
+    if (!read_binary_file(path, &bytes, &byte_count)) {
+        return 0;
+    }
+    aivm_program_init(&program, NULL, 0U);
+    load_result = aivm_program_load_aibc1(bytes, byte_count, &program);
+    free(bytes);
+    aivm_program_clear(&program);
+    return load_result.status == AIVM_PROGRAM_OK;
+}
+
 static int read_text_file(const char* path, char* out, size_t out_len)
 {
     FILE* f;
@@ -7593,6 +7612,7 @@ static AIRUN_MAYBE_UNUSED int handle_debug(int argc, char** argv)
     if (argc >= 4 && strcmp(argv[2], "disasm") == 0) {
         const char* input = argv[3];
         char resolved_program[PATH_MAX];
+        char source_aos[PATH_MAX];
         unsigned char* bytes = NULL;
         size_t byte_count = 0U;
         AivmProgram program;
@@ -7604,11 +7624,6 @@ static AIRUN_MAYBE_UNUSED int handle_debug(int argc, char** argv)
         if (input == NULL || input[0] == '\0') {
             fprintf(stderr,
                 "Err#err1(code=RUN001 message=\"Missing debug disasm input.\" nodeId=argv)\n");
-            return 2;
-        }
-        if (!resolve_input_to_aibc1(input, resolved_program, sizeof(resolved_program))) {
-            fprintf(stderr,
-                "Err#err1(code=RUN001 message=\"Could not resolve .aibc1 input for debug disasm.\" nodeId=argv)\n");
             return 2;
         }
         if (argc >= 5) {
@@ -7627,20 +7642,35 @@ static AIRUN_MAYBE_UNUSED int handle_debug(int argc, char** argv)
             }
             end = (size_t)parsed_index;
         }
-        if (!read_binary_file(resolved_program, &bytes, &byte_count)) {
-            fprintf(stderr,
-                "Err#err1(code=RUN001 message=\"Could not read .aibc1 input for debug disasm.\" nodeId=argv)\n");
-            return 2;
-        }
         aivm_program_init(&program, NULL, 0U);
-        load_result = aivm_program_load_aibc1(bytes, byte_count, &program);
-        free(bytes);
-        if (load_result.status != AIVM_PROGRAM_OK) {
-            fprintf(stderr,
-                "Err#err1(code=RUN001 message=\"AiBC1 load failed for debug disasm.\" detail=\"%s\" nodeId=disasm)\n",
-                aivm_program_status_code(load_result.status));
-            aivm_program_clear(&program);
-            return 2;
+        if (ends_with(input, ".aos") && resolve_input_to_aos(input, source_aos, sizeof(source_aos))) {
+            if (!parse_bytecode_aos_to_program_file(source_aos, &program, 0) &&
+                !parse_simple_program_aos_to_program_file(source_aos, &program)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Could not compile source input for debug disasm.\" nodeId=disasm)\n");
+                aivm_program_clear(&program);
+                return 2;
+            }
+        } else {
+            if (!resolve_input_to_aibc1(input, resolved_program, sizeof(resolved_program))) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Could not resolve .aibc1 input for debug disasm.\" nodeId=argv)\n");
+                return 2;
+            }
+            if (!read_binary_file(resolved_program, &bytes, &byte_count)) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"Could not read .aibc1 input for debug disasm.\" nodeId=argv)\n");
+                return 2;
+            }
+            load_result = aivm_program_load_aibc1(bytes, byte_count, &program);
+            free(bytes);
+            if (load_result.status != AIVM_PROGRAM_OK) {
+                fprintf(stderr,
+                    "Err#err1(code=RUN001 message=\"AiBC1 load failed for debug disasm.\" detail=\"%s\" nodeId=disasm)\n",
+                    aivm_program_status_code(load_result.status));
+                aivm_program_clear(&program);
+                return 2;
+            }
         }
         if (program.instruction_count == 0U) {
             printf("Ok#ok1(type=string value=\"\")\n");
@@ -8087,7 +8117,8 @@ static int build_input_to_aibc1(
        rebuild that source file instead of silently copying a sibling app.aibc1. */
     if (!explicit_aos_input &&
         resolve_input_to_aibc1(program_input, resolved_program, sizeof(resolved_program)) &&
-        file_exists(resolved_program)) {
+        file_exists(resolved_program) &&
+        is_supported_aibc1_file(resolved_program)) {
         if (same_file_path(resolved_program, out_app_path)) {
             resolved_program[0] = '\0';
         } else if (!copy_file(resolved_program, out_app_path)) {
@@ -8110,7 +8141,8 @@ static int build_input_to_aibc1(
         join_path(cache_root, cache_key, cache_key_dir, sizeof(cache_key_dir)) &&
         ensure_directory(cache_key_dir) &&
         join_path(cache_key_dir, "app.aibc1", cache_app_path, sizeof(cache_app_path)) &&
-        file_exists(cache_app_path)) {
+        file_exists(cache_app_path) &&
+        is_supported_aibc1_file(cache_app_path)) {
         if (strcmp(cache_app_path, out_app_path) == 0 || copy_file(cache_app_path, out_app_path)) {
             return 1;
         }
@@ -8404,7 +8436,8 @@ static AIRUN_MAYBE_UNUSED int handle_publish(int argc, char** argv)
         return 2;
     }
 
-    if (!resolve_input_to_aibc1(program_input, resolved_program, sizeof(resolved_program))) {
+    if ((program_input != NULL && ends_with(program_input, ".aos")) ||
+        !resolve_input_to_aibc1(program_input, resolved_program, sizeof(resolved_program))) {
         if (resolve_input_to_aos(program_input, source_aos, sizeof(source_aos))) {
             AivmProgram program;
             if (parse_bytecode_aos_to_program_file(source_aos, &program, 1)) {
