@@ -10,17 +10,16 @@ For the AiVM repository extraction workflow, use `Docs/AiVM-Repo-Split.md`.
 
 ## Architecture
 
-AiLang is organized into four explicit layers under `src/`:
+AiLang is organized into the active layers under `src/`:
 
 - `src/AiLang.Core` — language layer (AOS AST model, parser bridge, validator, formatter wiring, semantic helpers).
 - `src/AiVM.Core` — deterministic VM/runtime engine (AiBC1 load/run + syscall dispatch boundary).
-- `src/AiCLI` — executable bootloader and CLI argument handling (`run`, `serve`, `repl`, `bench`).
-  - Native command surface includes `build`, `run`, `publish`, `repl`, `bench`, and `debug run`.
-- `src/AiVectra` — UI-layer placeholder for future integration.
+- `src/AiCLI` — executable bootloader and CLI argument handling.
+  - Native command surface includes `init`, `clean`, `build`, `run`, `publish`, `repl`, `bench`, and `debug ...`.
 
 Layer rule:
 
-- C# host effects are only reachable through `sys.*`.
+- Host effects are only reachable through `sys.*`.
 - VM is canonical runtime execution.
 - AST interpreter exists only for debug (`--vm=ast` in dev mode).
 
@@ -34,7 +33,7 @@ This repository is itself an AiLang project.
 
 ## Canonical App Layout
 
-`aic new <name>` scaffolds this baseline layout:
+`./tools/airun init <name>` scaffolds this baseline layout:
 
 ```text
 AiLangMyApp/
@@ -82,10 +81,10 @@ Output format:
 airun version=<semver> aibc=1 mode=<dev|prod> commit=<hash-or-unknown>
 ```
 
-Run program execution uses the AiBC1 VM by default:
+Run program execution uses the AiBC1 VM by default. Use a runnable app or project:
 
 ```bash
-./tools/airun run examples/hello.aos
+./tools/airun run samples/cli-fetch/project.aiproj
 ```
 
 Run from project manifest:
@@ -109,10 +108,11 @@ Build bytecode artifact from source/project input:
 ./tools/airun build samples/cli-fetch/project.aiproj --out ./.tmp/build-cli-fetch
 ```
 
-Native runtime expects AiBC1 bytecode input:
+Native runtime can also execute an explicitly built AiBC1 artifact:
 
 ```bash
-./tools/airun run examples/hello.aibc1
+./tools/airun build samples/cli-fetch/project.aiproj --out ./.tmp/build-cli-fetch
+./tools/airun run ./.tmp/build-cli-fetch/app.aibc1 -- Fort\ Worth
 ```
 
 Publish wasm artifacts (web profile default):
@@ -217,7 +217,7 @@ Example:
 - Runtime is C-only in active build/test/release workflows.
 - New publish artifacts embed bytecode payloads by default.
 - `wasm32` publish supports profiles:
-  - `web` (default): emits `index.html` + `main.js` package files.
+  - `spa` (default): emits `index.html` + `main.js` package files.
   - `cli`: emits `run.sh` + `run.ps1` launcher files.
   - `fullstack`: emits root app binary + `www/` web package (`index.html`, `main.js`, `remote-client.js`, `app.aibc1`, wasm runtime artifacts).
     - bundles host runtime as root app binary (default host RID, override with `--wasm-fullstack-host-target <rid>`).
@@ -234,7 +234,7 @@ Example:
 
 ## Examples
 
-See `examples/hello.aos` for a full program using `console.print`, and `examples/golden` for evaluator/fmt/check goldens.
+See `examples/hello.aos` for a minimal AOS snippet using `console.print`, and `examples/golden` for evaluator/fmt/check goldens.
 
 ## Sample Apps
 
@@ -253,9 +253,9 @@ Current limitation:
 Run samples:
 
 ```bash
-./tools/airun run samples/cli-fetch/src/app.aos Fort\ Worth
-./tools/airun serve samples/weather-api/src/app.aos --port 8080
-./tools/airun serve samples/weather-site/src/app.aos --port 8081
+./tools/airun run samples/cli-fetch/project.aiproj -- Fort\ Worth
+./tools/airun run samples/weather-api/project.aiproj
+./tools/airun run samples/weather-site/project.aiproj
 ```
 
 Run deterministic benchmark cases:

@@ -32,11 +32,11 @@ Current: 66/66 canonical corpus pass (`100%`), with strict native entrypoint che
 Exit: parity dashboard fully green, no known semantic drift.
 
 2. `EPIC-ZC2` C Runtime As Sole Engine
-Status: `in_progress`
+Status: `completed`
 Goal: remove remaining bridge-gated transitional runtime behavior and C# runtime fallback semantics.
-Current: `--vm=c` run-source/bytecode/bundle parity paths are active through native shared runtime loading; remaining blocker is `serve --vm=c`, which still routes to host-side `DEV008` backend-not-linked behavior.
-Exit: runtime-only C path for run-source, embedded-bytecode, embedded-bundle, and serve.
-Note: native `AiCLI` wrapper stage is now present (`src/AiCLI/native/airun.c`), but still delegates non-`run --vm=c` flows to the legacy backend host binary.
+Current: native `AiCLI` (`src/AiCLI/native/airun.c`) is the active command surface, and canonical run/build/publish/debug flows are exercised through the native path.
+Exit: runtime-only C path for the supported native CLI surfaces.
+Note: `serve` is not part of the current `airun` command surface and is no longer tracked as a blocker.
 
 3. `EPIC-ZC3` Repo-wide C# Deletion
 Status: `completed`

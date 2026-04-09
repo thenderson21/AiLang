@@ -22,7 +22,7 @@ Overall status: **PASS**
 | run source | PASS | backed by canonical golden corpus parity |
 | embedded bytecode | PASS | vm=c run bytecode-oriented source completed (exit=0) |
 | embedded bundle | PASS | vm=c run .aibundle succeeded |
-| serve | PASS | serve is intentionally out-of-scope for native runtime surface |
+| serve | PASS | serve is not part of the current native runtime command surface |
 
 ## Behavioral Cases
 

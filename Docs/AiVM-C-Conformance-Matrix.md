@@ -77,7 +77,7 @@ Status keys:
 |---|---|---|
 | Dual-run parity compare utility | implemented | Normalized compare CLI + scripts wired in test flow. |
 | Manifest parity runner | implemented | Per-case artifacts + exit-status parity checks, including optional asymmetric expected left/right status support. |
-| `--vm=c` runtime entrypoint parity | in_progress | Dashboard uses strict entrypoint checks; run-source/bytecode/bundle are passing via native shared-runtime loading path. Remaining blocker is `serve --vm=c`, which still returns host `DEV008` backend-not-linked behavior. |
+| `--vm=c` runtime entrypoint parity | implemented | Dashboard uses strict native entrypoint checks; run-source/bytecode/bundle paths are passing in the current native CLI. `serve` is not part of the current `airun` command surface. |
 | Multi-platform CI (macOS/Linux/Windows) | implemented | `aivm-c-ci` workflow builds/tests across matrix OSes. |
 | Syscall-heavy golden parity suites | implemented | Core `CALL_SYS` syscall-heavy C tests added; manifest covers string/UI/net/crypto/worker validation paths with deterministic expected output/status checks. |
 | Memory leak threshold gate (matrix CI) | implemented | `scripts/aivm-mem-audit.sh`/`.ps1` enforce RSS growth threshold on Linux/macOS/Windows and emit deterministic TOML artifacts in `aivm-c-ci`. |

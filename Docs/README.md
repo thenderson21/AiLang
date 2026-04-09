@@ -41,7 +41,7 @@ If a doc in `Docs/` conflicts with `SPEC/`, follow `SPEC/`.
 
 ## Hard Constraints
 
-- AOS only (no JSON anywhere).
+- AOS only for AiLang language and runtime contracts. Repository tooling metadata may still use host-tool-native formats when appropriate.
 - Deterministic behavior and output.
 - No hidden side effects.
 - No semantic drift from `SPEC/`.

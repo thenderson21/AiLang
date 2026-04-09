@@ -34,10 +34,10 @@ This workflow is tooling-only. Do not modify app source to debug runtime behavio
 ./tools/airun debug capture run /absolute/or/relative/path/to/app.aos --inject-click 124,138 --inject-text 76103 --inject-key enter --out .artifacts/debug/scripted-run
 ```
 
-4a. Use built-in deterministic waits and close/finalization for live UI flows:
+4a. Use built-in deterministic waits and close/finalization for live UI flows against an existing sample project:
 
 ```bash
-./tools/airun debug capture run ./samples/WeatherApp/ --inject-text 76103 --inject-key enter --inject-wait 60 --inject-close --out .artifacts/debug/weather-live
+./tools/airun debug capture run ./samples/weather-site/project.aiproj --inject-wait 10 --inject-close --out .artifacts/debug/weather-site-run
 ```
 
 4b. For multi-step live scenarios, prefer a script file over long flag chains:
@@ -50,13 +50,13 @@ close
 ```
 
 ```bash
-./tools/airun debug capture run ./samples/WeatherApp/ --inject-script /absolute/path/to/weather.script --out .artifacts/debug/weather-live
+./tools/airun debug capture run ./samples/weather-site/project.aiproj --inject-script /absolute/path/to/weather.script --out .artifacts/debug/weather-site-run
 ```
 
 5. When a debug command needs both tool flags and compiled-app argv, put app argv after `--`:
 
 ```bash
-./tools/airun debug capture run ./src/AiVectra.Cli/app.aibc1 --out .artifacts/debug/aivectra-cli -- debug snapshot
+./tools/airun debug capture run ./samples/cli-fetch/project.aiproj --out .artifacts/debug/cli-fetch -- Fort\ Worth
 ```
 
 5. CI-parity local path:

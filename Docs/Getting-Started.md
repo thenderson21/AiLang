@@ -21,7 +21,7 @@ Run build and verification flows with deterministic outputs.
 ```
 3. Run a program:
 ```bash
-./tools/airun run examples/hello.aos
+./tools/airun run samples/cli-fetch/project.aiproj -- Fort\ Worth
 ```
 4. Scaffold a new project:
 ```bash
@@ -49,7 +49,7 @@ cat examples/golden/run_var.in.aos | ./tools/airun run --vm=ast src/compiler/aic
 - `build.sh shared`: builds the shared AiVM native library.
 - `build.sh wasm`: builds wasm runtime artifacts.
 - `build.sh all`: builds all bootstrap artifacts.
-- `test.sh`: canonical verification entrypoint. Prints `PASS/FAIL` per golden and final `Ok#ok1(type=int value=0)` on success.
+- `test.sh`: canonical verification entrypoint. Ends with `overall DoD status: PASS` on success.
 - `airun init`: scaffolds a valid project layout with built-in templates (`cli`, `cli-args`).
 - `aic fmt/check/run`: emits canonical AOS only.
 - Source node ids are optional; canonical ids are assigned deterministically.
