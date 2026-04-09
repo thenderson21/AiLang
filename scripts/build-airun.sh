@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SOURCE_PATH="${ROOT_DIR}/src/AiCLI/native/airun.c"
 NATIVE_INCLUDE="${ROOT_DIR}/src/AiVM.Core/native/include"
-NATIVE_SRC_DIR="${ROOT_DIR}/src/AiVM.Core/native/src"
+NATIVE_SRC_DIR="${ROOT_DIR}/src/AiVM.Core/native"
 NATIVE_UI_HOST_SRC="${ROOT_DIR}/src/AiCLI/native/airun_ui_host_macos.m"
 NATIVE_UI_HOST_LINUX_SRC="${ROOT_DIR}/src/AiCLI/native/airun_ui_host_linux.c"
 NATIVE_UI_HOST_WINDOWS_SRC="${ROOT_DIR}/src/AiCLI/native/airun_ui_host_windows.c"

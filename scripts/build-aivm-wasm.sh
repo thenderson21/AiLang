@@ -6,7 +6,7 @@ OUT_DIR="${AIVM_WASM_OUT_DIR:-${ROOT_DIR}/.artifacts/aivm-wasm32}"
 OUT_WASM="${OUT_DIR}/aivm-runtime-wasm32.wasm"
 OUT_WEB_JS="${OUT_DIR}/aivm-runtime-wasm32-web.mjs"
 NATIVE_INCLUDE="${ROOT_DIR}/src/AiVM.Core/native/include"
-NATIVE_SRC_DIR="${ROOT_DIR}/src/AiVM.Core/native/src"
+NATIVE_SRC_DIR="${ROOT_DIR}/src/AiVM.Core/native"
 NATIVE_EXAMPLES_DIR="${ROOT_DIR}/src/AiVM.Core/native/examples"
 
 if ! command -v emcc >/dev/null 2>&1; then

@@ -5,7 +5,7 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $sourcePath = Join-Path $root 'src/AiCLI/native/airun.c'
 $uiHostWindowsPath = Join-Path $root 'src/AiCLI/native/airun_ui_host_windows.c'
 $nativeInclude = Join-Path $root 'src/AiVM.Core/native/include'
-$nativeSrc = Join-Path $root 'src/AiVM.Core/native/src'
+$nativeSrc = Join-Path $root 'src/AiVM.Core/native'
 $hostWrapperPath = Join-Path $root 'tools/airun.exe'
 $hostRuntimePath = Join-Path $root 'tools/aivm-runtime.exe'
 

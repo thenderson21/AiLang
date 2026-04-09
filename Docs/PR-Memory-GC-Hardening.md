@@ -30,7 +30,7 @@ This PR hardens deterministic memory behavior for AiVM C runtime and increases m
 
 ## Files of Interest
 
-- `src/AiVM.Core/native/src/aivm_vm.c`
+- `src/AiVM.Core/native/aivm_vm.c`
 - `src/AiVM.Core/native/include/aivm_vm.h`
 - `src/AiCLI/native/airun.c`
 - `src/AiVM.Core/native/tests/test_vm_core.c`

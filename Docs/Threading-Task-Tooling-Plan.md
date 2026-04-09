@@ -62,22 +62,22 @@ Goal: Provide deterministic internal tooling APIs for task lifecycle management.
 
 Tasks:
 1. Define internal task record/state model and transition guards.
-   - Targets: `src/AiVM.Core/native/src/aivm_vm.c`, `src/AiVM.Core/native/include/aivm_vm.h`
+   - Targets: `src/AiVM.Core/native/aivm_vm.c`, `src/AiVM.Core/native/include/aivm_vm.h`
    - DoD: transitions are explicit and invalid transitions yield deterministic VM errors.
 2. Add structured parent/child task lifecycle helpers.
-   - Targets: `src/AiVM.Core/native/src/aivm_vm.c`, `src/AiVM.Core/native/src/aivm_runtime.c`
+   - Targets: `src/AiVM.Core/native/aivm_vm.c`, `src/AiVM.Core/native/aivm_runtime.c`
    - DoD: parent failure/cancel deterministically propagates to children.
 3. Add deterministic ready-order merge helper (ascending handle or lexical slot contract).
-   - Targets: `src/AiVM.Core/native/src/aivm_vm.c`, `src/AiVM.Core/native/src/aivm_parity.c`
+   - Targets: `src/AiVM.Core/native/aivm_vm.c`, `src/AiVM.Core/native/aivm_parity.c`
    - DoD: join materialization order is stable across runs.
 4. Add owner-thread mutation guard utility in runtime path.
-   - Targets: `src/AiVM.Core/native/src/aivm_runtime.c`, `src/AiVM.Core/native/include/aivm_runtime.h`
+   - Targets: `src/AiVM.Core/native/aivm_runtime.c`, `src/AiVM.Core/native/include/aivm_runtime.h`
    - DoD: all semantic state transitions route through guarded owner path.
 
 Validation commands:
 - `./test.sh`
 - `./scripts/test-c-vm.sh`
-- `rg -n "PAR_JOIN|AWAIT|task|owner" src/AiVM.Core/native/src src/AiVM.Core/native/tests -S`
+- `rg -n "PAR_JOIN|AWAIT|task|owner" src/AiVM.Core/native src/AiVM.Core/native/tests -S`
 
 ## Milestone M3: Worker Bridge and Host Tooling (No UI Runtime Work)
 
@@ -85,13 +85,13 @@ Goal: Ensure host-side worker tooling contracts are available for both high-conc
 
 Tasks:
 1. Finalize `sys.worker_*` contract behavior and return typing tests.
-   - Targets: `src/AiVM.Core/native/src/aivm_syscall_contracts.c`, `src/AiVM.Core/native/tests/test_syscall_contracts.c`
+   - Targets: `src/AiVM.Core/native/sys/aivm_syscall_contracts.c`, `src/AiVM.Core/native/tests/test_syscall_contracts.c`
    - DoD: contract table and tests cover arity/type/return for start/poll/result/error/cancel.
 2. Add deterministic polling/result terminal-state test matrix.
    - Targets: `src/AiVM.Core/native/tests/test_syscall.c`, `src/AiVM.Core/native/tests/test_runtime.c`
    - DoD: pending/completed/failed/canceled/unknown-handle paths are validated.
 3. Add host readiness adapter interfaces for external event enqueue/drain.
-   - Targets: `src/AiVM.Core/native/include/aivm_runtime.h`, `src/AiVM.Core/native/src/aivm_runtime.c`
+   - Targets: `src/AiVM.Core/native/include/aivm_runtime.h`, `src/AiVM.Core/native/aivm_runtime.c`
    - DoD: API supports local host integration without introducing UI semantics.
 4. Add docs for host integration contract and local usage.
    - Targets: `src/AiVM.Core/native/README.md`, `Docs/SyscallCoverageSummary.md`
@@ -128,9 +128,9 @@ Validation commands:
 ## Backlog (Post-M4)
 
 1. Optional CLI diagnostics for task table snapshots in debug mode only.
-   - Targets: `src/AiCLI/native/airun.c`, `src/AiVM.Core/native/src/aivm_runtime.c`
+   - Targets: `src/AiCLI/native/airun.c`, `src/AiVM.Core/native/aivm_runtime.c`
 2. Optional expanded deterministic telemetry for event queue depth over time.
-   - Targets: `src/AiVM.Core/native/src/aivm_runtime.c`, `Docs/AiVM-C-Conformance-Matrix.md`
+   - Targets: `src/AiVM.Core/native/aivm_runtime.c`, `Docs/AiVM-C-Conformance-Matrix.md`
 
 ## Release Readiness Checklist (Tooling Scope)
 
