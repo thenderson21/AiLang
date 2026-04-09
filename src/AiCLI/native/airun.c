@@ -6708,6 +6708,7 @@ static int simple_compile_block_ext(
     int* out_did_return)
 {
     const char* c;
+    size_t scope_local_count = 0U;
     int did_return = 0;
     if (out_did_return != NULL) {
         *out_did_return = 0;
@@ -6715,6 +6716,7 @@ static int simple_compile_block_ext(
     if (block_node == NULL || program == NULL || locals == NULL || ctx == NULL) {
         return 0;
     }
+    scope_local_count = locals->count;
     c = block_node->body_start;
     while (simple_parse_next_node(c, block_node->body_end, &(SimpleNodeView){0})) {
         SimpleNodeView child;
@@ -6722,9 +6724,11 @@ static int simple_compile_block_ext(
             break;
         }
         if (!simple_compile_stmt_ext(&child, program, locals, ctx, &did_return)) {
+            locals->count = scope_local_count;
             return 0;
         }
         if (did_return) {
+            locals->count = scope_local_count;
             if (out_did_return != NULL) {
                 *out_did_return = 1;
             }
@@ -6732,6 +6736,7 @@ static int simple_compile_block_ext(
         }
         c = child.next;
     }
+    locals->count = scope_local_count;
     return 1;
 }
 
