@@ -34,6 +34,7 @@ If a doc in `Docs/` conflicts with `SPEC/`, follow `SPEC/`.
 - [Three Repository Migration](./Three-Repo-Migration.md)
 - [Branching and Release Policy](./Branching-Release-Policy.md)
 - [Versioning](./Versioning.md)
+- [Installation and Versioning Contract](./Installation-Versioning.md)
 - [Migration 0.0.1](./Migration-0.0.1.md)
 - [Launch Stdlib 0.0.1](./Launch-Stdlib-0.0.1.md)
 - [Release 0.0.1](./Release-0.0.1.md)

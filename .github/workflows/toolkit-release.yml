@@ -37,8 +37,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="0.0.1-alpha.${GITHUB_RUN_NUMBER}"
-          TAG="v${VERSION}"
+          VERSION="$(AILANG_PRERELEASE_BUILD="${GITHUB_RUN_NUMBER}" ./scripts/read-version.sh --prerelease)"
+          TAG="$(AILANG_PRERELEASE_BUILD="${GITHUB_RUN_NUMBER}" ./scripts/read-version.sh --prerelease-tag)"
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
           echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
 
