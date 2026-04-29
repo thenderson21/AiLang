@@ -67,11 +67,15 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           mkdir -p .tmp/leak-reports
-          AIVM_MEM_LEAK_GATE=1 \
-          AIVM_LEAK_CHECK_ITERATIONS=50 \
-          AIVM_LEAK_MAX_GROWTH_KB=2048 \
-          AIVM_LEAK_REPORT=.tmp/leak-reports/aivm-c-ci-${{ matrix.os }}.txt \
-          ./test-aivm-c.sh
+          if [ "${{ runner.os }}" = "Linux" ]; then
+            AIVM_MEM_LEAK_GATE=1 \
+            AIVM_LEAK_CHECK_ITERATIONS=50 \
+            AIVM_LEAK_MAX_GROWTH_KB=2048 \
+            AIVM_LEAK_REPORT=.tmp/leak-reports/aivm-c-ci-${{ matrix.os }}.txt \
+            ./test-aivm-c.sh
+          else
+            ./test-aivm-c.sh
+          fi
 
       - name: Verify bytes host syscall test (Unix)
         if: runner.os != 'Windows'

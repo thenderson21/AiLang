@@ -257,8 +257,13 @@ static int spawn_uses_args_node_contract(void)
     int spin;
 
     aivm_program_clear(&program);
+#ifdef _WIN32
+    argv_values[0] = "/c";
+    argv_values[1] = "echo hello world";
+#else
     argv_values[0] = "hello";
     argv_values[1] = "world";
+#endif
     aivm_init_with_syscalls_and_argv(&vm, &program, NULL, 0U, argv_values, 2U);
     g_native_active_vm = &vm;
 
