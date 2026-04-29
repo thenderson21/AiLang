@@ -877,7 +877,6 @@ static int native_syscall_process_exit(
     fflush(stdout);
     fflush(stderr);
     exit(code);
-    return AIVM_SYSCALL_OK;
 }
 
 static int native_syscall_process_stream_read(
