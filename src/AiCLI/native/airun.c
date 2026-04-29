@@ -1,3 +1,21 @@
+#ifndef _WIN32
+#ifndef _DEFAULT_SOURCE
+#define _DEFAULT_SOURCE 1
+#endif
+#ifndef _DARWIN_C_SOURCE
+#define _DARWIN_C_SOURCE 1
+#endif
+#ifndef _POSIX_C_SOURCE
+#define _POSIX_C_SOURCE 200809L
+#endif
+#endif
+
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#endif
+
 #include <errno.h>
 #include <ctype.h>
 #include <limits.h>
@@ -9,15 +27,15 @@
 #include <stdint.h>
 
 #ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#include <windows.h>
 #include <direct.h>
 #include <io.h>
 #include <objbase.h>
 #include <psapi.h>
 #include <process.h>
-#include <winsock2.h>
-#include <ws2tcpip.h>
 #include <sys/stat.h>
-#include <windows.h>
 #include <wincodec.h>
 #ifndef PATH_MAX
 #define PATH_MAX 260
@@ -194,8 +212,8 @@ static char g_native_open_url_test_scratch[1024];
 static AirunLogLevel g_airun_log_level = AIRUN_LOG_ERROR;
 static FILE* g_airun_log_file = NULL;
 static AirunInjectedClick g_airun_injected_click = {0, 0, 0, 0};
-static AirunInjectedEventQueue g_airun_injected_events = {{{0}}, 0U, 0U};
-static AirunCapturedEventLog g_airun_captured_events = {{{0}}, 0U};
+static AirunInjectedEventQueue g_airun_injected_events = {0};
+static AirunCapturedEventLog g_airun_captured_events = {0};
 static AirunInteractState g_airun_interact_state = {0, 0, {0}, 0U};
 static void airun_format_value_preview(const AivmValue* value, char* buffer, size_t buffer_size);
 
@@ -3546,7 +3564,7 @@ static int native_bytes_to_base64(
     return 1;
 }
 
-static int native_rgba_base64_capacity(size_t rgba_length, size_t* out_capacity)
+static AIRUN_MAYBE_UNUSED int native_rgba_base64_capacity(size_t rgba_length, size_t* out_capacity)
 {
     size_t capacity;
     if (out_capacity == NULL) {

@@ -77,14 +77,18 @@ if [[ "${TARGET_PLATFORM}" == "osx" ]]; then
   UI_HOST_SRC="${NATIVE_UI_HOST_SRC}"
   LD_EXTRA=(-framework AppKit -framework Foundation -framework Security -framework CoreFoundation -framework CoreGraphics -framework ImageIO -framework CFNetwork)
 elif [[ "${TARGET_PLATFORM}" == "linux" && "${TARGET_ARCH}" == "arm64" && "${HOST_ARCH}" == "x64" ]]; then
-  UI_HOST_SRC="${NATIVE_UI_HOST_LINUX_SRC}"
-  LD_EXTRA=(-lX11)
+  if [[ "${AILANG_ENABLE_LINUX_UI_HOST:-0}" == "1" ]]; then
+    UI_HOST_SRC="${NATIVE_UI_HOST_LINUX_SRC}"
+    LD_EXTRA=(-lX11)
+  fi
   if command -v aarch64-linux-gnu-gcc >/dev/null 2>&1; then
     CC_BIN="aarch64-linux-gnu-gcc"
   fi
 elif [[ "${TARGET_PLATFORM}" == "linux" ]]; then
-  UI_HOST_SRC="${NATIVE_UI_HOST_LINUX_SRC}"
-  LD_EXTRA=(-lX11)
+  if [[ "${AILANG_ENABLE_LINUX_UI_HOST:-0}" == "1" ]]; then
+    UI_HOST_SRC="${NATIVE_UI_HOST_LINUX_SRC}"
+    LD_EXTRA=(-lX11)
+  fi
 elif [[ "${TARGET_PLATFORM}" == "windows" ]]; then
   UI_HOST_SRC="${NATIVE_UI_HOST_WINDOWS_SRC}"
   LD_EXTRA=(-lgdi32 -luser32 -lole32 -lwindowscodecs -luuid)
