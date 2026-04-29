@@ -83,7 +83,7 @@ jobs:
 
       - name: Perf smoke (Linux)
         if: runner.os == 'Linux'
-        run: AIVM_PERF_SMOKE=1 AIVM_PERF_RUNS=10 ./test-aivm-c.sh
+        run: ./scripts/aivm-c-perf-smoke.sh 10
 
       - name: Benchmark gate (Linux)
         if: runner.os == 'Linux'
