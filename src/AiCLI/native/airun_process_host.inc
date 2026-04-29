@@ -532,7 +532,7 @@ static int native_syscall_process_spawn(
         }
 
         if (!CreateProcessA(
-                args[0].string_value,
+                NULL,
                 command_line,
                 NULL,
                 NULL,
