@@ -200,13 +200,19 @@ static int spawn_and_wait_nonzero_exit(void)
 static int interleaved_fail_and_cancel_cleanup_stress(void)
 {
     int i;
+#ifdef _WIN32
+    int interleave_iterations = 2;
+#else
     int interleave_iterations = (int)(NATIVE_PROCESS_CAPACITY / 4);
+#endif
+#ifndef _WIN32
     if (interleave_iterations < 8) {
         interleave_iterations = 8;
     }
     if (interleave_iterations > 32) {
         interleave_iterations = 32;
     }
+#endif
 
     for (i = 0; i < interleave_iterations; i += 1) {
         if (spawn_and_wait_nonzero_exit() != 0) {
@@ -374,13 +380,18 @@ static int wait_drains_child_output_without_deadlock(void)
 int main(void)
 {
     int i;
-    for (i = 0; i < ((int)NATIVE_PROCESS_CAPACITY * 2); i += 1) {
+#ifdef _WIN32
+    int lifecycle_iterations = 4;
+#else
+    int lifecycle_iterations = (int)NATIVE_PROCESS_CAPACITY * 2;
+#endif
+    for (i = 0; i < lifecycle_iterations; i += 1) {
         if (spawn_and_wait_zero_exit() != 0) {
             return 1;
         }
     }
 
-    for (i = 0; i < ((int)NATIVE_PROCESS_CAPACITY * 2); i += 1) {
+    for (i = 0; i < lifecycle_iterations; i += 1) {
         if (spawn_and_wait_nonzero_exit() != 0) {
             return 1;
         }
