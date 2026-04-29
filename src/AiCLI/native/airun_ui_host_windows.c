@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <windows.h>
+#include <windowsx.h>
 
 typedef struct {
     int64_t handle;

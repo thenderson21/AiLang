@@ -11,6 +11,9 @@
 #endif
 
 #ifdef _WIN32
+#ifndef _CRT_RAND_S
+#define _CRT_RAND_S
+#endif
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -35,8 +38,12 @@
 #include <objbase.h>
 #include <psapi.h>
 #include <process.h>
+#include <shellapi.h>
 #include <sys/stat.h>
 #include <wincodec.h>
+#if defined(_MSC_VER)
+typedef SSIZE_T ssize_t;
+#endif
 #ifndef PATH_MAX
 #define PATH_MAX 260
 #endif
@@ -3564,7 +3571,8 @@ static int native_bytes_to_base64(
     return 1;
 }
 
-static AIRUN_MAYBE_UNUSED int native_rgba_base64_capacity(size_t rgba_length, size_t* out_capacity)
+#if defined(_WIN32) || defined(__APPLE__)
+static int native_rgba_base64_capacity(size_t rgba_length, size_t* out_capacity)
 {
     size_t capacity;
     if (out_capacity == NULL) {
@@ -3580,6 +3588,7 @@ static AIRUN_MAYBE_UNUSED int native_rgba_base64_capacity(size_t rgba_length, si
     *out_capacity = capacity + 1U;
     return 1;
 }
+#endif
 
 static int native_image_decode_to_rgba_base64(
     const uint8_t* input,

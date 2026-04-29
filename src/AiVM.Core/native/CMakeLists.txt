@@ -179,7 +179,7 @@ if (BUILD_TESTING)
     )
     target_link_libraries(aivm_test_bytes_host PRIVATE aivm_core)
     if (WIN32)
-        target_link_libraries(aivm_test_bytes_host PRIVATE ws2_32 psapi)
+        target_link_libraries(aivm_test_bytes_host PRIVATE ws2_32 psapi shell32)
     endif()
 
     add_executable(aivm_test_ui_image_host
@@ -187,7 +187,7 @@ if (BUILD_TESTING)
     )
     target_link_libraries(aivm_test_ui_image_host PRIVATE aivm_core)
     if (WIN32)
-        target_link_libraries(aivm_test_ui_image_host PRIVATE ws2_32 psapi)
+        target_link_libraries(aivm_test_ui_image_host PRIVATE ws2_32 psapi shell32)
     endif()
 
     add_executable(aivm_test_net_async_host
@@ -195,7 +195,7 @@ if (BUILD_TESTING)
     )
     target_link_libraries(aivm_test_net_async_host PRIVATE aivm_core)
     if (WIN32)
-        target_link_libraries(aivm_test_net_async_host PRIVATE ws2_32 psapi)
+        target_link_libraries(aivm_test_net_async_host PRIVATE ws2_32 psapi shell32)
     endif()
 
     add_executable(aivm_test_host_open_default
@@ -203,7 +203,7 @@ if (BUILD_TESTING)
     )
     target_link_libraries(aivm_test_host_open_default PRIVATE aivm_core)
     if (WIN32)
-        target_link_libraries(aivm_test_host_open_default PRIVATE ws2_32 psapi)
+        target_link_libraries(aivm_test_host_open_default PRIVATE ws2_32 psapi shell32)
     endif()
 
     add_executable(aivm_test_remote_channel
@@ -231,7 +231,7 @@ if (BUILD_TESTING)
     )
     target_link_libraries(aivm_test_process_lifecycle_stress PRIVATE aivm_core)
     if (WIN32)
-        target_link_libraries(aivm_test_process_lifecycle_stress PRIVATE ws2_32 psapi)
+        target_link_libraries(aivm_test_process_lifecycle_stress PRIVATE ws2_32 psapi shell32)
     endif()
     if (APPLE)
         target_link_libraries(

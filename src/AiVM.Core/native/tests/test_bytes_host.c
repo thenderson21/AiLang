@@ -133,7 +133,9 @@ int main(void)
 
     {
         size_t png_len = 0U;
+#if defined(__APPLE__) || defined(_WIN32)
         size_t rgba_len = 0U;
+#endif
         CHECK(native_bytes_from_base64(png_base64, NULL, 0U, &png_len) == 1);
         CHECK(png_len > 0U && png_len < NATIVE_BYTES_SCRATCH_CAPACITY);
         CHECK(native_bytes_from_base64(png_base64, g_native_bytes_scratch, png_len, &png_len) == 1);

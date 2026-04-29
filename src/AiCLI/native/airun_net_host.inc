@@ -1029,11 +1029,11 @@ static void native_net_async_worker_connect_execute(NativeNetAsyncConnectWorkerC
                 (void)snprintf(worker_error, sizeof(worker_error), "%s:dns_failed", ctx->use_tls ? "connect_tls_failed" : "connect_failed");
             } else if (ctx->use_tls) {
                 char detail[128];
-                (void)snprintf(detail, sizeof(detail), "connect_tls_failed:%s", worker_error);
+                (void)snprintf(detail, sizeof(detail), "connect_tls_failed:%.100s", worker_error);
                 (void)snprintf(worker_error, sizeof(worker_error), "%s", detail);
             } else {
                 char detail[128];
-                (void)snprintf(detail, sizeof(detail), "connect_failed:%s", worker_error);
+                (void)snprintf(detail, sizeof(detail), "connect_failed:%.100s", worker_error);
                 (void)snprintf(worker_error, sizeof(worker_error), "%s", detail);
             }
             goto finalize;
@@ -2592,10 +2592,10 @@ static int native_syscall_net_start_op(
             if (op->worker_error[0] == '\0') {
                 (void)snprintf(op->worker_error, sizeof(op->worker_error), "%s", op->use_tls ? "connect_tls_failed:dns_failed" : "connect_failed:dns_failed");
             } else if (op->use_tls) {
-                (void)snprintf(detail, sizeof(detail), "connect_tls_failed:%s", op->worker_error);
+                (void)snprintf(detail, sizeof(detail), "connect_tls_failed:%.100s", op->worker_error);
                 (void)snprintf(op->worker_error, sizeof(op->worker_error), "%s", detail);
             } else {
-                (void)snprintf(detail, sizeof(detail), "connect_failed:%s", op->worker_error);
+                (void)snprintf(detail, sizeof(detail), "connect_failed:%.100s", op->worker_error);
                 (void)snprintf(op->worker_error, sizeof(op->worker_error), "%s", detail);
             }
             free(worker_ctx);

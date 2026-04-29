@@ -41,7 +41,7 @@ $sources = @(
   (Join-Path $nativeSrc 'remote/aivm_remote_session.c')
 )
 $commonArgs = @('/nologo', '/O2', '/W4', '/WX', '/std:c11', '/D_CRT_SECURE_NO_WARNINGS', '/DAIRUN_UI_HOST_EXTERNAL=1', "/I$nativeInclude")
-$linkLibs = @('Ws2_32.lib', 'psapi.lib', 'user32.lib', 'gdi32.lib')
+$linkLibs = @('Ws2_32.lib', 'psapi.lib', 'user32.lib', 'gdi32.lib', 'Shell32.lib')
 
 $clArgs = $commonArgs + @("/Fe:$wrapperPath") + $sources + $linkLibs
 & cl @clArgs
