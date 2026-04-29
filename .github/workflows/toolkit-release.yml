@@ -384,11 +384,11 @@ jobs:
           chmod +x ./scripts/test-wasm-golden.sh
           mkdir -p .tmp
           ./scripts/test-wasm-golden.sh | tee .tmp/test-wasm-golden.log
-          source_cases="$(rg -o 'wasm golden corpus: PASS \([0-9]+ cases\)' .tmp/test-wasm-golden.log | tail -n1 | rg -o '[0-9]+' | head -n1)"
-          bytecode_cases="$(rg -o 'wasm bytecode-only corpus: PASS \([0-9]+ cases\)' .tmp/test-wasm-golden.log | tail -n1 | rg -o '[0-9]+' | head -n1)"
-          malformed_cases="$(rg -o 'wasm malformed corpus: PASS \([0-9]+ cases\)' .tmp/test-wasm-golden.log | tail -n1 | rg -o '[0-9]+' | head -n1)"
+          source_cases="$(grep -Eo 'wasm golden corpus: PASS \([0-9]+ cases\)' .tmp/test-wasm-golden.log | tail -n1 | sed -E 's/.*\(([0-9]+) cases\).*/\1/')"
+          bytecode_cases="$(grep -Eo 'wasm bytecode-only corpus: PASS \([0-9]+ cases\)' .tmp/test-wasm-golden.log | tail -n1 | sed -E 's/.*\(([0-9]+) cases\).*/\1/')"
+          malformed_cases="$(grep -Eo 'wasm malformed corpus: PASS \([0-9]+ cases\)' .tmp/test-wasm-golden.log | tail -n1 | sed -E 's/.*\(([0-9]+) cases\).*/\1/')"
           profiles_status="fail"
-          if rg -q 'wasm golden profiles: PASS \(cli/spa/fullstack\)' .tmp/test-wasm-golden.log; then
+          if grep -Eq 'wasm golden profiles: PASS \(cli/spa/fullstack\)' .tmp/test-wasm-golden.log; then
             profiles_status="pass"
           fi
           echo "### WASM Golden Coverage" >> "${GITHUB_STEP_SUMMARY}"
