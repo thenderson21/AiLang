@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - 'src/AiVM.Core/native/**'
+      - 'src/AiCLI/native/**'
       - 'test-aivm-c.sh'
       - 'test-aivm-c.ps1'
       - 'build.sh'
@@ -29,6 +30,7 @@ on:
       - main
     paths:
       - 'src/AiVM.Core/native/**'
+      - 'src/AiCLI/native/**'
       - 'test-aivm-c.sh'
       - 'test-aivm-c.ps1'
       - 'build.sh'
