@@ -2,7 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-BASELINE_FILE="${AIVM_BENCH_BASELINE_FILE:-${ROOT_DIR}/src/AiVM.Core/native/tests/compiler_runtime_bench_baseline.tsv}"
+source "${ROOT_DIR}/scripts/aivm-native-paths.sh"
+AIVM_C_SOURCE_DIR="$(require_aivm_native_dir "${ROOT_DIR}")"
+BASELINE_FILE="${AIVM_BENCH_BASELINE_FILE:-${AIVM_C_SOURCE_DIR}/tests/compiler_runtime_bench_baseline.tsv}"
 ITERATIONS="${AIVM_BENCH_ITERATIONS:-10}"
 MAX_REGRESSION_PCT="${AIVM_BENCH_MAX_REGRESSION_PCT:-5}"
 TMP_DIR="${ROOT_DIR}/.tmp/aivm-bench-gate"

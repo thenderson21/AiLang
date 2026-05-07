@@ -2,13 +2,13 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PREFERRED_C_SOURCE_DIR="${ROOT_DIR}/src/AiVM.Core/native"
-AIVM_C_SOURCE_DIR="${AIVM_C_SOURCE_DIR:-${PREFERRED_C_SOURCE_DIR}}"
+source "${ROOT_DIR}/scripts/aivm-native-paths.sh"
+AIVM_C_SOURCE_DIR="$(require_aivm_native_dir "${ROOT_DIR}")"
 AIVM_C_TESTS_DIR="${AIVM_C_TESTS_DIR:-${AIVM_C_SOURCE_DIR}/tests}"
 REPORT_PATH="${1:-${ROOT_DIR}/Docs/AiVM-C-Parity-Status.md}"
 TMP_DIR="${ROOT_DIR}/.tmp/aivm-parity-dashboard"
 BUILD_SUFFIX="native"
-BUILD_DIR="${ROOT_DIR}/.tmp/aivm-c-build-${BUILD_SUFFIX}"
+BUILD_DIR="${AIVM_C_BUILD_DIR:-${ROOT_DIR}/../AiVM/.tmp/aivm-c-build-${BUILD_SUFFIX}}"
 BUILD_OUTPUT_DIR="${BUILD_DIR}"
 PARITY_CLI="${BUILD_DIR}/aivm_parity_cli"
 MODE_USED="native"

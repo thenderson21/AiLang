@@ -68,41 +68,50 @@ jobs:
           name: wasm-runtime-files
           path: ./.artifacts/aivm-wasm32
 
-      - name: Build airun runtime (non-Windows)
+      - name: Install bootstrap SDK (non-Windows)
         if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
-          ./build.sh
-          test -x ./tools/ailang
+          curl -fsSL https://ailangcore.github.io/install.sh | sh -s -- --channel alpha
 
-      - name: Setup MSVC tools
-        if: runner.os == 'Windows'
-        uses: ilammy/msvc-dev-cmd@v1
-
-      - name: Build airun runtime (Windows)
+      - name: Install bootstrap SDK (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          iex "& { $(irm https://ailangcore.github.io/install.ps1) } -Channel alpha"
+
+      - name: Stage AiLang tools (non-Windows)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh
+          test -x ./tools/ailang
+
+      - name: Stage AiLang tools (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
           ./build.ps1
           if (-not (Test-Path .\tools\ailang.exe)) { throw 'missing tools/ailang.exe' }
 
-      - name: Build frontend parser (non-Windows)
+      - name: Stage frontend parser (non-Windows)
         if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p ./dist
-          cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
+          cp ./tools/aos_frontend "./dist/${{ matrix.frontend }}"
           chmod +x "./dist/${{ matrix.frontend }}"
 
-      - name: Build frontend parser (Windows)
+      - name: Stage frontend parser (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force .\dist | Out-Null
-          cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
-          Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
+          Copy-Item .\tools\aos_frontend.exe .\dist\${{ matrix.frontend }}
 
       - name: Stage runtime binary (non-Windows)
         if: runner.os != 'Windows'

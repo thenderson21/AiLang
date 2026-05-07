@@ -1,54 +1,7 @@
-name: aivm-c-ci
+name: AiVM source integration
 
 on:
   workflow_dispatch:
-  pull_request:
-    paths:
-      - 'src/AiVM.Core/native/**'
-      - 'src/AiCLI/native/**'
-      - 'test-aivm-c.sh'
-      - 'test-aivm-c.ps1'
-      - 'build.sh'
-      - 'build.ps1'
-      - 'scripts/aivm-parity-compare.sh'
-      - 'scripts/aivm-dualrun-parity.sh'
-      - 'scripts/aivm-dualrun-parity-manifest.sh'
-      - 'scripts/aivm-dualrun-parity-manifest.ps1'
-      - 'scripts/aivm-bench-gate.sh'
-      - 'scripts/aivm-parity-dashboard.sh'
-      - 'scripts/test-wasm-golden.sh'
-      - 'scripts/build-aivm-wasm.sh'
-      - 'scripts/aivm-mem-leak-check.sh'
-      - 'src/AiVM.Core/native/tests/parity_commands.txt'
-      - 'src/AiVM.Core/native/tests/parity_commands_portable.txt'
-      - 'src/AiVM.Core/native/tests/parity_commands_ci.txt'
-      - 'src/AiVM.Core/native/tests/compiler_runtime_bench_baseline.tsv'
-      - '.github/workflows/aivm-c-ci.yml'
-  push:
-    branches:
-      - develop
-      - main
-    paths:
-      - 'src/AiVM.Core/native/**'
-      - 'src/AiCLI/native/**'
-      - 'test-aivm-c.sh'
-      - 'test-aivm-c.ps1'
-      - 'build.sh'
-      - 'build.ps1'
-      - 'scripts/aivm-parity-compare.sh'
-      - 'scripts/aivm-dualrun-parity.sh'
-      - 'scripts/aivm-dualrun-parity-manifest.sh'
-      - 'scripts/aivm-dualrun-parity-manifest.ps1'
-      - 'scripts/aivm-bench-gate.sh'
-      - 'scripts/aivm-parity-dashboard.sh'
-      - 'scripts/test-wasm-golden.sh'
-      - 'scripts/build-aivm-wasm.sh'
-      - 'scripts/aivm-mem-leak-check.sh'
-      - 'src/AiVM.Core/native/tests/parity_commands.txt'
-      - 'src/AiVM.Core/native/tests/parity_commands_portable.txt'
-      - 'src/AiVM.Core/native/tests/parity_commands_ci.txt'
-      - 'src/AiVM.Core/native/tests/compiler_runtime_bench_baseline.tsv'
-      - '.github/workflows/aivm-c-ci.yml'
 
 jobs:
   build-test:
@@ -63,6 +16,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Checkout AiVM
+        uses: actions/checkout@v4
+        with:
+          repository: AiLangCore/AiVM
+          ref: develop
+          path: external/AiVM
+
       - name: Configure + build + test (Unix)
         if: runner.os != 'Windows'
         run: |
@@ -72,9 +32,9 @@ jobs:
             AIVM_LEAK_CHECK_ITERATIONS=50 \
             AIVM_LEAK_MAX_GROWTH_KB=2048 \
             AIVM_LEAK_REPORT=.tmp/leak-reports/aivm-c-ci-${{ matrix.os }}.txt \
-            ./test-aivm-c.sh
+            AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/native" ./test-aivm-c.sh
           else
-            ./test-aivm-c.sh
+            AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/native" ./test-aivm-c.sh
           fi
 
       - name: Verify bytes host syscall test (Unix)
@@ -83,13 +43,13 @@ jobs:
 
       - name: Perf smoke (Linux)
         if: runner.os == 'Linux'
-        run: ./scripts/aivm-c-perf-smoke.sh 10
+        run: AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/native" ./scripts/aivm-c-perf-smoke.sh 10
 
       - name: Benchmark gate (Linux)
         if: runner.os == 'Linux'
         run: |
           ./build.sh
-          ./scripts/aivm-bench-gate.sh
+          AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/native" ./scripts/aivm-bench-gate.sh
 
       - name: Setup Emscripten (Linux)
         if: runner.os == 'Linux'
@@ -110,7 +70,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          AIVM_DOD_RUN_TESTS=0 AIVM_DOD_RUN_BENCH=0 AIVM_DOD_RUN_WASM=1 ./scripts/aivm-parity-dashboard.sh .tmp/aivm-parity-dashboard-ci.md
+          AIVM_C_SOURCE_DIR="${GITHUB_WORKSPACE}/external/AiVM/native" AIVM_DOD_RUN_TESTS=0 AIVM_DOD_RUN_BENCH=0 AIVM_DOD_RUN_WASM=1 ./scripts/aivm-parity-dashboard.sh .tmp/aivm-parity-dashboard-ci.md
           {
             echo "### AiLang DoD Dashboard (Linux)"
             echo

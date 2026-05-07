@@ -10,18 +10,25 @@ For the AiVM repository extraction workflow, use `Docs/AiVM-Repo-Split.md`.
 
 ## Architecture
 
-AiLang is organized into the active layers under `src/`:
+AiLang owns the language, compiler/toolset, core libraries, SDK contracts, and
+examples. AiVM is a separate runtime project; AiLang consumes an installed
+`aivm` executable or an explicitly configured AiVM source checkout for VM
+development gates.
 
-- `src/AiLang.Core` — language layer (AOS AST model, parser bridge, validator, formatter wiring, semantic helpers).
-- `src/AiVM.Core` — deterministic VM/runtime engine (AiBC1 load/run + syscall dispatch boundary).
-- `src/AiCLI` — executable bootloader and CLI argument handling.
-  - Native command surface includes `init`, `clean`, `build`, `run`, `publish`, `repl`, `bench`, and `debug ...`.
+- `src/compiler` — AiLang-authored compiler/runtime scripts.
+- `src/std` — AiLang standard library modules.
+- `src/compiler` and `src/std` — AiLang-authored compiler/toolset and core libraries.
 
 Layer rule:
 
 - Host effects are only reachable through `sys.*`.
 - VM is canonical runtime execution.
+- Normal AiLang development should use an installed AiVM release. Set
+  `AIVM_C_SOURCE_DIR` only for source-level VM integration tests.
 - AST interpreter exists only for debug (`--vm=ast` in dev mode).
+- C runtime, native launcher, host syscall, and syscall-boundary code belongs in
+  AiVM, not AiLang. C library consumption must go through explicit SDK/syscall
+  adapter contracts.
 
 ## Project Identity
 
@@ -166,28 +173,32 @@ Ok#ok4(type=int value=5)
 
 ## Testing
 
-Run C runtime test suite:
+Run the AiLang test suite:
 
 ```bash
 ./test.sh
 ```
 
-`test.sh` is the canonical verification entrypoint. It is C-only and does not invoke dotnet.
+`test.sh` is the canonical verification entrypoint. It uses the selected
+installed SDK and does not invoke dotnet.
 
-## Build Launcher
+## Build Tooling
 
-Rebuild `tools/ailang` (native C, host platform):
+Stage `tools/ailang` from the selected installed SDK:
 
 ```bash
 ./build.sh
 ```
 
-`build.sh` is the canonical bootstrap entrypoint for AiLang tooling.
+`build.sh` is the canonical bootstrap entrypoint for AiLang tooling during the
+repository split. The long-term target is self-hosted AiLang command behavior;
+the temporary native launcher supplied by AiVM should shrink to VM execution and
+host adapter responsibilities.
 
-- `./build.sh` builds host-native tools (`tools/ailang`, `tools/aos_frontend`).
-- `./build.sh shared` builds the shared AiVM native library.
-- `./build.sh wasm` builds wasm runtime artifacts.
-- `./build.sh all` builds all bootstrap artifacts.
+- `./build.sh` stages host tools from the selected SDK.
+- `./build.sh shared` is delegated to AiVM and remains temporarily for migration compatibility.
+- `./build.sh wasm` is delegated to AiVM and remains temporarily for migration compatibility.
+- `./build.sh all` runs the compatibility target set.
 
 The underlying `scripts/build-*.sh` files remain implementation details behind this entrypoint.
 
@@ -209,6 +220,24 @@ Example:
 ```bash
 ./tools/ailang init MyApp --template cli-args
 ./tools/ailang run ./MyApp/ hello
+```
+
+Agent instruction targets:
+
+- `codex` (default): writes canonical `AGENTS.md`.
+- `claude`: writes `CLAUDE.md` pointing to `AGENTS.md`.
+- `cursor`: writes `.cursor/rules/ailang.mdc` pointing to `AGENTS.md`.
+- `gemini`: writes `GEMINI.md` pointing to `AGENTS.md`.
+- `copilot`: writes `.github/copilot-instructions.md` pointing to `AGENTS.md`.
+- `windsurf`: writes `.windsurfrules` pointing to `AGENTS.md`.
+
+Examples:
+
+```bash
+./tools/ailang init MyCodexApp --agent codex
+./tools/ailang init MyClaudeApp --agent claude
+./tools/ailang init MyAgentApp --agents codex,claude,cursor
+./tools/ailang init MyAllAgentsApp --agents all
 ```
 
 ## Runtime Engine

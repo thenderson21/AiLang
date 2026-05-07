@@ -42,10 +42,10 @@ if [[ -x "${ROOT_DIR}/tools/airun" ]]; then
     AIRUN_HAS_CLEAN=1
   fi
 
-  "${ROOT_DIR}/tools/airun" run "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --vm=c >/dev/null
+  "${ROOT_DIR}/tools/airun" run "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_main_params.aos" --vm=c >/dev/null
   TMP_NATIVE_PUBLISH_DIR="${ROOT_DIR}/.tmp/aivm-c-native-publish-smoke"
   rm -rf "${TMP_NATIVE_PUBLISH_DIR}"
-  "${ROOT_DIR}/tools/airun" publish "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --out "${TMP_NATIVE_PUBLISH_DIR}" >/dev/null
+  "${ROOT_DIR}/tools/airun" publish "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_main_params.aos" --out "${TMP_NATIVE_PUBLISH_DIR}" >/dev/null
   if [[ ! -f "${TMP_NATIVE_PUBLISH_DIR}/app.aibc1" ]]; then
     echo "native publish smoke failed: app.aibc1 was not produced" >&2
     exit 1
@@ -530,17 +530,17 @@ if [[ -x "${ROOT_DIR}/tools/airun" ]]; then
 
   run_task_edge_case \
     "await_edge_invalid" \
-    "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_await_edge_invalid.aos" \
-    "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_await_edge_invalid.out" \
+    "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_await_edge_invalid.aos" \
+    "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_await_edge_invalid.out" \
     "3"
   run_task_edge_case \
     "par_join_edge_invalid" \
-    "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_par_join_edge_invalid.aos" \
-    "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_par_join_edge_invalid.out" \
+    "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_par_join_edge_invalid.aos" \
+    "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_par_join_edge_invalid.out" \
     "3"
   run_task_edge_case \
     "par_cancel_edge_noop" \
-    "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_par_cancel_edge_noop.aos" \
+    "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_par_cancel_edge_noop.aos" \
     "" \
     "0"
 
@@ -557,7 +557,7 @@ fi
 
 if [[ "${AIVM_MEM_LEAK_GATE:-0}" == "1" ]]; then
   leak_iterations="${AIVM_LEAK_CHECK_ITERATIONS:-50}"
-  leak_target="${AIVM_LEAK_CHECK_TARGET:-${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos}"
+  leak_target="${AIVM_LEAK_CHECK_TARGET:-${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_main_params.aos}"
   AIVM_LEAK_MAX_GROWTH_KB="${AIVM_LEAK_MAX_GROWTH_KB:-2048}" \
     "${ROOT_DIR}/scripts/aivm-mem-leak-check.sh" "${leak_target}" "${leak_iterations}" >/dev/null
 fi

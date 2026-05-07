@@ -12,13 +12,13 @@ Completion snapshot (2026-03-05):
 
 Primary completion evidence:
 
-- `src/AiVM.Core/native/tests/test_syscall_contracts.c`
-- `src/AiVM.Core/native/tests/test_syscall.c`
-- `src/AiVM.Core/native/tests/test_runtime.c`
-- `src/AiVM.Core/native/tests/test_vm_determinism.c`
-- `src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_await_edge_invalid.aos`
-- `src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_par_join_edge_invalid.aos`
-- `src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_par_cancel_edge_noop.aos`
+- `../AiVM/native/tests/test_syscall_contracts.c`
+- `../AiVM/native/tests/test_syscall.c`
+- `../AiVM/native/tests/test_runtime.c`
+- `../AiVM/native/tests/test_vm_determinism.c`
+- `../AiVM/native/tests/parity_cases/vm_c_execute_src_await_edge_invalid.aos`
+- `../AiVM/native/tests/parity_cases/vm_c_execute_src_par_join_edge_invalid.aos`
+- `../AiVM/native/tests/parity_cases/vm_c_execute_src_par_cancel_edge_noop.aos`
 - `./test-aivm-c.sh`
 - `scripts/aivm-parity-dashboard.sh`
 - `Docs/SyscallCoverageSummary.md`
@@ -62,22 +62,22 @@ Goal: Provide deterministic internal tooling APIs for task lifecycle management.
 
 Tasks:
 1. Define internal task record/state model and transition guards.
-   - Targets: `src/AiVM.Core/native/aivm_vm.c`, `src/AiVM.Core/native/include/aivm_vm.h`
+   - Targets: `../AiVM/native/aivm_vm.c`, `../AiVM/native/include/aivm_vm.h`
    - DoD: transitions are explicit and invalid transitions yield deterministic VM errors.
 2. Add structured parent/child task lifecycle helpers.
-   - Targets: `src/AiVM.Core/native/aivm_vm.c`, `src/AiVM.Core/native/aivm_runtime.c`
+   - Targets: `../AiVM/native/aivm_vm.c`, `../AiVM/native/aivm_runtime.c`
    - DoD: parent failure/cancel deterministically propagates to children.
 3. Add deterministic ready-order merge helper (ascending handle or lexical slot contract).
-   - Targets: `src/AiVM.Core/native/aivm_vm.c`, `src/AiVM.Core/native/aivm_parity.c`
+   - Targets: `../AiVM/native/aivm_vm.c`, `../AiVM/native/aivm_parity.c`
    - DoD: join materialization order is stable across runs.
 4. Add owner-thread mutation guard utility in runtime path.
-   - Targets: `src/AiVM.Core/native/aivm_runtime.c`, `src/AiVM.Core/native/include/aivm_runtime.h`
+   - Targets: `../AiVM/native/aivm_runtime.c`, `../AiVM/native/include/aivm_runtime.h`
    - DoD: all semantic state transitions route through guarded owner path.
 
 Validation commands:
 - `./test.sh`
 - `./scripts/test-c-vm.sh`
-- `rg -n "PAR_JOIN|AWAIT|task|owner" src/AiVM.Core/native src/AiVM.Core/native/tests -S`
+- `rg -n "PAR_JOIN|AWAIT|task|owner" ../AiVM/native ../AiVM/native/tests -S`
 
 ## Milestone M3: Worker Bridge and Host Tooling (No UI Runtime Work)
 
@@ -85,22 +85,22 @@ Goal: Ensure host-side worker tooling contracts are available for both high-conc
 
 Tasks:
 1. Finalize `sys.worker_*` contract behavior and return typing tests.
-   - Targets: `src/AiVM.Core/native/sys/aivm_syscall_contracts.c`, `src/AiVM.Core/native/tests/test_syscall_contracts.c`
+   - Targets: `../AiVM/native/sys/aivm_syscall_contracts.c`, `../AiVM/native/tests/test_syscall_contracts.c`
    - DoD: contract table and tests cover arity/type/return for start/poll/result/error/cancel.
 2. Add deterministic polling/result terminal-state test matrix.
-   - Targets: `src/AiVM.Core/native/tests/test_syscall.c`, `src/AiVM.Core/native/tests/test_runtime.c`
+   - Targets: `../AiVM/native/tests/test_syscall.c`, `../AiVM/native/tests/test_runtime.c`
    - DoD: pending/completed/failed/canceled/unknown-handle paths are validated.
 3. Add host readiness adapter interfaces for external event enqueue/drain.
-   - Targets: `src/AiVM.Core/native/include/aivm_runtime.h`, `src/AiVM.Core/native/aivm_runtime.c`
+   - Targets: `../AiVM/native/include/aivm_runtime.h`, `../AiVM/native/aivm_runtime.c`
    - DoD: API supports local host integration without introducing UI semantics.
 4. Add docs for host integration contract and local usage.
-   - Targets: `src/AiVM.Core/native/README.md`, `Docs/SyscallCoverageSummary.md`
+   - Targets: `../AiVM/native/README.md`, `Docs/SyscallCoverageSummary.md`
    - DoD: clear integration path for web-host and UI-host adapters using same deterministic queue semantics.
 
 Validation commands:
 - `./test.sh`
 - `./test-aivm-c.sh`
-- `rg -n "sys.worker_|poll|result|cancel|event queue" src/AiVM.Core/native Docs -S`
+- `rg -n "sys.worker_|poll|result|cancel|event queue" ../AiVM/native Docs -S`
 
 ## Milestone M4: Local Stress + Determinism Tooling
 
@@ -108,10 +108,10 @@ Goal: Provide local tooling to validate 1000+ concurrent host operations and det
 
 Tasks:
 1. Add local stress harness for high in-flight operation simulation.
-   - Targets: `src/AiVM.Core/native/tests/test_runtime.c`, `src/AiVM.Core/native/tests/test_vm_determinism.c`
+   - Targets: `../AiVM/native/tests/test_runtime.c`, `../AiVM/native/tests/test_vm_determinism.c`
    - DoD: local test simulates 1000+ operation handles with deterministic completion merge checks.
 2. Add parity cases for async/par edge ordering and cancellation.
-   - Targets: `src/AiVM.Core/native/tests/parity_cases/*`, `src/AiVM.Core/native/tests/parity_commands*.txt`
+   - Targets: `../AiVM/native/tests/parity_cases/*`, `../AiVM/native/tests/parity_commands*.txt`
    - DoD: parity suite includes representative await/join/cancel ordering cases.
 3. Add local dashboard/check workflow for task tooling readiness.
    - Targets: `scripts/aivm-parity-dashboard.sh`, `Docs/AiVM-C-Parity-Status.md`
@@ -128,9 +128,9 @@ Validation commands:
 ## Backlog (Post-M4)
 
 1. Optional CLI diagnostics for task table snapshots in debug mode only.
-   - Targets: `src/AiCLI/native/airun.c`, `src/AiVM.Core/native/aivm_runtime.c`
+   - Targets: `../AiVM/native/ailang_cli/airun.c`, `../AiVM/native/aivm_runtime.c`
 2. Optional expanded deterministic telemetry for event queue depth over time.
-   - Targets: `src/AiVM.Core/native/aivm_runtime.c`, `Docs/AiVM-C-Conformance-Matrix.md`
+   - Targets: `../AiVM/native/aivm_runtime.c`, `Docs/AiVM-C-Conformance-Matrix.md`
 
 ## Release Readiness Checklist (Tooling Scope)
 

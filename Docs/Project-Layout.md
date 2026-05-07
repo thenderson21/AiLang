@@ -30,3 +30,14 @@ Scaffold with built-in templates:
 ./tools/airun init MyApp
 ./tools/airun init MyArgsApp --template cli-args
 ```
+
+Scaffold agent instruction files:
+
+```bash
+./tools/airun init MyCodexApp --agent codex
+./tools/airun init MyClaudeApp --agent claude
+./tools/airun init MyMultiAgentApp --agents codex,claude,cursor
+./tools/airun init MyAllAgentsApp --agents all
+```
+
+`AGENTS.md` is canonical. Other agent-specific files point back to it.

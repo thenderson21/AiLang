@@ -1,0 +1,12 @@
+name = "cli-args"
+kind = "project"
+description = "AiLang command-line application with argument handling."
+entry_file = "src/app.aos"
+entry_export = "start"
+
+variables = [
+  "project.name",
+  "project.version",
+  "project.entryFile",
+  "project.entryExport"
+]

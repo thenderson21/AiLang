@@ -35,6 +35,8 @@ Long-term rule:
 
 - AiLang should not own the C VM implementation.
 - AiLang should not own AiVectra UI library implementation.
+- AiLang command behavior should be rewritten in AiLang, not preserved as
+  permanent C code elsewhere.
 
 ### AiVM
 
@@ -59,6 +61,8 @@ Long-term rule:
   explicit syscall dispatch.
 - AiVM should interpret compiled AiLang programs, not own language/compiler
   semantics.
+- Native launcher code in AiVM is a temporary bootstrap host until the AiLang
+  CLI is self-hosted. See `Docs/AiLang-Self-Hosting-Rewrite.md`.
 
 ### AiVectra
 
@@ -103,14 +107,9 @@ The old C# AiVM runtime has been archived in:
 AiVM/legacy/csharp/src/AiVM
 ```
 
-AiLang still contains the pre-split native source path during transition:
-
-```text
-AiLang/src/AiVM.Core/native
-```
-
-Operational AiLang scripts now prefer the sibling checkout at `../AiVM/native`
-when it exists, and fall back to the in-tree path only for transition safety.
+AiLang no longer owns the pre-split native source path. Operational AiLang
+scripts consume the sibling checkout at `../AiVM/native` by default, or the path
+provided through `AIVM_C_SOURCE_DIR`.
 
 ## Migration Phases
 
@@ -146,9 +145,8 @@ AiVM/
 
 ### Phase 3: Rewire AiLang to consume AiVM
 
-- Done: AiLang bootstrap scripts prefer the sibling `../AiVM/native` checkout.
-- Pending: remove the tracked native VM implementation from AiLang after all
-  parity fixtures and integration tests no longer require the old in-tree path.
+- Done: AiLang bootstrap scripts consume the sibling `../AiVM/native` checkout.
+- Done: removed the tracked native VM implementation from AiLang.
 - Pending: choose final dependency mechanism: submodule, sibling checkout, or
   release artifact.
 - Run `./test.sh` in AiLang after the full removal step.

@@ -94,7 +94,7 @@ AIVM_BENCH_ITERATIONS=10 AIVM_BENCH_MAX_REGRESSION_PCT=5 ./scripts/aivm-bench-ga
 
 Inputs:
 
-- Baseline file: `src/AiVM.Core/native/tests/compiler_runtime_bench_baseline.tsv`
+- Baseline file: `../AiVM/native/tests/compiler_runtime_bench_baseline.tsv`
 - Current run: `./tools/airun bench --iterations <n> --human`
 - Policy: fail if any baseline case is missing from current output or exceeds `max_regression_pct`.
 
@@ -132,17 +132,17 @@ Built-in CLI command (`airun debug profile`) runs repeated deterministic executi
 Direct CLI usage:
 
 ```bash
-./tools/airun debug profile ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos --iterations 20 --max-growth-kb 2048 --out .tmp/aivm-mem-audit.toml --vm=c
+./tools/airun debug profile ./../AiVM/native/tests/parity_cases/vm_c_execute_src_main_params.aos --iterations 20 --max-growth-kb 2048 --out .tmp/aivm-mem-audit.toml --vm=c
 ```
 
 ```bash
-./scripts/aivm-mem-audit.sh ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos 20
+./scripts/aivm-mem-audit.sh ./../AiVM/native/tests/parity_cases/vm_c_execute_src_main_params.aos 20
 ```
 
 Optional threshold tuning (KB):
 
 ```bash
-AIVM_LEAK_MAX_RSS_GROWTH_KB=2048 ./scripts/aivm-mem-audit.sh ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos 20
+AIVM_LEAK_MAX_RSS_GROWTH_KB=2048 ./scripts/aivm-mem-audit.sh ./../AiVM/native/tests/parity_cases/vm_c_execute_src_main_params.aos 20
 ```
 
 Windows:

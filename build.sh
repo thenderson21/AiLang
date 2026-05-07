@@ -7,13 +7,13 @@ print_usage() {
   cat <<'EOF'
 Usage: ./build.sh [host|shared|wasm|all]
 
-Builds AiLang tooling through one canonical bootstrap entrypoint.
+Builds AiLang tooling through the selected installed SDK.
 
 Targets:
-  host    Build host-native tools (default).
-  shared  Build the shared AiVM native library.
-  wasm    Build wasm runtime artifacts.
-  all     Build host tools, shared library, and wasm artifacts.
+  host    Stage host tools from the selected installed SDK (default).
+  shared  Delegated to AiVM; kept temporarily for migration compatibility.
+  wasm    Delegated to AiVM; kept temporarily for migration compatibility.
+  all     Stage host tools and run delegated compatibility targets.
 EOF
 }
 
@@ -21,7 +21,7 @@ run_target() {
   local target="$1"
   case "${target}" in
     host)
-      "${ROOT_DIR}/scripts/build-airun.sh"
+      "${ROOT_DIR}/scripts/stage-installed-toolchain.sh"
       ;;
     shared)
       "${ROOT_DIR}/scripts/build-aivm-c-shared.sh"

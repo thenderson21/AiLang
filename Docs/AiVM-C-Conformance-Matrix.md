@@ -2,7 +2,7 @@
 
 ## Scope
 
-This matrix tracks native `src/AiVM.Core/native` parity work against the current AiLang contracts in:
+This matrix tracks native `../AiVM/native` parity work against the current AiLang contracts in:
 
 - `SPEC/BYTECODE.md`
 - `SPEC/IL.md`
@@ -69,7 +69,7 @@ Status keys:
 | No time/random/threading dependence | implemented | Core code path is pure state transition logic. |
 | Replay stability checks | implemented | `aivm_test_vm_determinism` repeats mixed VM+syscall runs. |
 | Warning-clean build enforcement | implemented | CMake applies `-Wall -Wextra -Wpedantic -Werror` and `/W4 /WX`. |
-| Perf smoke baseline guard | implemented | `scripts/aivm-c-perf-smoke.sh` enforces median threshold from `src/AiVM.Core/native/tests/perf_baseline.env` (optional via `AIVM_PERF_SMOKE=1`). |
+| Perf smoke baseline guard | implemented | `scripts/aivm-c-perf-smoke.sh` enforces median threshold from `../AiVM/native/tests/perf_baseline.env` (optional via `AIVM_PERF_SMOKE=1`). |
 
 ## Parity/CI
 

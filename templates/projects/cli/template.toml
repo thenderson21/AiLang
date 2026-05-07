@@ -1,0 +1,12 @@
+name = "cli"
+kind = "project"
+description = "Basic AiLang command-line application."
+entry_file = "src/app.aos"
+entry_export = "start"
+
+variables = [
+  "project.name",
+  "project.version",
+  "project.entryFile",
+  "project.entryExport"
+]

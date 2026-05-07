@@ -8,7 +8,7 @@ This document is an execution checklist, not a roadmap narrative.
 
 ## Current Baseline
 
-- VM memory is deterministic and bounded by explicit capacities in `src/AiVM.Core/native/include/aivm_vm.h`.
+- VM memory is deterministic and bounded by explicit capacities in `../AiVM/native/include/aivm_vm.h`.
 - Node graph memory uses deterministic tracing compaction with fixed policy:
   - `node_gc_interval_allocations = 64`
   - `node_gc_pressure_threshold_nodes = 384`

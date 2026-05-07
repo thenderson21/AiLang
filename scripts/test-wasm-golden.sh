@@ -2,6 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/aivm-native-paths.sh"
+AIVM_C_SOURCE_DIR="$(require_aivm_native_dir "${ROOT_DIR}")"
 AILANG_CLI="${ROOT_DIR}/tools/ailang"
 if [[ ! -x "${AILANG_CLI}" && -x "${ROOT_DIR}/tools/airun" ]]; then
   AILANG_CLI="${ROOT_DIR}/tools/airun"
@@ -49,13 +51,13 @@ WASM_STDIN_EOF_CASES=(
   "wasm_console_readline_eof"
   "wasm_console_readallstdin_eof"
 )
-PROCESS_CASE="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_process_start_unsupported.aos"
-FS_WARN_CASE="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/wasm_profile_warn_fs_file_read.aos"
-NET_WARN_CASE="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/wasm_profile_warn_net_tcp_connect.aos"
-UI_WARN_CASE="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/wasm_profile_warn_ui_draw_rect.aos"
-UI_POLL_WARN_CASE="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/wasm_profile_warn_ui_poll_event.aos"
-UI_SIZE_WARN_CASE="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/wasm_profile_warn_ui_get_window_size.aos"
-IMAGE_WARN_CASE="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/wasm_profile_warn_image_decode.aos"
+PROCESS_CASE="${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_process_start_unsupported.aos"
+FS_WARN_CASE="${AIVM_C_SOURCE_DIR}/tests/parity_cases/wasm_profile_warn_fs_file_read.aos"
+NET_WARN_CASE="${AIVM_C_SOURCE_DIR}/tests/parity_cases/wasm_profile_warn_net_tcp_connect.aos"
+UI_WARN_CASE="${AIVM_C_SOURCE_DIR}/tests/parity_cases/wasm_profile_warn_ui_draw_rect.aos"
+UI_POLL_WARN_CASE="${AIVM_C_SOURCE_DIR}/tests/parity_cases/wasm_profile_warn_ui_poll_event.aos"
+UI_SIZE_WARN_CASE="${AIVM_C_SOURCE_DIR}/tests/parity_cases/wasm_profile_warn_ui_get_window_size.aos"
+IMAGE_WARN_CASE="${AIVM_C_SOURCE_DIR}/tests/parity_cases/wasm_profile_warn_image_decode.aos"
 PUBLISH_DIR="${TMP_DIR}/publish"
 PUBLISH_SPA_DIR="${TMP_DIR}/publish-spa"
 PUBLISH_FULLSTACK_DIR="${TMP_DIR}/publish-fullstack"
@@ -3505,7 +3507,7 @@ cleanup() {
 trap cleanup EXIT
 
 for CASE_NAME in "${CASES[@]}"; do
-  CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
+  CASE_PATH="${AIVM_C_SOURCE_DIR}/tests/parity_cases/${CASE_NAME}.aos"
   CASE_OUT="${PUBLISH_DIR}/${CASE_NAME}"
   mkdir -p "${CASE_OUT}"
   "${AILANG_CLI}" publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null
@@ -3534,7 +3536,7 @@ for CASE_NAME in "${CASES[@]}"; do
 done
 
 for CASE_NAME in "${BYTECODE_ONLY_CASES[@]}"; do
-  CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
+  CASE_PATH="${AIVM_C_SOURCE_DIR}/tests/parity_cases/${CASE_NAME}.aos"
   CASE_OUT="${PUBLISH_DIR}/${CASE_NAME}"
   mkdir -p "${CASE_OUT}"
   "${AILANG_CLI}" publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null
@@ -3565,7 +3567,7 @@ done
 STDIN_EXPECTED="${TMP_DIR}/stdin-eof-expected.out"
 printf '\n' > "${STDIN_EXPECTED}"
 for CASE_NAME in "${WASM_STDIN_EOF_CASES[@]}"; do
-  CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
+  CASE_PATH="${AIVM_C_SOURCE_DIR}/tests/parity_cases/${CASE_NAME}.aos"
   CASE_OUT="${PUBLISH_DIR}/${CASE_NAME}"
   mkdir -p "${CASE_OUT}"
   "${AILANG_CLI}" publish "${CASE_PATH}" --target wasm32 --out "${CASE_OUT}" >/dev/null
@@ -3591,7 +3593,7 @@ for CASE_NAME in "${WASM_STDIN_EOF_CASES[@]}"; do
 done
 
 for CASE_NAME in "${MALFORMED_CASES[@]}"; do
-  CASE_PATH="${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/${CASE_NAME}.aos"
+  CASE_PATH="${AIVM_C_SOURCE_DIR}/tests/parity_cases/${CASE_NAME}.aos"
   CASE_OUT="${PUBLISH_DIR}/${CASE_NAME}"
   CASE_ERR="${CASE_OUT}/publish.err"
   mkdir -p "${CASE_OUT}"
@@ -3619,8 +3621,8 @@ for CASE_NAME in "${MALFORMED_CASES[@]}"; do
   esac
 done
 
-"${AILANG_CLI}" publish "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --target wasm32 --wasm-profile spa --out "${PUBLISH_SPA_DIR}" >/dev/null
-"${AILANG_CLI}" publish "${ROOT_DIR}/src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos" --target wasm32 --wasm-profile fullstack --out "${PUBLISH_FULLSTACK_DIR}" >/dev/null
+"${AILANG_CLI}" publish "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_main_params.aos" --target wasm32 --wasm-profile spa --out "${PUBLISH_SPA_DIR}" >/dev/null
+"${AILANG_CLI}" publish "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_main_params.aos" --target wasm32 --wasm-profile fullstack --out "${PUBLISH_FULLSTACK_DIR}" >/dev/null
 "${AILANG_CLI}" publish "${PROCESS_CASE}" --target wasm32 --wasm-profile cli --out "${PUBLISH_PROCESS_CLI_DIR}" >"${PROCESS_OUT}" 2>"${PROCESS_ERR}"
 "${AILANG_CLI}" publish "${PROCESS_CASE}" --target wasm32 --wasm-profile spa --out "${TMP_DIR}/process-spa" >/dev/null 2>"${PROCESS_SPA_WARN}"
 "${AILANG_CLI}" publish "${PROCESS_CASE}" --target wasm32 --wasm-profile fullstack --out "${TMP_DIR}/process-fullstack" >/dev/null 2>"${PROCESS_FULLSTACK_WARN}"

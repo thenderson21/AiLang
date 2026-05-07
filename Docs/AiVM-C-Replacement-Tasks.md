@@ -34,7 +34,7 @@ Exit: parity dashboard fully green, no known semantic drift.
 2. `EPIC-ZC2` C Runtime As Sole Engine
 Status: `completed`
 Goal: remove remaining bridge-gated transitional runtime behavior and C# runtime fallback semantics.
-Current: native `AiCLI` (`src/AiCLI/native/airun.c`) is the active command surface, and canonical run/build/publish/debug flows are exercised through the native path.
+Current: native launcher code has moved to AiVM (`../AiVM/native/ailang_cli/airun.c`), and canonical run/build/publish/debug flows are exercised through the native path.
 Exit: runtime-only C path for the supported native CLI surfaces.
 Note: `serve` is not part of the current `airun` command surface and is no longer tracked as a blocker.
 
@@ -65,8 +65,8 @@ Exit: memory/leak suite integrated and green in CI.
 Canonical post-cutover source layout remains under `src/`:
 
 - `src/AiLang.Core` (native implementation target under `src/AiLang.Core/native`)
-- `src/AiVM.Core` (native implementation rooted at `src/AiVM.Core/native`)
-- `src/AiCLI` (native implementation target under `src/AiCLI/native`)
+- `../AiVM` (native implementation rooted at `../AiVM/native`)
+- `../AiVM/native/ailang_cli` (native launcher and host adapter implementation)
 
 ## Issue Requirements (Mandatory Fields)
 
@@ -124,7 +124,7 @@ Use this sequence to reproduce threading/task readiness checks locally with dete
 
 Expected:
 
-- `100% tests passed` for `src/AiVM.Core/native` C test suite.
+- `100% tests passed` for `../AiVM/native` C test suite.
 - `parity dashboard: 97/97 passing (100.00%)` (or current canonical corpus count at run time).
 - `overall DoD status: PASS`.
 
@@ -153,7 +153,7 @@ Expected in report:
 4. Task-tooling parity edge case presence:
 
 ```bash
-rg -n "parity_vm_c_execute_src_(await_edge_invalid|par_join_edge_invalid|par_cancel_edge_noop)" src/AiVM.Core/native/tests/parity_commands_portable.txt
+rg -n "parity_vm_c_execute_src_(await_edge_invalid|par_join_edge_invalid|par_cancel_edge_noop)" ../AiVM/native/tests/parity_commands_portable.txt
 ```
 
 Expected:

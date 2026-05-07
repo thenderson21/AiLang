@@ -49,6 +49,7 @@ Allowed derived versions:
 - `0.0.1-alpha.N`
 - `0.0.1-beta.N`
 - `0.0.1-rc.N`
+- `0.0.1-local` for local-only development builds
 - `0.0.1`
 
 Tags use `v` plus the derived version:
@@ -152,31 +153,118 @@ Rules:
 
 ## Installation Layout
 
-The installed toolchain should use one root directory:
+Released toolchains should install under the user installation root:
 
 ```text
-AiLangCore/
+~/.ailang/
 +-- bin/
++-- current -> toolchains/<latest-installed-version>
++-- local/
+`-- toolchains/
+    +-- 0.0.1-alpha.15/
+    `-- 0.0.1/
+```
+
+Each toolchain directory should use this shape:
+
+```text
+<toolchain-root>/
++-- bin/
+|   +-- ailang
+|   +-- aivm
+|   `-- aivectra
 +-- lib/
-+-- sdk/
++-- include/
++-- compiler/
++-- std/
++-- sys/
 +-- manifests/
-`-- VERSION
+|   `-- local.toml or install.toml
+`-- .artifacts/
 ```
 
-Expected binaries:
+`~/.ailang/bin` contains stable shims. The shims dispatch to
+`~/.ailang/current`, so switching released SDKs does not require changing
+`PATH`. `~/.ailang/current` is for the latest installed versioned SDK; mutable
+local development builds are selected per project.
+
+## Project Toolchain Selection
+
+Projects can select a toolchain without changing the global current toolchain by
+committing an `ailang-toolchain.toml` file at the project root:
+
+```toml
+[toolchain]
+version = "local"
+```
+
+The stable shims under `~/.ailang/bin` search from the current working
+directory up to the filesystem root for `ailang-toolchain.toml`. If found, the
+selected version resolves to:
 
 ```text
-bin/ailang
-bin/aivm
-bin/aivectra
+~/.ailang/toolchains/<version>
 ```
 
-Expected metadata:
+The special value `local` resolves to:
 
 ```text
-manifests/install.toml
-manifests/components.toml
+~/.ailang/local
 ```
+
+If no project selection exists, the shims fall back to `~/.ailang/current`.
+`AILANG_TOOLCHAIN=<version>` can be used as a temporary command-level override.
+
+Use the helper script to write or inspect the project selection:
+
+```bash
+cd AiLang
+./scripts/select-toolchain.sh local ../AiVectra
+./scripts/select-toolchain.sh --show ../AiVectra
+./scripts/select-toolchain.sh --clear ../AiVectra
+```
+
+## Local Development SDK
+
+Local development builds use the reserved toolchain slot:
+
+```text
+~/.ailang/local
+```
+
+The local slot is intentionally mutable. It is for active development only and
+must not be published as a release artifact. When a bug is fixed in AiVM while
+working in AiVectra, rebuild and restage the local SDK:
+
+```bash
+cd AiLang
+./scripts/update-local-toolchain.sh
+```
+
+That command rebuilds the sibling AiVM checkout when present, rebuilds AiLang,
+stages AiVectra source/launcher when present, and updates `~/.ailang/local`.
+It does not change `~/.ailang/current`.
+After that, commands run from projects selecting `local` resolve through the
+refreshed local SDK:
+
+```bash
+aivm --help
+ailang --version
+aivectra --help
+```
+
+To use the local SDK for one project without changing every shell, write a
+project-local selector:
+
+```bash
+cd AiLang
+./scripts/select-toolchain.sh local ../AiLang
+./scripts/select-toolchain.sh local ../AiVM
+./scripts/select-toolchain.sh local ../AiVectra
+```
+
+Any `ailang`, `aivm`, or `aivectra` command run from those project directories
+will resolve through `~/.ailang/local`.
 
 ## Installer Behavior
 
@@ -199,13 +287,16 @@ ailang toolchain use 0.0.1-alpha.12
 ailang toolchain doctor
 ```
 
-## Current Transitional Rules
+## Current Independence Rules
 
-- AiLang scripts may use a sibling `../AiVM/native` checkout during migration.
-- Release artifacts should move toward consuming AiVM release artifacts instead
-  of compiling AiVM source from AiLang.
-- AiVectra should declare the AiLang and AiVM version/ABI requirements it was
-  built and tested against.
+- AiVM must build and test without AiLang or AiVectra.
+- AiLang must use an installed AiVM executable for normal development and CI.
+- AiLang source-level VM tests may use `AIVM_C_SOURCE_DIR`, but this is an
+  explicit VM-development mode.
+- Sibling checkout fallback is disabled by default. During migration, set
+  `AILANG_ALLOW_SIBLING_AIVM_SOURCE=1` to use `../AiVM/native`.
+- AiVectra is an AiLang project. It should depend on an installed `ailang`
+  toolchain, not on AiVM internals.
 
 ## Immediate Implementation Tasks
 

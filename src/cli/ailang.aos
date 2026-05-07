@@ -1,0 +1,897 @@
+Program#cli_p1 {
+  Export#cli_e1(name=main)
+
+  Let#cli_l1(name=main) {
+    Fn#cli_f1(params=args) {
+      Block#cli_b1 {
+        Let#cli_l2(name=cmd) { Call#cli_c1(target=readArg) { Var#cli_v1(name=args) Lit#cli_i1(value=0) } }
+        If#cli_if1 {
+          Eq#cli_e2 { Var#cli_v2(name=cmd) Lit#cli_i2(value="") }
+          Block#cli_b2 { Return#cli_r1 { Call#cli_c2(target=runHelp) { Lit#cli_i3(value=0) } } }
+          Block#cli_b3 {
+            If#cli_if2 {
+              Eq#cli_e3 { Var#cli_v3(name=cmd) Lit#cli_i4(value="help") }
+              Block#cli_b4 { Return#cli_r2 { Call#cli_c3(target=runHelp) { Lit#cli_i5(value=0) } } }
+              Block#cli_b5 {
+                If#cli_if3 {
+                  Eq#cli_e4 { Var#cli_v4(name=cmd) Lit#cli_i6(value="--help") }
+                  Block#cli_b6 { Return#cli_r3 { Call#cli_c4(target=runHelp) { Lit#cli_i7(value=0) } } }
+                  Block#cli_b7 {
+                    If#cli_if4 {
+                      Eq#cli_e5 { Var#cli_v5(name=cmd) Lit#cli_i8(value="version") }
+                      Block#cli_b8 { Return#cli_r4 { Call#cli_c5(target=runVersion) { Lit#cli_i9(value=0) } } }
+                      Block#cli_b9 {
+                        If#cli_if5 {
+                          Eq#cli_e6 { Var#cli_v6(name=cmd) Lit#cli_i10(value="--version") }
+                          Block#cli_b10 { Return#cli_r5 { Call#cli_c6(target=runVersion) { Lit#cli_i11(value=0) } } }
+                          Block#cli_b11 {
+                            If#cli_if6 {
+                              Eq#cli_e7 { Var#cli_v7(name=cmd) Lit#cli_i12(value="init") }
+                              Block#cli_b12 { Return#cli_r6 { Call#cli_c7(target=runInit) { Var#cli_v8(name=args) } } }
+                              Block#cli_b13 {
+                                If#cli_if7 {
+                                  Eq#cli_e8 { Var#cli_v9(name=cmd) Lit#cli_i13(value="template") }
+                                  Block#cli_b14 { Return#cli_r7 { Call#cli_c8(target=runTemplate) { Var#cli_v10(name=args) } } }
+                                  Block#cli_b15 {
+                                    If#cli_if8 {
+                                      Eq#cli_e9 { Var#cli_v11(name=cmd) Lit#cli_i14(value="agent") }
+                                      Block#cli_b16 { Return#cli_r8 { Call#cli_c9(target=runAgent) { Var#cli_v12(name=args) } } }
+                                      Block#cli_b17 {
+                                        If#cli_if9 {
+                                          Eq#cli_e10 { Var#cli_v13(name=cmd) Lit#cli_i15(value="build") }
+                                          Block#cli_b18 { Return#cli_r9 { Call#cli_c10(target=runBuild) { Var#cli_v14(name=args) } } }
+                                          Block#cli_b19 {
+                                            If#cli_if10 {
+                                              Eq#cli_e11 { Var#cli_v15(name=cmd) Lit#cli_i16(value="run") }
+                                              Block#cli_b20 { Return#cli_r10 { Call#cli_c11(target=runRun) { Var#cli_v16(name=args) } } }
+                                              Block#cli_b21 {
+                                                If#cli_if11 {
+                                                  Eq#cli_e12 { Var#cli_v17(name=cmd) Lit#cli_i17(value="publish") }
+                                                  Block#cli_b22 { Return#cli_r11 { Call#cli_c12(target=runPublish) { Var#cli_v18(name=args) } } }
+                                                  Block#cli_b23 {
+                                                    If#cli_if12 {
+                                                      Eq#cli_e13 { Var#cli_v19(name=cmd) Lit#cli_i18(value="clean") }
+                                                      Block#cli_b24 { Return#cli_r12 { Call#cli_c13(target=runClean) { Var#cli_v20(name=args) } } }
+                                                      Block#cli_b25 { Return#cli_r13 { Call#cli_c14(target=unknownCommand) { Var#cli_v21(name=cmd) } } }
+                                                    }
+                                                  }
+                                                }
+                                              }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l10(name=readArg) {
+    Fn#cli_f10(params=args,index) {
+      Block#cli_b30 {
+        If#cli_if20 {
+          Eq#cli_e20 { Var#cli_v20(name=index) ChildCount#cli_cc1 { Var#cli_v21(name=args) } }
+          Block#cli_b31 { Return#cli_r20 { Lit#cli_i20(value="") } }
+          Block#cli_b32 {
+            Return#cli_r21 {
+              AttrValueString#cli_avs1 {
+                ChildAt#cli_ca1 { Var#cli_v22(name=args) Var#cli_v23(name=index) }
+                Lit#cli_i21(value=0)
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l20(name=runHelp) {
+    Fn#cli_f20(params=_) {
+      Block#cli_b40 {
+        Call#cli_c20(target=sys.stdout.writeLine) { Lit#cli_i30(value="Usage: ailang <command> [options]") }
+        Call#cli_c21(target=sys.stdout.writeLine) { Lit#cli_i31(value="Commands: init, template, agent, build, run, publish, clean, version, help") }
+        Return#cli_r30 { Lit#cli_i32(value=0) }
+      }
+    }
+  }
+
+  Let#cli_l21(name=runVersion) {
+    Fn#cli_f21(params=_) {
+      Block#cli_b41 {
+        Call#cli_c22(target=sys.stdout.writeLine) { Lit#cli_i33(value="ailang 0.0.1") }
+        Return#cli_r31 { Lit#cli_i34(value=0) }
+      }
+    }
+  }
+
+  Let#cli_l22(name=runTemplate) {
+    Fn#cli_f22(params=args) {
+      Block#cli_b42 {
+        Let#cli_l22s(name=subcmd) { Call#cli_c22s(target=readArg) { Var#cli_v22s(name=args) Lit#cli_i22s(value=1) } }
+        Let#cli_l22n(name=name) { Call#cli_c22n(target=readArg) { Var#cli_v22n(name=args) Lit#cli_i22n(value=2) } }
+        If#cli_if22 {
+          Eq#cli_e22 { Var#cli_v22s2(name=subcmd) Lit#cli_i22(value="list") }
+          Block#cli_b42a {
+            Call#cli_c22a(target=sys.stdout.writeLine) { Lit#cli_i22a(value="cli        Basic AiLang command-line application.") }
+            Call#cli_c22b(target=sys.stdout.writeLine) { Lit#cli_i22b(value="cli-args   AiLang command-line application with argument handling.") }
+            Return#cli_r22 { Lit#cli_i22c(value=0) }
+          }
+          Block#cli_b42b {
+            If#cli_if22b {
+              Eq#cli_e22b { Var#cli_v22s3(name=subcmd) Lit#cli_i22d(value="show") }
+              Block#cli_b42c { Return#cli_r22b { Call#cli_c22c(target=showTemplate) { Var#cli_v22n2(name=name) } } }
+              Block#cli_b42d {
+                If#cli_if22c {
+                  Eq#cli_e22c { Var#cli_v22s4(name=subcmd) Lit#cli_i22e(value="path") }
+                  Block#cli_b42e { Return#cli_r22c { Call#cli_c22d(target=pathTemplate) { Var#cli_v22n3(name=name) } } }
+                  Block#cli_b42f { Return#cli_r22d { Call#cli_c22e(target=unknownCommand) { Lit#cli_i22f(value="template") } } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l23(name=runAgent) {
+    Fn#cli_f23(params=args) {
+      Block#cli_b43 {
+        Let#cli_l23s(name=subcmd) { Call#cli_c23s(target=readArg) { Var#cli_v23s(name=args) Lit#cli_i23s(value=1) } }
+        If#cli_if23 {
+          Eq#cli_e23 { Var#cli_v23s2(name=subcmd) Lit#cli_i23(value="list") }
+          Block#cli_b43a {
+            Call#cli_c23a(target=sys.stdout.writeLine) { Lit#cli_i23a(value="codex") }
+            Call#cli_c23b(target=sys.stdout.writeLine) { Lit#cli_i23b(value="claude") }
+            Call#cli_c23c(target=sys.stdout.writeLine) { Lit#cli_i23c(value="cursor") }
+            Call#cli_c23d(target=sys.stdout.writeLine) { Lit#cli_i23d(value="gemini") }
+            Call#cli_c23e(target=sys.stdout.writeLine) { Lit#cli_i23e(value="copilot") }
+            Call#cli_c23f(target=sys.stdout.writeLine) { Lit#cli_i23f(value="windsurf") }
+            Return#cli_r23 { Lit#cli_i23g(value=0) }
+          }
+          Block#cli_b43b { Return#cli_r23b { Call#cli_c23g(target=unknownCommand) { Lit#cli_i23h(value="agent") } } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l24(name=showTemplate) {
+    Fn#cli_f24(params=name) {
+      Block#cli_b44 {
+        If#cli_if24 {
+          Eq#cli_e24 { Var#cli_v24(name=name) Lit#cli_i24(value="cli-args") }
+          Block#cli_b44a {
+            Call#cli_c24a(target=sys.stdout.writeLine) { Lit#cli_i24a(value="name = \"cli-args\"") }
+            Call#cli_c24b(target=sys.stdout.writeLine) { Lit#cli_i24b(value="description = \"AiLang command-line application with argument handling.\"") }
+            Call#cli_c24c(target=sys.stdout.writeLine) { Lit#cli_i24c(value="entry_file = \"src/app.aos\"") }
+            Call#cli_c24d(target=sys.stdout.writeLine) { Lit#cli_i24d(value="entry_export = \"start\"") }
+            Return#cli_r24 { Lit#cli_i24e(value=0) }
+          }
+          Block#cli_b44b {
+            If#cli_if24b {
+              Eq#cli_e24b { Var#cli_v24b(name=name) Lit#cli_i24f(value="cli") }
+              Block#cli_b44c {
+                Call#cli_c24e(target=sys.stdout.writeLine) { Lit#cli_i24g(value="name = \"cli\"") }
+                Call#cli_c24f(target=sys.stdout.writeLine) { Lit#cli_i24h(value="description = \"Basic AiLang command-line application.\"") }
+                Call#cli_c24g(target=sys.stdout.writeLine) { Lit#cli_i24i(value="entry_file = \"src/app.aos\"") }
+                Call#cli_c24h(target=sys.stdout.writeLine) { Lit#cli_i24j(value="entry_export = \"start\"") }
+                Return#cli_r24b { Lit#cli_i24k(value=0) }
+              }
+              Block#cli_b44d {
+                Call#cli_c24i(target=sys.stdout.writeLine) { Lit#cli_i24l(value="Err#err0(code=AILANG004 message=\"Unknown template.\" nodeId=\"template\")") }
+                Return#cli_r24c { Lit#cli_i24m(value=1) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l25(name=pathTemplate) {
+    Fn#cli_f25(params=name) {
+      Block#cli_b45 {
+        If#cli_if25 {
+          Call#cli_c25(target=isKnownTemplate) { Var#cli_v25(name=name) }
+          Block#cli_b45a {
+            Call#cli_c25a(target=sys.stdout.writeLine) { StrConcat#cli_sc25 { Lit#cli_i25(value="templates/projects/") Var#cli_v25a(name=name) } }
+            Return#cli_r25 { Lit#cli_i25a(value=0) }
+          }
+          Block#cli_b45b {
+            Call#cli_c25b(target=sys.stdout.writeLine) { Lit#cli_i25b(value="Err#err0(code=AILANG004 message=\"Unknown template.\" nodeId=\"template\")") }
+            Return#cli_r25b { Lit#cli_i25c(value=1) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l30(name=runInit) {
+    Fn#cli_f30(params=args) {
+      Block#cli_b50 {
+        Let#cli_l31(name=path) { Call#cli_c30(target=readArg) { Var#cli_v30(name=args) Lit#cli_i40(value=1) } }
+        Let#cli_l31t(name=template) { Call#cli_c30t(target=readOption) { Var#cli_v30t(name=args) Lit#cli_i40t(value=1) Lit#cli_i40u(value="--template") Lit#cli_i40v(value="cli") } }
+        Let#cli_l31a(name=agent) { Call#cli_c30a(target=readOption) { Var#cli_v30a(name=args) Lit#cli_i40a(value=1) Lit#cli_i40b(value="--agent") Lit#cli_i40c(value="codex") } }
+        Let#cli_l31as(name=agents) { Call#cli_c30as(target=readOption) { Var#cli_v30as(name=args) Lit#cli_i40as(value=1) Lit#cli_i40bs(value="--agents") Var#cli_v30av(name=agent) } }
+        Let#cli_l31f(name=force) { Call#cli_c30f(target=hasFlag) { Var#cli_v30f(name=args) Lit#cli_i40f(value=1) Lit#cli_i40g(value="--force") } }
+        If#cli_if30 {
+          Eq#cli_e30 { Var#cli_v31(name=path) Lit#cli_i41(value="") }
+          Block#cli_b51 { Return#cli_r40 { Call#cli_c31(target=missingPath) { Lit#cli_i42(value="init") } } }
+          Block#cli_b52 {
+            If#cli_if31 {
+              Call#cli_c32a(target=isValidAgentList) { Var#cli_v31asv(name=agents) }
+              Block#cli_b53 {
+                If#cli_if32 {
+                  Call#cli_c32k(target=isKnownTemplate) { Var#cli_v31t(name=template) }
+                  Block#cli_b54 {
+                    If#cli_if33 {
+                      Call#cli_c32tmpl(target=isTemplateInstalled) { Var#cli_v31tt(name=template) }
+                      Block#cli_b55 {
+                        If#cli_if34 {
+                          Call#cli_c32(target=sys.fs.path.exists) { Var#cli_v31(name=path) }
+                          Block#cli_b56 {
+                            If#cli_if35 {
+                              Var#cli_v31f(name=force)
+                              Block#cli_b57 { Return#cli_r43 { Call#cli_c32i(target=emitInitProject) { Var#cli_v31(name=path) Var#cli_v31t2(name=template) Var#cli_v31as(name=agents) } } }
+                              Block#cli_b58 {
+                                Call#cli_c33(target=sys.stdout.writeLine) { Lit#cli_i43(value="Err#err0(code=AILANG003 message=\"Directory already exists.\" nodeId=\"init\")") }
+                                Return#cli_r41 { Lit#cli_i44(value=1) }
+                              }
+                            }
+                          }
+                          Block#cli_b59 { Return#cli_r44 { Call#cli_c32j(target=emitInitProject) { Var#cli_v31(name=path) Var#cli_v31t3(name=template) Var#cli_v31as2(name=agents) } } }
+                        }
+                      }
+                      Block#cli_b60 {
+                        Call#cli_c33t(target=sys.stdout.writeLine) { Lit#cli_i43t(value="Err#err0(code=AILANG005 message=\"Template is not installed.\" nodeId=\"template\")") }
+                        Return#cli_r41t { Lit#cli_i44t(value=1) }
+                      }
+                    }
+                  }
+                  Block#cli_b61 {
+                    Call#cli_c34u(target=sys.stdout.writeLine) { Lit#cli_i45u(value="Err#err0(code=AILANG004 message=\"Unknown template.\" nodeId=\"template\")") }
+                    Return#cli_r42u { Lit#cli_i46u(value=1) }
+                  }
+                }
+              }
+              Block#cli_b62 {
+                Call#cli_c34a(target=sys.stdout.writeLine) { Lit#cli_i45a(value="Err#err0(code=AILANG006 message=\"Unknown agent.\" nodeId=\"agent\")") }
+                Return#cli_r42a { Lit#cli_i46a(value=1) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l31o(name=readOption) {
+    Fn#cli_f31o(params=args,index,name,defaultValue) {
+      Block#cli_b31o {
+        If#cli_if31o {
+          Eq#cli_e31o { Var#cli_v31o(name=index) ChildCount#cli_cc31o { Var#cli_v32o(name=args) } }
+          Block#cli_b31o1 { Return#cli_r31o1 { Var#cli_v33o(name=defaultValue) } }
+          Block#cli_b31o2 {
+            If#cli_if31o2 {
+              Eq#cli_e31o2 { Call#cli_c31o(target=readArg) { Var#cli_v34o(name=args) Var#cli_v35o(name=index) } Var#cli_v36o(name=name) }
+              Block#cli_b31o3 { Return#cli_r31o2 { Call#cli_c31o2(target=readArg) { Var#cli_v37o(name=args) Add#cli_a31o { Var#cli_v38o(name=index) Lit#cli_i31o(value=1) } } } }
+              Block#cli_b31o4 { Return#cli_r31o3 { Call#cli_c31o3(target=readOption) { Var#cli_v39o(name=args) Add#cli_a31o2 { Var#cli_v40o(name=index) Lit#cli_i31o2(value=1) } Var#cli_v41o(name=name) Var#cli_v42o(name=defaultValue) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l31h(name=hasFlag) {
+    Fn#cli_f31h(params=args,index,name) {
+      Block#cli_b31h {
+        If#cli_if31h {
+          Eq#cli_e31h { Var#cli_v31h(name=index) ChildCount#cli_cc31h { Var#cli_v32h(name=args) } }
+          Block#cli_b31h1 { Return#cli_r31h1 { Lit#cli_i31h(value=false) } }
+          Block#cli_b31h2 {
+            If#cli_if31h2 {
+              Eq#cli_e31h2 { Call#cli_c31h(target=readArg) { Var#cli_v33h(name=args) Var#cli_v34h(name=index) } Var#cli_v35h(name=name) }
+              Block#cli_b31h3 { Return#cli_r31h2 { Lit#cli_i31h2(value=true) } }
+              Block#cli_b31h4 { Return#cli_r31h3 { Call#cli_c31h2(target=hasFlag) { Var#cli_v36h(name=args) Add#cli_a31h { Var#cli_v37h(name=index) Lit#cli_i31h3(value=1) } Var#cli_v38h(name=name) } } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l31k(name=isKnownTemplate) {
+    Fn#cli_f31k(params=template) {
+      Block#cli_b31k {
+        If#cli_if31k {
+          Eq#cli_e31k { Var#cli_v31k(name=template) Lit#cli_i31k(value="cli") }
+          Block#cli_b31k1 { Return#cli_r31k1 { Lit#cli_i31k2(value=true) } }
+          Block#cli_b31k2 { Return#cli_r31k2 { Eq#cli_e31k2 { Var#cli_v32k(name=template) Lit#cli_i31k3(value="cli-args") } } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l31ki(name=isTemplateInstalled) {
+    Fn#cli_f31ki(params=template) {
+      Block#cli_b31ki {
+        Let#cli_l31kid(name=templateDir) { StrConcat#cli_sc31ki1 { Lit#cli_i31ki1(value="templates/projects/") Var#cli_v31ki(name=template) } }
+        If#cli_if31ki1 {
+          Call#cli_c31ki1(target=sys.fs.path.exists) { StrConcat#cli_sc31ki2 { Var#cli_v31ki2(name=templateDir) Lit#cli_i31ki2(value="/template.toml") } }
+          Block#cli_b31ki1 {
+            If#cli_if31ki2 {
+              Call#cli_c31ki2(target=sys.fs.path.exists) { StrConcat#cli_sc31ki3 { Var#cli_v31ki3(name=templateDir) Lit#cli_i31ki3(value="/project.aiproj.tpl") } }
+              Block#cli_b31ki2 {
+                If#cli_if31ki3 {
+                  Call#cli_c31ki3(target=sys.fs.path.exists) { StrConcat#cli_sc31ki4 { Var#cli_v31ki4(name=templateDir) Lit#cli_i31ki4(value="/src/app.aos.tpl") } }
+                  Block#cli_b31ki3 {
+                    If#cli_if31ki4 {
+                      Call#cli_c31ki4(target=sys.fs.path.exists) { StrConcat#cli_sc31ki5 { Var#cli_v31ki5(name=templateDir) Lit#cli_i31ki5(value="/AGENTS.md.tpl") } }
+                      Block#cli_b31ki4 {
+                        Return#cli_r31ki1 {
+                          Call#cli_c31ki5(target=sys.fs.path.exists) { StrConcat#cli_sc31ki6 { Var#cli_v31ki6(name=templateDir) Lit#cli_i31ki6(value="/.gitignore.tpl") } }
+                        }
+                      }
+                      Block#cli_b31ki5 { Return#cli_r31ki2 { Lit#cli_i31ki7(value=false) } }
+                    }
+                  }
+                  Block#cli_b31ki6 { Return#cli_r31ki3 { Lit#cli_i31ki8(value=false) } }
+                }
+              }
+              Block#cli_b31ki7 { Return#cli_r31ki4 { Lit#cli_i31ki9(value=false) } }
+            }
+          }
+          Block#cli_b31ki8 { Return#cli_r31ki5 { Lit#cli_i31ki10(value=false) } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l32i(name=emitInitProject) {
+    Fn#cli_f32i(params=path,template,agents) {
+      Block#cli_b32i {
+        Let#cli_l32(name=srcDir) { StrConcat#cli_sc_init1 { Var#cli_v31(name=path) Lit#cli_i45(value="/src") } }
+        Let#cli_l32a(name=assetsDir) { StrConcat#cli_sc_inita1 { Var#cli_v31a(name=path) Lit#cli_i45a(value="/Assets") } }
+        Let#cli_l32b(name=assetsImagesDir) { StrConcat#cli_sc_inita2 { Var#cli_v31b(name=path) Lit#cli_i45b(value="/Assets/images") } }
+        Let#cli_l32c(name=assetsFontsDir) { StrConcat#cli_sc_inita3 { Var#cli_v31c(name=path) Lit#cli_i45c(value="/Assets/fonts") } }
+        Let#cli_l32d(name=assetsLocaleDir) { StrConcat#cli_sc_inita4 { Var#cli_v31d(name=path) Lit#cli_i45d(value="/Assets/locale") } }
+        Let#cli_l32e(name=assetsLocaleFile) { StrConcat#cli_sc_inita5 { Var#cli_v31e(name=path) Lit#cli_i45e(value="/Assets/locale/en.toml") } }
+        Let#cli_l32t(name=templateDir) { StrConcat#cli_sc_initt1 { Lit#cli_i45t(value="templates/projects/") Var#cli_v31t4(name=template) } }
+        Let#cli_l32tp(name=projectTemplateFile) { StrConcat#cli_sc_initt2 { Var#cli_v31t5(name=templateDir) Lit#cli_i45tp(value="/project.aiproj.tpl") } }
+        Let#cli_l32ta(name=appTemplateFile) { StrConcat#cli_sc_initt3 { Var#cli_v31t6(name=templateDir) Lit#cli_i45ta(value="/src/app.aos.tpl") } }
+        Let#cli_l32tag(name=agentsTemplateFile) { StrConcat#cli_sc_initt4 { Var#cli_v31t7(name=templateDir) Lit#cli_i45tag(value="/AGENTS.md.tpl") } }
+        Let#cli_l32tg(name=gitignoreTemplateFile) { StrConcat#cli_sc_initt5 { Var#cli_v31t8(name=templateDir) Lit#cli_i45tg(value="/.gitignore.tpl") } }
+        Let#cli_l33(name=projectFile) { StrConcat#cli_sc_init2 { Var#cli_v31f(name=path) Lit#cli_i46(value="/project.aiproj") } }
+        Let#cli_l34(name=appFile) { StrConcat#cli_sc_init3 { Var#cli_v31g(name=path) Lit#cli_i47(value="/src/app.aos") } }
+        Let#cli_l35(name=agentsFile) { StrConcat#cli_sc_init4 { Var#cli_v31h(name=path) Lit#cli_i48(value="/AGENTS.md") } }
+        Let#cli_l36g(name=gitignoreFile) { StrConcat#cli_sc_initg1 { Var#cli_v31i(name=path) Lit#cli_i48g(value="/.gitignore") } }
+        Call#cli_c34(target=sys.fs.dir.create) { Var#cli_v31j(name=path) }
+        Call#cli_c35(target=sys.fs.dir.create) { Var#cli_v32(name=srcDir) }
+        Call#cli_c35a(target=sys.fs.dir.create) { Var#cli_v32a(name=assetsDir) }
+        Call#cli_c35b(target=sys.fs.dir.create) { Var#cli_v32b(name=assetsImagesDir) }
+        Call#cli_c35c(target=sys.fs.dir.create) { Var#cli_v32c(name=assetsFontsDir) }
+        Call#cli_c35d(target=sys.fs.dir.create) { Var#cli_v32d(name=assetsLocaleDir) }
+        Call#cli_c36(target=writeTextFile) { Var#cli_v33(name=projectFile) Call#cli_c37(target=renderProjectTemplate) { Call#cli_c37r(target=readTextFile) { Var#cli_v31tp(name=projectTemplateFile) } Var#cli_v31k(name=path) } }
+        Call#cli_c38(target=writeTextFile) { Var#cli_v34(name=appFile) Call#cli_c39(target=renderProjectTemplate) { Call#cli_c39r(target=readTextFile) { Var#cli_v31ta(name=appTemplateFile) } Var#cli_v31t9(name=path) } }
+        Call#cli_c40(target=writeTextFile) { Var#cli_v35(name=agentsFile) Call#cli_c41(target=renderProjectTemplate) { Call#cli_c41r(target=readTextFile) { Var#cli_v31tag(name=agentsTemplateFile) } Var#cli_v31t10(name=path) } }
+        Call#cli_c40g(target=writeTextFile) { Var#cli_v35g(name=gitignoreFile) Call#cli_c40gr(target=renderProjectTemplate) { Call#cli_c40gt(target=readTextFile) { Var#cli_v31tg(name=gitignoreTemplateFile) } Var#cli_v31t11(name=path) } }
+        Call#cli_c40l(target=writeTextFile) { Var#cli_v35l(name=assetsLocaleFile) Lit#cli_i50l(value="# Locale seed data\n") }
+        Call#cli_c40a(target=writeAgentFiles) { Var#cli_v35a(name=path) Var#cli_v35b(name=agents) }
+        Call#cli_c42(target=sys.stdout.writeLine) { Lit#cli_i51(value="Ok#ok1(type=string value=\"project-created\")") }
+        Return#cli_r42 { Lit#cli_i52(value=0) }
+      }
+    }
+  }
+
+  Let#cli_l35(name=writeTextFile) {
+    Fn#cli_f35(params=path,text) {
+      Block#cli_b55 {
+        Return#cli_r45 {
+          Call#cli_c45(target=sys.fs.file.write) {
+            Var#cli_v45(name=path)
+            Call#cli_c46(target=sys.bytes.fromUtf8String) { Var#cli_v46(name=text) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l35r(name=readTextFile) {
+    Fn#cli_f35r(params=path) {
+      Block#cli_b55r {
+        Return#cli_r45r {
+          Call#cli_c45r(target=sys.bytes.toUtf8String) {
+            Call#cli_c46r(target=sys.fs.file.read) { Var#cli_v45r(name=path) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l35rt(name=renderProjectTemplate) {
+    Fn#cli_f35rt(params=text,projectName) {
+      Block#cli_b55rt {
+        Let#cli_l35rt1(name=step1) {
+          Call#cli_c35rt1(target=replaceAllKnown) {
+            Var#cli_v35rt1(name=text)
+            Lit#cli_i35rt1(value="{{project.name}}")
+            Lit#cli_i35rt1a(value=16)
+            Var#cli_v35rt2(name=projectName)
+          }
+        }
+        Let#cli_l35rt2(name=step2) {
+          Call#cli_c35rt2(target=replaceAllKnown) {
+            Var#cli_v35rt3(name=step1)
+            Lit#cli_i35rt2(value="{{project.entryFile}}")
+            Lit#cli_i35rt2a(value=21)
+            Lit#cli_i35rt3(value="src/app.aos")
+          }
+        }
+        Let#cli_l35rt3(name=step3) {
+          Call#cli_c35rt3(target=replaceAllKnown) {
+            Var#cli_v35rt4(name=step2)
+            Lit#cli_i35rt4(value="{{project.entryExport}}")
+            Lit#cli_i35rt4a(value=23)
+            Lit#cli_i35rt5(value="start")
+          }
+        }
+        Return#cli_r45rt {
+          Call#cli_c35rt4(target=replaceAllKnown) {
+            Var#cli_v35rt5(name=step3)
+            Lit#cli_i35rt6(value="{{project.version}}")
+            Lit#cli_i35rt6a(value=19)
+            Lit#cli_i35rt7(value="0.0.1")
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l35ra(name=replaceAllKnown) {
+    Fn#cli_f35ra(params=text,needle,needleLength,replacement) {
+      Block#cli_b35ra {
+        If#cli_if35ra0 {
+          Eq#cli_eq35ra0 { Var#cli_v35ra0(name=needleLength) Lit#cli_i35ra0(value=0) }
+          Block#cli_b35ra0 { Return#cli_r35ra0 { Var#cli_v35ra1(name=text) } }
+          Block#cli_b35ra1 {
+            Let#cli_l35ra1(name=at) {
+              Call#cli_c35ra1(target=sys.str.find) {
+                Var#cli_v35ra2(name=text)
+                Var#cli_v35ra3(name=needle)
+                Lit#cli_i35ra1(value=0)
+              }
+            }
+            If#cli_if35ra1 {
+              Eq#cli_eq35ra1 { Var#cli_v35ra4(name=at) Lit#cli_i35ra2(value=-1) }
+              Block#cli_b35ra2 { Return#cli_r35ra1 { Var#cli_v35ra5(name=text) } }
+              Block#cli_b35ra3 {
+                Let#cli_l35ra2(name=prefix) {
+                  Call#cli_c35ra2(target=sys.str.substring) {
+                    Var#cli_v35ra6(name=text)
+                    Lit#cli_i35ra3(value=0)
+                    Var#cli_v35ra7(name=at)
+                  }
+                }
+                Let#cli_l35ra3(name=suffixStart) { Add#cli_add35ra1 { Var#cli_v35ra8(name=at) Var#cli_v35ra9(name=needleLength) } }
+                Let#cli_l35ra4(name=suffix) {
+                  Call#cli_c35ra3(target=sys.str.substring) {
+                    Var#cli_v35ra10(name=text)
+                    Var#cli_v35ra11(name=suffixStart)
+                    Lit#cli_i35ra4(value=2147483647)
+                  }
+                }
+                Return#cli_r35ra2 {
+                  StrConcat#cli_sc35ra1 {
+                    Var#cli_v35ra12(name=prefix)
+                    StrConcat#cli_sc35ra2 {
+                      Var#cli_v35ra13(name=replacement)
+                      Call#cli_c35ra4(target=replaceAllKnown) {
+                        Var#cli_v35ra14(name=suffix)
+                        Var#cli_v35ra15(name=needle)
+                        Var#cli_v35ra16(name=needleLength)
+                        Var#cli_v35ra17(name=replacement)
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l39(name=writeAgentFiles) {
+    Fn#cli_f39(params=path,agents) {
+      Block#cli_b59 {
+        Let#cli_l39c(name=claudeFile) { StrConcat#cli_sc_agent1 { Var#cli_v39(name=path) Lit#cli_i57(value="/CLAUDE.md") } }
+        Let#cli_l39g(name=geminiFile) { StrConcat#cli_sc_agent2 { Var#cli_v40(name=path) Lit#cli_i58(value="/GEMINI.md") } }
+        Let#cli_l39w(name=windsurfFile) { StrConcat#cli_sc_agent3 { Var#cli_v41(name=path) Lit#cli_i59(value="/.windsurfrules") } }
+        Let#cli_l39cd(name=cursorDir) { StrConcat#cli_sc_agent4 { Var#cli_v42(name=path) Lit#cli_i60a(value="/.cursor") } }
+        Let#cli_l39cr(name=cursorRulesDir) { StrConcat#cli_sc_agent5 { Var#cli_v43(name=path) Lit#cli_i60b(value="/.cursor/rules") } }
+        Let#cli_l39cf(name=cursorFile) { StrConcat#cli_sc_agent6 { Var#cli_v44(name=path) Lit#cli_i60c(value="/.cursor/rules/ailang.mdc") } }
+        Let#cli_l39gd(name=githubDir) { StrConcat#cli_sc_agent7 { Var#cli_v45a(name=path) Lit#cli_i60d(value="/.github") } }
+        Let#cli_l39gf(name=copilotFile) { StrConcat#cli_sc_agent8 { Var#cli_v45b(name=path) Lit#cli_i60e(value="/.github/copilot-instructions.md") } }
+        Let#cli_l39ct(name=claudeTemplateFile) { Lit#cli_i60f(value="templates/agents/claude/CLAUDE.md.tpl") }
+        Let#cli_l39gt(name=geminiTemplateFile) { Lit#cli_i60g(value="templates/agents/gemini/GEMINI.md.tpl") }
+        Let#cli_l39wt(name=windsurfTemplateFile) { Lit#cli_i60h(value="templates/agents/windsurf/.windsurfrules.tpl") }
+        Let#cli_l39crt(name=cursorTemplateFile) { Lit#cli_i60i(value="templates/agents/cursor/.cursor/rules/ailang.mdc.tpl") }
+        Let#cli_l39cpt(name=copilotTemplateFile) { Lit#cli_i60j(value="templates/agents/copilot/.github/copilot-instructions.md.tpl") }
+        If#cli_if39all {
+          Call#cli_c39all(target=hasAgent) { Var#cli_v45(name=agents) Lit#cli_i60x(value="all") }
+          Block#cli_b59all {
+            Call#cli_c59a(target=writeTextFile) { Var#cli_v46(name=claudeFile) Call#cli_c59b(target=renderProjectTemplate) { Call#cli_c59br(target=readTextFile) { Var#cli_v46t(name=claudeTemplateFile) } Var#cli_v46p(name=path) } }
+            Call#cli_c59c(target=writeTextFile) { Var#cli_v47(name=geminiFile) Call#cli_c59d(target=renderProjectTemplate) { Call#cli_c59dr(target=readTextFile) { Var#cli_v47t(name=geminiTemplateFile) } Var#cli_v47p(name=path) } }
+            Call#cli_c59e(target=writeTextFile) { Var#cli_v48(name=windsurfFile) Call#cli_c59f(target=renderProjectTemplate) { Call#cli_c59fr(target=readTextFile) { Var#cli_v48t(name=windsurfTemplateFile) } Var#cli_v48p(name=path) } }
+            Call#cli_c59g(target=sys.fs.dir.create) { Var#cli_v49(name=cursorDir) }
+            Call#cli_c59h(target=sys.fs.dir.create) { Var#cli_v50(name=cursorRulesDir) }
+            Call#cli_c59i(target=writeTextFile) { Var#cli_v51(name=cursorFile) Call#cli_c59j(target=renderProjectTemplate) { Call#cli_c59jr(target=readTextFile) { Var#cli_v51t(name=cursorTemplateFile) } Var#cli_v51p(name=path) } }
+            Call#cli_c59k(target=sys.fs.dir.create) { Var#cli_v52(name=githubDir) }
+            Call#cli_c59l(target=writeTextFile) { Var#cli_v53(name=copilotFile) Call#cli_c59m(target=renderProjectTemplate) { Call#cli_c59mr(target=readTextFile) { Var#cli_v53t(name=copilotTemplateFile) } Var#cli_v53p(name=path) } }
+            Return#cli_r59all { Lit#cli_i66(value=0) }
+          }
+          Block#cli_b59one {
+            If#cli_if39claude {
+              Call#cli_c59hc(target=hasAgent) { Var#cli_v54(name=agents) Lit#cli_i67(value="claude") }
+              Block#cli_b59claude { Call#cli_c59n(target=writeTextFile) { Var#cli_v55(name=claudeFile) Call#cli_c59o(target=renderProjectTemplate) { Call#cli_c59or(target=readTextFile) { Var#cli_v55t(name=claudeTemplateFile) } Var#cli_v55p(name=path) } } }
+              Block#cli_b59notclaude { Lit#cli_i68b(value=0) }
+            }
+            If#cli_if39gemini {
+              Call#cli_c59hg(target=hasAgent) { Var#cli_v56(name=agents) Lit#cli_i69(value="gemini") }
+              Block#cli_b59gemini { Call#cli_c59p(target=writeTextFile) { Var#cli_v57(name=geminiFile) Call#cli_c59q(target=renderProjectTemplate) { Call#cli_c59qr(target=readTextFile) { Var#cli_v57t(name=geminiTemplateFile) } Var#cli_v57p(name=path) } } }
+              Block#cli_b59notgemini { Lit#cli_i70b(value=0) }
+            }
+            If#cli_if39windsurf {
+              Call#cli_c59hw(target=hasAgent) { Var#cli_v58(name=agents) Lit#cli_i71(value="windsurf") }
+              Block#cli_b59windsurf { Call#cli_c59r(target=writeTextFile) { Var#cli_v59(name=windsurfFile) Call#cli_c59s(target=renderProjectTemplate) { Call#cli_c59sr(target=readTextFile) { Var#cli_v59t(name=windsurfTemplateFile) } Var#cli_v59p(name=path) } } }
+              Block#cli_b59notwindsurf { Lit#cli_i72b(value=0) }
+            }
+            If#cli_if39cursor {
+              Call#cli_c59hr(target=hasAgent) { Var#cli_v60(name=agents) Lit#cli_i73(value="cursor") }
+              Block#cli_b59cursor {
+                Call#cli_c59t(target=sys.fs.dir.create) { Var#cli_v61(name=cursorDir) }
+                Call#cli_c59u(target=sys.fs.dir.create) { Var#cli_v62(name=cursorRulesDir) }
+                Call#cli_c59v(target=writeTextFile) { Var#cli_v63(name=cursorFile) Call#cli_c59w(target=renderProjectTemplate) { Call#cli_c59wr(target=readTextFile) { Var#cli_v63t(name=cursorTemplateFile) } Var#cli_v63p(name=path) } }
+              }
+              Block#cli_b59notcursor { Lit#cli_i74b(value=0) }
+            }
+            If#cli_if39copilot {
+              Call#cli_c59hp(target=hasAgent) { Var#cli_v64(name=agents) Lit#cli_i75(value="copilot") }
+              Block#cli_b59copilot {
+                Call#cli_c59x(target=sys.fs.dir.create) { Var#cli_v65(name=githubDir) }
+                Call#cli_c59y(target=writeTextFile) { Var#cli_v66(name=copilotFile) Call#cli_c59z(target=renderProjectTemplate) { Call#cli_c59zr(target=readTextFile) { Var#cli_v66t(name=copilotTemplateFile) } Var#cli_v66p(name=path) } }
+              }
+              Block#cli_b59notcopilot { Lit#cli_i76b(value=0) }
+            }
+            Return#cli_r59 { Lit#cli_i77(value=0) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l39all(name=isAllAgents) {
+    Fn#cli_f39all(params=agents) {
+      Block#cli_b39all {
+        If#cli_if39a {
+          Eq#cli_e39a { Var#cli_v39a(name=agents) Lit#cli_i39a(value="all") }
+          Block#cli_b39a { Return#cli_r39a { Lit#cli_i39b(value=true) } }
+          Block#cli_b39b { Return#cli_r39b { Eq#cli_e39b { Var#cli_v39b(name=agents) Lit#cli_i39c(value="claude,cursor,gemini,copilot,windsurf") } } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l39known(name=isKnownAgent) {
+    Fn#cli_f39known(params=name) {
+      Block#cli_b39known {
+        If#cli_if39known1 {
+          Eq#cli_eq39known1 { Var#cli_v39known1(name=name) Lit#cli_i39known1(value="codex") }
+          Block#cli_b39known1 { Return#cli_r39known1 { Lit#cli_i39known2(value=true) } }
+          Block#cli_b39known2 {
+            If#cli_if39known2 {
+              Eq#cli_eq39known2 { Var#cli_v39known2(name=name) Lit#cli_i39known3(value="claude") }
+              Block#cli_b39known3 { Return#cli_r39known2 { Lit#cli_i39known4(value=true) } }
+              Block#cli_b39known4 {
+                If#cli_if39known3 {
+                  Eq#cli_eq39known3 { Var#cli_v39known3(name=name) Lit#cli_i39known5(value="cursor") }
+                  Block#cli_b39known5 { Return#cli_r39known3 { Lit#cli_i39known6(value=true) } }
+                  Block#cli_b39known6 {
+                    If#cli_if39known4 {
+                      Eq#cli_eq39known4 { Var#cli_v39known4(name=name) Lit#cli_i39known7(value="gemini") }
+                      Block#cli_b39known7 { Return#cli_r39known4 { Lit#cli_i39known8(value=true) } }
+                      Block#cli_b39known8 {
+                        If#cli_if39known5 {
+                          Eq#cli_eq39known5 { Var#cli_v39known5(name=name) Lit#cli_i39known9(value="copilot") }
+                          Block#cli_b39known9 { Return#cli_r39known5 { Lit#cli_i39known10(value=true) } }
+                          Block#cli_b39known10 { Return#cli_r39known6 { Eq#cli_eq39known6 { Var#cli_v39known6(name=name) Lit#cli_i39known11(value="windsurf") } } }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l39valid(name=isValidAgentList) {
+    Fn#cli_f39valid(params=agents) {
+      Block#cli_b39valid {
+        If#cli_if39valid1 {
+          Eq#cli_eq39valid1 { Var#cli_v39valid1(name=agents) Lit#cli_i39valid1(value="all") }
+          Block#cli_b39valid1 { Return#cli_r39valid1 { Lit#cli_i39valid2(value=true) } }
+          Block#cli_b39valid2 {
+            Let#cli_l39valid1(name=comma) { Call#cli_c39valid1(target=sys.str.find) { Var#cli_v39valid2(name=agents) Lit#cli_i39valid3(value=",") Lit#cli_i39valid4(value=0) } }
+            If#cli_if39valid2 {
+              Eq#cli_eq39valid2 { Var#cli_v39valid3(name=comma) Lit#cli_i39valid5(value=-1) }
+              Block#cli_b39valid3 { Return#cli_r39valid2 { Call#cli_c39valid2(target=isKnownAgent) { Var#cli_v39valid4(name=agents) } } }
+              Block#cli_b39valid4 {
+                Let#cli_l39valid2(name=first) { Call#cli_c39valid3(target=sys.str.substring) { Var#cli_v39valid5(name=agents) Lit#cli_i39valid6(value=0) Var#cli_v39valid6(name=comma) } }
+                Let#cli_l39valid3(name=restStart) { Add#cli_add39valid1 { Var#cli_v39valid7(name=comma) Lit#cli_i39valid7(value=1) } }
+                Let#cli_l39valid4(name=rest) { Call#cli_c39valid4(target=sys.str.substring) { Var#cli_v39valid8(name=agents) Var#cli_v39valid9(name=restStart) Lit#cli_i39valid8(value=2147483647) } }
+                If#cli_if39valid3 {
+                  Call#cli_c39valid5(target=isKnownAgent) { Var#cli_v39valid10(name=first) }
+                  Block#cli_b39valid5 { Return#cli_r39valid3 { Call#cli_c39valid6(target=isValidAgentList) { Var#cli_v39valid11(name=rest) } } }
+                  Block#cli_b39valid6 { Return#cli_r39valid4 { Lit#cli_i39valid9(value=false) } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l39has(name=hasAgent) {
+    Fn#cli_f39has(params=agents,name) {
+      Block#cli_b39has {
+        If#cli_if39has1 {
+          Eq#cli_e39has1 { Var#cli_v39has1(name=agents) Lit#cli_i39has1(value="all") }
+          Block#cli_b39has2 { Return#cli_r39has1 { Lit#cli_i39has2(value=true) } }
+          Block#cli_b39has3 {
+            If#cli_if39has4 {
+              Eq#cli_e39has2 { Var#cli_v39has2(name=agents) Var#cli_v39has3(name=name) }
+              Block#cli_b39has5 { Return#cli_r39has2 { Lit#cli_i39has3(value=true) } }
+              Block#cli_b39has6 {
+                Let#cli_l39hasn(name=normalizedAgents) { StrConcat#cli_sc39has1 { Lit#cli_i39has4(value=",") StrConcat#cli_sc39has2 { Var#cli_v39has4(name=agents) Lit#cli_i39has5(value=",") } } }
+                Let#cli_l39hask(name=needle) { StrConcat#cli_sc39has3 { Lit#cli_i39has6(value=",") StrConcat#cli_sc39has4 { Var#cli_v39has5(name=name) Lit#cli_i39has7(value=",") } } }
+                Let#cli_l39has7(name=found) { Call#cli_c39has(target=sys.str.find) { Var#cli_v39has6(name=normalizedAgents) Var#cli_v39has7(name=needle) Lit#cli_i39has8(value=0) } }
+                If#cli_if39has7 {
+                  Eq#cli_e39has7 { Var#cli_v39has8(name=found) Lit#cli_i39has9(value=-1) }
+                  Block#cli_b39has7 { Return#cli_r39has3 { Lit#cli_i39has10(value=false) } }
+                  Block#cli_b39has8 { Return#cli_r39has4 { Lit#cli_i39has11(value=true) } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l40(name=runBuild) {
+    Fn#cli_f40(params=args) {
+      Block#cli_b60 {
+        Let#cli_l40p(name=path) { Call#cli_c40p(target=readArg) { Var#cli_v40p(name=args) Lit#cli_i40p(value=1) } }
+        If#cli_if40p {
+          Eq#cli_e40p { Var#cli_v40p2(name=path) Lit#cli_i40pe(value="") }
+          Block#cli_b40p { Return#cli_r40p { Call#cli_c40m(target=missingPath) { Lit#cli_i40m(value="build") } } }
+          Block#cli_b40q {
+            Let#cli_l40o(name=outDir) { Call#cli_c40o(target=readOption) { Var#cli_v40o(name=args) Lit#cli_i40o(value=2) Lit#cli_i40oo(value="--out") Lit#cli_i40od(value="") } }
+            Return#cli_r40q { Call#cli_c40b(target=buildProject) { Var#cli_v40p3(name=path) Var#cli_v40o2(name=outDir) } }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l40bp(name=buildProject) {
+    Fn#cli_f40bp(params=path,outDir) {
+      Block#cli_b40bp {
+        Let#cli_l40bpm(name=manifestPath) { StrConcat#cli_sc40bp1 { Var#cli_v40bp1(name=path) Lit#cli_i40bp1(value="/project.aiproj") } }
+        Let#cli_l40bpo(name=resolvedOutDir) { Call#cli_c40bp0(target=resolveBuildOutDir) { Var#cli_v40bp2(name=path) Var#cli_v40bp3(name=outDir) } }
+        Let#cli_l40bpf(name=outFile) { StrConcat#cli_sc40bp2 { Var#cli_v40bp4(name=resolvedOutDir) Lit#cli_i40bp2(value="/app.aibc1") } }
+        If#cli_if40bp1 {
+          Call#cli_c40bp1(target=sys.fs.path.exists) { Var#cli_v40bp5(name=manifestPath) }
+          Block#cli_b40bp1 {
+            Return#cli_r40bp1 { Call#cli_c40bpb(target=runBootstrapBuild) { Var#cli_v40bp6(name=path) Var#cli_v40bp7(name=resolvedOutDir) Var#cli_v40bp8(name=outFile) } }
+          }
+          Block#cli_b40bp14 { Return#cli_r40bp8 { Call#cli_c40bpe7(target=buildError) { Lit#cli_i40bp39(value="AILANG007") Lit#cli_i40bp40(value="project.aiproj not found.") Lit#cli_i40bp41(value="project") } } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l40rb(name=runBootstrapBuild) {
+    Fn#cli_f40rb(params=path,outDir,outFile) {
+      Block#cli_b40rb {
+        Let#cli_l40rbc(name=compilerPath) { Call#cli_c40rb0(target=resolveBootstrapCompiler) { Lit#cli_i40rb0(value=0) } }
+        Let#cli_l40rba(name=spawnArgs) { Call#cli_c40rb1(target=makeBuildSpawnArgs) { Var#cli_v40rb1(name=path) Var#cli_v40rb2(name=outDir) } }
+        Let#cli_l40rbe(name=env) { MakeBlock#cli_mb40rb1 { Lit#cli_i40rb1(value="env") } }
+        Let#cli_l40rbh(name=handle) { Call#cli_c40rb2(target=sys.process.spawn) { Var#cli_v40rb3(name=compilerPath) Var#cli_v40rb4(name=spawnArgs) Lit#cli_i40rb2(value="") Var#cli_v40rb5(name=env) } }
+        Let#cli_l40rbc2(name=code) { Call#cli_c40rb3(target=sys.process.wait) { Var#cli_v40rb6(name=handle) } }
+        Let#cli_l40rbo(name=stdoutText) { Call#cli_c40rb4(target=sys.bytes.toUtf8String) { Call#cli_c40rb5(target=sys.process.stdout.read) { Var#cli_v40rb7(name=handle) } } }
+        Let#cli_l40rbs(name=stderrText) { Call#cli_c40rb6(target=sys.bytes.toUtf8String) { Call#cli_c40rb7(target=sys.process.stderr.read) { Var#cli_v40rb8(name=handle) } } }
+        If#cli_if40rb1 {
+          Eq#cli_e40rb1 { Var#cli_v40rb9(name=code) Lit#cli_i40rb3(value=0) }
+          Block#cli_b40rb1 {
+            Call#cli_c40rb8(target=sys.stdout.writeLine) { StrConcat#cli_sc40rb1 { Lit#cli_i40rb4(value="Ok#ok1(type=string value=\"") StrConcat#cli_sc40rb2 { Var#cli_v40rb10(name=outFile) Lit#cli_i40rb5(value="\")") } } }
+            Return#cli_r40rb1 { Lit#cli_i40rb6(value=0) }
+          }
+          Block#cli_b40rb2 {
+            If#cli_if40rb2 {
+              Eq#cli_e40rb2 { Var#cli_v40rb11(name=stderrText) Lit#cli_i40rb7(value="") }
+              Block#cli_b40rb3 { Lit#cli_i40rb8(value=0) }
+              Block#cli_b40rb4 { Call#cli_c40rb9(target=sys.stdout.writeLine) { Var#cli_v40rb12(name=stderrText) } }
+            }
+            If#cli_if40rb3 {
+              Eq#cli_e40rb3 { Var#cli_v40rb13(name=stdoutText) Lit#cli_i40rb9(value="") }
+              Block#cli_b40rb5 { Lit#cli_i40rb10(value=0) }
+              Block#cli_b40rb6 { Call#cli_c40rb10(target=sys.stdout.writeLine) { Var#cli_v40rb14(name=stdoutText) } }
+            }
+            Return#cli_r40rb2 { Call#cli_c40rb11(target=buildError) { Lit#cli_i40rb11(value="AILANG014") Lit#cli_i40rb12(value="Bootstrap compiler build failed.") Lit#cli_i40rb13(value="build") } }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l40rc(name=resolveBootstrapCompiler) {
+    Fn#cli_f40rc(params=_) {
+      Block#cli_b40rc {
+        Let#cli_l40rce(name=fromEnv) { Call#cli_c40rc1(target=sys.process.env.get) { Lit#cli_i40rc1(value="AILANG_BOOTSTRAP_COMPILER") } }
+        If#cli_if40rc {
+          Eq#cli_e40rc { Var#cli_v40rc1(name=fromEnv) Lit#cli_i40rc2(value="") }
+          Block#cli_b40rc1 { Return#cli_r40rc1 { Lit#cli_i40rc3(value="./tools/airun") } }
+          Block#cli_b40rc2 { Return#cli_r40rc2 { Var#cli_v40rc2(name=fromEnv) } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l40ma(name=makeBuildSpawnArgs) {
+    Fn#cli_f40ma(params=path,outDir) {
+      Block#cli_b40ma {
+        Return#cli_r40ma {
+          AppendChild#cli_ap40ma1 {
+            AppendChild#cli_ap40ma2 {
+              AppendChild#cli_ap40ma3 {
+                AppendChild#cli_ap40ma4 {
+                  MakeBlock#cli_mb40ma1 { Lit#cli_i40ma1(value="args") }
+                  MakeLitString#cli_mls40ma1 { Lit#cli_i40ma2(value="arg0") Lit#cli_i40ma3(value="build") }
+                }
+                MakeLitString#cli_mls40ma2 { Lit#cli_i40ma4(value="arg1") Var#cli_v40ma1(name=path) }
+              }
+              MakeLitString#cli_mls40ma3 { Lit#cli_i40ma5(value="arg2") Lit#cli_i40ma6(value="--out") }
+            }
+            MakeLitString#cli_mls40ma4 { Lit#cli_i40ma7(value="arg3") Var#cli_v40ma2(name=outDir) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#cli_l40bo(name=resolveBuildOutDir) {
+    Fn#cli_f40bo(params=path,outDir) {
+      Block#cli_b40bo {
+        If#cli_if40bo {
+          Eq#cli_e40bo { Var#cli_v40bo1(name=outDir) Lit#cli_i40bo1(value="") }
+          Block#cli_b40bo1 { Return#cli_r40bo1 { StrConcat#cli_sc40bo1 { Var#cli_v40bo2(name=path) Lit#cli_i40bo2(value="/bin") } } }
+          Block#cli_b40bo2 { Return#cli_r40bo2 { Var#cli_v40bo3(name=outDir) } }
+        }
+      }
+    }
+  }
+
+  Let#cli_l40be(name=buildError) {
+    Fn#cli_f40be(params=code,message,nodeId) {
+      Block#cli_b40be {
+        Call#cli_c40be1(target=sys.stdout.writeLine) {
+          StrConcat#cli_sc40be1 {
+            Lit#cli_i40be1(value="Err#err0(code=")
+            StrConcat#cli_sc40be2 {
+              Var#cli_v40be1(name=code)
+              StrConcat#cli_sc40be3 {
+                Lit#cli_i40be2(value=" message=\"")
+                StrConcat#cli_sc40be4 {
+                  Var#cli_v40be2(name=message)
+                  StrConcat#cli_sc40be5 {
+                    Lit#cli_i40be3(value="\" nodeId=\"")
+                    StrConcat#cli_sc40be6 { Var#cli_v40be3(name=nodeId) Lit#cli_i40be4(value="\")") }
+                  }
+                }
+              }
+            }
+          }
+        }
+        Return#cli_r40be { Lit#cli_i40be5(value=1) }
+      }
+    }
+  }
+
+  Let#cli_l41(name=runRun) {
+    Fn#cli_f41(params=args) {
+      Block#cli_b61 {
+        Return#cli_r51 { Call#cli_c41(target=notImplemented) { Lit#cli_i51(value="run") } }
+      }
+    }
+  }
+
+  Let#cli_l42(name=runPublish) {
+    Fn#cli_f42(params=args) {
+      Block#cli_b62 {
+        Return#cli_r52 { Call#cli_c42(target=notImplemented) { Lit#cli_i52(value="publish") } }
+      }
+    }
+  }
+
+  Let#cli_l43(name=runClean) {
+    Fn#cli_f43(params=args) {
+      Block#cli_b63 {
+        Return#cli_r53 { Call#cli_c43(target=notImplemented) { Lit#cli_i53(value="clean") } }
+      }
+    }
+  }
+
+  Let#cli_l50(name=missingPath) {
+    Fn#cli_f50(params=command) {
+      Block#cli_b70 {
+        Call#cli_c50(target=sys.stdout.writeLine) {
+          StrConcat#cli_sc1 {
+            Lit#cli_i60(value="Err#err0(code=AILANG001 message=\"Missing path.\" nodeId=\"")
+            StrConcat#cli_sc2 { Var#cli_v50(name=command) Lit#cli_i61(value="\")") }
+          }
+        }
+        Return#cli_r60 { Lit#cli_i62(value=1) }
+      }
+    }
+  }
+
+  Let#cli_l51(name=notImplemented) {
+    Fn#cli_f51(params=command) {
+      Block#cli_b71 {
+        Call#cli_c51(target=sys.stdout.writeLine) {
+          StrConcat#cli_sc3 {
+            Lit#cli_i63(value="Err#err0(code=AILANG900 message=\"Command is declared but not implemented in AiLang CLI yet.\" nodeId=\"")
+            StrConcat#cli_sc4 { Var#cli_v51(name=command) Lit#cli_i64(value="\")") }
+          }
+        }
+        Return#cli_r61 { Lit#cli_i65(value=1) }
+      }
+    }
+  }
+
+  Let#cli_l52(name=unknownCommand) {
+    Fn#cli_f52(params=command) {
+      Block#cli_b72 {
+        Call#cli_c52(target=sys.stdout.writeLine) {
+          StrConcat#cli_sc5 {
+            Lit#cli_i66(value="Err#err0(code=AILANG002 message=\"Unknown command.\" nodeId=\"")
+            StrConcat#cli_sc6 { Var#cli_v52(name=command) Lit#cli_i67(value="\")") }
+          }
+        }
+        Return#cli_r62 { Lit#cli_i68(value=1) }
+      }
+    }
+  }
+}

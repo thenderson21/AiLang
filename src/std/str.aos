@@ -78,6 +78,76 @@ Program#std_str_p1 {
     }
   }
 
+  Let#std_str_l8(name=replaceAll) {
+    Fn#std_str_f8(params=text,needle,replacement) {
+      Block#std_str_b8 {
+        Return#std_str_r8 {
+          Call#std_str_c7(target=replaceAllKnown) {
+            Var#std_str_v16(name=text)
+            Var#std_str_v17(name=needle)
+            Call#std_str_c8(target=sys.str.utf8ByteCount) { Var#std_str_v18(name=needle) }
+            Var#std_str_v19(name=replacement)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_str_l9(name=replaceAllKnown) {
+    Fn#std_str_f9(params=text,needle,needleLength,replacement) {
+      Block#std_str_b9 {
+        If#std_str_if1 {
+          Eq#std_str_eq1 { Var#std_str_v20(name=needleLength) Lit#std_str_i1(value=0) }
+          Block#std_str_b10 { Return#std_str_r9 { Var#std_str_v21(name=text) } }
+          Block#std_str_b11 {
+            Let#std_str_l10(name=at) {
+              Call#std_str_c9(target=sys.str.find) {
+                Var#std_str_v22(name=text)
+                Var#std_str_v23(name=needle)
+                Lit#std_str_i2(value=0)
+              }
+            }
+            If#std_str_if2 {
+              Eq#std_str_eq2 { Var#std_str_v24(name=at) Lit#std_str_i3(value=-1) }
+              Block#std_str_b12 { Return#std_str_r10 { Var#std_str_v25(name=text) } }
+              Block#std_str_b13 {
+                Let#std_str_l11(name=prefix) {
+                  Call#std_str_c10(target=sys.str.substring) {
+                    Var#std_str_v26(name=text)
+                    Lit#std_str_i4(value=0)
+                    Var#std_str_v27(name=at)
+                  }
+                }
+                Let#std_str_l12(name=suffixStart) { Add#std_str_a1 { Var#std_str_v28(name=at) Var#std_str_v29(name=needleLength) } }
+                Let#std_str_l13(name=suffix) {
+                  Call#std_str_c11(target=sys.str.substring) {
+                    Var#std_str_v30(name=text)
+                    Var#std_str_v31(name=suffixStart)
+                    Lit#std_str_i5(value=2147483647)
+                  }
+                }
+                Return#std_str_r11 {
+                  StrConcat#std_str_s2 {
+                    Var#std_str_v32(name=prefix)
+                    StrConcat#std_str_s3 {
+                      Var#std_str_v33(name=replacement)
+                      Call#std_str_c12(target=replaceAllKnown) {
+                        Var#std_str_v34(name=suffix)
+                        Var#std_str_v35(name=needle)
+                        Var#std_str_v36(name=needleLength)
+                        Var#std_str_v37(name=replacement)
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   Export#std_str_e1(name=concat)
   Export#std_str_e2(name=substring)
   Export#std_str_e3(name=remove)
@@ -85,4 +155,5 @@ Program#std_str_p1 {
   Export#std_str_e5(name=fromCodePoint)
   Export#std_str_e6(name=decodeUnicodeHex4)
   Export#std_str_e7(name=decodeUnicodeSurrogatePairHex4)
+  Export#std_str_e8(name=replaceAll)
 }

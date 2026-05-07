@@ -1,7 +1,7 @@
 # module_path	exports_csv
 src/std/core.aos	assert,resultOkString,resultOkInt,resultOkBool,resultOkNode,resultOkNull,resultErr,resultIsOk,resultValueOr,resultCodeOr,resultMessageOr,resultNodeOr,optionSomeString,optionNone,optionHas,optionValueOr,nodeEmpty,nodeWithString,nodeWithInt,nodeWithBool,mapFieldKey,mapFieldValue,mapHasAt,mapHas,mapGetNodeOrAt,mapGetNodeOr,mapGetStringOrAt,mapGetStringOr,mapGetIntOrAt,mapGetIntOr,mapGetBoolOrAt,mapGetBoolOr,mapSetFold,mapSet,recordEmpty,recordHas,recordGetNodeOr,recordGetStringOr,recordGetIntOr,recordGetBoolOr,recordSet
 src/std/io.aos	print,println
-src/std/str.aos	concat,substring,remove,find,fromCodePoint,decodeUnicodeHex4,decodeUnicodeSurrogatePairHex4
+src/std/str.aos	concat,substring,remove,find,fromCodePoint,decodeUnicodeHex4,decodeUnicodeSurrogatePairHex4,replaceAll
 src/std/bytes.aos	length,at,slice,concat,fromBase64,toBase64,toUtf8String,fromUtf8String
 src/std/math.aos	add
 src/std/json.aos	encode,parse,parseNode

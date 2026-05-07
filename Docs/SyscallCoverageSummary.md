@@ -31,10 +31,10 @@ Implemented and test-backed:
 
 Primary tests:
 
-- `src/AiVM.Core/native/tests/test_syscall_contracts.c`
-- `src/AiVM.Core/native/tests/test_syscall.c`
-- `src/AiVM.Core/native/tests/test_runtime.c`
-- `src/AiVM.Core/native/tests/test_bytes_host.c`
+- `../AiVM/native/tests/test_syscall_contracts.c`
+- `../AiVM/native/tests/test_syscall.c`
+- `../AiVM/native/tests/test_runtime.c`
+- `../AiVM/native/tests/test_bytes_host.c`
 
 ## Host Event Queue Adapter Coverage
 
@@ -58,7 +58,7 @@ Contract summary:
 
 Primary tests:
 
-- `src/AiVM.Core/native/tests/test_runtime.c`
+- `../AiVM/native/tests/test_runtime.c`
 
 ## Status Against Threading/Task Plan (M3)
 

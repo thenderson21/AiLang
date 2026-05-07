@@ -275,7 +275,26 @@ Program#p1 {
             Block#k284 { Var#k285(name=stateAfter) }
           }
         }
-        Return#k274 { Var#k276(name=stateAfterProject) }
+        Let#k300(name=stateAfterLoopControls) {
+          If#k301 {
+            Eq#k302 { Var#k16(name=kind) Lit#k303(value="Loop") }
+            Block#k304 { Call#k305(target=requireChildCount) { Var#k306(name=node) Var#k307(name=stateAfterProject) Lit#k308(value=1) } }
+            Block#k309 {
+              If#k310 {
+                Eq#k311 { Var#k16(name=kind) Lit#k312(value="Break") }
+                Block#k313 { Call#k314(target=requireChildCount) { Var#k315(name=node) Var#k316(name=stateAfterProject) Lit#k317(value=0) } }
+                Block#k318 {
+                  If#k319 {
+                    Eq#k320 { Var#k16(name=kind) Lit#k321(value="Continue") }
+                    Block#k322 { Call#k323(target=requireChildCount) { Var#k324(name=node) Var#k325(name=stateAfterProject) Lit#k326(value=0) } }
+                    Block#k327 { Var#k328(name=stateAfterProject) }
+                  }
+                }
+              }
+            }
+          }
+        }
+        Return#k274 { Var#k300(name=stateAfterLoopControls) }
       }
     }
   }

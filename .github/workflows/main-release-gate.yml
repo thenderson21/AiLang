@@ -76,56 +76,53 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+          echo "native cross-compile moved to AiVM"
 
-      - name: Build + stage airun (Unix)
+      - name: Install bootstrap SDK (Unix)
+        if: matrix.platform != 'windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSL https://ailangcore.github.io/install.sh | sh -s -- --channel alpha
+
+      - name: Install bootstrap SDK (Windows)
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        run: |
+          iex "& { $(irm https://ailangcore.github.io/install.ps1) } -Channel alpha"
+
+      - name: Stage AiLang tools (Unix)
         if: matrix.platform != 'windows'
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p ./dist
-          AIVM_AIRUN_PLATFORM="${{ matrix.platform }}" \
-          AIVM_AIRUN_ARCH="${{ matrix.arch }}" \
-          ./build.sh
-          test -x "./${{ matrix.artifact_dir }}/${{ matrix.airun }}"
-          cp "./${{ matrix.artifact_dir }}/${{ matrix.airun }}" "./dist/${{ matrix.airun }}"
+          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh
+          cp ./tools/ailang "./dist/${{ matrix.airun }}"
           chmod +x "./dist/${{ matrix.airun }}"
 
-      - name: Build + stage airun (Windows)
+      - name: Stage AiLang tools (Windows)
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force .\dist | Out-Null
-          $env:AIVM_AIRUN_ARCH = '${{ matrix.arch }}'
+          $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
           ./build.ps1
-          if (-not (Test-Path ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}")) { throw 'missing airun runtime' }
-          Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}" ".\\dist\\${{ matrix.airun }}"
+          Copy-Item .\tools\ailang.exe ".\dist\${{ matrix.airun }}"
 
-      - name: Build frontend parser (Unix)
+      - name: Stage frontend parser (Unix)
         if: matrix.platform != 'windows'
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "${{ matrix.platform }}" == "linux" && "${{ matrix.arch }}" == "arm64" ]]; then
-            aarch64-linux-gnu-gcc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
-          elif [[ "${{ matrix.platform }}" == "osx" ]]; then
-            if [[ "${{ matrix.arch }}" == "x64" ]]; then
-              clang -std=c11 -O2 -arch x86_64 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
-            else
-              clang -std=c11 -O2 -arch arm64 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
-            fi
-          else
-            cc -std=c11 -O2 ./tools/aos_frontend.c -o "./dist/${{ matrix.frontend }}"
-          fi
+          cp ./tools/aos_frontend "./dist/${{ matrix.frontend }}"
           chmod +x "./dist/${{ matrix.frontend }}"
 
-      - name: Build frontend parser (Windows)
+      - name: Stage frontend parser (Windows)
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
-          cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
-          Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
+          Copy-Item .\tools\aos_frontend.exe ".\dist\${{ matrix.frontend }}"
 
       - name: Stage compiler assets (Unix)
         if: matrix.platform != 'windows'
@@ -170,7 +167,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          "./dist/${{ matrix.airun }}" run ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos --vm=c >/dev/null
+          "./dist/${{ matrix.airun }}" --version >/dev/null
 
       - name: Memory leak gate (Unix)
         if: matrix.platform != 'windows'
@@ -178,10 +175,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p .tmp/leak-reports
-          AIVM_LEAK_CHECK_ITERATIONS=50 \
-          AIVM_LEAK_MAX_GROWTH_KB=2048 \
-          AIVM_LEAK_REPORT=.tmp/leak-reports/main-release-gate-${{ matrix.rid }}.txt \
-          ./scripts/aivm-mem-leak-check.sh ./src/AiVM.Core/native/tests/parity_cases/vm_c_execute_src_main_params.aos
+          echo "memory leak gate moved to AiVM"
 
       - name: Upload leak report (failed Unix run)
         if: failure() && matrix.platform != 'windows'
@@ -195,7 +189,7 @@ jobs:
         if: matrix.platform == 'windows' && matrix.arch != 'arm64'
         shell: pwsh
         run: |
-          & ".\\dist\\${{ matrix.airun }}" run .\src\AiVM.Core\native\tests\parity_cases\vm_c_execute_src_main_params.aos --vm=c | Out-Null
+          & ".\\dist\\${{ matrix.airun }}" --version | Out-Null
           if ($LASTEXITCODE -ne 0) { throw 'native runtime smoke failed' }
 
   wasm-runtime-artifact:

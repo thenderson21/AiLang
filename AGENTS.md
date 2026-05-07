@@ -28,6 +28,12 @@ AiLang exists to let AI agents create, understand, modify, debug, and ship softw
 - No hidden side effects inside the VM; all effects must route through `sys.*`.
 - VM execution must not directly access time, randomness, network, filesystem, or process state.
 - Syscalls are the only permitted escape hatch from deterministic execution.
+- Do not request or add new `sys.*` targets for deterministic language or
+  library behavior such as string replacement, collection operations, template
+  rendering, parsing, validation, compiler policy, or compatibility adapters.
+  Those belong in AiLang or AiLang core libraries.
+- A new syscall is only appropriate when it crosses a host boundary and cannot
+  be implemented deterministically in AiLang.
 
 ## Layer boundaries (enforced)
 
@@ -36,15 +42,13 @@ AiLang exists to let AI agents create, understand, modify, debug, and ship softw
   - AST/IR structures
   - validator and deterministic language semantics
   - no direct syscall, network, file, or process operations
-- `src/AiVM.Core` is VM-only:
+- `../AiVM/native` is VM-only:
   - AiBC1 loading/execution
   - deterministic state transition engine
   - syscall dispatch boundary only (`sys.*`)
   - no language-spec ownership changes without `SPEC/` updates
-- `src/AiCLI` is bootloader-only:
-  - CLI arg parsing and mode selection
-  - syscall host binding
-  - delegates execution to core/vm layers
+  - new syscall contracts require `../AiVM/Docs/Syscalls.md` justification and
+    AiVM contract tests
 - `src/AiVectra` is UI-layer placeholder (no active runtime integration yet).
 
 ## What the AI is allowed to do
@@ -63,6 +67,10 @@ AiLang exists to let AI agents create, understand, modify, debug, and ship softw
 - Do not introduce hidden side effects.
 - Do not weaken validation or type checking.
 - Do not silently change output formatting.
+- Do not add C VM/runtime/native launcher code to AiLang. VM/runtime/native
+  launcher C belongs in AiVM, and foreign C library access must go through an
+  explicit SDK/syscall/adapter boundary. The temporary `tools/aos_frontend.c`
+  parser bootstrap is allowed until the parser frontend is rewritten in AiLang.
 
 ## Development workflow
 
@@ -74,7 +82,7 @@ AiLang exists to let AI agents create, understand, modify, debug, and ship softw
 
 ## Local commands
 
-- Use `./tools/airun` for day-to-day execution.
+- Use `./tools/ailang` for day-to-day execution.
 - VM is default for `run`; use `--vm=ast` only for debugging unsupported bytecode paths.
 - Production runtime builds (`AosDevMode=false`) disable `--vm=ast` and source-mode commands.
 - Use `./build.sh` or `./build.ps1` as the canonical tooling bootstrap entrypoint.
@@ -82,7 +90,8 @@ AiLang exists to let AI agents create, understand, modify, debug, and ship softw
 - Treat `scripts/test*.sh` and `scripts/test*.ps1` as internal implementation details behind the canonical verification entrypoint unless the task is specifically about test-harness maintenance.
 - Treat `scripts/build-*.sh` and `scripts/build-*.ps1` as internal implementation details behind the canonical bootstrap entrypoint unless the task is specifically about build-script maintenance.
 - Do not use `dotnet run` or `dotnet test` for normal workflow.
-- Frontend parsing is provided by standalone `tools/aos_frontend`.
+- Frontend parsing currently uses temporary bootstrap tool `tools/aos_frontend`.
+- Native launchers and host adapters are supplied by the selected installed SDK.
 
 ## Definition of done
 
@@ -99,11 +108,12 @@ A change is complete only if:
 
 ## Release Contract Policy
 
-- Contract stability is enforced at release-candidate (`rc`) and stable releases only.
-- During `alpha` and `beta`, backward compatibility is not required by default.
-- During `alpha` and `beta`, use explicit contract negotiation/versioning for evolving formats and ABIs.
-- Do not preserve legacy fallback paths solely for pre-`rc` compatibility.
-- At `rc`, remove/close negotiation paths and freeze contracts for release.
+IMPORTANT: Until a major or minor release is officially released, all contracts,
+APIs, schemas, interfaces, and architectural decisions are considered
+negotiable and may change freely. Do not add backward compatibility layers,
+legacy adapters, or dual-path support unless explicitly requested. When changing
+direction, replace the old implementation completely and update the codebase
+consistently to the new contract. Patch releases are for bug fixes only.
 
 ## Documentation policy
 

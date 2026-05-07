@@ -1,4 +1,6 @@
 Program#aic_p1 {
+  Export#aic_e0(name=main)
+
   Let#aic_l1(name=main) {
     Fn#aic_f1(params=args) {
       Block#aic_b1 {
@@ -24,11 +26,11 @@ Program#aic_p1 {
                           Block#aic_b1t0 { Return#aic_r5 { Call#aic_c6(target=runTest) { Var#aic_v8(name=args) } } }
                           Block#aic_b1t1 {
                             If#aic_if6 {
-                              Eq#aic_e6 { Var#aic_v9(name=cmd) Lit#aic_i1t1(value="new") }
+                              Eq#aic_e6 { Var#aic_v9(name=cmd) Lit#aic_i1t1(value="init") }
                               Block#aic_b1t2 { Return#aic_r7 { Call#aic_c8(target=runNew) { Var#aic_v1t2(name=args) } } }
                               Block#aic_b1t3 {
-                                Call#aic_c9(target=io.write) { Lit#aic_i9(value="Err#err0(code=AIC001 message=\"Unknown subcommand.\" nodeId=argv)") }
-                                Return#aic_r8 { Lit#aic_i1t0(value=1) }
+                                Call#aic_c10(target=io.write) { Lit#aic_i9(value="Err#err0(code=AIC001 message=\"Unknown subcommand.\" nodeId=argv)") }
+                                Return#aic_r9 { Lit#aic_i1t0(value=1) }
                               }
                             }
                           }

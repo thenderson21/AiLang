@@ -2,8 +2,9 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-NATIVE_DIR="${ROOT_DIR}/src/AiVM.Core/native"
-BUILD_DIR="${ROOT_DIR}/.tmp/aivm-c-build-native"
+source "${ROOT_DIR}/scripts/aivm-native-paths.sh"
+NATIVE_DIR="$(require_aivm_native_dir "${ROOT_DIR}")"
+BUILD_DIR="${AIVM_C_BUILD_DIR:-${ROOT_DIR}/../AiVM/.tmp/aivm-c-build-native}"
 LOG_DIR="${ROOT_DIR}/.tmp"
 LOG_FILE="${LOG_DIR}/test-wasm-ctest.log"
 PRESET_FILE="${NATIVE_DIR}/CMakePresets.json"
