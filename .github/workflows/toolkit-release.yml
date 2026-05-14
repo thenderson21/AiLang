@@ -104,6 +104,12 @@ jobs:
           ref: develop
           path: AiVM
 
+      - name: Setup MSVC tools
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+
       - name: Stage AiLang tools (Unix)
         if: runner.os != 'Windows'
         shell: bash

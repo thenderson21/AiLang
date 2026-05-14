@@ -84,6 +84,12 @@ jobs:
           name: wasm-runtime-files
           path: ./.artifacts/aivm-wasm32
 
+      - name: Setup MSVC tools
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+
       - name: Stage AiLang tools (non-Windows)
         if: runner.os != 'Windows'
         shell: bash
