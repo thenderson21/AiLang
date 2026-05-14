@@ -46,6 +46,7 @@ copy_executable() {
 
 SDK_ROOT="$(resolve_toolchain_root)"
 SDK_BIN="${SDK_ROOT}/bin"
+LEGACY_BOOTSTRAP="${AILANG_ALLOW_LEGACY_BOOTSTRAP_SDK:-0}"
 
 if [[ ! -d "${SDK_ROOT}" ]]; then
   echo "selected AiLang SDK is not installed: ${SDK_ROOT}" >&2
@@ -53,26 +54,52 @@ if [[ ! -d "${SDK_ROOT}" ]]; then
   exit 1
 fi
 
-if [[ ! -x "${SDK_BIN}/ailang" ]]; then
+resolve_sdk_executable() {
+  local name="$1"
+  local canonical="${SDK_BIN}/${name}"
+  if [[ -x "${canonical}" ]]; then
+    printf '%s\n' "${canonical}"
+    return 0
+  fi
+  if [[ "${LEGACY_BOOTSTRAP}" == "1" && -x "${SDK_ROOT}/${name}" ]]; then
+    printf '%s\n' "${SDK_ROOT}/${name}"
+    return 0
+  fi
+  return 1
+}
+
+AILANG_BIN="$(resolve_sdk_executable ailang || true)"
+if [[ -z "${AILANG_BIN}" ]]; then
   echo "selected AiLang SDK is missing bin/ailang: ${SDK_ROOT}" >&2
+  if [[ "${LEGACY_BOOTSTRAP}" != "1" ]]; then
+    echo "Set AILANG_ALLOW_LEGACY_BOOTSTRAP_SDK=1 only when bootstrapping from a pre-bin-layout alpha SDK." >&2
+  fi
   exit 1
 fi
 
 mkdir -p "${TOOLS_DIR}"
-copy_executable "${SDK_BIN}/ailang" "${TOOLS_DIR}/ailang"
+copy_executable "${AILANG_BIN}" "${TOOLS_DIR}/ailang"
 
-if [[ -x "${SDK_BIN}/airun" ]]; then
-  copy_executable "${SDK_BIN}/airun" "${TOOLS_DIR}/airun"
+AIRUN_BIN="$(resolve_sdk_executable airun || true)"
+if [[ -n "${AIRUN_BIN}" ]]; then
+  copy_executable "${AIRUN_BIN}" "${TOOLS_DIR}/airun"
 else
-  copy_executable "${SDK_BIN}/ailang" "${TOOLS_DIR}/airun"
+  copy_executable "${AILANG_BIN}" "${TOOLS_DIR}/airun"
 fi
 
-if [[ -x "${SDK_BIN}/aivm-runtime" ]]; then
-  copy_executable "${SDK_BIN}/aivm-runtime" "${TOOLS_DIR}/aivm-runtime"
+RUNTIME_BIN="$(resolve_sdk_executable aivm-runtime || true)"
+if [[ -n "${RUNTIME_BIN}" ]]; then
+  copy_executable "${RUNTIME_BIN}" "${TOOLS_DIR}/aivm-runtime"
 fi
 
-if [[ -x "${SDK_BIN}/aos_frontend" ]]; then
-  copy_executable "${SDK_BIN}/aos_frontend" "${TOOLS_DIR}/aos_frontend"
+FRONTEND_BIN="$(resolve_sdk_executable aos_frontend || true)"
+if [[ -n "${FRONTEND_BIN}" ]]; then
+  copy_executable "${FRONTEND_BIN}" "${TOOLS_DIR}/aos_frontend"
+fi
+
+if [[ -d "${SDK_ROOT}/.artifacts" ]]; then
+  mkdir -p "${ROOT_DIR}/.artifacts"
+  cp -R "${SDK_ROOT}/.artifacts"/. "${ROOT_DIR}/.artifacts"/
 fi
 
 cat <<EOF

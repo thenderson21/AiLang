@@ -46,17 +46,31 @@ function Invoke-StageInstalledToolchain {
   }
   $sdkBin = Join-Path $sdkRoot 'bin'
   $toolsDir = Join-Path $PSScriptRoot 'tools'
+  $allowLegacyBootstrap = $env:AILANG_ALLOW_LEGACY_BOOTSTRAP_SDK -eq '1'
   $ailang = Join-Path $sdkBin 'ailang.exe'
   if (-not (Test-Path $ailang)) {
     $ailang = Join-Path $sdkBin 'ailang'
   }
+  if ((-not (Test-Path $ailang)) -and $allowLegacyBootstrap) {
+    $ailang = Join-Path $sdkRoot 'ailang.exe'
+    if (-not (Test-Path $ailang)) {
+      $ailang = Join-Path $sdkRoot 'ailang'
+    }
+  }
   if (-not (Test-Path $ailang)) {
-    throw "selected AiLang SDK is missing bin/ailang: $sdkRoot"
+    if ($allowLegacyBootstrap) {
+      throw "selected AiLang SDK is missing bin/ailang or legacy bootstrap ailang: $sdkRoot"
+    }
+    throw "selected AiLang SDK is missing bin/ailang: $sdkRoot. Set AILANG_ALLOW_LEGACY_BOOTSTRAP_SDK=1 only when bootstrapping from a pre-bin-layout alpha SDK."
   }
   New-Item -ItemType Directory -Force -Path $toolsDir | Out-Null
   Copy-Item $ailang (Join-Path $toolsDir 'ailang.exe') -Force
   $airun = Join-Path $sdkBin 'airun.exe'
   if (-not (Test-Path $airun)) { $airun = Join-Path $sdkBin 'airun' }
+  if ((-not (Test-Path $airun)) -and $allowLegacyBootstrap) {
+    $airun = Join-Path $sdkRoot 'airun.exe'
+    if (-not (Test-Path $airun)) { $airun = Join-Path $sdkRoot 'airun' }
+  }
   if (Test-Path $airun) {
     Copy-Item $airun (Join-Path $toolsDir 'airun.exe') -Force
   } else {
@@ -64,13 +78,27 @@ function Invoke-StageInstalledToolchain {
   }
   $runtime = Join-Path $sdkBin 'aivm-runtime.exe'
   if (-not (Test-Path $runtime)) { $runtime = Join-Path $sdkBin 'aivm-runtime' }
+  if ((-not (Test-Path $runtime)) -and $allowLegacyBootstrap) {
+    $runtime = Join-Path $sdkRoot 'aivm-runtime.exe'
+    if (-not (Test-Path $runtime)) { $runtime = Join-Path $sdkRoot 'aivm-runtime' }
+  }
   if (Test-Path $runtime) {
     Copy-Item $runtime (Join-Path $toolsDir 'aivm-runtime.exe') -Force
   }
   $frontend = Join-Path $sdkBin 'aos_frontend.exe'
   if (-not (Test-Path $frontend)) { $frontend = Join-Path $sdkBin 'aos_frontend' }
+  if ((-not (Test-Path $frontend)) -and $allowLegacyBootstrap) {
+    $frontend = Join-Path $sdkRoot 'aos_frontend.exe'
+    if (-not (Test-Path $frontend)) { $frontend = Join-Path $sdkRoot 'aos_frontend' }
+  }
   if (Test-Path $frontend) {
     Copy-Item $frontend (Join-Path $toolsDir 'aos_frontend.exe') -Force
+  }
+  $sdkArtifacts = Join-Path $sdkRoot '.artifacts'
+  if (Test-Path $sdkArtifacts) {
+    $repoArtifacts = Join-Path $PSScriptRoot '.artifacts'
+    New-Item -ItemType Directory -Force -Path $repoArtifacts | Out-Null
+    Copy-Item -Path (Join-Path $sdkArtifacts '*') -Destination $repoArtifacts -Recurse -Force
   }
   Write-Host "Staged AiLang tools from installed SDK: $sdkRoot"
 }
@@ -78,7 +106,8 @@ function Invoke-StageInstalledToolchain {
 function Invoke-BuildTarget([string]$Target) {
   switch ($Target) {
     'host' {
-      Invoke-StageInstalledToolchain
+      & "$PSScriptRoot/scripts/build-airun.ps1"
+      if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     'shared' {
       bash "$PSScriptRoot/scripts/build-aivm-c-shared.sh"

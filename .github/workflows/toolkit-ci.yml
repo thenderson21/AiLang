@@ -71,28 +71,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Checkout AiVM native source
+        uses: actions/checkout@v4
+        with:
+          repository: AiLangCore/AiVM
+          ref: develop
+          path: AiVM
+
       - name: Download wasm runtime files
         uses: actions/download-artifact@v4
         with:
           name: wasm-runtime-files
           path: ./.artifacts/aivm-wasm32
 
-      - name: Install bootstrap SDK (non-Windows)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl -fsSL https://ailangcore.github.io/install.sh | sh -s -- --channel alpha
-
-      - name: Install bootstrap SDK (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          iex "& { $(irm https://ailangcore.github.io/install.ps1) } -Channel alpha"
-
       - name: Stage AiLang tools (non-Windows)
         if: runner.os != 'Windows'
         shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/native
         run: |
           set -euo pipefail
           AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh
@@ -101,6 +97,8 @@ jobs:
       - name: Stage AiLang tools (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\native
         run: |
           $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
           ./build.ps1

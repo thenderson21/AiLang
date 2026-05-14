@@ -97,22 +97,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install bootstrap SDK (Unix)
-        if: runner.os != 'Windows'
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl -fsSL https://ailangcore.github.io/install.sh | sh -s -- --channel alpha
-
-      - name: Install bootstrap SDK (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          iex "& { $(irm https://ailangcore.github.io/install.ps1) } -Channel alpha"
+      - name: Checkout AiVM native source
+        uses: actions/checkout@v4
+        with:
+          repository: AiLangCore/AiVM
+          ref: develop
+          path: AiVM
 
       - name: Stage AiLang tools (Unix)
         if: runner.os != 'Windows'
         shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/native
         run: |
           set -euo pipefail
           AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh
@@ -121,6 +117,8 @@ jobs:
       - name: Stage AiLang tools (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\native
         run: |
           $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
           ./build.ps1
@@ -231,6 +229,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Checkout AiVM native source
+        uses: actions/checkout@v4
+        with:
+          repository: AiLangCore/AiVM
+          ref: develop
+          path: AiVM
+
       - name: Download wasm runtime files
         uses: actions/download-artifact@v4
         with:
@@ -250,30 +255,24 @@ jobs:
           set -euo pipefail
           echo "native cross-compile moved to AiVM"
 
-      - name: Install bootstrap SDK (Unix)
-        if: matrix.platform != 'windows'
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl -fsSL https://ailangcore.github.io/install.sh | sh -s -- --channel alpha
-
-      - name: Install bootstrap SDK (Windows)
-        if: matrix.platform == 'windows'
-        shell: pwsh
-        run: |
-          iex "& { $(irm https://ailangcore.github.io/install.ps1) } -Channel alpha"
-
       - name: Stage AiLang tools (Unix)
         if: matrix.platform != 'windows'
         shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/native
         run: |
           set -euo pipefail
+          AIVM_AIRUN_PLATFORM="${{ matrix.platform }}" \
+          AIVM_AIRUN_ARCH="${{ matrix.arch }}" \
           AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh
 
       - name: Stage AiLang tools (Windows)
         if: matrix.platform == 'windows'
         shell: pwsh
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\native
         run: |
+          $env:AIVM_AIRUN_ARCH = '${{ matrix.arch }}'
           $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
           ./build.ps1
 
@@ -321,6 +320,12 @@ jobs:
           cp "./${{ matrix.artifact_dir }}/${{ matrix.airun }}" "${PACKAGE_DIR}/"
           test -x "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}"
           cp "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}" "${PACKAGE_DIR}/"
+          mkdir -p "${PACKAGE_DIR}/bin"
+          cp "./${{ matrix.artifact_dir }}/${{ matrix.airun }}" "${PACKAGE_DIR}/bin/ailang"
+          cp "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}" "${PACKAGE_DIR}/bin/aivm-runtime"
+          chmod +x "${PACKAGE_DIR}/bin/ailang" "${PACKAGE_DIR}/bin/aivm-runtime"
+          cp "./dist/${{ matrix.frontend }}" "${PACKAGE_DIR}/bin/aos_frontend"
+          chmod +x "${PACKAGE_DIR}/bin/aos_frontend"
           mkdir -p "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}"
           cp "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}" "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}/aivm"
           chmod +x "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}/aivm"
@@ -346,6 +351,10 @@ jobs:
           Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}" $packageDir
           if (-not (Test-Path ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}")) { throw 'missing minimal runtime' }
           Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}" $packageDir
+          New-Item -ItemType Directory -Force "$packageDir\bin" | Out-Null
+          Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}" "$packageDir\bin\ailang.exe"
+          Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}" "$packageDir\bin\aivm-runtime.exe"
+          Copy-Item ".\\dist\\${{ matrix.frontend }}" "$packageDir\bin\aos_frontend.exe"
           $targetRid = '${{ matrix.rid }}' -replace '^windows-', 'win-'
           New-Item -ItemType Directory -Force "$packageDir\runtimes\$targetRid" | Out-Null
           Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}" "$packageDir\runtimes\$targetRid\aivm.exe"

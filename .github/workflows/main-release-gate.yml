@@ -65,6 +65,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Checkout AiVM native source
+        uses: actions/checkout@v4
+        with:
+          repository: AiLangCore/AiVM
+          ref: develop
+          path: AiVM
+
       - name: Setup MSVC tools
         if: matrix.platform == 'windows'
         uses: ilammy/msvc-dev-cmd@v1
@@ -78,25 +85,16 @@ jobs:
           set -euo pipefail
           echo "native cross-compile moved to AiVM"
 
-      - name: Install bootstrap SDK (Unix)
-        if: matrix.platform != 'windows'
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl -fsSL https://ailangcore.github.io/install.sh | sh -s -- --channel alpha
-
-      - name: Install bootstrap SDK (Windows)
-        if: matrix.platform == 'windows'
-        shell: pwsh
-        run: |
-          iex "& { $(irm https://ailangcore.github.io/install.ps1) } -Channel alpha"
-
       - name: Stage AiLang tools (Unix)
         if: matrix.platform != 'windows'
         shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/native
         run: |
           set -euo pipefail
           mkdir -p ./dist
+          AIVM_AIRUN_PLATFORM="${{ matrix.platform }}" \
+          AIVM_AIRUN_ARCH="${{ matrix.arch }}" \
           AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh
           cp ./tools/ailang "./dist/${{ matrix.airun }}"
           chmod +x "./dist/${{ matrix.airun }}"
@@ -104,8 +102,11 @@ jobs:
       - name: Stage AiLang tools (Windows)
         if: matrix.platform == 'windows'
         shell: pwsh
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\native
         run: |
           New-Item -ItemType Directory -Force .\dist | Out-Null
+          $env:AIVM_AIRUN_ARCH = '${{ matrix.arch }}'
           $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
           ./build.ps1
           Copy-Item .\tools\ailang.exe ".\dist\${{ matrix.airun }}"
