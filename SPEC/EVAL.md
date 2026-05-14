@@ -40,11 +40,17 @@ This file is normative for `aic run` evaluation behavior.
 - `Await`: evaluate child expression; child must resolve to `Task`; block until completion and return resolved value or propagate resolved `Err`.
 - `Par`: evaluate each child in isolated branch state from the same lexical snapshot, then join all branches before continuing.
 - `Import(path)`: resolve path relative to current module file; parse via frontend; validate with `validate.aos`; evaluate imported module in isolated environment; merge only names explicitly listed by `Export`.
+- `Import(package,path)`: resolve `package` through the project lockfile and local package cache, then resolve `path` relative to that package root. Evaluation and export merge semantics are the same as relative imports.
 - `Export(name)`: mark an existing binding as exported from the current module evaluation scope.
 
-## Module Rules
+## Module And Package Rules
 
-- Import resolution is strictly relative (absolute paths are rejected).
+- Relative import resolution is strictly relative (absolute paths are rejected).
+- Package import resolution is strictly lockfile-based. Evaluation must not
+  perform package registry or git network access.
+- A package import is valid only when the named package appears in
+  `project.aiproj`, is pinned in `ailang.lock.toml`, and is present in the
+  local package cache.
 - Circular imports fail deterministically with runtime `Err`.
 - Missing import files fail deterministically with runtime `Err`.
 

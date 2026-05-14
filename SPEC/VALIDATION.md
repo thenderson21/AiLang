@@ -18,9 +18,16 @@ This file is normative for semantic validation used by `aic check` (default path
 - Required attributes must exist (for example `Let.name`, `Var.name`, `Lit.value`, `Call.target`).
 - Module nodes require:
 - `Import.path` (string) with `0` children.
+- `Import.package`, when present, must be a non-empty string naming an
+  `Include` from the project manifest.
 - `Export.name` (identifier) with `0` children.
 - Manifest node requires:
-- `Project.name` (string), `Project.entryFile` (string, relative path), `Project.entryExport` (non-empty string), and `0` children.
+- `Project.name` (string), `Project.entryFile` (string, relative path), and
+  `Project.entryExport` (non-empty string).
+- `Project` children, when present, must all be `Include` nodes.
+- `Include.name` and `Include.version` are required strings.
+- `Include.path`, when present, must be a relative string path for local
+  development includes.
 - Child arity must match node contract (for example `Let=1`, `Var=0`, `Eq=2`, `Add=2`, `If=2..3`, `Loop=1`, `Break=0`, `Continue=0`).
 - `If` branches must be `Block` nodes where required (`VAL021`, `VAL022`).
 - `Fn` must have `params` and a single `Block` body (`VAL050`).

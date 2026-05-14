@@ -35,6 +35,7 @@ If a doc in `Docs/` conflicts with `SPEC/`, follow `SPEC/`.
 - [Branching and Release Policy](./Branching-Release-Policy.md)
 - [Versioning](./Versioning.md)
 - [Installation and Versioning Contract](./Installation-Versioning.md)
+- [Packages](./AiLang-Packages.md)
 - [Migration 0.0.1](./Migration-0.0.1.md)
 - [Launch Stdlib 0.0.1](./Launch-Stdlib-0.0.1.md)
 - [Release 0.0.1](./Release-0.0.1.md)

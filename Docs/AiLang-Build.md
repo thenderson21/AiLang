@@ -24,6 +24,21 @@ If `--out` is omitted, the output directory is:
 <project-dir>/bin
 ```
 
+Build reads restored dependencies from `ailang.lock.toml` and the local package
+cache. It must not fetch package repositories implicitly. If a package required
+by the manifest or import graph is missing from the lockfile/cache, build fails
+with a deterministic diagnostic and the caller should run:
+
+```bash
+ailang package restore
+```
+
+Compiled output is reachable-code only. Starting from `Project.entryFile` and
+`Project.entryExport`, the compiler emits only modules, functions, constants,
+and data reachable through explicit imports and calls. Restored package source,
+unused package exports, docs, tests, examples, and unrelated assets are not part
+of the output.
+
 ## Current Implementation
 
 `src/cli/ailang.aos` owns the command contract, argument validation, output

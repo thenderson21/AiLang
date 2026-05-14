@@ -12,10 +12,10 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 | `Var` | `name` (identifier) | `0` | Reads from environment. |
 | `Lit` | `value` (`string\|number\|bool\|null\|bytes`) | `0` | Literal value node. |
 | `Call` | `target` (identifier/dotted identifier) | `0..N` | Native or user-defined call. |
-| `Import` | `path` (string, relative) | `0` | Loads another module and merges explicit exports. |
+| `Import` | `path` (string, relative) | `0` | Loads another module and merges explicit exports. May include optional `package` for package-scoped imports. |
 | `Export` | `name` (identifier) | `0` | Exposes one binding from current module. |
 | `Project` | `name` (string), `entryFile` (string), `entryExport` (string) | `0..N` | Project manifest node for `project.aiproj`; children must be `Include`. |
-| `Include` | `name` (string), `path` (string, relative), `version` (string) | `0` | Declares library include metadata for project-level dependency resolution. |
+| `Include` | `name` (string), `version` (string) | `0` | Declares project-level dependency metadata. Optional `path` declares a local development include; otherwise the package resolves through the registry and lockfile. |
 | `If` | none | `2..3` | Condition, then-branch, optional else-branch. |
 | `Eq` | none | `2` | Value equality. |
 | `StrConcat` | none | `2` | String concatenation. |
@@ -129,3 +129,17 @@ This file is normative for the executable AiLang IL subset used by `aic run`.
 - Changes to kind set, attrs, arity, or value shape require updates to:
 - `SPEC/IL.md`
 - related golden tests under `examples/golden`
+
+## Package Include Contract
+
+- `Project` children must be `Include` nodes.
+- Registry includes require `name` and `version`.
+- Local development includes require `name`, `version`, and `path`.
+- `Include.path`, when present, must be relative and must not escape through
+  symlink tricks after canonicalization.
+- Package resolution is not implicit during evaluation. Restore resolves package
+  metadata into `ailang.lock.toml`; build and publish consume the lockfile.
+- `Import(package="...", path="...")` resolves `path` inside the named locked
+  package.
+- `Import(path="...")` without `package` resolves relative to the current
+  module file.

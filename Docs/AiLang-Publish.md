@@ -105,6 +105,12 @@ During the alpha bootstrap phase, `publish` still delegates source compilation
 to the same bootstrap compiler resolution path used by `ailang build`, then
 assembles the publish layout in the AiLang-authored CLI.
 
+Publish follows the same reachable-code rule as build. Framework-dependent
+publish emits the app payload and launchers only. Self-contained publish emits
+the app payload, launchers, explicitly declared publish assets, and the runtime
+for the selected target only. It must not include all SDK runtimes, all restored
+package sources, or unused package assets.
+
 ## Errors
 
 - Missing path returns `AILANG001`.
