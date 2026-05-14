@@ -48,6 +48,19 @@ Package versions must resolve to immutable git commits. Tags may be used as
 human-readable version refs, but the lockfile must store the exact commit that
 was restored.
 
+Package records may classify package contents by type:
+
+```toml
+types = ["library", "tool", "template"]
+```
+
+- `library`: importable AiLang source.
+- `tool`: executable command or project tool.
+- `template`: project, file, or agent template content.
+
+A package may contain more than one type. For example, AiVectra can expose UI
+libraries, UI tooling, and application templates from the same package.
+
 ## Project Manifest
 
 `project.aiproj` declares direct package dependencies as `Include` children of

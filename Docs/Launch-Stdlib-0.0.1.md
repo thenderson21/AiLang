@@ -34,14 +34,11 @@ Per-target support expectations for those baseline modules are declared in
 - `src/std/str.aos`
 - `src/std/bytes.aos`
 - `src/std/math.aos`
-- `src/std/json.aos`
 
 Reason:
 
 - These provide the minimum data/result/string/printing utilities expected from
   a production language.
-- `std.json` is included because API work requires deterministic parse and
-  serialize support without pushing that burden into app code.
 
 ### Tier 2: Runtime environment
 
@@ -59,24 +56,17 @@ Reason:
 - `std.debug` is baseline because a production language must provide a standard,
   supported debugging surface for diagnostics, tracing, replay, and validation.
 
-### Tier 3: Network and service baseline
-
-- `src/std/net.aos`
-- `src/std/http.aos`
-
-Reason:
-
-- Production apps need a canonical networking surface.
-- `std.http` should be the normal application entrypoint for HTTP work instead
-  of direct `sys.net.*` usage.
-
 ## Not part of the production baseline
 
-These libraries may remain in the repo, but they are not part of the minimum
-production stdlib contract.
+These libraries are first-party packages, not minimum stdlib modules.
 
-- `src/std/ui_input.aos`
-  - Useful, but profile-specific and not required for non-UI programs.
+- `std-json`
+- `std-net`
+- `std-http`
+- `std-image`
+- `std-ui-input`
+  - Useful, but profile-specific and expected to live in an optional package or
+    AiVectra.
 - `src/std/platform.aos`
   - Redundant with `std.system.platform` and must not remain in the shipped
     stdlib surface as an alias.
@@ -131,7 +121,7 @@ Each production-baseline module must meet all of these:
 1. Make `std.*` the only intended application library namespace.
 2. Remove duplicate wrappers such as `src/std/platform.aos` where a broader
    module already owns the contract.
-3. Audit `std.http` and `std.json` for any lingering dependency on
+3. Audit first-party packages for any lingering dependency on
    `compiler.*`-shaped app behavior.
 4. Define per-target support expectations for baseline modules, especially wasm
    profiles.
@@ -142,7 +132,7 @@ Each production-baseline module must meet all of these:
 
 ## JSON contract
 
-`src/std/json.aos` remains in baseline with intentionally constrained behavior:
+`std-json` remains first-party with intentionally constrained behavior:
 
 - supported parse inputs: `null`, booleans, numbers, quoted strings, arrays,
   and objects (leading/trailing whitespace allowed)

@@ -32,12 +32,12 @@ This branch exists to turn the baseline in
    - replay/capture expectations
    - target capability notes
    - contract distinction between production diagnostics and debug-only internals
-1. Review `std.http.aos` for production-readiness:
+1. Review the `std-http` package for production-readiness:
    - request/response helpers
    - error shape
    - timeout/cancel behavior
    - target capability notes
-2. Review `std.json.aos` for production-readiness:
+2. Review the `std-json` package for production-readiness:
    - parse coverage
    - stringify stability
    - result-node contract consistency

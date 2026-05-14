@@ -4,11 +4,8 @@ src/std/io.aos	native	native	native	native	Output is profile-mapped, but module 
 src/std/str.aos	native	native	native	native	Pure deterministic string helpers.
 src/std/bytes.aos	native	native	native	native	Pure deterministic bytes, base64, and UTF-8 helpers.
 src/std/math.aos	native	native	native	native	Pure deterministic numeric helpers.
-src/std/json.aos	native	native	native	native	Pure deterministic parse and encode helpers.
 src/std/system.aos	partial	partial	blocked	blocked	Metadata exports are broadly available; openDefault/openUrl remain host-only and are not browser baseline capabilities.
 src/std/process.aos	native	host-dependent	blocked	partial	Native host process control exists; browser targets do not expose process lifecycle.
 src/std/fs.aos	native	host-dependent	blocked	partial	Native host filesystem exists; browser targets require explicit remote or host-side adapters.
 src/std/time.aos	native	host-dependent	profile-defined	profile-defined	Time access exists but target policy differs and browser behavior must remain explicit and deterministic.
 src/std/debug.aos	native	host-dependent	partial	partial	Debug capture exists, but artifact and host-debug behavior remains target/profile specific.
-src/std/net.aos	native	host-dependent	blocked	partial	Direct network is native on host targets; browser-side use requires explicit remote/capability routing.
-src/std/http.aos	native	host-dependent	remote	remote	HTTP is native on host targets; browser wasm uses explicit remote adapters rather than direct sys.net transport.

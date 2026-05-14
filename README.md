@@ -273,7 +273,8 @@ Use $ailang to create a new AiLang project named MyApp and run it.
   - MVP security baseline: `SPEC/WASM_REMOTE_SECURITY.md`.
   - Runtime requires `AIVM_REMOTE_EXPECTED_TOKEN` and `AIVM_REMOTE_SESSION_TOKEN` for `sys.remote.call`.
 - Build flag: `AosDevMode=false` creates a production runtime build with AST mode disabled.
-- HTTP body parsing boundary: `std.json.parse` is a constrained HTTP integration helper that converts JSON request body text into canonical AOS nodes. It does not introduce JSON as a runtime value model.
+- HTTP body parsing boundary: JSON parsing is provided by the first-party
+  `std-json` package. It does not introduce JSON as a runtime value model.
 
 ## Examples
 
@@ -287,7 +288,8 @@ Canonical sample projects live in `samples/`:
 - `samples/weather-site`: lifecycle HTTP app serving `/` HTML using shared weather data logic.
 - `samples/cli-fetch`: CLI-style app that formats and prints weather output.
 
-Note: weather samples now call a live upstream weather endpoint via `httpRequest` from `src/std/http.aos`, so runtime internet access is required.
+Note: weather samples use the first-party `std-http` package and call a live
+upstream weather endpoint, so runtime internet access is required.
 
 Current limitation:
 - Full sample source-graph compilation (imports-heavy project shapes) is still being expanded in the native build pipeline.

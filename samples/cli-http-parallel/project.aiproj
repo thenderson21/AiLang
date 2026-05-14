@@ -1,3 +1,0 @@
-Program {
-  Project(name="cli-http-parallel" entryFile="src/app.aos" entryExport="start")
-}

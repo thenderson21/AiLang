@@ -12,15 +12,11 @@ to behave like a production programming language.
 | Strings | `std.str` | Yes | Deterministic text operations | Keep as canonical text helper surface |
 | Bytes | `std.bytes` | Yes | Binary payload handling for files, network, encoding | Keep and test heavily |
 | Math | `std.math` | Yes | Minimal arithmetic helpers and future numeric growth point | Expand intentionally, not ad hoc |
-| JSON | `std.json` | Yes | API parse/serialize baseline | Harden contract and coverage |
 | System metadata | `std.system` | Yes | Platform, arch, runtime identity | Keep as single canonical system surface |
 | Process | `std.process` | Yes | Args, env, cwd, child process control | Keep minimal and capability-bound |
 | Filesystem | `std.fs` | Yes | File and path operations for real apps/tools | Keep minimal, deterministic, capability-bound |
 | Time | `std.time` | Yes | Time reads and sleep primitives | Keep explicit and target-documented |
 | Debugging | `std.debug` | Yes | Production diagnostics, tracing, replay, capture | Treat as first-class production library |
-| Network | `std.net` | Yes | Low-level network baseline under `std.*` | Keep mechanical, not convenience-heavy |
-| HTTP | `std.http` | Yes | Canonical app-facing HTTP layer | Make this the normal API surface for services/clients |
-| UI input | `std.ui_input` | No | Useful UI helpers for text/edit/event handling | Keep optional and profile-specific |
 | Platform alias | `std.platform` | No | Redundant wrapper over `std.system` | Remove, no aliasing |
 
 ## Non-stdlib surfaces
@@ -35,13 +31,13 @@ to behave like a production programming language.
 | Area | Recommended namespace | Purpose |
 |---|---|---|
 | Generic text utilities | `std.text` | Generic string/text helpers shared across domains |
-| JSON | `std.json` | JSON parse, serialize, and JSON node helpers |
+| JSON | `std-json` package | JSON parse, serialize, and JSON node helpers |
 | XML | `std.xml` | XML parse, serialize, and XML node helpers |
 | TOML | `std.toml` | TOML parse, serialize, and config helpers |
 | Markdown | `std.markdown` | Markdown parse/render/document helpers |
 | Bytes/binary | `std.bytes` | Binary payload handling |
-| HTTP | `std.http` | HTTP protocol/client/server helpers |
-| Raw networking | `std.net` | Lower-level networking primitives |
+| HTTP | `std-http` package | HTTP protocol/client/server helpers |
+| Raw networking | `std-net` package | Lower-level networking primitives |
 | Filesystem | `std.fs` | File/path operations |
 | Process/runtime | `std.process` | Args, env, and child process control |
 | System metadata | `std.system` | Platform, arch, and runtime identity |
@@ -69,14 +65,15 @@ to behave like a production programming language.
 | Conformance tests | Docs alone are not enough | Add tests that enforce required modules and exports |
 | Sample adoption | Samples define the real developer experience | Move samples to `std.*`, not `sys.*` |
 | Production debug story | Language must be debuggable in production | Keep `std.debug` baseline and testable |
-| Hardened HTTP/JSON | Real apps depend on these first | Review contract, errors, and deterministic behavior |
+| Hardened package libraries | Real apps depend on these first | Move optional HTTP/JSON/network/UI helpers through packages with clear contracts |
 
 ## Decision summary
 
 | Question | Answer |
 |---|---|
 | Is `std.debug` baseline? | Yes |
-| Is `std.ui_input` baseline? | No |
+| Is `std.ui_input` baseline? | No, it belongs in an optional package or AiVectra |
+| Are `std.http`, `std.json`, `std.net`, and `std.image` baseline? | No, they belong in optional packages |
 | Is `std.platform` baseline? | No |
 | Should `std.platform` remain as alias? | No |
 | Should pre-`1.0.0` preserve compatibility aliases? | No |
