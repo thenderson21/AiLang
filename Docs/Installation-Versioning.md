@@ -178,10 +178,23 @@ Each toolchain directory should use this shape:
 +-- compiler/
 +-- std/
 +-- sys/
++-- runtimes/
+|   +-- host/
+|   |   `-- aivm
+|   +-- osx-arm64/
+|   |   `-- aivm
+|   +-- linux-x64/
+|   |   `-- aivm
+|   `-- ...
 +-- manifests/
 |   `-- local.toml or install.toml
 `-- .artifacts/
 ```
+
+SDKs should bundle the supported host runtimes they can publish. `host` points
+to the SDK's runtime for the current machine. Self-contained publish consumes
+`<toolchain-root>/runtimes/<target>/...` and bundles only the selected target
+runtime into the app output.
 
 `~/.ailang/bin` contains stable shims. The shims dispatch to
 `~/.ailang/current`, so switching released SDKs does not require changing

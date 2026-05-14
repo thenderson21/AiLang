@@ -321,6 +321,9 @@ jobs:
           cp "./${{ matrix.artifact_dir }}/${{ matrix.airun }}" "${PACKAGE_DIR}/"
           test -x "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}"
           cp "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}" "${PACKAGE_DIR}/"
+          mkdir -p "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}"
+          cp "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}" "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}/aivm"
+          chmod +x "${PACKAGE_DIR}/runtimes/${{ matrix.rid }}/aivm"
           cp -R ./dist/compiler "${PACKAGE_DIR}/compiler"
           cp -R ./templates "${PACKAGE_DIR}/templates"
           mkdir -p "${PACKAGE_DIR}/.artifacts/aivm-wasm32"
@@ -343,6 +346,9 @@ jobs:
           Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}" $packageDir
           if (-not (Test-Path ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}")) { throw 'missing minimal runtime' }
           Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}" $packageDir
+          $targetRid = '${{ matrix.rid }}' -replace '^windows-', 'win-'
+          New-Item -ItemType Directory -Force "$packageDir\runtimes\$targetRid" | Out-Null
+          Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}" "$packageDir\runtimes\$targetRid\aivm.exe"
           Copy-Item .\LICENSE $packageDir
           Copy-Item .\dist\compiler $packageDir -Recurse
           Copy-Item .\templates $packageDir -Recurse
@@ -480,6 +486,13 @@ jobs:
             "windows-x64"
             "windows-arm64"
           )
+          target_rid() {
+            case "$1" in
+              windows-x64) echo "win-x64" ;;
+              windows-arm64) echo "win-arm64" ;;
+              *) echo "$1" ;;
+            esac
+          }
 
           for RID in "${ALL_RIDS[@]}"; do
             PKG_DIR="ailang-${VERSION}-${RID}"
@@ -504,19 +517,30 @@ jobs:
             mkdir -p "${TARGET_DIR}/.artifacts"
 
             for SRC_RID in "${UNIX_RIDS[@]}"; do
+              TARGET_RUNTIME_RID="$(target_rid "${SRC_RID}")"
               mkdir -p "${TARGET_DIR}/.artifacts/ailang-${SRC_RID}"
               cp "./release-assets/ailang-${VERSION}-${SRC_RID}/aivm-runtime" "${TARGET_DIR}/.artifacts/ailang-${SRC_RID}/aivm-runtime"
               chmod +x "${TARGET_DIR}/.artifacts/ailang-${SRC_RID}/aivm-runtime"
+              mkdir -p "${TARGET_DIR}/runtimes/${TARGET_RUNTIME_RID}"
+              cp "./release-assets/ailang-${VERSION}-${SRC_RID}/aivm-runtime" "${TARGET_DIR}/runtimes/${TARGET_RUNTIME_RID}/aivm"
+              chmod +x "${TARGET_DIR}/runtimes/${TARGET_RUNTIME_RID}/aivm"
             done
             for SRC_RID in "${WINDOWS_RIDS[@]}"; do
+              TARGET_RUNTIME_RID="$(target_rid "${SRC_RID}")"
               mkdir -p "${TARGET_DIR}/.artifacts/ailang-${SRC_RID}"
               cp "./release-assets/ailang-${VERSION}-${SRC_RID}/aivm-runtime.exe" "${TARGET_DIR}/.artifacts/ailang-${SRC_RID}/aivm-runtime.exe"
+              mkdir -p "${TARGET_DIR}/runtimes/${TARGET_RUNTIME_RID}"
+              cp "./release-assets/ailang-${VERSION}-${SRC_RID}/aivm-runtime.exe" "${TARGET_DIR}/runtimes/${TARGET_RUNTIME_RID}/aivm.exe"
             done
 
             mkdir -p "${TARGET_DIR}/.artifacts/aivm-wasm32"
             cp "./release-assets/${WASM_PKG}/aivm-runtime-wasm32.wasm" "${TARGET_DIR}/.artifacts/aivm-wasm32/"
             cp "./release-assets/${WASM_PKG}/aivm-runtime-wasm32-web.wasm" "${TARGET_DIR}/.artifacts/aivm-wasm32/"
             cp "./release-assets/${WASM_PKG}/aivm-runtime-wasm32-web.mjs" "${TARGET_DIR}/.artifacts/aivm-wasm32/"
+            mkdir -p "${TARGET_DIR}/runtimes/wasm-wasi" "${TARGET_DIR}/runtimes/wasm-browser"
+            cp "./release-assets/${WASM_PKG}/aivm-runtime-wasm32.wasm" "${TARGET_DIR}/runtimes/wasm-wasi/aivm.wasm"
+            cp "./release-assets/${WASM_PKG}/aivm-runtime-wasm32-web.wasm" "${TARGET_DIR}/runtimes/wasm-browser/aivm.wasm"
+            cp "./release-assets/${WASM_PKG}/aivm-runtime-wasm32-web.mjs" "${TARGET_DIR}/runtimes/wasm-browser/aivm.mjs"
           done
 
           for RID in "${UNIX_RIDS[@]}"; do

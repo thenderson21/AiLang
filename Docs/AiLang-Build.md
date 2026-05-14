@@ -8,7 +8,9 @@ Status: alpha bootstrap contract.
 ailang build <project-dir> [--out <dir>]
 ```
 
-`<project-dir>` must contain `project.aiproj`.
+`<project-dir>` must contain `project.aiproj`. The manifest must declare a
+non-empty `entryFile` and `entryExport`, and `entryFile` must point at an
+existing source file under the project directory.
 
 Output is always:
 
@@ -32,8 +34,17 @@ bootstrap compiler process:
 
 ```text
 AILANG_BOOTSTRAP_COMPILER, when set
-./tools/airun, otherwise
+project ailang-toolchain.toml selected SDK, when set
+./tools/ailang, when running from an AiLang source checkout
+~/.ailang/current/bin/ailang, when installed
+ailang, otherwise
 ```
+
+`AILANG_TOOLCHAIN` overrides the project-local selector for this resolution
+step. `AILANG_INSTALL_ROOT` overrides the SDK root; otherwise the root is
+`~/.ailang`. The special selector `local` resolves to
+`~/.ailang/local/bin/ailang`; other selectors resolve to
+`~/.ailang/toolchains/<version>/bin/ailang`.
 
 Production `aivm` binds the process syscalls needed to run this alpha build
 path, so the compiled AiLang CLI can execute `build` under `aivm` as long as the
@@ -48,4 +59,7 @@ gap.
 
 - Missing path returns `AILANG001`.
 - Missing `project.aiproj` returns `AILANG007`.
+- Missing or empty `entryFile` returns `AILANG008`.
+- Missing or empty `entryExport` returns `AILANG009`.
+- Missing entry source file returns `AILANG010`.
 - Bootstrap compiler failure returns `AILANG014`.

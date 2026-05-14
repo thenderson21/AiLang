@@ -18,7 +18,13 @@ ailang agent list
 
 ## Templates
 
-Installed project templates live under:
+Installed project templates are registered in:
+
+```text
+templates/projects/index.toml
+```
+
+Template assets live under:
 
 ```text
 templates/projects/<name>
@@ -34,7 +40,7 @@ AGENTS.md.tpl
 .gitignore.tpl
 ```
 
-Supported project templates:
+The current SDK registry includes:
 
 - `cli`
 - `cli-args`

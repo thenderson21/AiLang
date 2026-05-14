@@ -1,0 +1,9 @@
+[[template]]
+name = "cli"
+description = "Basic AiLang command-line application."
+path = "templates/projects/cli"
+
+[[template]]
+name = "cli-args"
+description = "AiLang command-line application with argument handling."
+path = "templates/projects/cli-args"

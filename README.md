@@ -100,8 +100,8 @@ Run from project manifest:
 ./tools/ailang run samples/cli-fetch/project.aiproj
 ```
 
-By default, `run`/`build` reuse deterministic project-local cache entries under `.toolchain/cache/airun/`.
-Use `--no-cache` to force rebuild and `clean` to clear cache:
+By default, `run`/`build` may reuse deterministic project-local cache entries under `.toolchain/`.
+Use `--no-cache` to force rebuild and `clean` to clear project toolchain state:
 
 ```bash
 ./tools/ailang build samples/cli-fetch --no-cache

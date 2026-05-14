@@ -64,14 +64,19 @@ Current bootstrap status:
 
 - `src/cli/ailang.aos` builds to `app.aibc1`.
 - `aivm app.aibc1 --version` executes through the production VM.
-- `init`, `template`, and `agent` have first bytecode-runnable implementations.
+- `init`, `template`, `agent`, `help`, `version`, and `project version` have
+  first bytecode-runnable implementations.
 - `init` renders installed `.tpl` files under `templates/projects`. Missing
   template files are an error.
 - `build` has an alpha AiLang command implementation, but source-to-AiBC
   compilation still delegates to the bootstrap compiler process documented in
   `Docs/AiLang-Build.md`.
-- `run`, `publish`, and `clean` are declared but still need real AiLang
-  implementations.
+- `clean` is implemented directly in the AiLang-authored CLI.
+- `run` has an alpha AiLang-authored command policy and delegates execution to
+  `aivm` for bytecode or the bootstrap compiler for source/project inputs.
+- `publish` has an alpha AiLang-authored command policy and delegates publish
+  execution to the bootstrap compiler until the compiler runs as AiLang
+  bytecode.
 - Production `aivm` binds the process syscalls needed by general-purpose
   AiLang programs, so it can execute the alpha `build` path when the bootstrap
   compiler executable is present.

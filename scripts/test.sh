@@ -9,6 +9,7 @@ cd "${ROOT_DIR}"
 ./scripts/test-stdlib-capabilities.sh
 ./scripts/test-airun-init.sh
 ./scripts/test-airun-build-source.sh
+./scripts/test-ailang-cli-spec.sh
 ./scripts/test-airun-traced-syscalls.sh
 bash ./scripts/test-airun-debug-dns.sh
 bash ./scripts/test-airun-debug-disasm.sh

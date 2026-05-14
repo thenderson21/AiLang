@@ -24,20 +24,20 @@ Notes:
 - `Assets/` folders are optional and may be removed when unused.
 - Extension boundary: `.aos` for code and `.toml` for data.
 
-Scaffold with built-in templates:
+Scaffold with installed SDK templates:
 
 ```bash
-./tools/airun init MyApp
-./tools/airun init MyArgsApp --template cli-args
+./tools/ailang init MyApp
+./tools/ailang init MyArgsApp --template cli-args
 ```
 
 Scaffold agent instruction files:
 
 ```bash
-./tools/airun init MyCodexApp --agent codex
-./tools/airun init MyClaudeApp --agent claude
-./tools/airun init MyMultiAgentApp --agents codex,claude,cursor
-./tools/airun init MyAllAgentsApp --agents all
+./tools/ailang init MyCodexApp --agent codex
+./tools/ailang init MyClaudeApp --agent claude
+./tools/ailang init MyMultiAgentApp --agents codex,claude,cursor
+./tools/ailang init MyAllAgentsApp --agents all
 ```
 
 `AGENTS.md` is canonical. Other agent-specific files point back to it.
