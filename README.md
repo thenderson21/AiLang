@@ -240,6 +240,20 @@ Examples:
 ./tools/ailang init MyAllAgentsApp --agents all
 ```
 
+Optional Codex skill:
+
+```bash
+git clone https://github.com/AiLangCore/ailang-codex-skill.git
+cd ailang-codex-skill
+./scripts/install.sh
+```
+
+Then ask Codex:
+
+```text
+Use $ailang to create a new AiLang project named MyApp and run it.
+```
+
 ## Runtime Engine
 
 - Canonical runtime: AiBC1 bytecode VM (default).
