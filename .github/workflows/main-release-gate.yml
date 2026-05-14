@@ -201,6 +201,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Checkout AiVM native source
+        uses: actions/checkout@v4
+        with:
+          repository: AiLangCore/AiVM
+          ref: develop
+          path: AiVM
+
       - name: Setup Emscripten
         uses: mymindstorm/setup-emsdk@v14
         with:
@@ -208,6 +215,8 @@ jobs:
 
       - name: Build wasm runtime artifact
         shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/native
         run: |
           set -euo pipefail
           ./build.sh wasm
@@ -222,6 +231,8 @@ jobs:
 
       - name: Wasm golden smoke
         shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/native
         run: |
           set -euo pipefail
           chmod +x ./scripts/test-wasm-golden.sh

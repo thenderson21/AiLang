@@ -420,6 +420,8 @@ jobs:
 
       - name: Wasm golden smoke
         shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/native
         run: |
           set -euo pipefail
           chmod +x ./scripts/test-wasm-golden.sh
