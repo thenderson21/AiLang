@@ -106,11 +106,16 @@ run restore.
 
 ## Commands
 
-Initial package command surface:
+Implemented alpha package command surface:
 
 ```bash
 ailang package restore
 ailang package list
+```
+
+Planned package command surface:
+
+```bash
 ailang package add <name>[@<version>]
 ailang package remove <name>
 ailang package update [name]
@@ -122,6 +127,11 @@ ailang package update [name]
 `list` shows direct and transitive packages from the lockfile.
 
 `add`, `remove`, and `update` modify `project.aiproj` and then run restore.
+
+Alpha implementation note: `restore` is currently backed by an AiVM C native
+bridge helper. This is an intermediary boundary for self-hosting and native
+library wrapping, not a new VM syscall. The long-term implementation remains
+AiLang-authored package logic running on AiVM.
 
 ## Cache
 

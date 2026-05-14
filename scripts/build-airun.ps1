@@ -36,6 +36,8 @@ if (-not (Get-Command cl -ErrorAction SilentlyContinue)) {
 $sources = @(
   $sourcePath,
   $uiHostWindowsPath,
+  (Join-Path $nativeSrc 'ailang_native_bridge.c'),
+  (Join-Path $nativeSrc 'ailang_package_manager.c'),
   (Join-Path $nativeSrc 'aivm_types.c'),
   (Join-Path $nativeSrc 'aivm_vm.c'),
   (Join-Path $nativeSrc 'aivm_program.c'),

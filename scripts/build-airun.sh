@@ -102,6 +102,8 @@ fi
 COMMON_SOURCES=(
   "${SOURCE_PATH}"
   "${UI_HOST_SRC}"
+  "${NATIVE_SRC_DIR}/ailang_native_bridge.c"
+  "${NATIVE_SRC_DIR}/ailang_package_manager.c"
   "${NATIVE_SRC_DIR}/aivm_types.c"
   "${NATIVE_SRC_DIR}/aivm_vm.c"
   "${NATIVE_SRC_DIR}/aivm_program.c"
