@@ -223,6 +223,16 @@ jobs:
           ./build.sh wasm
           test -f ./.artifacts/aivm-wasm32/aivm-runtime-wasm32.wasm
 
+      - name: Stage host tools for wasm golden tests
+        shell: bash
+        env:
+          AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/native
+        run: |
+          set -euo pipefail
+          AIVM_AIRUN_PLATFORM=linux \
+          AIVM_AIRUN_ARCH=x64 \
+          AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh host
+
       - name: Setup wasmtime
         shell: bash
         run: |
