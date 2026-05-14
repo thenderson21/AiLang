@@ -123,7 +123,8 @@ jobs:
         if: matrix.platform == 'windows'
         shell: pwsh
         run: |
-          Copy-Item .\tools\aos_frontend.exe ".\dist\${{ matrix.frontend }}"
+          cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
+          Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
 
       - name: Stage compiler assets (Unix)
         if: matrix.platform != 'windows'

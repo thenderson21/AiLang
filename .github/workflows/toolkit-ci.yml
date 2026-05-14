@@ -124,7 +124,8 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force .\dist | Out-Null
-          Copy-Item .\tools\aos_frontend.exe .\dist\${{ matrix.frontend }}
+          cl /nologo /O2 /std:c11 /Fe:.\dist\${{ matrix.frontend }} .\tools\aos_frontend.c
+          Remove-Item -Force .\aos_frontend.obj -ErrorAction SilentlyContinue
 
       - name: Stage runtime binary (non-Windows)
         if: runner.os != 'Windows'
