@@ -440,14 +440,233 @@ Program#parser_p1 {
                 }
               }
               Block#parser_b116 {
-                Return#parser_r109 {
-                  MakeLitString#parser_mls5 {
-                    Call#parser_c211(target=parse.tokenValue) { Var#parser_v223(name=keyToken) }
-                    Call#parser_c212(target=parse.tokenValue) { Var#parser_v224(name=valueToken) }
+                If#parser_if67 {
+                  Eq#parser_e67 {
+                    Call#parser_c215(target=parse.tokenKind) { Var#parser_v225(name=valueToken) }
+                    Lit#parser_i217(value="name")
+                  }
+                  Block#parser_b117 {
+                    If#parser_if68 {
+                      Call#parser_c216(target=parse.isDigit) {
+                        Call#parser_c217(target=parse.charAt) {
+                          Call#parser_c218(target=parse.tokenValue) { Var#parser_v226(name=valueToken) }
+                          Lit#parser_i218(value=0)
+                        }
+                      }
+                      Block#parser_b118 {
+                        Return#parser_r110 {
+                          MakeLitInt#parser_mli2 {
+                            Call#parser_c219(target=parse.tokenValue) { Var#parser_v227(name=keyToken) }
+                            Call#parser_c220(target=parse.parseIntToken) { Var#parser_v228(name=valueToken) }
+                          }
+                        }
+                      }
+                      Block#parser_b119 {
+                        Return#parser_r109 {
+                          MakeLitString#parser_mls5 {
+                            Call#parser_c211(target=parse.tokenValue) { Var#parser_v223(name=keyToken) }
+                            Call#parser_c212(target=parse.tokenValue) { Var#parser_v224(name=valueToken) }
+                          }
+                        }
+                      }
+                    }
+                  }
+                  Block#parser_b120 {
+                    Return#parser_r111 {
+                      MakeLitString#parser_mls6 {
+                        Call#parser_c221(target=parse.tokenValue) { Var#parser_v229(name=keyToken) }
+                        Call#parser_c222(target=parse.tokenValue) { Var#parser_v230(name=valueToken) }
+                      }
+                    }
                   }
                 }
               }
             }
+          }
+        }
+      }
+    }
+  }
+
+  Let#parser_l65(name=parse.isDigit) {
+    Fn#parser_f63(params=ch) {
+      Block#parser_b121 {
+        If#parser_if69 {
+          Eq#parser_e68 { Var#parser_v231(name=ch) Lit#parser_i219(value="0") }
+          Block#parser_b122 { Return#parser_r112 { Lit#parser_i220(value=true) } }
+          Block#parser_b123 {
+            If#parser_if70 {
+              Eq#parser_e69 { Var#parser_v232(name=ch) Lit#parser_i221(value="1") }
+              Block#parser_b124 { Return#parser_r113 { Lit#parser_i222(value=true) } }
+              Block#parser_b125 {
+                If#parser_if71 {
+                  Eq#parser_e70 { Var#parser_v233(name=ch) Lit#parser_i223(value="2") }
+                  Block#parser_b126 { Return#parser_r114 { Lit#parser_i224(value=true) } }
+                  Block#parser_b127 {
+                    If#parser_if72 {
+                      Eq#parser_e71 { Var#parser_v234(name=ch) Lit#parser_i225(value="3") }
+                      Block#parser_b128 { Return#parser_r115 { Lit#parser_i226(value=true) } }
+                      Block#parser_b129 {
+                        If#parser_if73 {
+                          Eq#parser_e72 { Var#parser_v235(name=ch) Lit#parser_i227(value="4") }
+                          Block#parser_b130 { Return#parser_r116 { Lit#parser_i228(value=true) } }
+                          Block#parser_b131 {
+                            If#parser_if74 {
+                              Eq#parser_e73 { Var#parser_v236(name=ch) Lit#parser_i229(value="5") }
+                              Block#parser_b132 { Return#parser_r117 { Lit#parser_i230(value=true) } }
+                              Block#parser_b133 {
+                                If#parser_if75 {
+                                  Eq#parser_e74 { Var#parser_v237(name=ch) Lit#parser_i231(value="6") }
+                                  Block#parser_b134 { Return#parser_r118 { Lit#parser_i232(value=true) } }
+                                  Block#parser_b135 {
+                                    If#parser_if76 {
+                                      Eq#parser_e75 { Var#parser_v238(name=ch) Lit#parser_i233(value="7") }
+                                      Block#parser_b136 { Return#parser_r119 { Lit#parser_i234(value=true) } }
+                                      Block#parser_b137 {
+                                        If#parser_if77 {
+                                          Eq#parser_e76 { Var#parser_v239(name=ch) Lit#parser_i235(value="8") }
+                                          Block#parser_b138 { Return#parser_r120 { Lit#parser_i236(value=true) } }
+                                          Block#parser_b139 {
+                                            If#parser_if78 {
+                                              Eq#parser_e77 { Var#parser_v240(name=ch) Lit#parser_i237(value="9") }
+                                              Block#parser_b140 { Return#parser_r121 { Lit#parser_i238(value=true) } }
+                                              Block#parser_b141 { Return#parser_r122 { Lit#parser_i239(value=false) } }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#parser_l66(name=parse.digitValue) {
+    Fn#parser_f64(params=ch) {
+      Block#parser_b142 {
+        If#parser_if79 {
+          Eq#parser_e78 { Var#parser_v241(name=ch) Lit#parser_i240(value="0") }
+          Block#parser_b143 { Return#parser_r123 { Lit#parser_i241(value=0) } }
+          Block#parser_b144 {
+            If#parser_if80 {
+              Eq#parser_e79 { Var#parser_v242(name=ch) Lit#parser_i242(value="1") }
+              Block#parser_b145 { Return#parser_r124 { Lit#parser_i243(value=1) } }
+              Block#parser_b146 {
+                If#parser_if81 {
+                  Eq#parser_e80 { Var#parser_v243(name=ch) Lit#parser_i244(value="2") }
+                  Block#parser_b147 { Return#parser_r125 { Lit#parser_i245(value=2) } }
+                  Block#parser_b148 {
+                    If#parser_if82 {
+                      Eq#parser_e81 { Var#parser_v244(name=ch) Lit#parser_i246(value="3") }
+                      Block#parser_b149 { Return#parser_r126 { Lit#parser_i247(value=3) } }
+                      Block#parser_b150 {
+                        If#parser_if83 {
+                          Eq#parser_e82 { Var#parser_v245(name=ch) Lit#parser_i248(value="4") }
+                          Block#parser_b151 { Return#parser_r127 { Lit#parser_i249(value=4) } }
+                          Block#parser_b152 {
+                            If#parser_if84 {
+                              Eq#parser_e83 { Var#parser_v246(name=ch) Lit#parser_i250(value="5") }
+                              Block#parser_b153 { Return#parser_r128 { Lit#parser_i251(value=5) } }
+                              Block#parser_b154 {
+                                If#parser_if85 {
+                                  Eq#parser_e84 { Var#parser_v247(name=ch) Lit#parser_i252(value="6") }
+                                  Block#parser_b155 { Return#parser_r129 { Lit#parser_i253(value=6) } }
+                                  Block#parser_b156 {
+                                    If#parser_if86 {
+                                      Eq#parser_e85 { Var#parser_v248(name=ch) Lit#parser_i254(value="7") }
+                                      Block#parser_b157 { Return#parser_r130 { Lit#parser_i255(value=7) } }
+                                      Block#parser_b158 {
+                                        If#parser_if87 {
+                                          Eq#parser_e86 { Var#parser_v249(name=ch) Lit#parser_i256(value="8") }
+                                          Block#parser_b159 { Return#parser_r131 { Lit#parser_i257(value=8) } }
+                                          Block#parser_b160 {
+                                            If#parser_if88 {
+                                              Eq#parser_e87 { Var#parser_v250(name=ch) Lit#parser_i258(value="9") }
+                                              Block#parser_b161 { Return#parser_r132 { Lit#parser_i259(value=9) } }
+                                              Block#parser_b162 { Return#parser_r133 { Lit#parser_i260(value=0) } }
+                                            }
+                                          }
+                                        }
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#parser_l67(name=parse.mul10) {
+    Fn#parser_f65(params=value) {
+      Block#parser_b163 {
+        Let#parser_l68(name=two) { Add#parser_a105 { Var#parser_v251(name=value) Var#parser_v252(name=value) } }
+        Let#parser_l69(name=four) { Add#parser_a106 { Var#parser_v253(name=two) Var#parser_v254(name=two) } }
+        Let#parser_l70(name=eight) { Add#parser_a107 { Var#parser_v255(name=four) Var#parser_v256(name=four) } }
+        Return#parser_r134 { Add#parser_a108 { Var#parser_v257(name=eight) Var#parser_v258(name=two) } }
+      }
+    }
+  }
+
+  Let#parser_l71(name=parse.parseIntText) {
+    Fn#parser_f66(params=text,index,end,acc) {
+      Block#parser_b164 {
+        If#parser_if89 {
+          Eq#parser_e88 { Var#parser_v259(name=index) Var#parser_v260(name=end) }
+          Block#parser_b165 { Return#parser_r135 { Var#parser_v261(name=acc) } }
+          Block#parser_b166 {
+            Return#parser_r136 {
+              Call#parser_c223(target=parse.parseIntText) {
+                Var#parser_v262(name=text)
+                Add#parser_a109 { Var#parser_v263(name=index) Lit#parser_i261(value=1) }
+                Var#parser_v264(name=end)
+                Add#parser_a110 {
+                  Call#parser_c224(target=parse.mul10) { Var#parser_v265(name=acc) }
+                  Call#parser_c225(target=parse.digitValue) {
+                    Call#parser_c226(target=parse.charAt) { Var#parser_v266(name=text) Var#parser_v267(name=index) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#parser_l72(name=parse.parseIntToken) {
+    Fn#parser_f67(params=token) {
+      Block#parser_b167 {
+        Let#parser_l73(name=value) { Call#parser_c227(target=parse.tokenValue) { Var#parser_v268(name=token) } }
+        Return#parser_r137 {
+          Call#parser_c228(target=parse.parseIntText) {
+            Var#parser_v269(name=value)
+            Lit#parser_i262(value=0)
+            Call#parser_c229(target=parse.readNameEnd) { Var#parser_v270(name=value) Lit#parser_i263(value=0) }
+            Lit#parser_i264(value=0)
           }
         }
       }
@@ -706,13 +925,18 @@ Program#parser_p1 {
   Export#parser_e14(name=parse.parseEmptyNode)
   Export#parser_e15(name=parse.parseNodeWithNameAttr)
   Export#parser_e16(name=parse.makeAttrLit)
-  Export#parser_e17(name=parse.parseNodeWithNameAttrAt)
-  Export#parser_e18(name=parse.parseProgramWithOneChild)
-  Export#parser_e19(name=parse.makeResult)
-  Export#parser_e20(name=parse.resultNode)
-  Export#parser_e21(name=parse.resultNext)
-  Export#parser_e22(name=parse.parseNodeAt)
-  Export#parser_e23(name=parse.parseAttrNodeFromTokens)
-  Export#parser_e24(name=parse.parseChildrenInto)
-  Export#parser_e25(name=parse.parseNode)
+  Export#parser_e17(name=parse.isDigit)
+  Export#parser_e18(name=parse.digitValue)
+  Export#parser_e19(name=parse.mul10)
+  Export#parser_e20(name=parse.parseIntText)
+  Export#parser_e21(name=parse.parseIntToken)
+  Export#parser_e22(name=parse.parseNodeWithNameAttrAt)
+  Export#parser_e23(name=parse.parseProgramWithOneChild)
+  Export#parser_e24(name=parse.makeResult)
+  Export#parser_e25(name=parse.resultNode)
+  Export#parser_e26(name=parse.resultNext)
+  Export#parser_e27(name=parse.parseNodeAt)
+  Export#parser_e28(name=parse.parseAttrNodeFromTokens)
+  Export#parser_e29(name=parse.parseChildrenInto)
+  Export#parser_e30(name=parse.parseNode)
 }

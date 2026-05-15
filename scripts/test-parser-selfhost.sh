@@ -188,8 +188,18 @@ Program#test_p1 {
           Block#test_b51 { Lit#test_i97(value=0) }
           Block#test_b52 { Return#test_r26 { Call#test_c46(target=fail) { Lit#test_i98(value="bool attr value failed") } } }
         }
-        Call#test_c47(target=sys.stdout.writeLine) { Lit#test_i99(value="parser-selfhost-ok") }
-        Return#test_r27 { Lit#test_i100(value=0) }
+        Let#test_l20(name=intNode) {
+          Call#test_c47(target=parse.parseNode) {
+            Lit#test_i99(value="Window#w1(width=320)")
+          }
+        }
+        If#test_if26 {
+          Eq#test_e26 { AttrValueInt#test_avi1 { Var#test_v38(name=intNode) Lit#test_i100(value=0) } Lit#test_i101(value=320) }
+          Block#test_b53 { Lit#test_i102(value=0) }
+          Block#test_b54 { Return#test_r27 { Call#test_c48(target=fail) { Lit#test_i103(value="int attr value failed") } } }
+        }
+        Call#test_c49(target=sys.stdout.writeLine) { Lit#test_i104(value="parser-selfhost-ok") }
+        Return#test_r28 { Lit#test_i105(value=0) }
       }
     }
   }
