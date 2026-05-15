@@ -9,11 +9,13 @@ This document is an execution checklist, not a roadmap narrative.
 ## Current Baseline
 
 - VM memory is deterministic and bounded by explicit capacities in `../AiVM/native/include/aivm_vm.h`.
+- Large VM regions are heap-backed inside AiVM instead of embedded directly in
+  the `AivmVm` struct.
 - Node graph memory uses deterministic tracing compaction with fixed policy:
   - `node_gc_interval_allocations = 64`
-  - `node_gc_pressure_threshold_nodes = 384`
-  - `node_gc_pressure_threshold_attrs = 1536`
-  - `node_gc_pressure_threshold_children = 3072`
+  - `node_gc_pressure_threshold_nodes = 12288`
+  - `node_gc_pressure_threshold_attrs = 49152`
+  - `node_gc_pressure_threshold_children = 98304`
   - hard-cap path compacts before emitting `AIVMM005`.
 - Memory pressure telemetry is emitted in debug artifacts:
   - `string_arena_pressure_count`
@@ -23,10 +25,14 @@ This document is an execution checklist, not a roadmap narrative.
 - Root-attribution telemetry is emitted in debug artifacts:
   - flat `node_root_*` counters in `state_snapshots.toml`
   - structured `node_roots` table in `diagnostics.toml`
+- Node-kind attribution is emitted in debug artifacts:
+  - `node_kind_counts` in `state_snapshots.toml`
+  - `node_kind_counts` in `diagnostics.toml`
 - Stability checks exist (`test_memory_rc.c`, `test_memory_cycle.c`).
 - Leak/profile scripts exist:
   - `scripts/aivm-mem-leak-check.sh`
   - `scripts/aivm-mem-profile.sh`
+  - `scripts/profile-parser-memory.sh`
 - Dashboard currently reports Memory/GC pass in `Docs/AiVM-C-Parity-Status.md`.
 
 ## Production Strategy (Recommended)
@@ -79,6 +85,16 @@ This document is an execution checklist, not a roadmap narrative.
 
 ## Immediate Next Tasks
 
-1. Add one deterministic async/process cleanup stress test focused on cancel/fail paths.
-2. Expand memory-growth audit targets beyond the single baseline parity case.
-3. Keep release-gate assertions on debug bundle memory/root-attribution telemetry fields.
+1. Fix parser intermediate retention before raising VM node limits again.
+2. Add one deterministic async/process cleanup stress test focused on cancel/fail paths.
+3. Expand memory-growth audit targets beyond the single baseline parity case.
+4. Keep release-gate assertions on debug bundle memory/root/kind-attribution telemetry fields.
+
+## Parser Memory Finding
+
+`scripts/profile-parser-memory.sh src/compiler/format.aos` currently reaches
+`AIVMM005` with all `16384` node slots retained from locals. The diagnostic
+bundle reports one `Block` retaining more than sixteen thousand children and a
+large `unknown` node-kind bucket. This points at parser intermediate
+representation/lifetime behavior, not a need for another arena capacity
+increase.

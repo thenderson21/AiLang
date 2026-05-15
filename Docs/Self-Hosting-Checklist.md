@@ -33,6 +33,9 @@ compiler path.
    - parse `.aos` into canonical IL nodes
    - deterministic IDs
    - deterministic diagnostics
+   - reduce temporary token/result node retention
+   - keep `scripts/profile-parser-memory.sh` green enough to parse compiler
+     source files without `AIVMM005`
 
 3. Validator in AiLang
    - enforce IL contracts
