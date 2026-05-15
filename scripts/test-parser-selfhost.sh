@@ -178,8 +178,18 @@ Program#test_p1 {
           Block#test_b49 { Lit#test_i92(value=0) }
           Block#test_b50 { Return#test_r25 { Call#test_c44(target=fail) { Lit#test_i93(value="quoted attr value failed") } } }
         }
-        Call#test_c45(target=sys.stdout.writeLine) { Lit#test_i94(value="parser-selfhost-ok") }
-        Return#test_r26 { Lit#test_i95(value=0) }
+        Let#test_l19(name=boolNode) {
+          Call#test_c45(target=parse.parseNode) {
+            Lit#test_i94(value="Flag#f1(enabled=true)")
+          }
+        }
+        If#test_if25 {
+          Eq#test_e25 { AttrValueBool#test_avb1 { Var#test_v37(name=boolNode) Lit#test_i95(value=0) } Lit#test_i96(value=true) }
+          Block#test_b51 { Lit#test_i97(value=0) }
+          Block#test_b52 { Return#test_r26 { Call#test_c46(target=fail) { Lit#test_i98(value="bool attr value failed") } } }
+        }
+        Call#test_c47(target=sys.stdout.writeLine) { Lit#test_i99(value="parser-selfhost-ok") }
+        Return#test_r27 { Lit#test_i100(value=0) }
       }
     }
   }
