@@ -152,8 +152,34 @@ Program#test_p1 {
           Block#test_b43 { Lit#test_i79(value=0) }
           Block#test_b44 { Return#test_r22 { Call#test_c37(target=fail) { Lit#test_i80(value="nested export attr failed") } } }
         }
-        Call#test_c38(target=sys.stdout.writeLine) { Lit#test_i81(value="parser-selfhost-ok") }
-        Return#test_r23 { Lit#test_i82(value=0) }
+        Let#test_l17(name=quotedToken) {
+          Call#test_c38(target=parse.nextToken) {
+            Lit#test_i81(value="\"./app.aos\"")
+            Lit#test_i82(value=0)
+          }
+        }
+        If#test_if22 {
+          Eq#test_e22 { Call#test_c39(target=parse.tokenKind) { Var#test_v34(name=quotedToken) } Lit#test_i83(value="string") }
+          Block#test_b45 { Lit#test_i84(value=0) }
+          Block#test_b46 { Return#test_r23 { Call#test_c40(target=fail) { Lit#test_i85(value="quoted token kind failed") } } }
+        }
+        If#test_if23 {
+          Eq#test_e23 { Call#test_c41(target=parse.tokenValue) { Var#test_v35(name=quotedToken) } Lit#test_i86(value="./app.aos") }
+          Block#test_b47 { Lit#test_i87(value=0) }
+          Block#test_b48 { Return#test_r24 { Call#test_c42(target=fail) { Lit#test_i88(value="quoted token value failed") } } }
+        }
+        Let#test_l18(name=importNode) {
+          Call#test_c43(target=parse.parseNode) {
+            Lit#test_i89(value="Import#i1(path=\"./app.aos\")")
+          }
+        }
+        If#test_if24 {
+          Eq#test_e24 { AttrValueString#test_avs5 { Var#test_v36(name=importNode) Lit#test_i90(value=0) } Lit#test_i91(value="./app.aos") }
+          Block#test_b49 { Lit#test_i92(value=0) }
+          Block#test_b50 { Return#test_r25 { Call#test_c44(target=fail) { Lit#test_i93(value="quoted attr value failed") } } }
+        }
+        Call#test_c45(target=sys.stdout.writeLine) { Lit#test_i94(value="parser-selfhost-ok") }
+        Return#test_r26 { Lit#test_i95(value=0) }
       }
     }
   }
