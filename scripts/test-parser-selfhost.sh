@@ -178,35 +178,40 @@ Program#test_p1 {
           Block#test_b49 { Lit#test_i92(value=0) }
           Block#test_b50 { Return#test_r25 { Call#test_c44(target=fail) { Lit#test_i93(value="quoted attr value failed") } } }
         }
-        Let#test_l19(name=boolNode) {
+        Let#test_l19(name=escapedNode) {
           Call#test_c45(target=parse.parseNode) {
-            Lit#test_i94(value="Flag#f1(enabled=true)")
+            Lit#test_i94(value="Esc#e1(text=\"a\\\"b\")")
           }
         }
         If#test_if25 {
-          Eq#test_e25 { AttrValueBool#test_avb1 { Var#test_v37(name=boolNode) Lit#test_i95(value=0) } Lit#test_i96(value=true) }
+          Eq#test_e25 { AttrValueString#test_avs9 { Var#test_v37(name=escapedNode) Lit#test_i95(value=0) } Lit#test_i96(value="a\"b") }
           Block#test_b51 { Lit#test_i97(value=0) }
-          Block#test_b52 { Return#test_r26 { Call#test_c46(target=fail) { Lit#test_i98(value="bool attr value failed") } } }
+          Block#test_b52 { Return#test_r26 { Call#test_c46(target=fail) { Lit#test_i98(value="escaped quote attr failed") } } }
         }
-        Let#test_l20(name=intNode) {
+        Let#test_l20(name=boolNode) {
           Call#test_c47(target=parse.parseNode) {
-            Lit#test_i99(value="Window#w1(width=320)")
+            Lit#test_i99(value="Flag#f1(enabled=true)")
           }
         }
         If#test_if26 {
-          Eq#test_e26 { AttrValueInt#test_avi1 { Var#test_v38(name=intNode) Lit#test_i100(value=0) } Lit#test_i101(value=320) }
+          Eq#test_e26 { AttrValueBool#test_avb1 { Var#test_v38(name=boolNode) Lit#test_i100(value=0) } Lit#test_i101(value=true) }
           Block#test_b53 { Lit#test_i102(value=0) }
-          Block#test_b54 { Return#test_r27 { Call#test_c48(target=fail) { Lit#test_i103(value="int attr value failed") } } }
+          Block#test_b54 { Return#test_r27 { Call#test_c48(target=fail) { Lit#test_i103(value="bool attr value failed") } } }
         }
-        Let#test_l21(name=multiAttrNode) {
+        Let#test_l21(name=intNode) {
           Call#test_c49(target=parse.parseNode) {
-            Lit#test_i104(value="Bytecode#bc1(flags=0 format=\"AiBC1\" magic=\"AIBC\" version=2)")
+            Lit#test_i104(value="Window#w1(width=320)")
           }
         }
         If#test_if27 {
-          Eq#test_e27 { AttrCount#test_ac2 { Var#test_v39(name=multiAttrNode) } Lit#test_i105(value=4) }
-          Block#test_b55 { Lit#test_i106(value=0) }
-          Block#test_b56 { Return#test_r28 { Call#test_c50(target=fail) { Lit#test_i107(value="multi attr count failed") } } }
+          Eq#test_e27 { AttrValueInt#test_avi1 { Var#test_v39(name=intNode) Lit#test_i105(value=0) } Lit#test_i106(value=320) }
+          Block#test_b55 { Lit#test_i176(value=0) }
+          Block#test_b56 { Return#test_r28 { Call#test_c50(target=fail) { Lit#test_i107(value="int attr value failed") } } }
+        }
+        Let#test_l43(name=multiAttrNode) {
+          Call#test_c72(target=parse.parseNode) {
+            Lit#test_i175(value="Bytecode#bc1(flags=0 format=\"AiBC1\" magic=\"AIBC\" version=2)")
+          }
         }
         If#test_if28 {
           Eq#test_e28 { AttrValueString#test_avs6 { Var#test_v40(name=multiAttrNode) Lit#test_i108(value=1) } Lit#test_i109(value="AiBC1") }
@@ -311,7 +316,7 @@ Program#test_p1 {
           Block#test_b82 { Return#test_r41 { Call#test_c70(target=fail) { Lit#test_i172(value="real negative literal attr failed") } } }
         }
         Call#test_c71(target=sys.stdout.writeLine) { Lit#test_i173(value="parser-selfhost-ok") }
-        Return#test_r42 { Lit#test_i174(value=0) }
+        Return#test_r44 { Lit#test_i174(value=0) }
       }
     }
   }

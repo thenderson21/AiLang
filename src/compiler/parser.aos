@@ -174,10 +174,23 @@ Program#parser_p1 {
               Eq#parser_e61 { Var#parser_v204(name=ch) Lit#parser_i201(value="\"") }
               Block#parser_b103 { Return#parser_r101 { Add#parser_a100 { Var#parser_v205(name=index) Lit#parser_i202(value=1) } } }
               Block#parser_b104 {
-                Return#parser_r102 {
-                  Call#parser_c201(target=parse.readStringEnd) {
-                    Var#parser_v206(name=text)
-                    Add#parser_a101 { Var#parser_v207(name=index) Lit#parser_i203(value=1) }
+                If#parser_if96 {
+                  Eq#parser_e94 { Var#parser_v206(name=ch) Lit#parser_i281(value="\\") }
+                  Block#parser_b183 {
+                    Return#parser_r147 {
+                      Call#parser_c263(target=parse.readStringEnd) {
+                        Var#parser_v207(name=text)
+                        Add#parser_a113 { Var#parser_v208(name=index) Lit#parser_i282(value=2) }
+                      }
+                    }
+                  }
+                  Block#parser_b184 {
+                    Return#parser_r102 {
+                      Call#parser_c201(target=parse.readStringEnd) {
+                        Var#parser_v209(name=text)
+                        Add#parser_a101 { Var#parser_v210(name=index) Lit#parser_i203(value=1) }
+                      }
+                    }
                   }
                 }
               }
@@ -191,23 +204,69 @@ Program#parser_p1 {
   Let#parser_l62(name=parse.readStringText) {
     Fn#parser_f61(params=text,index) {
       Block#parser_b105 {
-        Let#parser_l63(name=ch) { Call#parser_c202(target=parse.charAt) { Var#parser_v208(name=text) Var#parser_v209(name=index) } }
+        Let#parser_l63(name=ch) { Call#parser_c202(target=parse.charAt) { Var#parser_v211(name=text) Var#parser_v212(name=index) } }
         If#parser_if62 {
-          Eq#parser_e62 { Var#parser_v210(name=ch) Lit#parser_i204(value="") }
+          Eq#parser_e62 { Var#parser_v213(name=ch) Lit#parser_i204(value="") }
           Block#parser_b106 { Return#parser_r103 { Lit#parser_i205(value="") } }
           Block#parser_b107 {
             If#parser_if63 {
-              Eq#parser_e63 { Var#parser_v211(name=ch) Lit#parser_i206(value="\"") }
+              Eq#parser_e63 { Var#parser_v214(name=ch) Lit#parser_i206(value="\"") }
               Block#parser_b108 { Return#parser_r104 { Lit#parser_i207(value="") } }
               Block#parser_b109 {
-                Return#parser_r105 {
-                  StrConcat#parser_sc2 {
-                    Var#parser_v212(name=ch)
-                    Call#parser_c203(target=parse.readStringText) {
-                      Var#parser_v213(name=text)
-                      Add#parser_a102 { Var#parser_v214(name=index) Lit#parser_i208(value=1) }
+                If#parser_if97 {
+                  Eq#parser_e95 { Var#parser_v215(name=ch) Lit#parser_i283(value="\\") }
+                  Block#parser_b185 {
+                    Return#parser_r148 {
+                      StrConcat#parser_sc3 {
+                        Call#parser_c264(target=parse.decodeEscape) {
+                          Call#parser_c265(target=parse.charAt) {
+                            Var#parser_v216(name=text)
+                            Add#parser_a114 { Var#parser_v217(name=index) Lit#parser_i284(value=1) }
+                          }
+                        }
+                        Call#parser_c266(target=parse.readStringText) {
+                          Var#parser_v218(name=text)
+                          Add#parser_a115 { Var#parser_v219(name=index) Lit#parser_i285(value=2) }
+                        }
+                      }
                     }
                   }
+                  Block#parser_b186 {
+                    Return#parser_r105 {
+                      StrConcat#parser_sc2 {
+                        Var#parser_v220(name=ch)
+                        Call#parser_c203(target=parse.readStringText) {
+                          Var#parser_v221(name=text)
+                          Add#parser_a102 { Var#parser_v222(name=index) Lit#parser_i208(value=1) }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#parser_l84(name=parse.decodeEscape) {
+    Fn#parser_f71(params=ch) {
+      Block#parser_b187 {
+        If#parser_if98 {
+          Eq#parser_e96 { Var#parser_v350(name=ch) Lit#parser_i286(value="n") }
+          Block#parser_b188 { Return#parser_r149 { Lit#parser_i287(value="
+") } }
+          Block#parser_b189 {
+            If#parser_if99 {
+              Eq#parser_e97 { Var#parser_v351(name=ch) Lit#parser_i288(value="t") }
+              Block#parser_b190 { Return#parser_r150 { Lit#parser_i289(value="	") } }
+              Block#parser_b191 {
+                If#parser_if100 {
+                  Eq#parser_e98 { Var#parser_v352(name=ch) Lit#parser_i290(value="r") }
+                  Block#parser_b192 { Return#parser_r151 { Lit#parser_i291(value="") } }
+                  Block#parser_b193 { Return#parser_r152 { Var#parser_v353(name=ch) } }
                 }
               }
             }
@@ -1042,29 +1101,30 @@ Program#parser_p1 {
   Export#parser_e6(name=parse.readNameText)
   Export#parser_e7(name=parse.readStringEnd)
   Export#parser_e8(name=parse.readStringText)
-  Export#parser_e9(name=parse.makeToken)
-  Export#parser_e10(name=parse.tokenKind)
-  Export#parser_e11(name=parse.tokenValue)
-  Export#parser_e12(name=parse.tokenNext)
-  Export#parser_e13(name=parse.nextToken)
-  Export#parser_e14(name=parse.parseEmptyNode)
-  Export#parser_e15(name=parse.parseNodeWithNameAttr)
-  Export#parser_e16(name=parse.makeAttrLit)
-  Export#parser_e17(name=parse.isIntToken)
-  Export#parser_e18(name=parse.isDigit)
-  Export#parser_e19(name=parse.digitValue)
-  Export#parser_e20(name=parse.mul10)
-  Export#parser_e21(name=parse.parseIntText)
-  Export#parser_e22(name=parse.negateInt)
-  Export#parser_e23(name=parse.parseIntToken)
-  Export#parser_e24(name=parse.parseNodeWithNameAttrAt)
-  Export#parser_e25(name=parse.parseProgramWithOneChild)
-  Export#parser_e26(name=parse.makeResult)
-  Export#parser_e27(name=parse.resultNode)
-  Export#parser_e28(name=parse.resultNext)
-  Export#parser_e29(name=parse.parseNodeAt)
-  Export#parser_e30(name=parse.parseAttrNodeFromTokens)
-  Export#parser_e31(name=parse.parseAttrsInto)
-  Export#parser_e32(name=parse.parseChildrenInto)
-  Export#parser_e33(name=parse.parseNode)
+  Export#parser_e9(name=parse.decodeEscape)
+  Export#parser_e10(name=parse.makeToken)
+  Export#parser_e11(name=parse.tokenKind)
+  Export#parser_e12(name=parse.tokenValue)
+  Export#parser_e13(name=parse.tokenNext)
+  Export#parser_e14(name=parse.nextToken)
+  Export#parser_e15(name=parse.parseEmptyNode)
+  Export#parser_e16(name=parse.parseNodeWithNameAttr)
+  Export#parser_e17(name=parse.makeAttrLit)
+  Export#parser_e18(name=parse.isIntToken)
+  Export#parser_e19(name=parse.isDigit)
+  Export#parser_e20(name=parse.digitValue)
+  Export#parser_e21(name=parse.mul10)
+  Export#parser_e22(name=parse.parseIntText)
+  Export#parser_e23(name=parse.negateInt)
+  Export#parser_e24(name=parse.parseIntToken)
+  Export#parser_e25(name=parse.parseNodeWithNameAttrAt)
+  Export#parser_e26(name=parse.parseProgramWithOneChild)
+  Export#parser_e27(name=parse.makeResult)
+  Export#parser_e28(name=parse.resultNode)
+  Export#parser_e29(name=parse.resultNext)
+  Export#parser_e30(name=parse.parseNodeAt)
+  Export#parser_e31(name=parse.parseAttrNodeFromTokens)
+  Export#parser_e32(name=parse.parseAttrsInto)
+  Export#parser_e33(name=parse.parseChildrenInto)
+  Export#parser_e34(name=parse.parseNode)
 }
