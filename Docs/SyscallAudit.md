@@ -6,12 +6,12 @@ Audit date: 2026-02-13
 
 This audit covers syscall capability surface in:
 
-- `/Users/toddhenderson/RiderProjects/AiLang/src/AiVM.Core/ISyscallHost.cs`
-- `/Users/toddhenderson/RiderProjects/AiLang/src/AiVM.Core/VmSyscallDispatcher.cs`
-- `/Users/toddhenderson/RiderProjects/AiLang/src/AiVM.Core/SyscallContracts.cs`
-- `/Users/toddhenderson/RiderProjects/AiLang/src/AiVM.Core/DefaultSyscallHost.cs`
-- `/Users/toddhenderson/RiderProjects/AiLang/src/AiVM.Core/VmCapabilityDispatcher.cs`
-- `/Users/toddhenderson/RiderProjects/AiLang/src/AiLang.Core/AosValidator.cs`
+- `src/AiVM.Core/ISyscallHost.cs`
+- `src/AiVM.Core/VmSyscallDispatcher.cs`
+- `src/AiVM.Core/SyscallContracts.cs`
+- `src/AiVM.Core/DefaultSyscallHost.cs`
+- `src/AiVM.Core/VmCapabilityDispatcher.cs`
+- `src/AiLang.Core/AosValidator.cs`
 
 ## Current Capability Groups
 

@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-ACTIVE_ROOT="/tmp/codex/agent-bus"
-PERSISTENT_ROOT="/Users/toddhenderson/.codex/agent-bus"
+ACTIVE_ROOT="${AILANG_AGENT_BUS_ACTIVE_ROOT:-/tmp/codex/agent-bus}"
+PERSISTENT_ROOT="${AILANG_AGENT_BUS_PERSISTENT_ROOT:-${CODEX_HOME:-$HOME/.codex}/agent-bus}"
 
 ensure_dirs() {
   root="$1"
@@ -31,7 +31,11 @@ latest_mtime() {
     echo 0
     return
   fi
-  find "$root" -type f -exec stat -f '%m' {} \; 2>/dev/null | sort -nr | awk 'NR==1{print $1; found=1} END{if(!found) print 0}'
+  if find "$root" -type f -exec stat -f '%m' {} \; >/dev/null 2>&1; then
+    find "$root" -type f -exec stat -f '%m' {} \; 2>/dev/null | sort -nr | awk 'NR==1{print $1; found=1} END{if(!found) print 0}'
+  else
+    find "$root" -type f -exec stat -c '%Y' {} \; 2>/dev/null | sort -nr | awk 'NR==1{print $1; found=1} END{if(!found) print 0}'
+  fi
 }
 
 active_exists=0
