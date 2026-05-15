@@ -290,6 +290,37 @@ Program#parser_p1 {
     }
   }
 
+  Let#parser_l17(name=parse.parseEmptyNode) {
+    Fn#parser_f13(params=text) {
+      Block#parser_b63 {
+        Let#parser_l18(name=kindToken) {
+          Call#parser_c27(target=parse.nextToken) {
+            Var#parser_v75(name=text)
+            Lit#parser_i79(value=0)
+          }
+        }
+        Let#parser_l19(name=hashToken) {
+          Call#parser_c28(target=parse.nextToken) {
+            Var#parser_v76(name=text)
+            Call#parser_c29(target=parse.tokenNext) { Var#parser_v77(name=kindToken) }
+          }
+        }
+        Let#parser_l20(name=idToken) {
+          Call#parser_c30(target=parse.nextToken) {
+            Var#parser_v78(name=text)
+            Call#parser_c31(target=parse.tokenNext) { Var#parser_v79(name=hashToken) }
+          }
+        }
+        Return#parser_r38 {
+          MakeNode#parser_mn1 {
+            Call#parser_c32(target=parse.tokenValue) { Var#parser_v80(name=kindToken) }
+            Call#parser_c33(target=parse.tokenValue) { Var#parser_v81(name=idToken) }
+          }
+        }
+      }
+    }
+  }
+
   Export#parser_e1(name=parse.charAt)
   Export#parser_e2(name=parse.isWhitespace)
   Export#parser_e3(name=parse.skipWhitespace)
@@ -301,4 +332,5 @@ Program#parser_p1 {
   Export#parser_e9(name=parse.tokenValue)
   Export#parser_e10(name=parse.tokenNext)
   Export#parser_e11(name=parse.nextToken)
+  Export#parser_e12(name=parse.parseEmptyNode)
 }

@@ -60,8 +60,19 @@ Program#test_p1 {
           Block#test_b13 { Lit#test_i20(value=0) }
           Block#test_b14 { Return#test_r7 { Call#test_c17(target=fail) { Lit#test_i21(value="symbol token failed") } } }
         }
-        Call#test_c18(target=sys.stdout.writeLine) { Lit#test_i22(value="parser-selfhost-ok") }
-        Return#test_r8 { Lit#test_i23(value=0) }
+        Let#test_l8(name=programNode) { Call#test_c18(target=parse.parseEmptyNode) { Lit#test_i22(value="Program#p1 { }") } }
+        If#test_if7 {
+          Eq#test_e7 { NodeKind#test_nk1 { Var#test_v15(name=programNode) } Lit#test_i23(value="Program") }
+          Block#test_b15 { Lit#test_i24(value=0) }
+          Block#test_b16 { Return#test_r8 { Call#test_c19(target=fail) { Lit#test_i25(value="node kind failed") } } }
+        }
+        If#test_if8 {
+          Eq#test_e8 { NodeId#test_nid1 { Var#test_v16(name=programNode) } Lit#test_i26(value="p1") }
+          Block#test_b17 { Lit#test_i27(value=0) }
+          Block#test_b18 { Return#test_r9 { Call#test_c20(target=fail) { Lit#test_i28(value="node id failed") } } }
+        }
+        Call#test_c21(target=sys.stdout.writeLine) { Lit#test_i29(value="parser-selfhost-ok") }
+        Return#test_r10 { Lit#test_i30(value=0) }
       }
     }
   }
