@@ -109,8 +109,51 @@ Program#test_p1 {
           Block#test_b31 { Lit#test_i54(value=0) }
           Block#test_b32 { Return#test_r16 { Call#test_c29(target=fail) { Lit#test_i55(value="program child attr failed") } } }
         }
-        Call#test_c30(target=sys.stdout.writeLine) { Lit#test_i56(value="parser-selfhost-ok") }
-        Return#test_r17 { Lit#test_i57(value=0) }
+        Let#test_l12(name=twoChildProgram) {
+          Call#test_c30(target=parse.parseNode) {
+            Lit#test_i56(value="Program#p3 { Export#e3(name=start) Export#e4(name=stop) }")
+          }
+        }
+        If#test_if16 {
+          Eq#test_e16 { ChildCount#test_cc2 { Var#test_v25(name=twoChildProgram) } Lit#test_i57(value=2) }
+          Block#test_b33 { Lit#test_i58(value=0) }
+          Block#test_b34 { Return#test_r17 { Call#test_c31(target=fail) { Lit#test_i59(value="two child count failed") } } }
+        }
+        Let#test_l13(name=secondChild) { ChildAt#test_ca2 { Var#test_v26(name=twoChildProgram) Lit#test_i60(value=1) } }
+        If#test_if17 {
+          Eq#test_e17 { NodeId#test_nid2 { Var#test_v27(name=secondChild) } Lit#test_i61(value="e4") }
+          Block#test_b35 { Lit#test_i62(value=0) }
+          Block#test_b36 { Return#test_r18 { Call#test_c32(target=fail) { Lit#test_i63(value="second child id failed") } } }
+        }
+        If#test_if18 {
+          Eq#test_e18 { AttrValueString#test_avs3 { Var#test_v28(name=secondChild) Lit#test_i64(value=0) } Lit#test_i65(value="stop") }
+          Block#test_b37 { Lit#test_i66(value=0) }
+          Block#test_b38 { Return#test_r19 { Call#test_c33(target=fail) { Lit#test_i67(value="second child attr failed") } } }
+        }
+        Let#test_l14(name=nestedProgram) {
+          Call#test_c34(target=parse.parseNode) {
+            Lit#test_i68(value="Program#p4 { Let#l4 { Export#e5(name=start) } }")
+          }
+        }
+        Let#test_l15(name=letNode) { ChildAt#test_ca3 { Var#test_v29(name=nestedProgram) Lit#test_i69(value=0) } }
+        If#test_if19 {
+          Eq#test_e19 { NodeKind#test_nk4 { Var#test_v30(name=letNode) } Lit#test_i70(value="Let") }
+          Block#test_b39 { Lit#test_i71(value=0) }
+          Block#test_b40 { Return#test_r20 { Call#test_c35(target=fail) { Lit#test_i72(value="nested let kind failed") } } }
+        }
+        If#test_if20 {
+          Eq#test_e20 { ChildCount#test_cc3 { Var#test_v31(name=letNode) } Lit#test_i73(value=1) }
+          Block#test_b41 { Lit#test_i74(value=0) }
+          Block#test_b42 { Return#test_r21 { Call#test_c36(target=fail) { Lit#test_i75(value="nested child count failed") } } }
+        }
+        Let#test_l16(name=nestedExport) { ChildAt#test_ca4 { Var#test_v32(name=letNode) Lit#test_i76(value=0) } }
+        If#test_if21 {
+          Eq#test_e21 { AttrValueString#test_avs4 { Var#test_v33(name=nestedExport) Lit#test_i77(value=0) } Lit#test_i78(value="start") }
+          Block#test_b43 { Lit#test_i79(value=0) }
+          Block#test_b44 { Return#test_r22 { Call#test_c37(target=fail) { Lit#test_i80(value="nested export attr failed") } } }
+        }
+        Call#test_c38(target=sys.stdout.writeLine) { Lit#test_i81(value="parser-selfhost-ok") }
+        Return#test_r23 { Lit#test_i82(value=0) }
       }
     }
   }
