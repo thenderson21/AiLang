@@ -327,8 +327,14 @@ Normative semantic contracts live in:
 - `SPEC/VALIDATION.md`
 - `SPEC/BYTECODE.md`
 
-Draft proposal (not implemented):
+Non-normative design companion:
 
 - `SPEC/CONCURRENCY.md`
 
 When semantics change, update these specs and matching goldens together.
+
+## Roadmap
+
+- `ROADMAP.md` tracks the public Alpha -> Beta -> RC -> 1.0 direction.
+- `BETA_READINESS.md` tracks the project-wide beta gate across AiLang, AiVM,
+  and AiVectra.

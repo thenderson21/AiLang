@@ -1,296 +1,95 @@
-# AiLang Runtime & Platform Roadmap
-Authoritative Direction – Focused Execution Plan
+# AiLangCore Roadmap
 
-⸻
+Status: public planning roadmap for AiLang, AiVM, and AiVectra.
 
-## Vision
+AiLangCore is an AI-first programming platform built around deterministic
+language semantics, a tiny native VM, and a vector UI/runtime SDK.
 
-AiLang is a deterministic, AI-optimized development platform.
+## Architecture Direction
 
-Goals:
-	•	Minimal host layer (C# = bootloader + syscalls only)
-	•	Majority of semantics implemented in AiLang
-	•	Deterministic execution
-	•	Cross-platform (macOS, Windows, Linux)
-	•	Future WASM + JIT capable
-	•	Competes conceptually with .NET — but AI-first and simpler
+- AiLang owns language semantics, compiler/tooling, core libraries, package
+  restore, project templates, and SDK layout.
+- AiVM owns the native C runtime, bytecode execution, syscall dispatch, memory
+  management, diagnostics, and embeddable VM library.
+- AiVectra owns the vector UI SDK, scene graph semantics, app runtime
+  integration, and UI samples.
 
-⸻
+The public runtime direction is the native C AiVM. Legacy runtime paths are
+bootstrap or archive material only unless explicitly marked otherwise.
 
-## Core Principle
+## Alpha
 
-C# must be:
-	•	Bootloader
-	•	Syscall surface
-	•	Process boundary
-	•	Platform abstraction
+Goal: make the project installable, understandable, and demoable.
 
-All orchestration, lifecycle, routing, HTTP logic, JSON, runtime dispatch, etc. must live in AiLang.
+Current priorities:
 
-⸻
+- Keep public docs aligned with the three-repo architecture.
+- Keep `develop` branches buildable and testable.
+- Ensure install scripts install the current SDK and native VM artifacts.
+- Keep `ailang init`, `ailang build`, `ailang run`, and `ailang publish`
+  coherent.
+- Prove package restore with a curated git-backed registry.
+- Keep AiVM memory behavior deterministic and covered by regression tests.
+- Keep at least one AiVectra app/sample runnable for demos.
 
-## Phase 1 – Runtime Stabilization (Current Phase)
+Alpha is allowed to change contracts freely. Do not add compatibility layers
+unless explicitly requested.
 
-Status: In Progress
+## Beta
 
-Objectives:
-	•	Unified runtime.start(args) for run + serve
-	•	Lifecycle orchestration in AiLang
-	•	Routing in AiLang
-	•	JSON in AiLang
-	•	HTTP parsing in AiLang
-	•	C# reduced to syscall layer
+Goal: make the project credible for outside contributors, conference demos, and
+sponsor review.
 
-Remaining Work:
-	•	Remove any remaining lifecycle knowledge from C#
-	•	Ensure all command handling lives in runtime.aos
-	•	Stabilize syscall namespace: sys.*
+Beta gates are tracked in:
 
-Exit Criteria:
-	•	C# contains zero lifecycle or routing logic
-	•	C# contains zero HTTP orchestration logic
-	•	All orchestration flows through runtime.aos
+```text
+BETA_READINESS.md
+```
 
-⸻
+Minimum beta outcomes:
 
-## Phase 2 – Structured HTTP Platform
+- install flow works on macOS, Linux, and Windows
+- native AiVM artifacts are released for supported hosts
+- `ailang init/build/run` works from installed SDKs
+- package restore works and is documented
+- public specs have clear ownership
+- resource limits and error codes are stable enough for beta
+- at least one AiVectra sample app is functional and documented
+- website, releases, README files, and branch story are consistent
 
-Objective: Real Web API capability
+## Release Candidate
 
-Additions Required:
+Goal: lock behavior for the first stable release.
 
-Transport:
-	•	TLS support
-	•	Proper HTTP/1.1 support (request body, persistent connections)
-	•	Structured request/response objects
+RC requirements:
 
-Language-Level Contract:
+- semantic specs are internally consistent
+- CLI contracts are frozen for 1.0
+- package registry format is frozen for 1.0
+- release automation is repeatable
+- install/update flow is repeatable
+- cross-platform CI is green
+- docs contain no known architecture contradictions
 
-HttpRequest:
-	•	method
-	•	path
-	•	query
-	•	headers (Map)
-	•	body
+## 1.0
 
-HttpResponse:
-	•	status
-	•	headers
-	•	body
+Goal: a stable first release for real users and contributors.
 
-Runtime Changes:
-	•	Event#Message(type=“http.request”, payload=HttpRequest)
-	•	Command#Emit(type=“http.response”, payload=HttpResponse)
+1.0 requirements:
 
-Exit Criteria:
-	•	HTTP apps no longer manipulate raw text
-	•	JSON response built via Map + std.json.stringify
-	•	TLS supported via sys.tls.listen
+- deterministic language contracts are stable
+- native AiVM is the default runtime
+- SDK layout and version selection are stable
+- package restore is stable
+- AiVectra has a documented app model
+- public docs explain how humans and agents start projects
+- sponsorship and contribution paths are clear
 
-⸻
+## Long-Term Direction
 
-## Phase 3 – Bytecode VM
-
-Objective: Remove interpreter bottleneck
-
-Current:
-	•	Tree-walking interpreter
-
-Needed:
-	•	Deterministic bytecode format
-	•	AOT compiler: AOS → AIBYTE
-	•	Bytecode VM executor
-	•	Publish bundles embed bytecode, not AST
-
-Why:
-	•	Performance
-	•	Platform independence
-	•	JIT-ready
-	•	WASM-ready
-
-Exit Criteria:
-	•	aic publish produces bytecode
-	•	Runtime executes bytecode instead of AST
-	•	Interpreter retained only for dev mode
-
-Architecture Clarification:
-
-The bytecode VM is a deterministic microkernel.
-
-- Bytecode execution must be a pure state transition system.
-- All host interaction occurs only through explicit `sys.*` dispatch.
-- No host IO, time, randomness, or network logic may exist in the VM core.
-- Syscall handling must remain capability-gated.
-
-This ensures deterministic replay, WASM portability, and future JIT/AOT safety.
-⸻
-
-## Phase 4 – GUI Platform (Vector-Based)
-
-Objective: Cross-platform UI system
-
-Architecture:
-
-C# syscalls:
-	•	sys.gfx.createWindow
-	•	sys.gfx.beginFrame
-	•	sys.gfx.drawRect
-	•	sys.gfx.drawText
-	•	sys.gfx.endFrame
-	•	sys.gfx.pollEvent
-
-AiLang:
-	•	State → UiTree
-	•	UiTree diff
-	•	Render commands
-	•	Event#UiMessage events
-
-Approach:
-
-Retained-mode vector scene graph.
-
-Why:
-	•	Deterministic
-	•	Cross-platform
-	•	AI-friendly declarative structure
-	•	Future WASM compatible
-
-Exit Criteria:
-	•	Minimal window opens
-	•	Button click event works
-	•	Same UiTree works on macOS + Windows
-
-⸻
-
-## Phase 5 – WASM Backend
-
-Objective: Run AiLang in the browser
-
-Options:
-	1.	Compile bytecode VM to WASM
-	2.	Compile AiLang bytecode directly to WASM
-
-Preferred Path:
-	•	VM compiled to WASM
-	•	Same bytecode format used everywhere
-
-Result:
-	•	Same AiLang app runs:
-	•	CLI
-	•	Web API
-	•	GUI
-	•	Browser
-
-Exit Criteria:
-	•	Hello World runs in browser
-	•	Same runtime kernel used
-
-⸻
-
-## Phase 6 – JIT (Optional, Performance Phase)
-
-Objective: Compete with high-performance runtimes
-
-Approach:
-	•	JIT from bytecode → native
-	•	Platform-specific codegen
-	•	Or use Cranelift/LLVM
-
-This is not required until:
-	•	VM is stable
-	•	HTTP + GUI are stable
-
-⸻
-
-## Distribution Strategy
-
-Short Term:
-	•	Separate runtime binaries per platform
-	•	macOS arm64
-	•	macOS x64
-	•	Windows x64
-	•	Linux x64
-
-Mid Term:
-	•	Unified bytecode bundle format
-	•	Runtime version embedded in binary
-
-Long Term:
-	•	Multi-platform runtime releases
-	•	Versioned runtime + stable ABI
-
-⸻
-
-Non-Goals (For Now)
-	•	No ORM
-	•	No MVC framework
-	•	No async/await complexity
-	•	No dynamic reflection system
-	•	No third-party framework layering
-
-Focus on:
-	•	Runtime correctness
-	•	Determinism
-	•	Performance
-	•	AI-optimized semantics
-
-⸻
-
-## Syscall Capability Audit v1 (Execution Track)
-
-Objective: Establish the minimal syscall capability surface required for AI-authored libraries to support CLI, server, and GUI applications.
-
-Scope:
-	•	Capability-layer primitives only (no standard library implementation in this track)
-	•	No host-level lifecycle or business semantics
-	•	No architectural bypass of deterministic VM/syscall boundaries
-
-Required capability groups:
-	•	console
-	•	process
-	•	file
-	•	net
-	•	time
-	•	crypto (minimal)
-	•	ui (window/frame/event)
-
-Execution sequence:
-	1. Spec and permission model update for capability-group syscall gating
-	2. Validator + syscall contract updates for new primitive signatures
-	3. Host adapter implementation per group with stable error contracts
-	4. Golden and integration coverage for deterministic behavior under capability calls
-
-Definition of done for this track:
-	•	Capability surface is sufficient for library-level CLI runtime support
-	•	Capability surface is sufficient for library-level TCP/HTTP/WebSocket support
-	•	Capability surface is sufficient for basic desktop GUI + event loop support
-	•	No stdlib/framework semantics moved into host layer
-
-Related planning docs:
-	•	`Docs/SyscallAudit.md`
-	•	`Docs/SyscallRequiredSpec_v1.md`
-	•	`Docs/SyscallCoverageSummary.md`
-
-⸻
-
-Immediate Next Milestone
-
-Choose ONE and execute fully:
-
-A) Structured HttpRequest/HttpResponse contract
-B) Bytecode VM foundation
-C) Vector GUI syscall surface
-
-Do not split focus.
-
-⸻
-
-Strategic Positioning
-
-AiLang should be:
-	•	More deterministic than .NET
-	•	Simpler than Node
-	•	More uniform than Rust
-	•	More AI-readable than all of them
-
-The advantage is architectural clarity, not feature count.
+- Self-host the AiLang compiler/tooling in AiLang.
+- Keep AiVM tiny, fast, deterministic, and embeddable.
+- Preserve AOT/JIT feasibility by keeping bytecode and host effects explicit.
+- Support platform-preferred publish layouts.
+- Support WebAssembly without changing language semantics.
+- Grow AiVectra into a deterministic vector UI/runtime SDK.

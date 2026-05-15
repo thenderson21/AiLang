@@ -41,7 +41,7 @@ If a doc in `Docs/` conflicts with `SPEC/`, follow `SPEC/`.
 - [Release 0.0.1](./Release-0.0.1.md)
 - [Launch Checklist](./Launch-Checklist.md)
 - [Self-Hosting Checklist](./Self-Hosting-Checklist.md)
-- [Draft Concurrency Contract](../SPEC/CONCURRENCY.md)
+- [Concurrency Design Notes](../SPEC/CONCURRENCY.md)
 
 ## Hard Constraints
 

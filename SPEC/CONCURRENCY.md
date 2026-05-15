@@ -1,13 +1,18 @@
-# Concurrency Contract (Draft)
+# Concurrency Design Notes (Non-Normative)
 
-Status: Design companion. Core async contracts are now normative in:
+Status: non-normative design companion. This document is explanatory and may
+change freely while the concurrency model is being refined.
+
+Authoritative AiLang semantics live only in:
 
 - `SPEC/IL.md`
 - `SPEC/EVAL.md`
 - `SPEC/VALIDATION.md`
 - `SPEC/BYTECODE.md`
 
-This document remains explanatory and design-oriented for implementation strategy details.
+If this document conflicts with those files, those files win. When concurrency
+semantics become active language contracts, the normative changes must be made
+in those canonical specs first and this document must be updated afterward.
 
 ## Purpose
 
