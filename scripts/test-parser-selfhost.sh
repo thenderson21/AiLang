@@ -218,67 +218,100 @@ Program#test_p1 {
           Block#test_b59 { Lit#test_i114(value=0) }
           Block#test_b60 { Return#test_r30 { Call#test_c52(target=fail) { Lit#test_i115(value="multi attr int failed") } } }
         }
-        Let#test_l22(name=realSource) {
-          Call#test_c53(target=sys.bytes.toUtf8String) {
-            Call#test_c54(target=sys.fs.file.read) {
-              Lit#test_i116(value="examples/golden/run_nontrivial.in.aos")
+        Let#test_l22(name=negativeIntNode) {
+          Call#test_c53(target=parse.parseNode) {
+            Lit#test_i116(value="Lit#neg1(value=-360)")
+          }
+        }
+        If#test_if30 {
+          Eq#test_e30 { AttrValueInt#test_avi3 { Var#test_v42(name=negativeIntNode) Lit#test_i117(value=0) } Lit#test_i118(value=-360) }
+          Block#test_b61 { Lit#test_i119(value=0) }
+          Block#test_b62 { Return#test_r31 { Call#test_c54(target=fail) { Lit#test_i120(value="negative int attr failed") } } }
+        }
+        Let#test_l23(name=realSource) {
+          Call#test_c55(target=sys.bytes.toUtf8String) {
+            Call#test_c56(target=sys.fs.file.read) {
+              Lit#test_i121(value="examples/golden/run_nontrivial.in.aos")
             }
           }
         }
-        Let#test_l23(name=realProgram) { Call#test_c55(target=parse.parseNode) { Var#test_v42(name=realSource) } }
-        If#test_if30 {
-          Eq#test_e30 { NodeKind#test_nk5 { Var#test_v43(name=realProgram) } Lit#test_i117(value="Program") }
-          Block#test_b61 { Lit#test_i118(value=0) }
-          Block#test_b62 { Return#test_r31 { Call#test_c56(target=fail) { Lit#test_i119(value="real root kind failed") } } }
-        }
+        Let#test_l24(name=realProgram) { Call#test_c57(target=parse.parseNode) { Var#test_v43(name=realSource) } }
         If#test_if31 {
-          Eq#test_e31 { NodeId#test_nid3 { Var#test_v44(name=realProgram) } Lit#test_i120(value="p1") }
-          Block#test_b63 { Lit#test_i121(value=0) }
-          Block#test_b64 { Return#test_r32 { Call#test_c57(target=fail) { Lit#test_i122(value="real root id failed") } } }
+          Eq#test_e31 { NodeKind#test_nk5 { Var#test_v44(name=realProgram) } Lit#test_i122(value="Program") }
+          Block#test_b63 { Lit#test_i123(value=0) }
+          Block#test_b64 { Return#test_r32 { Call#test_c58(target=fail) { Lit#test_i124(value="real root kind failed") } } }
         }
         If#test_if32 {
-          Eq#test_e32 { ChildCount#test_cc4 { Var#test_v45(name=realProgram) } Lit#test_i123(value=3) }
-          Block#test_b65 { Lit#test_i124(value=0) }
-          Block#test_b66 { Return#test_r33 { Call#test_c58(target=fail) { Lit#test_i125(value="real root child count failed") } } }
+          Eq#test_e32 { NodeId#test_nid3 { Var#test_v45(name=realProgram) } Lit#test_i125(value="p1") }
+          Block#test_b65 { Lit#test_i126(value=0) }
+          Block#test_b66 { Return#test_r33 { Call#test_c59(target=fail) { Lit#test_i127(value="real root id failed") } } }
         }
-        Let#test_l24(name=realLetX) { ChildAt#test_ca5 { Var#test_v46(name=realProgram) Lit#test_i126(value=0) } }
         If#test_if33 {
-          Eq#test_e33 { NodeKind#test_nk6 { Var#test_v47(name=realLetX) } Lit#test_i127(value="Let") }
-          Block#test_b67 { Lit#test_i128(value=0) }
-          Block#test_b68 { Return#test_r34 { Call#test_c59(target=fail) { Lit#test_i129(value="real let kind failed") } } }
+          Eq#test_e33 { ChildCount#test_cc4 { Var#test_v46(name=realProgram) } Lit#test_i128(value=3) }
+          Block#test_b67 { Lit#test_i129(value=0) }
+          Block#test_b68 { Return#test_r34 { Call#test_c60(target=fail) { Lit#test_i130(value="real root child count failed") } } }
         }
+        Let#test_l25(name=realLetX) { ChildAt#test_ca5 { Var#test_v47(name=realProgram) Lit#test_i131(value=0) } }
         If#test_if34 {
-          Eq#test_e34 { AttrValueString#test_avs7 { Var#test_v48(name=realLetX) Lit#test_i130(value=0) } Lit#test_i131(value="x") }
-          Block#test_b69 { Lit#test_i132(value=0) }
-          Block#test_b70 { Return#test_r35 { Call#test_c60(target=fail) { Lit#test_i133(value="real let attr failed") } } }
+          Eq#test_e34 { NodeKind#test_nk6 { Var#test_v48(name=realLetX) } Lit#test_i132(value="Let") }
+          Block#test_b69 { Lit#test_i133(value=0) }
+          Block#test_b70 { Return#test_r35 { Call#test_c61(target=fail) { Lit#test_i134(value="real let kind failed") } } }
         }
-        Let#test_l25(name=realLitTwo) { ChildAt#test_ca6 { Var#test_v49(name=realLetX) Lit#test_i134(value=0) } }
         If#test_if35 {
-          Eq#test_e35 { AttrValueInt#test_avi3 { Var#test_v50(name=realLitTwo) Lit#test_i135(value=0) } Lit#test_i136(value=2) }
+          Eq#test_e35 { AttrValueString#test_avs7 { Var#test_v49(name=realLetX) Lit#test_i135(value=0) } Lit#test_i136(value="x") }
           Block#test_b71 { Lit#test_i137(value=0) }
-          Block#test_b72 { Return#test_r36 { Call#test_c61(target=fail) { Lit#test_i138(value="real int literal attr failed") } } }
+          Block#test_b72 { Return#test_r36 { Call#test_c62(target=fail) { Lit#test_i138(value="real let attr failed") } } }
         }
-        Let#test_l26(name=realIf) { ChildAt#test_ca7 { Var#test_v51(name=realProgram) Lit#test_i139(value=2) } }
+        Let#test_l26(name=realLitTwo) { ChildAt#test_ca6 { Var#test_v50(name=realLetX) Lit#test_i139(value=0) } }
         If#test_if36 {
-          Eq#test_e36 { NodeKind#test_nk7 { Var#test_v52(name=realIf) } Lit#test_i140(value="If") }
-          Block#test_b73 { Lit#test_i141(value=0) }
-          Block#test_b74 { Return#test_r37 { Call#test_c62(target=fail) { Lit#test_i142(value="real if kind failed") } } }
+          Eq#test_e36 { AttrValueInt#test_avi4 { Var#test_v51(name=realLitTwo) Lit#test_i140(value=0) } Lit#test_i141(value=2) }
+          Block#test_b73 { Lit#test_i142(value=0) }
+          Block#test_b74 { Return#test_r37 { Call#test_c63(target=fail) { Lit#test_i143(value="real int literal attr failed") } } }
         }
+        Let#test_l27(name=realIf) { ChildAt#test_ca7 { Var#test_v52(name=realProgram) Lit#test_i144(value=2) } }
         If#test_if37 {
-          Eq#test_e37 { ChildCount#test_cc5 { Var#test_v53(name=realIf) } Lit#test_i143(value=3) }
-          Block#test_b75 { Lit#test_i144(value=0) }
-          Block#test_b76 { Return#test_r38 { Call#test_c63(target=fail) { Lit#test_i145(value="real if child count failed") } } }
+          Eq#test_e37 { NodeKind#test_nk7 { Var#test_v53(name=realIf) } Lit#test_i145(value="If") }
+          Block#test_b75 { Lit#test_i146(value=0) }
+          Block#test_b76 { Return#test_r38 { Call#test_c64(target=fail) { Lit#test_i147(value="real if kind failed") } } }
         }
-        Let#test_l27(name=realThenBlock) { ChildAt#test_ca8 { Var#test_v54(name=realIf) Lit#test_i146(value=1) } }
-        Let#test_l28(name=realConcat) { ChildAt#test_ca9 { Var#test_v55(name=realThenBlock) Lit#test_i147(value=0) } }
-        Let#test_l29(name=realOkLit) { ChildAt#test_ca10 { Var#test_v56(name=realConcat) Lit#test_i148(value=0) } }
         If#test_if38 {
-          Eq#test_e38 { AttrValueString#test_avs8 { Var#test_v57(name=realOkLit) Lit#test_i149(value=0) } Lit#test_i150(value="ok-") }
-          Block#test_b77 { Lit#test_i151(value=0) }
-          Block#test_b78 { Return#test_r39 { Call#test_c64(target=fail) { Lit#test_i152(value="real quoted literal attr failed") } } }
+          Eq#test_e38 { ChildCount#test_cc5 { Var#test_v54(name=realIf) } Lit#test_i148(value=3) }
+          Block#test_b77 { Lit#test_i149(value=0) }
+          Block#test_b78 { Return#test_r39 { Call#test_c65(target=fail) { Lit#test_i150(value="real if child count failed") } } }
         }
-        Call#test_c65(target=sys.stdout.writeLine) { Lit#test_i153(value="parser-selfhost-ok") }
-        Return#test_r40 { Lit#test_i154(value=0) }
+        Let#test_l28(name=realThenBlock) { ChildAt#test_ca8 { Var#test_v55(name=realIf) Lit#test_i151(value=1) } }
+        Let#test_l29(name=realConcat) { ChildAt#test_ca9 { Var#test_v56(name=realThenBlock) Lit#test_i152(value=0) } }
+        Let#test_l30(name=realOkLit) { ChildAt#test_ca10 { Var#test_v57(name=realConcat) Lit#test_i153(value=0) } }
+        If#test_if39 {
+          Eq#test_e39 { AttrValueString#test_avs8 { Var#test_v58(name=realOkLit) Lit#test_i154(value=0) } Lit#test_i155(value="ok-") }
+          Block#test_b79 { Lit#test_i156(value=0) }
+          Block#test_b80 { Return#test_r40 { Call#test_c66(target=fail) { Lit#test_i157(value="real quoted literal attr failed") } } }
+        }
+        Let#test_l31(name=loopSource) {
+          Call#test_c67(target=sys.bytes.toUtf8String) {
+            Call#test_c68(target=sys.fs.file.read) {
+              Lit#test_i158(value="examples/bench/loop_compute.aos")
+            }
+          }
+        }
+        Let#test_l32(name=loopProgram) { Call#test_c69(target=parse.parseNode) { Var#test_v59(name=loopSource) } }
+        Let#test_l33(name=loopLetSum) { ChildAt#test_ca11 { Var#test_v60(name=loopProgram) Lit#test_i159(value=0) } }
+        Let#test_l34(name=loopFn) { ChildAt#test_ca12 { Var#test_v61(name=loopLetSum) Lit#test_i160(value=0) } }
+        Let#test_l35(name=loopBlock) { ChildAt#test_ca13 { Var#test_v62(name=loopFn) Lit#test_i161(value=0) } }
+        Let#test_l36(name=loopIf) { ChildAt#test_ca14 { Var#test_v63(name=loopBlock) Lit#test_i162(value=0) } }
+        Let#test_l37(name=loopElseBlock) { ChildAt#test_ca15 { Var#test_v64(name=loopIf) Lit#test_i163(value=2) } }
+        Let#test_l38(name=loopReturn) { ChildAt#test_ca16 { Var#test_v65(name=loopElseBlock) Lit#test_i164(value=0) } }
+        Let#test_l39(name=loopOuterAdd) { ChildAt#test_ca17 { Var#test_v66(name=loopReturn) Lit#test_i165(value=0) } }
+        Let#test_l40(name=loopCall) { ChildAt#test_ca18 { Var#test_v67(name=loopOuterAdd) Lit#test_i166(value=1) } }
+        Let#test_l41(name=loopInnerAdd) { ChildAt#test_ca19 { Var#test_v68(name=loopCall) Lit#test_i167(value=0) } }
+        Let#test_l42(name=loopNegativeLit) { ChildAt#test_ca20 { Var#test_v69(name=loopInnerAdd) Lit#test_i168(value=1) } }
+        If#test_if40 {
+          Eq#test_e40 { AttrValueInt#test_avi5 { Var#test_v70(name=loopNegativeLit) Lit#test_i169(value=0) } Lit#test_i170(value=-1) }
+          Block#test_b81 { Lit#test_i171(value=0) }
+          Block#test_b82 { Return#test_r41 { Call#test_c70(target=fail) { Lit#test_i172(value="real negative literal attr failed") } } }
+        }
+        Call#test_c71(target=sys.stdout.writeLine) { Lit#test_i173(value="parser-selfhost-ok") }
+        Return#test_r42 { Lit#test_i174(value=0) }
       }
     }
   }
