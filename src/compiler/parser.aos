@@ -139,9 +139,166 @@ Program#parser_p1 {
     }
   }
 
+  Let#parser_l7(name=parse.readNameText) {
+    Fn#parser_f6(params=text,index) {
+      Block#parser_b38 {
+        Let#parser_l8(name=ch) { Call#parser_c9(target=parse.charAt) { Var#parser_v30(name=text) Var#parser_v31(name=index) } }
+        If#parser_if17 {
+          Call#parser_c10(target=parse.isDelimiter) { Var#parser_v32(name=ch) }
+          Block#parser_b39 { Return#parser_r22 { Lit#parser_i43(value="") } }
+          Block#parser_b40 {
+            Return#parser_r23 {
+              StrConcat#parser_sc1 {
+                Var#parser_v33(name=ch)
+                Call#parser_c11(target=parse.readNameText) {
+                  Var#parser_v34(name=text)
+                  Add#parser_a3 { Var#parser_v35(name=index) Lit#parser_i44(value=1) }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#parser_l9(name=parse.makeToken) {
+    Fn#parser_f7(params=kind,value,nextIndex) {
+      Block#parser_b41 {
+        Return#parser_r24 {
+          AppendChild#parser_ap1 {
+            AppendChild#parser_ap2 {
+              AppendChild#parser_ap3 {
+                MakeBlock#parser_mb1 { Lit#parser_i45(value="token") }
+                MakeLitString#parser_mls1 { Lit#parser_i46(value="kind") Var#parser_v36(name=kind) }
+              }
+              MakeLitString#parser_mls2 { Lit#parser_i47(value="value") Var#parser_v37(name=value) }
+            }
+            MakeLitInt#parser_mli1 { Lit#parser_i48(value="next") Var#parser_v38(name=nextIndex) }
+          }
+        }
+      }
+    }
+  }
+
+  Let#parser_l10(name=parse.tokenKind) {
+    Fn#parser_f8(params=token) {
+      Block#parser_b42 {
+        Return#parser_r25 {
+          AttrValueString#parser_avs1 {
+            ChildAt#parser_ca1 { Var#parser_v39(name=token) Lit#parser_i49(value=0) }
+            Lit#parser_i50(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let#parser_l11(name=parse.tokenValue) {
+    Fn#parser_f9(params=token) {
+      Block#parser_b43 {
+        Return#parser_r26 {
+          AttrValueString#parser_avs2 {
+            ChildAt#parser_ca2 { Var#parser_v40(name=token) Lit#parser_i51(value=1) }
+            Lit#parser_i52(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let#parser_l12(name=parse.tokenNext) {
+    Fn#parser_f10(params=token) {
+      Block#parser_b44 {
+        Return#parser_r27 {
+          AttrValueInt#parser_avi1 {
+            ChildAt#parser_ca3 { Var#parser_v41(name=token) Lit#parser_i53(value=2) }
+            Lit#parser_i54(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let#parser_l13(name=parse.nextSymbolToken) {
+    Fn#parser_f11(params=ch,index) {
+      Block#parser_b45 {
+        If#parser_if18 {
+          Eq#parser_e14 { Var#parser_v42(name=ch) Lit#parser_i55(value="#") }
+          Block#parser_b46 { Return#parser_r28 { Call#parser_c12(target=parse.makeToken) { Lit#parser_i56(value="hash") Var#parser_v43(name=ch) Add#parser_a4 { Var#parser_v44(name=index) Lit#parser_i57(value=1) } } } }
+          Block#parser_b47 {
+            If#parser_if19 {
+              Eq#parser_e15 { Var#parser_v45(name=ch) Lit#parser_i58(value="{") }
+              Block#parser_b48 { Return#parser_r29 { Call#parser_c13(target=parse.makeToken) { Lit#parser_i59(value="lbrace") Var#parser_v46(name=ch) Add#parser_a5 { Var#parser_v47(name=index) Lit#parser_i60(value=1) } } } }
+              Block#parser_b49 {
+                If#parser_if20 {
+                  Eq#parser_e16 { Var#parser_v48(name=ch) Lit#parser_i61(value="}") }
+                  Block#parser_b50 { Return#parser_r30 { Call#parser_c14(target=parse.makeToken) { Lit#parser_i62(value="rbrace") Var#parser_v49(name=ch) Add#parser_a6 { Var#parser_v50(name=index) Lit#parser_i63(value=1) } } } }
+                  Block#parser_b51 {
+                    If#parser_if21 {
+                      Eq#parser_e17 { Var#parser_v51(name=ch) Lit#parser_i64(value="(") }
+                      Block#parser_b52 { Return#parser_r31 { Call#parser_c15(target=parse.makeToken) { Lit#parser_i65(value="lparen") Var#parser_v52(name=ch) Add#parser_a7 { Var#parser_v53(name=index) Lit#parser_i66(value=1) } } } }
+                      Block#parser_b53 {
+                        If#parser_if22 {
+                          Eq#parser_e18 { Var#parser_v54(name=ch) Lit#parser_i67(value=")") }
+                          Block#parser_b54 { Return#parser_r32 { Call#parser_c16(target=parse.makeToken) { Lit#parser_i68(value="rparen") Var#parser_v55(name=ch) Add#parser_a8 { Var#parser_v56(name=index) Lit#parser_i69(value=1) } } } }
+                          Block#parser_b55 {
+                            If#parser_if23 {
+                              Eq#parser_e19 { Var#parser_v57(name=ch) Lit#parser_i70(value="=") }
+                              Block#parser_b56 { Return#parser_r33 { Call#parser_c17(target=parse.makeToken) { Lit#parser_i71(value="equals") Var#parser_v58(name=ch) Add#parser_a9 { Var#parser_v59(name=index) Lit#parser_i72(value=1) } } } }
+                              Block#parser_b57 { Return#parser_r34 { Call#parser_c18(target=parse.makeToken) { Lit#parser_i73(value="quote") Var#parser_v60(name=ch) Add#parser_a10 { Var#parser_v61(name=index) Lit#parser_i74(value=1) } } } }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#parser_l14(name=parse.nextToken) {
+    Fn#parser_f12(params=text,index) {
+      Block#parser_b58 {
+        Let#parser_l15(name=start) { Call#parser_c19(target=parse.skipWhitespace) { Var#parser_v62(name=text) Var#parser_v63(name=index) } }
+        Let#parser_l16(name=ch) { Call#parser_c20(target=parse.charAt) { Var#parser_v64(name=text) Var#parser_v65(name=start) } }
+        If#parser_if24 {
+          Eq#parser_e20 { Var#parser_v66(name=ch) Lit#parser_i75(value="") }
+          Block#parser_b59 { Return#parser_r35 { Call#parser_c21(target=parse.makeToken) { Lit#parser_i76(value="eof") Lit#parser_i77(value="") Var#parser_v67(name=start) } } }
+          Block#parser_b60 {
+            If#parser_if25 {
+              Call#parser_c22(target=parse.isDelimiter) { Var#parser_v68(name=ch) }
+              Block#parser_b61 { Return#parser_r36 { Call#parser_c23(target=parse.nextSymbolToken) { Var#parser_v69(name=ch) Var#parser_v70(name=start) } } }
+              Block#parser_b62 {
+                Return#parser_r37 {
+                  Call#parser_c24(target=parse.makeToken) {
+                    Lit#parser_i78(value="name")
+                    Call#parser_c25(target=parse.readNameText) { Var#parser_v71(name=text) Var#parser_v72(name=start) }
+                    Call#parser_c26(target=parse.readNameEnd) { Var#parser_v73(name=text) Var#parser_v74(name=start) }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   Export#parser_e1(name=parse.charAt)
   Export#parser_e2(name=parse.isWhitespace)
   Export#parser_e3(name=parse.skipWhitespace)
   Export#parser_e4(name=parse.isDelimiter)
   Export#parser_e5(name=parse.readNameEnd)
+  Export#parser_e6(name=parse.readNameText)
+  Export#parser_e7(name=parse.makeToken)
+  Export#parser_e8(name=parse.tokenKind)
+  Export#parser_e9(name=parse.tokenValue)
+  Export#parser_e10(name=parse.tokenNext)
+  Export#parser_e11(name=parse.nextToken)
 }

@@ -43,8 +43,25 @@ Program#test_p1 {
           Block#test_b7 { Lit#test_i10(value=0) }
           Block#test_b8 { Return#test_r4 { Call#test_c8(target=fail) { Lit#test_i11(value="delimiter failed") } } }
         }
-        Call#test_c9(target=sys.stdout.writeLine) { Lit#test_i12(value="parser-selfhost-ok") }
-        Return#test_r5 { Lit#test_i13(value=0) }
+        Let#test_l6(name=tok1) { Call#test_c9(target=parse.nextToken) { Var#test_v9(name=sample) Lit#test_i12(value=0) } }
+        If#test_if4 {
+          Eq#test_e4 { Call#test_c10(target=parse.tokenKind) { Var#test_v10(name=tok1) } Lit#test_i13(value="name") }
+          Block#test_b9 { Lit#test_i14(value=0) }
+          Block#test_b10 { Return#test_r5 { Call#test_c11(target=fail) { Lit#test_i15(value="token kind failed") } } }
+        }
+        If#test_if5 {
+          Eq#test_e5 { Call#test_c12(target=parse.tokenValue) { Var#test_v11(name=tok1) } Lit#test_i16(value="Name") }
+          Block#test_b11 { Lit#test_i17(value=0) }
+          Block#test_b12 { Return#test_r6 { Call#test_c13(target=fail) { Lit#test_i18(value="token value failed") } } }
+        }
+        Let#test_l7(name=tok2) { Call#test_c14(target=parse.nextToken) { Var#test_v12(name=sample) Call#test_c15(target=parse.tokenNext) { Var#test_v13(name=tok1) } } }
+        If#test_if6 {
+          Eq#test_e6 { Call#test_c16(target=parse.tokenKind) { Var#test_v14(name=tok2) } Lit#test_i19(value="hash") }
+          Block#test_b13 { Lit#test_i20(value=0) }
+          Block#test_b14 { Return#test_r7 { Call#test_c17(target=fail) { Lit#test_i21(value="symbol token failed") } } }
+        }
+        Call#test_c18(target=sys.stdout.writeLine) { Lit#test_i22(value="parser-selfhost-ok") }
+        Return#test_r8 { Lit#test_i23(value=0) }
       }
     }
   }
