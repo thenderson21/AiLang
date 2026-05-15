@@ -321,6 +321,32 @@ Program#parser_p1 {
     }
   }
 
+  Let#parser_l21(name=parse.parseNodeWithNameAttr) {
+    Fn#parser_f14(params=text) {
+      Block#parser_b64 {
+        Let#parser_l22(name=kindToken) { Call#parser_c34(target=parse.nextToken) { Var#parser_v82(name=text) Lit#parser_i80(value=0) } }
+        Let#parser_l23(name=hashToken) { Call#parser_c35(target=parse.nextToken) { Var#parser_v83(name=text) Call#parser_c36(target=parse.tokenNext) { Var#parser_v84(name=kindToken) } } }
+        Let#parser_l24(name=idToken) { Call#parser_c37(target=parse.nextToken) { Var#parser_v85(name=text) Call#parser_c38(target=parse.tokenNext) { Var#parser_v86(name=hashToken) } } }
+        Let#parser_l25(name=lparenToken) { Call#parser_c39(target=parse.nextToken) { Var#parser_v87(name=text) Call#parser_c40(target=parse.tokenNext) { Var#parser_v88(name=idToken) } } }
+        Let#parser_l26(name=attrKeyToken) { Call#parser_c41(target=parse.nextToken) { Var#parser_v89(name=text) Call#parser_c42(target=parse.tokenNext) { Var#parser_v90(name=lparenToken) } } }
+        Let#parser_l27(name=equalsToken) { Call#parser_c43(target=parse.nextToken) { Var#parser_v91(name=text) Call#parser_c44(target=parse.tokenNext) { Var#parser_v92(name=attrKeyToken) } } }
+        Let#parser_l28(name=attrValueToken) { Call#parser_c45(target=parse.nextToken) { Var#parser_v93(name=text) Call#parser_c46(target=parse.tokenNext) { Var#parser_v94(name=equalsToken) } } }
+        Return#parser_r39 {
+          AppendAttr#parser_aa1 {
+            MakeNode#parser_mn2 {
+              Call#parser_c47(target=parse.tokenValue) { Var#parser_v95(name=kindToken) }
+              Call#parser_c48(target=parse.tokenValue) { Var#parser_v96(name=idToken) }
+            }
+            MakeLitString#parser_mls3 {
+              Call#parser_c49(target=parse.tokenValue) { Var#parser_v97(name=attrKeyToken) }
+              Call#parser_c50(target=parse.tokenValue) { Var#parser_v98(name=attrValueToken) }
+            }
+          }
+        }
+      }
+    }
+  }
+
   Export#parser_e1(name=parse.charAt)
   Export#parser_e2(name=parse.isWhitespace)
   Export#parser_e3(name=parse.skipWhitespace)
@@ -333,4 +359,5 @@ Program#parser_p1 {
   Export#parser_e10(name=parse.tokenNext)
   Export#parser_e11(name=parse.nextToken)
   Export#parser_e12(name=parse.parseEmptyNode)
+  Export#parser_e13(name=parse.parseNodeWithNameAttr)
 }

@@ -71,8 +71,29 @@ Program#test_p1 {
           Block#test_b17 { Lit#test_i27(value=0) }
           Block#test_b18 { Return#test_r9 { Call#test_c20(target=fail) { Lit#test_i28(value="node id failed") } } }
         }
-        Call#test_c21(target=sys.stdout.writeLine) { Lit#test_i29(value="parser-selfhost-ok") }
-        Return#test_r10 { Lit#test_i30(value=0) }
+        Let#test_l9(name=exportNode) { Call#test_c21(target=parse.parseNodeWithNameAttr) { Lit#test_i29(value="Export#e1(name=start)") } }
+        If#test_if9 {
+          Eq#test_e9 { NodeKind#test_nk2 { Var#test_v17(name=exportNode) } Lit#test_i30(value="Export") }
+          Block#test_b19 { Lit#test_i31(value=0) }
+          Block#test_b20 { Return#test_r10 { Call#test_c22(target=fail) { Lit#test_i32(value="attr node kind failed") } } }
+        }
+        If#test_if10 {
+          Eq#test_e10 { AttrCount#test_ac1 { Var#test_v18(name=exportNode) } Lit#test_i33(value=1) }
+          Block#test_b21 { Lit#test_i34(value=0) }
+          Block#test_b22 { Return#test_r11 { Call#test_c23(target=fail) { Lit#test_i35(value="attr count failed") } } }
+        }
+        If#test_if11 {
+          Eq#test_e11 { AttrKey#test_ak1 { Var#test_v19(name=exportNode) Lit#test_i36(value=0) } Lit#test_i37(value="name") }
+          Block#test_b23 { Lit#test_i38(value=0) }
+          Block#test_b24 { Return#test_r12 { Call#test_c24(target=fail) { Lit#test_i39(value="attr key failed") } } }
+        }
+        If#test_if12 {
+          Eq#test_e12 { AttrValueString#test_avs1 { Var#test_v20(name=exportNode) Lit#test_i40(value=0) } Lit#test_i41(value="start") }
+          Block#test_b25 { Lit#test_i42(value=0) }
+          Block#test_b26 { Return#test_r13 { Call#test_c25(target=fail) { Lit#test_i43(value="attr value failed") } } }
+        }
+        Call#test_c26(target=sys.stdout.writeLine) { Lit#test_i44(value="parser-selfhost-ok") }
+        Return#test_r14 { Lit#test_i45(value=0) }
       }
     }
   }
