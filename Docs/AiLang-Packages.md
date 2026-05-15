@@ -45,8 +45,8 @@ repo = "https://github.com/AiLangCore/AiVectra.git"
 packageRoot = "."
 license = "MIT"
 
-[versions."0.0.1-alpha.12"]
-ref = "v0.0.1-alpha.12"
+[versions."0.0.1-alpha.13"]
+ref = "v0.0.1-alpha.13"
 commit = "exact-git-commit"
 ```
 

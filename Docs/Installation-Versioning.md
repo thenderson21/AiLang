@@ -55,7 +55,7 @@ Allowed derived versions:
 Tags use `v` plus the derived version:
 
 ```text
-v0.0.1-alpha.12
+v0.0.1-alpha.N
 v0.0.1
 ```
 
