@@ -33,7 +33,7 @@ Program#parser_mem_profile_p1 {
         }
         Let#parser_mem_profile_l4(name=parsed) { Call#parser_mem_profile_c3(target=parse.parseNode) { Var#parser_mem_profile_v3(name=sourceText) } }
         Call#parser_mem_profile_c4(target=sys.stdout.writeLine) { NodeKind#parser_mem_profile_nk1 { Var#parser_mem_profile_v4(name=parsed) } }
-        Return#parser_mem_profile_r1 { Lit#parser_mem_profile_i3(value=0) }
+        Return#parser_mem_profile_r1 { Var#parser_mem_profile_v4(name=parsed) }
       }
     }
   }
