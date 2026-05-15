@@ -111,13 +111,13 @@ Implemented alpha package command surface:
 ```bash
 ailang package restore
 ailang package list
+ailang package add <name>[@<version>]
+ailang package remove <name>
 ```
 
 Planned package command surface:
 
 ```bash
-ailang package add <name>[@<version>]
-ailang package remove <name>
 ailang package update [name]
 ```
 
@@ -126,7 +126,19 @@ ailang package update [name]
 
 `list` shows direct and transitive packages from the lockfile.
 
-`add`, `remove`, and `update` modify `project.aiproj` and then run restore.
+`add` and `remove` modify `project.aiproj` and then run restore. `add` uses
+the registry default version when no version is supplied.
+
+Package tools are available as `ailang <tool> ...` after restore. Command
+resolution is:
+
+1. compiled AiLang command
+2. globally installed tool under `~/.ailang/tools`
+3. local package tool from the current project's lockfile
+
+If a package declares `tool` and its tool name conflicts with a compiled,
+global, or already-local tool, restore fails instead of silently shadowing a
+command.
 
 Alpha implementation note: `restore` is currently backed by an AiVM C native
 bridge helper. This is an intermediary boundary for self-hosting and native
@@ -135,10 +147,10 @@ AiLang-authored package logic running on AiVM.
 
 ## Cache
 
-Package source is cached under the selected SDK root:
+Restored package source is cached under the project:
 
 ```text
-~/.ailang/packages/git/<repo-hash>/<commit>/
+.ailang/packages/<package-name>/
 ```
 
 The cache is an implementation detail. Projects must resolve packages through
