@@ -8,6 +8,7 @@ cd "${ROOT_DIR}"
 ./scripts/test-stdlib-conformance.sh
 ./scripts/test-stdlib-capabilities.sh
 ./scripts/test-parser-selfhost.sh
+./scripts/test-parser-selfhost-compiler-files.sh
 ./scripts/test-airun-init.sh
 ./scripts/test-airun-build-source.sh
 ./scripts/test-ailang-cli-spec.sh
