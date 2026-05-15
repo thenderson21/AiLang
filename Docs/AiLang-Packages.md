@@ -1,6 +1,12 @@
 # AiLang Packages
 
-Status: alpha design contract.
+Status: alpha-ready implementation contract.
+
+The package manager is ready for alpha use and demos. It is not yet a
+production package ecosystem. The implemented surface is intentionally small:
+direct git-backed packages from the curated registry, exact commit locks,
+project-local restore, package imports, package tool dispatch, and package
+template discovery.
 
 ## Goals
 
@@ -120,6 +126,17 @@ Planned package command surface:
 ```bash
 ailang package update [name]
 ```
+
+Known alpha gaps:
+
+- no transitive dependency resolution
+- no semantic version ranges
+- no package publish command
+- no registry commit pin in the lockfile
+- no package integrity/signature verification
+- no package template instantiation yet
+- package manager logic is still backed by a temporary AiVM C native bridge,
+  pending the self-hosted AiLang implementation
 
 `restore` resolves the manifest through the registry, writes or updates
 `ailang.lock.toml`, and populates the local package cache.

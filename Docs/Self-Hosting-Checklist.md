@@ -9,18 +9,27 @@ compiler path.
 
 ## Execution Order
 
-1. Package manager
-   - `ailang package list`
-   - `ailang package restore`
-   - `ailang.lock.toml`
-   - local package cache
-   - package imports resolvable by compiler
-   - package tool conflict checks
-   - package templates discoverable by `ailang template`
-   - temporary C bridge wrappers isolated behind the AiVM native bridge when
-     the AiLang implementation is not available yet
+1. Package manager: alpha-ready, not production-complete
+   - done: `ailang package list`
+   - done: `ailang package add <name>[@<version>]`
+   - done: `ailang package restore`
+   - done: `ailang package remove <name>`
+   - done: `ailang.lock.toml`
+   - done: local project package cache
+   - done: package imports resolvable by compiler
+   - done: package tool conflict checks
+   - done: package templates discoverable by `ailang template`
+   - done: AiVectra library/tool/template package surface
+   - not done: package update
+   - not done: transitive dependency resolution
+   - not done: semver range resolution
+   - not done: package publish workflow
+   - not done: lockfile registry commit pinning
+   - not done: package integrity/signature verification
+   - temporary C bridge wrappers are isolated behind the AiVM native bridge
+     while the AiLang implementation is not available yet
 
-2. Parser in AiLang
+2. Parser in AiLang: next active milestone
    - parse `.aos` into canonical IL nodes
    - deterministic IDs
    - deterministic diagnostics

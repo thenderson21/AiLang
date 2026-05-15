@@ -1,0 +1,147 @@
+Program#parser_p1 {
+  Let#parser_l1(name=parse.charAt) {
+    Fn#parser_f1(params=text,index) {
+      Block#parser_b1 {
+        Return#parser_r1 {
+          Call#parser_c1(target=sys.str.substring) {
+            Var#parser_v1(name=text)
+            Var#parser_v2(name=index)
+            Lit#parser_i1(value=1)
+          }
+        }
+      }
+    }
+  }
+
+  Let#parser_l2(name=parse.isWhitespace) {
+    Fn#parser_f2(params=ch) {
+      Block#parser_b2 {
+        If#parser_if1 {
+          Eq#parser_e1 { Var#parser_v3(name=ch) Lit#parser_i2(value=" ") }
+          Block#parser_b3 { Return#parser_r2 { Lit#parser_i3(value=true) } }
+          Block#parser_b4 { Lit#parser_i4(value=0) }
+        }
+        If#parser_if2 {
+          Eq#parser_e2 { Var#parser_v4(name=ch) Lit#parser_i5(value="
+") }
+          Block#parser_b5 { Return#parser_r3 { Lit#parser_i6(value=true) } }
+          Block#parser_b6 { Lit#parser_i7(value=0) }
+        }
+        If#parser_if3 {
+          Eq#parser_e3 { Var#parser_v5(name=ch) Lit#parser_i8(value="	") }
+          Block#parser_b7 { Return#parser_r4 { Lit#parser_i9(value=true) } }
+          Block#parser_b8 { Lit#parser_i10(value=0) }
+        }
+        If#parser_if4 {
+          Eq#parser_e4 { Var#parser_v6(name=ch) Lit#parser_i11(value="") }
+          Block#parser_b9 { Return#parser_r5 { Lit#parser_i12(value=true) } }
+          Block#parser_b10 { Return#parser_r6 { Lit#parser_i13(value=false) } }
+        }
+      }
+    }
+  }
+
+  Let#parser_l3(name=parse.skipWhitespace) {
+    Fn#parser_f3(params=text,index) {
+      Block#parser_b11 {
+        Let#parser_l4(name=ch) { Call#parser_c2(target=parse.charAt) { Var#parser_v7(name=text) Var#parser_v8(name=index) } }
+        If#parser_if5 {
+          Eq#parser_e5 { Var#parser_v9(name=ch) Lit#parser_i14(value="") }
+          Block#parser_b12 { Return#parser_r7 { Var#parser_v10(name=index) } }
+          Block#parser_b13 {
+            If#parser_if6 {
+              Call#parser_c3(target=parse.isWhitespace) { Var#parser_v11(name=ch) }
+              Block#parser_b14 {
+                Return#parser_r8 {
+                  Call#parser_c4(target=parse.skipWhitespace) {
+                    Var#parser_v12(name=text)
+                    Add#parser_a1 { Var#parser_v13(name=index) Lit#parser_i15(value=1) }
+                  }
+                }
+              }
+              Block#parser_b15 { Return#parser_r9 { Var#parser_v14(name=index) } }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Let#parser_l5(name=parse.isDelimiter) {
+    Fn#parser_f4(params=ch) {
+      Block#parser_b16 {
+        If#parser_if7 {
+          Eq#parser_e6 { Var#parser_v15(name=ch) Lit#parser_i16(value="") }
+          Block#parser_b17 { Return#parser_r10 { Lit#parser_i17(value=true) } }
+          Block#parser_b18 { Lit#parser_i18(value=0) }
+        }
+        If#parser_if8 {
+          Call#parser_c5(target=parse.isWhitespace) { Var#parser_v16(name=ch) }
+          Block#parser_b19 { Return#parser_r11 { Lit#parser_i19(value=true) } }
+          Block#parser_b20 { Lit#parser_i20(value=0) }
+        }
+        If#parser_if9 {
+          Eq#parser_e7 { Var#parser_v17(name=ch) Lit#parser_i21(value="#") }
+          Block#parser_b21 { Return#parser_r12 { Lit#parser_i22(value=true) } }
+          Block#parser_b22 { Lit#parser_i23(value=0) }
+        }
+        If#parser_if10 {
+          Eq#parser_e8 { Var#parser_v18(name=ch) Lit#parser_i24(value="(") }
+          Block#parser_b23 { Return#parser_r13 { Lit#parser_i25(value=true) } }
+          Block#parser_b24 { Lit#parser_i26(value=0) }
+        }
+        If#parser_if11 {
+          Eq#parser_e9 { Var#parser_v19(name=ch) Lit#parser_i27(value=")") }
+          Block#parser_b25 { Return#parser_r14 { Lit#parser_i28(value=true) } }
+          Block#parser_b26 { Lit#parser_i29(value=0) }
+        }
+        If#parser_if12 {
+          Eq#parser_e10 { Var#parser_v20(name=ch) Lit#parser_i30(value="{") }
+          Block#parser_b27 { Return#parser_r15 { Lit#parser_i31(value=true) } }
+          Block#parser_b28 { Lit#parser_i32(value=0) }
+        }
+        If#parser_if13 {
+          Eq#parser_e11 { Var#parser_v21(name=ch) Lit#parser_i33(value="}") }
+          Block#parser_b29 { Return#parser_r16 { Lit#parser_i34(value=true) } }
+          Block#parser_b30 { Lit#parser_i35(value=0) }
+        }
+        If#parser_if14 {
+          Eq#parser_e12 { Var#parser_v22(name=ch) Lit#parser_i36(value="=") }
+          Block#parser_b31 { Return#parser_r17 { Lit#parser_i37(value=true) } }
+          Block#parser_b32 { Lit#parser_i38(value=0) }
+        }
+        If#parser_if15 {
+          Eq#parser_e13 { Var#parser_v23(name=ch) Lit#parser_i39(value="\"") }
+          Block#parser_b33 { Return#parser_r18 { Lit#parser_i40(value=true) } }
+          Block#parser_b34 { Return#parser_r19 { Lit#parser_i41(value=false) } }
+        }
+      }
+    }
+  }
+
+  Let#parser_l6(name=parse.readNameEnd) {
+    Fn#parser_f5(params=text,index) {
+      Block#parser_b35 {
+        Let#parser_l7(name=ch) { Call#parser_c6(target=parse.charAt) { Var#parser_v24(name=text) Var#parser_v25(name=index) } }
+        If#parser_if16 {
+          Call#parser_c7(target=parse.isDelimiter) { Var#parser_v26(name=ch) }
+          Block#parser_b36 { Return#parser_r20 { Var#parser_v27(name=index) } }
+          Block#parser_b37 {
+            Return#parser_r21 {
+              Call#parser_c8(target=parse.readNameEnd) {
+                Var#parser_v28(name=text)
+                Add#parser_a2 { Var#parser_v29(name=index) Lit#parser_i42(value=1) }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  Export#parser_e1(name=parse.charAt)
+  Export#parser_e2(name=parse.isWhitespace)
+  Export#parser_e3(name=parse.skipWhitespace)
+  Export#parser_e4(name=parse.isDelimiter)
+  Export#parser_e5(name=parse.readNameEnd)
+}
