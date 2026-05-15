@@ -198,8 +198,28 @@ Program#test_p1 {
           Block#test_b53 { Lit#test_i102(value=0) }
           Block#test_b54 { Return#test_r27 { Call#test_c48(target=fail) { Lit#test_i103(value="int attr value failed") } } }
         }
-        Call#test_c49(target=sys.stdout.writeLine) { Lit#test_i104(value="parser-selfhost-ok") }
-        Return#test_r28 { Lit#test_i105(value=0) }
+        Let#test_l21(name=multiAttrNode) {
+          Call#test_c49(target=parse.parseNode) {
+            Lit#test_i104(value="Bytecode#bc1(flags=0 format=\"AiBC1\" magic=\"AIBC\" version=2)")
+          }
+        }
+        If#test_if27 {
+          Eq#test_e27 { AttrCount#test_ac2 { Var#test_v39(name=multiAttrNode) } Lit#test_i105(value=4) }
+          Block#test_b55 { Lit#test_i106(value=0) }
+          Block#test_b56 { Return#test_r28 { Call#test_c50(target=fail) { Lit#test_i107(value="multi attr count failed") } } }
+        }
+        If#test_if28 {
+          Eq#test_e28 { AttrValueString#test_avs6 { Var#test_v40(name=multiAttrNode) Lit#test_i108(value=1) } Lit#test_i109(value="AiBC1") }
+          Block#test_b57 { Lit#test_i110(value=0) }
+          Block#test_b58 { Return#test_r29 { Call#test_c51(target=fail) { Lit#test_i111(value="multi attr string failed") } } }
+        }
+        If#test_if29 {
+          Eq#test_e29 { AttrValueInt#test_avi2 { Var#test_v41(name=multiAttrNode) Lit#test_i112(value=3) } Lit#test_i113(value=2) }
+          Block#test_b59 { Lit#test_i114(value=0) }
+          Block#test_b60 { Return#test_r30 { Call#test_c52(target=fail) { Lit#test_i115(value="multi attr int failed") } } }
+        }
+        Call#test_c53(target=sys.stdout.writeLine) { Lit#test_i116(value="parser-selfhost-ok") }
+        Return#test_r31 { Lit#test_i117(value=0) }
       }
     }
   }
