@@ -92,8 +92,25 @@ Program#test_p1 {
           Block#test_b25 { Lit#test_i42(value=0) }
           Block#test_b26 { Return#test_r13 { Call#test_c25(target=fail) { Lit#test_i43(value="attr value failed") } } }
         }
-        Call#test_c26(target=sys.stdout.writeLine) { Lit#test_i44(value="parser-selfhost-ok") }
-        Return#test_r14 { Lit#test_i45(value=0) }
+        Let#test_l10(name=programTree) { Call#test_c26(target=parse.parseProgramWithOneChild) { Lit#test_i44(value="Program#p2 { Export#e2(name=start) }") } }
+        If#test_if13 {
+          Eq#test_e13 { ChildCount#test_cc1 { Var#test_v21(name=programTree) } Lit#test_i45(value=1) }
+          Block#test_b27 { Lit#test_i46(value=0) }
+          Block#test_b28 { Return#test_r14 { Call#test_c27(target=fail) { Lit#test_i47(value="program child count failed") } } }
+        }
+        Let#test_l11(name=childNode) { ChildAt#test_ca1 { Var#test_v22(name=programTree) Lit#test_i48(value=0) } }
+        If#test_if14 {
+          Eq#test_e14 { NodeKind#test_nk3 { Var#test_v23(name=childNode) } Lit#test_i49(value="Export") }
+          Block#test_b29 { Lit#test_i50(value=0) }
+          Block#test_b30 { Return#test_r15 { Call#test_c28(target=fail) { Lit#test_i51(value="program child kind failed") } } }
+        }
+        If#test_if15 {
+          Eq#test_e15 { AttrValueString#test_avs2 { Var#test_v24(name=childNode) Lit#test_i52(value=0) } Lit#test_i53(value="start") }
+          Block#test_b31 { Lit#test_i54(value=0) }
+          Block#test_b32 { Return#test_r16 { Call#test_c29(target=fail) { Lit#test_i55(value="program child attr failed") } } }
+        }
+        Call#test_c30(target=sys.stdout.writeLine) { Lit#test_i56(value="parser-selfhost-ok") }
+        Return#test_r17 { Lit#test_i57(value=0) }
       }
     }
   }

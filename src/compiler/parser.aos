@@ -324,7 +324,20 @@ Program#parser_p1 {
   Let#parser_l21(name=parse.parseNodeWithNameAttr) {
     Fn#parser_f14(params=text) {
       Block#parser_b64 {
-        Let#parser_l22(name=kindToken) { Call#parser_c34(target=parse.nextToken) { Var#parser_v82(name=text) Lit#parser_i80(value=0) } }
+        Return#parser_r40 {
+          Call#parser_c51(target=parse.parseNodeWithNameAttrAt) {
+            Var#parser_v99(name=text)
+            Lit#parser_i81(value=0)
+          }
+        }
+      }
+    }
+  }
+
+  Let#parser_l29(name=parse.parseNodeWithNameAttrAt) {
+    Fn#parser_f15(params=text,index) {
+      Block#parser_b65 {
+        Let#parser_l22(name=kindToken) { Call#parser_c34(target=parse.nextToken) { Var#parser_v82(name=text) Var#parser_v100(name=index) } }
         Let#parser_l23(name=hashToken) { Call#parser_c35(target=parse.nextToken) { Var#parser_v83(name=text) Call#parser_c36(target=parse.tokenNext) { Var#parser_v84(name=kindToken) } } }
         Let#parser_l24(name=idToken) { Call#parser_c37(target=parse.nextToken) { Var#parser_v85(name=text) Call#parser_c38(target=parse.tokenNext) { Var#parser_v86(name=hashToken) } } }
         Let#parser_l25(name=lparenToken) { Call#parser_c39(target=parse.nextToken) { Var#parser_v87(name=text) Call#parser_c40(target=parse.tokenNext) { Var#parser_v88(name=idToken) } } }
@@ -347,6 +360,29 @@ Program#parser_p1 {
     }
   }
 
+  Let#parser_l30(name=parse.parseProgramWithOneChild) {
+    Fn#parser_f16(params=text) {
+      Block#parser_b66 {
+        Let#parser_l31(name=kindToken) { Call#parser_c52(target=parse.nextToken) { Var#parser_v101(name=text) Lit#parser_i82(value=0) } }
+        Let#parser_l32(name=hashToken) { Call#parser_c53(target=parse.nextToken) { Var#parser_v102(name=text) Call#parser_c54(target=parse.tokenNext) { Var#parser_v103(name=kindToken) } } }
+        Let#parser_l33(name=idToken) { Call#parser_c55(target=parse.nextToken) { Var#parser_v104(name=text) Call#parser_c56(target=parse.tokenNext) { Var#parser_v105(name=hashToken) } } }
+        Let#parser_l34(name=lbraceToken) { Call#parser_c57(target=parse.nextToken) { Var#parser_v106(name=text) Call#parser_c58(target=parse.tokenNext) { Var#parser_v107(name=idToken) } } }
+        Return#parser_r41 {
+          AppendChild#parser_ap4 {
+            MakeNode#parser_mn3 {
+              Call#parser_c59(target=parse.tokenValue) { Var#parser_v108(name=kindToken) }
+              Call#parser_c60(target=parse.tokenValue) { Var#parser_v109(name=idToken) }
+            }
+            Call#parser_c61(target=parse.parseNodeWithNameAttrAt) {
+              Var#parser_v110(name=text)
+              Call#parser_c62(target=parse.tokenNext) { Var#parser_v111(name=lbraceToken) }
+            }
+          }
+        }
+      }
+    }
+  }
+
   Export#parser_e1(name=parse.charAt)
   Export#parser_e2(name=parse.isWhitespace)
   Export#parser_e3(name=parse.skipWhitespace)
@@ -360,4 +396,6 @@ Program#parser_p1 {
   Export#parser_e11(name=parse.nextToken)
   Export#parser_e12(name=parse.parseEmptyNode)
   Export#parser_e13(name=parse.parseNodeWithNameAttr)
+  Export#parser_e14(name=parse.parseNodeWithNameAttrAt)
+  Export#parser_e15(name=parse.parseProgramWithOneChild)
 }
