@@ -17,17 +17,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Checkout AiVM native source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: AiLangCore/AiVM
           ref: develop
           path: AiVM
 
       - name: Setup Emscripten
-        uses: mymindstorm/setup-emsdk@v14
+        uses: mymindstorm/setup-emsdk@v16
         with:
           version: latest
 
@@ -43,7 +43,7 @@ jobs:
           test -f ./.artifacts/aivm-wasm32/aivm-runtime-wasm32-web.mjs
 
       - name: Upload wasm runtime files
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: wasm-runtime-files
           path: ./.artifacts/aivm-wasm32
@@ -72,17 +72,17 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Checkout AiVM native source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: AiLangCore/AiVM
           ref: develop
           path: AiVM
 
       - name: Download wasm runtime files
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: wasm-runtime-files
           path: ./.artifacts/aivm-wasm32
@@ -171,7 +171,7 @@ jobs:
           .\scripts\stage-sdk-docs.ps1 .\dist
 
       - name: Upload toolkit artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: toolkit-${{ matrix.os }}
           path: ./dist

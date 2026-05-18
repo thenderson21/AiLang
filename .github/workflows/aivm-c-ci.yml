@@ -17,10 +17,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Checkout AiVM
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: AiLangCore/AiVM
           ref: develop
@@ -56,7 +56,7 @@ jobs:
 
       - name: Setup Emscripten (Linux)
         if: runner.os == 'Linux'
-        uses: mymindstorm/setup-emsdk@v14
+        uses: mymindstorm/setup-emsdk@v16
         with:
           version: latest
 
@@ -106,7 +106,7 @@ jobs:
 
       - name: Upload parity report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: aivm-parity-artifacts-${{ matrix.os }}
           path: |
@@ -118,7 +118,7 @@ jobs:
 
       - name: Upload leak report (failed Unix run)
         if: failure() && runner.os != 'Windows'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: aivm-leak-report-${{ matrix.os }}
           path: .tmp/leak-reports/aivm-c-ci-${{ matrix.os }}.txt

@@ -66,10 +66,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Checkout AiVM native source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: AiLangCore/AiVM
           ref: develop
@@ -184,7 +184,7 @@ jobs:
 
       - name: Upload leak report (failed Unix run)
         if: failure() && matrix.platform != 'windows'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: main-release-leak-report-${{ matrix.rid }}
           path: .tmp/leak-reports/main-release-gate-${{ matrix.rid }}.txt
@@ -203,17 +203,17 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Checkout AiVM native source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: AiLangCore/AiVM
           ref: develop
           path: AiVM
 
       - name: Setup Emscripten
-        uses: mymindstorm/setup-emsdk@v14
+        uses: mymindstorm/setup-emsdk@v16
         with:
           version: latest
 

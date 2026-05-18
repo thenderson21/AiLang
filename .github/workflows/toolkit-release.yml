@@ -24,7 +24,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
@@ -98,10 +98,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Checkout AiVM native source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: AiLangCore/AiVM
           ref: develop
@@ -153,7 +153,7 @@ jobs:
 
       - name: Upload leak report (failed Unix run)
         if: failure() && runner.os == 'Linux'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: toolkit-release-leak-report-${{ matrix.os }}
           path: .tmp/leak-reports/toolkit-release-${{ matrix.os }}.txt
@@ -236,17 +236,17 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Checkout AiVM native source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: AiLangCore/AiVM
           ref: develop
           path: AiVM
 
       - name: Download wasm runtime files
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: wasm-runtime-files
           path: ./.artifacts/aivm-wasm32
@@ -379,7 +379,7 @@ jobs:
           Compress-Archive -Path $packageDir -DestinationPath "$packageDir.zip" -Force
 
       - name: Upload packaged artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ailang-${{ matrix.rid }}
           path: ailang-${{ needs.prepare.outputs.version }}-${{ matrix.rid }}.${{ matrix.archive }}
@@ -393,17 +393,17 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Checkout AiVM native source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: AiLangCore/AiVM
           ref: develop
           path: AiVM
 
       - name: Setup Emscripten
-        uses: mymindstorm/setup-emsdk@v14
+        uses: mymindstorm/setup-emsdk@v16
         with:
           version: latest
 
@@ -474,13 +474,13 @@ jobs:
           tar -czf "${PACKAGE_DIR}.tar.gz" "${PACKAGE_DIR}"
 
       - name: Upload wasm runtime files
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: wasm-runtime-files
           path: ./.artifacts/aivm-wasm32
 
       - name: Upload wasm artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ailang-wasm32
           path: ailang-${{ needs.prepare.outputs.version }}-wasm32.tar.gz
@@ -495,10 +495,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Download packaged artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: ./release-assets
           merge-multiple: true
