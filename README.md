@@ -185,6 +185,11 @@ Run the AiLang test suite:
 `test.sh` is the canonical verification entrypoint. It uses the selected
 installed SDK and does not invoke dotnet.
 
+AiLang does not yet expose a project-level `ailang test` command. For the beta
+line, use repo-local verification scripts and app-level `ailang package
+restore`, `ailang build`, and `ailang run`. See
+[`Docs/AiLang-Test.md`](./Docs/AiLang-Test.md).
+
 ## Build Tooling
 
 Stage `tools/ailang` from the selected installed SDK:

@@ -36,7 +36,7 @@ Verified on 2026-05-19:
 - [x] `ailang init` works with project templates and `--agent` options.
 - [x] `ailang build` works from an installed SDK.
 - [x] `ailang run` works from an installed SDK.
-- [ ] `ailang test` exists or the beta docs explicitly define the temporary
+- [x] `ailang test` exists or the beta docs explicitly define the temporary
   test command.
 - [x] Package restore works from the curated package registry.
 - [ ] Package restore rejects tool command conflicts deterministically.
@@ -91,12 +91,12 @@ Verified on 2026-05-19:
 
 1. Run fresh Linux and Windows installer smoke tests against the published beta
    artifacts.
-2. Define or implement the beta `ailang test` command behavior.
-3. Audit package restore from an installed SDK using the public curated
+2. Audit package restore from an installed SDK using the public curated
    registry.
-4. Tighten repo metadata and README status across the public repositories.
-5. Finish resource-limit and error-code documentation for beta users.
-6. Harden restored package tool dispatch. Tracking: `AiLangCore/AiLang#185`.
+3. Tighten repo metadata and README status across the public repositories.
+4. Finish resource-limit and error-code documentation for beta users.
+5. Harden restored package tool dispatch. Tracking: `AiLangCore/AiLang#185`.
+6. Implement project-level `ailang test`.
 7. Decide whether failed AiLang `v0.0.1-beta.1` should remain visible as a
    historical failed tag or be removed manually.
 
