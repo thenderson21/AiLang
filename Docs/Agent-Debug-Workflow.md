@@ -7,6 +7,9 @@ This workflow is tooling-only. Do not modify app source to debug runtime behavio
 - Prefer AiLang and AiVectra built-in debug and automation surfaces over external tooling.
 - If the current debug surface cannot complete the task cleanly, improve the debug surface first.
 - Human verification is exception-only. Repeated need for human confirmation means the runtime or UI tooling is still incomplete.
+- Production `aivm` may be intentionally limited. Full debugger, profiler,
+  stack trace, capture, replay, and artifact inspection belong to
+  `aivm-debug`/debug-profile tooling.
 
 ## Commands
 
@@ -73,6 +76,39 @@ Each debug capture run writes one directory with deterministic files:
 - `runtime_trace.log`: host/runtime trace with UI, async, and syscall activity
 - `vm_trace.toml`: VM step trace (`nodeId`, `op`, `function`, `pc`)
 - `state_snapshots.toml`: stack/locals/env snapshots
+
+Target debug/profile artifact bundles should also grow toward:
+
+- `stdout.txt`
+- `stderr.txt`
+- `syscall_trace.toml`
+- `stack_trace.toml`
+- `profile.toml`
+- `memory.toml`
+- `events.toml`
+- `ui_capture.toml`
+- `suggestions.toml`
+
+Agent-facing debug tools should be able to inspect those files without requiring
+screenshots or human interpretation as the primary evidence.
+
+## Agent Inspection Commands
+
+The intended agent-facing command family is:
+
+```bash
+aivm-debug explain <debug-run-dir>
+aivm-debug suggest <debug-run-dir>
+aivm-debug inspect stack <debug-run-dir>
+aivm-debug inspect profile <debug-run-dir>
+aivm-debug inspect memory <debug-run-dir>
+aivm-debug inspect syscalls <debug-run-dir>
+aivm-debug compare <left-debug-run-dir> <right-debug-run-dir>
+```
+
+Until those commands are implemented, agents should inspect the TOML artifacts
+directly and prefer adding missing machine-readable evidence over adding
+source-level diagnostic prints.
 
 When interactive behavior is required, prefer runtime-owned injected events over external UI scripting so the captured artifact and the executed interaction stay in the same debug surface.
 

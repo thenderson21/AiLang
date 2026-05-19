@@ -1,11 +1,13 @@
 # module_path	native_host	wasm_cli	wasm_spa	wasm_fullstack	notes
 src/std/core.aos	native	native	native	native	Pure deterministic result and node helpers.
-src/std/io.aos	native	native	native	native	Output is profile-mapped, but module surface is available on every supported target.
+src/std/io.aos	native	native	native	native	Stdout/stderr output is profile-mapped, but the module surface is available on every supported target.
 src/std/str.aos	native	native	native	native	Pure deterministic string helpers.
 src/std/bytes.aos	native	native	native	native	Pure deterministic bytes, base64, and UTF-8 helpers.
-src/std/math.aos	native	native	native	native	Pure deterministic numeric helpers.
+src/std/null.aos	native	native	native	native	Pure deterministic null helpers.
+src/std/number.aos	native	native	native	native	Pure deterministic integer helpers, comparison, formatting, and parsing.
+src/std/math.aos	native	native	native	native	Pure deterministic integer arithmetic helpers; division and modulo are deferred until the numeric error/result contract is settled.
 src/std/system.aos	partial	partial	blocked	blocked	Metadata exports are broadly available; openDefault/openUrl remain host-only and are not browser baseline capabilities.
 src/std/process.aos	native	host-dependent	blocked	partial	Native host process control exists; browser targets do not expose process lifecycle.
 src/std/fs.aos	native	host-dependent	blocked	partial	Native host filesystem exists; browser targets require explicit remote or host-side adapters.
 src/std/time.aos	native	host-dependent	profile-defined	profile-defined	Time access exists but target policy differs and browser behavior must remain explicit and deterministic.
-src/std/debug.aos	native	host-dependent	partial	partial	Debug capture exists, but artifact and host-debug behavior remains target/profile specific.
+src/std/debug.aos	native	native	native	native	Production-safe diagnostics only: mode, stderr logging, and assertions. Capture, replay, artifacts, and tracing belong to debug/profile runtimes, not the production stdlib surface.

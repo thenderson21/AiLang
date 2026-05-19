@@ -1,9 +1,39 @@
 Program#std_io_p1 {
+  Let#std_io_l0(name=write) {
+    Fn#std_io_f0(params=value) {
+      Block#std_io_b0 {
+        Return#std_io_r0 {
+          Call#std_io_c0(target=sys.console.write) { Var#std_io_v0(name=value) }
+        }
+      }
+    }
+  }
+
+  Let#std_io_l0a(name=writeLine) {
+    Fn#std_io_f0a(params=value) {
+      Block#std_io_b0a {
+        Return#std_io_r0a {
+          Call#std_io_c0a(target=sys.console.writeLine) { Var#std_io_v0a(name=value) }
+        }
+      }
+    }
+  }
+
+  Let#std_io_l0b(name=writeErrLine) {
+    Fn#std_io_f0b(params=value) {
+      Block#std_io_b0b {
+        Return#std_io_r0b {
+          Call#std_io_c0b(target=sys.console.writeErrLine) { Var#std_io_v0b(name=value) }
+        }
+      }
+    }
+  }
+
   Let#std_io_l1(name=print) {
     Fn#std_io_f1(params=value) {
       Block#std_io_b1 {
         Return#std_io_r1 {
-          Call#std_io_c1(target=io.print) { Var#std_io_v1(name=value) }
+          Call#std_io_c1(target=writeLine) { Var#std_io_v1(name=value) }
         }
       }
     }
@@ -13,14 +43,15 @@ Program#std_io_p1 {
     Fn#std_io_f2(params=value) {
       Block#std_io_b2 {
         Return#std_io_r2 {
-          Call#std_io_c2(target=io.print) {
-            StrConcat#std_io_s1 { Var#std_io_v2(name=value) Lit#std_io_i1(value="\n") }
-          }
+          Call#std_io_c2(target=writeLine) { Var#std_io_v2(name=value) }
         }
       }
     }
   }
 
+  Export#std_io_e0(name=write)
+  Export#std_io_e0a(name=writeLine)
+  Export#std_io_e0b(name=writeErrLine)
   Export#std_io_e1(name=print)
   Export#std_io_e2(name=println)
 }

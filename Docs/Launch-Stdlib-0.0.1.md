@@ -33,12 +33,20 @@ Per-target support expectations for those baseline modules are declared in
 - `src/std/io.aos`
 - `src/std/str.aos`
 - `src/std/bytes.aos`
+- `src/std/null.aos`
+- `src/std/number.aos`
 - `src/std/math.aos`
 
 Reason:
 
 - These provide the minimum data/result/string/printing utilities expected from
   a production language.
+- `std.number` owns deterministic integer comparison, formatting, parsing, and
+  basic signed arithmetic helpers.
+- `std.math` is the arithmetic growth point. The current baseline includes
+  deterministic integer `add`, `sub`, `mul`, and `negate`; division and modulo
+  are intentionally deferred until AiLang has a settled numeric error/result
+  contract.
 
 ### Tier 2: Runtime environment
 
@@ -54,7 +62,24 @@ Reason:
 - They are effectful wrappers around `sys.*`, but they are still baseline
   because real programs need a stable standard entrypoint for these concerns.
 - `std.debug` is baseline because a production language must provide a standard,
-  supported debugging surface for diagnostics, tracing, replay, and validation.
+  supported diagnostics surface. In the production VM this is intentionally
+  limited to mode detection, stderr logging, and assertions.
+
+## Production diagnostics baseline
+
+Production diagnostics must remain small enough for the stripped production VM:
+
+- `std.io.write` and `std.io.writeLine` write to stdout.
+- `std.io.writeErrLine` writes to stderr.
+- `std.debug.debugMode` returns the active debug/profile mode string.
+- `std.debug.log(level, message)` writes a structured line to stderr.
+- `std.debug.info`, `std.debug.warn`, and `std.debug.error` are level-specific
+  wrappers over `std.debug.log`.
+- `std.debug.debugAssert` is the standard assertion hook.
+
+Capture, replay, artifact writing, async tracing, frame capture, and UI replay
+are debug/profile-runtime features. They are still valid host/debug tooling
+capabilities, but they are not production stdlib exports.
 
 ## Not part of the production baseline
 
@@ -67,6 +92,18 @@ These libraries are first-party packages, not minimum stdlib modules.
 - `std-ui-input`
   - Useful, but profile-specific and expected to live in an optional package or
     AiVectra.
+- Debug/profile-only capture APIs:
+  - `captureFrameBegin`
+  - `captureFrameEnd`
+  - `captureDraw`
+  - `captureInput`
+  - `captureState`
+  - `replayLoad`
+  - `replayNext`
+  - `artifactWrite`
+  - `traceAsync`
+  - These belong to debug/profile tooling or AiVectra-specific packages, not
+    the production stdlib.
 - `src/std/platform.aos`
   - Redundant with `std.system.platform` and must not remain in the shipped
     stdlib surface as an alias.
@@ -93,6 +130,25 @@ Rules:
 - If `std.*` requires functionality from `compiler.*`, that dependency should
   be considered technical debt unless it is purely toolchain-facing.
 
+## Numeric baseline
+
+The `0.0.1` numeric baseline is intentionally integer-first:
+
+- `std.number` owns general number helpers:
+  - constants: `zero`, `one`
+  - arithmetic: `add`, `sub`, `mul`, `inc`, `dec`, `negate`, `abs`
+  - comparison: `equals`, `lt`, `lte`, `gt`, `gte`
+  - state/range helpers: `isZero`, `isNegative`, `isPositive`,
+    `isNonNegative`, `sign`, `min`, `max`, `clamp`, `betweenInclusive`
+  - parsing/formatting: `toString`, `digitValue`, `isWholeString`,
+    `parseWholeOr`, `isSignedWholeString`, `isNumberString`, `parseNumberOr`
+- `std.math` owns arithmetic helpers intended to grow into the broader math
+  namespace.
+
+Division, modulo, floating point, overflow policy, and decimal behavior are not
+part of this baseline. Add them only after the numeric failure/result behavior
+is specified.
+
 ## Contract policy
 
 - Contract negotiation remains open until `1.0.0`.
@@ -113,8 +169,11 @@ Each production-baseline module must meet all of these:
 - Has target-specific unsupported behavior documented when capability-limited.
 - Declares target capability status in `Docs/Stdlib-Capability-Matrix.tsv`.
 - Has coverage through library tests, golden coverage, or sample usage.
+- Has behavior coverage for required deterministic helpers through
+  `scripts/test-stdlib-behavior.sh` where practical.
 - For debugging libraries, has clear production behavior for capture, replay,
-  and diagnostic emission.
+  and diagnostic emission. Production `std.debug` is limited to stderr logging,
+  debug mode, and assertions.
 
 ## Immediate cleanup targets
 
@@ -127,8 +186,8 @@ Each production-baseline module must meet all of these:
    profiles.
 5. Add conformance tests so the baseline is enforced by the repo, not just by
    documentation.
-6. Treat `std.debug` as a required production surface, not a best-effort dev
-   helper.
+6. Treat the limited production `std.debug` surface as required. Keep capture,
+   replay, trace, and artifact helpers out of the production stdlib contract.
 
 ## JSON contract
 

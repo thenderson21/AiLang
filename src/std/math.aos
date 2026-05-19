@@ -1,11 +1,59 @@
 Program#std_math_p1 {
+  Import#std_math_i1(path="./number.aos")
+
   Let#std_math_l1(name=add) {
     Fn#std_math_f1(params=a,b) {
       Block#std_math_b1 {
-        Return#std_math_r1 { Add#std_math_a1 { Var#std_math_v1(name=a) Var#std_math_v2(name=b) } }
+        Return#std_math_r1 {
+          Call#std_math_c1(target=add) {
+            Var#std_math_v1(name=a)
+            Var#std_math_v2(name=b)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_math_l2(name=sub) {
+    Fn#std_math_f2(params=a,b) {
+      Block#std_math_b2 {
+        Return#std_math_r2 {
+          Call#std_math_c2(target=sub) {
+            Var#std_math_v3(name=a)
+            Var#std_math_v4(name=b)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_math_l3(name=mul) {
+    Fn#std_math_f3(params=a,b) {
+      Block#std_math_b3 {
+        Return#std_math_r3 {
+          Call#std_math_c3(target=mul) {
+            Var#std_math_v5(name=a)
+            Var#std_math_v6(name=b)
+          }
+        }
+      }
+    }
+  }
+
+  Let#std_math_l4(name=negate) {
+    Fn#std_math_f4(params=value) {
+      Block#std_math_b4 {
+        Return#std_math_r4 {
+          Call#std_math_c4(target=negate) {
+            Var#std_math_v7(name=value)
+          }
+        }
       }
     }
   }
 
   Export#std_math_e1(name=add)
+  Export#std_math_e2(name=sub)
+  Export#std_math_e3(name=mul)
+  Export#std_math_e4(name=negate)
 }
