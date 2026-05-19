@@ -2,6 +2,13 @@
 
 All notable changes to this project are documented in this file.
 
+## [0.0.1-beta.2] - 2026-05-19
+
+### Fixed
+
+- Fixed Windows release staging so `build.ps1` keeps `tools/ailang.exe` after
+  building the native AiLang tool.
+
 ## [0.0.1-beta.1] - 2026-05-19
 
 ### Changed

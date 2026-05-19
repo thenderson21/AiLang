@@ -76,5 +76,5 @@ if ($targetArch -eq 'x64') {
   New-Item -ItemType Directory -Force -Path (Join-Path $root 'tools') | Out-Null
   Copy-Item $wrapperPath $hostWrapperPath -Force
   Copy-Item $runtimePath $hostRuntimePath -Force
-  Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $root 'tools\ailang.exe'), (Join-Path $root 'tools\ailang')
+  Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $root 'tools\airun.exe'), (Join-Path $root 'tools\airun')
 }
