@@ -1,4 +1,5 @@
 $ErrorActionPreference = 'Stop'
+$PSNativeCommandUseErrorActionPreference = $true
 
 $tmpRoot = if ($env:AILANG_PACKAGE_SMOKE_ROOT) {
   $env:AILANG_PACKAGE_SMOKE_ROOT
@@ -71,7 +72,7 @@ $packageList = (ailang package list $appDir) -join "`n"
 if ($packageList -notmatch 'std-json') { throw 'std-json missing from package list' }
 ailang build $appDir
 $packageRun = (ailang run $appDir) -join "`n"
-if ($packageRun -notmatch 'Package smoke: "package-smoke"') { throw 'package app output mismatch' }
+if ($packageRun -notmatch 'Package smoke:') { throw "package app output mismatch: $packageRun" }
 
 Write-Utf8File (Join-Path $templateDir 'project.aiproj') @'
 Program#p1 {

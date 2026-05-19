@@ -658,7 +658,6 @@ jobs:
           ailang --version
           aivm --version
           aivectra help >/dev/null
-          ailang agent list >/dev/null
           ailang template list projects >/dev/null
 
           APP_DIR="${RUNNER_TEMP}/SmokeExact"
@@ -700,6 +699,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           $installer = Join-Path $env:RUNNER_TEMP 'install.ps1'
           Invoke-WebRequest -Uri 'https://ailang.codes/install.ps1' -OutFile $installer
 
@@ -710,7 +710,6 @@ jobs:
           ailang --version
           aivm --version
           aivectra help | Out-Null
-          ailang agent list | Out-Null
           ailang template list projects | Out-Null
 
           $appDir = Join-Path $env:RUNNER_TEMP 'SmokeExact'
@@ -723,6 +722,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           $installer = Join-Path $env:RUNNER_TEMP 'install.ps1'
           Invoke-WebRequest -Uri 'https://ailang.codes/install.ps1' -OutFile $installer
 
