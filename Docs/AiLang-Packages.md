@@ -146,6 +146,86 @@ Known alpha gaps:
 `add` and `remove` modify `project.aiproj` and then run restore. `add` uses
 the registry default version when no version is supplied.
 
+## Publishing Packages
+
+Beta package publishing is registry-first and git-backed. There is no
+`ailang package publish` command yet. Publishing means creating or updating a
+package source repository, cutting an immutable source version, and submitting a
+registry change that points at that exact commit.
+
+Publisher workflow:
+
+1. Create or update the package source repository.
+2. Add a package descriptor at `package.toml` or
+   `packages/<name>/package.toml`.
+3. Put importable library source under `src/`.
+4. Put package templates under `templates/projects/` or `templates/files/`
+   when the package exposes templates.
+5. Put package tools under the package-owned tool path once tool dispatch is
+   hardened for beta.
+6. Run the package's own validation script.
+7. Commit the source change.
+8. Create a release tag for the package source version.
+9. Resolve the tag to its exact git commit.
+10. Open a pull request against `AiLangCore/ailang-packages` adding or updating
+    `packages/<name>.toml`.
+
+Package source descriptor shape:
+
+```toml
+schema = "ailang.package-source.v1"
+name = "std-json"
+version = "0.0.1-beta.1"
+types = ["library"]
+
+[libraries.json]
+entry = "src/json.aos"
+exports = ["encode", "parse", "parseNode"]
+```
+
+Registry record shape:
+
+```toml
+schema = "ailang.package.v1"
+name = "std-json"
+repo = "https://github.com/AiLangCore/ailang-core-packages.git"
+packageRoot = "packages/std-json"
+license = "MIT"
+types = ["library"]
+defaultVersion = "0.0.1-beta.1"
+
+[versions."0.0.1-beta.1"]
+ref = "v0.0.1-beta.1"
+commit = "exact-git-commit"
+```
+
+Registry review requirements:
+
+- `repo` must be a git repository URL.
+- `packageRoot` must contain the package descriptor.
+- `types` must match the package contents.
+- `ref` should be a readable tag or branch name.
+- `commit` must be the immutable commit restored by users.
+- `defaultVersion` may only move to a version that has a matching
+  `[versions."<version>"]` entry.
+- Packages that expose tools must not conflict with compiled AiLang commands,
+  globally installed tools, or other local package tools.
+
+Validation before merging a registry change:
+
+```bash
+ailang package restore <example-project>
+ailang package list <example-project>
+ailang build <example-project>
+ailang run <example-project>
+ailang template list projects <example-project>
+ailang template list files <example-project>
+```
+
+For the current beta, package publishing is intentionally a pull-request
+workflow. That keeps registry curation explicit while the package schema,
+tool-dispatch behavior, and integrity model are still negotiable.
+
 Package tools are available as `ailang <tool> ...` after restore. Command
 resolution is:
 
@@ -156,6 +236,9 @@ resolution is:
 If a package declares `tool` and its tool name conflicts with a compiled,
 global, or already-local tool, restore fails instead of silently shadowing a
 command.
+
+Known beta issue: restored package tool execution still needs hardening before
+it is release-gated. See `AiLangCore/AiLang#185`.
 
 Alpha implementation note: `restore` is currently backed by an AiVM C native
 bridge helper. This is an intermediary boundary for self-hosting and native

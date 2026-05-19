@@ -40,7 +40,7 @@ Verified on 2026-05-19:
   test command.
 - [x] Package restore works from the curated package registry.
 - [ ] Package restore rejects tool command conflicts deterministically.
-- [ ] Package publishing flow is documented.
+- [x] Package publishing flow is documented.
 - [x] AiVM native runtime is the runtime used by the public SDK.
 - [x] `aivm` and `aivm-debug` release artifacts exist for supported hosts.
 - [x] At least one AiVectra sample app is functional and documented.
@@ -72,7 +72,8 @@ Verified on 2026-05-19:
 - [x] One canonical package demo exists.
 - [x] Demo uses a dependency from the curated registry.
 - [x] Demo documents restore, build, and run.
-- [ ] Tool packages expose subcommands without name conflicts.
+- [ ] Tool packages expose subcommands without name conflicts. Tracking:
+  `AiLangCore/AiLang#185`.
 - [x] Library packages are referenceable by AiLang source.
 - [x] Template packages are visible through template listing.
 
@@ -91,11 +92,11 @@ Verified on 2026-05-19:
 1. Run fresh Linux and Windows installer smoke tests against the published beta
    artifacts.
 2. Define or implement the beta `ailang test` command behavior.
-3. Finish public package publishing documentation.
-4. Audit package restore from an installed SDK using the public curated
+3. Audit package restore from an installed SDK using the public curated
    registry.
-5. Tighten repo metadata and README status across the public repositories.
-6. Finish resource-limit and error-code documentation for beta users.
+4. Tighten repo metadata and README status across the public repositories.
+5. Finish resource-limit and error-code documentation for beta users.
+6. Harden restored package tool dispatch. Tracking: `AiLangCore/AiLang#185`.
 7. Decide whether failed AiLang `v0.0.1-beta.1` should remain visible as a
    historical failed tag or be removed manually.
 
