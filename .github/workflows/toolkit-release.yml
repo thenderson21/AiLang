@@ -629,3 +629,103 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: gh release edit "${{ needs.prepare.outputs.tag }}" --draft=false
+
+  install-smoke-unix:
+    name: install-smoke-${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    needs:
+      - prepare
+      - release
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-14
+
+    steps:
+      - name: Exact version install smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          export AILANG_INSTALL_ROOT="${RUNNER_TEMP}/ailang-exact"
+          curl -fsSL https://ailang.codes/install.sh | sh -s -- --version "${{ needs.prepare.outputs.version }}" --root "${AILANG_INSTALL_ROOT}"
+          export PATH="${AILANG_INSTALL_ROOT}/bin:${PATH}"
+
+          ailang --version
+          aivm --version
+          aivectra help >/dev/null
+          ailang agent list >/dev/null
+          ailang template list projects >/dev/null
+
+          APP_DIR="${RUNNER_TEMP}/SmokeExact"
+          ailang init "${APP_DIR}" --agent codex
+          ailang build "${APP_DIR}"
+          ailang run "${APP_DIR}"
+
+      - name: Beta channel install smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          export AILANG_INSTALL_ROOT="${RUNNER_TEMP}/ailang-channel"
+          curl -fsSL https://ailang.codes/install.sh | sh -s -- --channel beta --root "${AILANG_INSTALL_ROOT}"
+          export PATH="${AILANG_INSTALL_ROOT}/bin:${PATH}"
+
+          ailang --version
+          aivm --version
+          aivectra help >/dev/null
+
+          APP_DIR="${RUNNER_TEMP}/SmokeChannel"
+          ailang init "${APP_DIR}" --agent codex
+          ailang build "${APP_DIR}"
+          ailang run "${APP_DIR}"
+
+  install-smoke-windows:
+    name: install-smoke-windows
+    runs-on: windows-latest
+    needs:
+      - prepare
+      - release
+
+    steps:
+      - name: Exact version install smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Join-Path $env:RUNNER_TEMP 'install.ps1'
+          Invoke-WebRequest -Uri 'https://ailang.codes/install.ps1' -OutFile $installer
+
+          $installRoot = Join-Path $env:RUNNER_TEMP 'ailang-exact'
+          & $installer -Version '${{ needs.prepare.outputs.version }}' -InstallRoot $installRoot
+          $env:PATH = "$installRoot\bin;$env:PATH"
+
+          ailang --version
+          aivm --version
+          aivectra help | Out-Null
+          ailang agent list | Out-Null
+          ailang template list projects | Out-Null
+
+          $appDir = Join-Path $env:RUNNER_TEMP 'SmokeExact'
+          ailang init $appDir --agent codex
+          ailang build $appDir
+          ailang run $appDir
+
+      - name: Beta channel install smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Join-Path $env:RUNNER_TEMP 'install.ps1'
+          Invoke-WebRequest -Uri 'https://ailang.codes/install.ps1' -OutFile $installer
+
+          $installRoot = Join-Path $env:RUNNER_TEMP 'ailang-channel'
+          & $installer -Channel beta -InstallRoot $installRoot
+          $env:PATH = "$installRoot\bin;$env:PATH"
+
+          ailang --version
+          aivm --version
+          aivectra help | Out-Null
+
+          $appDir = Join-Path $env:RUNNER_TEMP 'SmokeChannel'
+          ailang init $appDir --agent codex
+          ailang build $appDir
+          ailang run $appDir
