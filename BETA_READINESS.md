@@ -38,7 +38,7 @@ Verified on 2026-05-19:
 - [x] `ailang run` works from an installed SDK.
 - [ ] `ailang test` exists or the beta docs explicitly define the temporary
   test command.
-- [ ] Package restore works from the curated package registry.
+- [x] Package restore works from the curated package registry.
 - [ ] Package restore rejects tool command conflicts deterministically.
 - [ ] Package publishing flow is documented.
 - [x] AiVM native runtime is the runtime used by the public SDK.
@@ -69,12 +69,12 @@ Verified on 2026-05-19:
 
 ## Package Ecosystem Gates
 
-- [ ] One canonical package demo exists.
-- [ ] Demo uses a dependency from the curated registry.
-- [ ] Demo documents restore, build, and run.
+- [x] One canonical package demo exists.
+- [x] Demo uses a dependency from the curated registry.
+- [x] Demo documents restore, build, and run.
 - [ ] Tool packages expose subcommands without name conflicts.
-- [ ] Library packages are referenceable by AiLang source.
-- [ ] Template packages are visible through template listing.
+- [x] Library packages are referenceable by AiLang source.
+- [x] Template packages are visible through template listing.
 
 ## Sponsorship Gates
 

@@ -1,0 +1,103 @@
+$ErrorActionPreference = 'Stop'
+
+$tmpRoot = if ($env:AILANG_PACKAGE_SMOKE_ROOT) {
+  $env:AILANG_PACKAGE_SMOKE_ROOT
+} elseif ($env:RUNNER_TEMP) {
+  Join-Path $env:RUNNER_TEMP ([System.Guid]::NewGuid().ToString('N'))
+} else {
+  Join-Path ([System.IO.Path]::GetTempPath()) ([System.Guid]::NewGuid().ToString('N'))
+}
+
+$appDir = Join-Path $tmpRoot 'package-app'
+$templateDir = Join-Path $tmpRoot 'template-app'
+
+function Require-Tool {
+  param([string]$Name)
+  if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
+    throw "missing required tool: $Name"
+  }
+}
+
+function Write-Utf8File {
+  param(
+    [string]$Path,
+    [string]$Content
+  )
+  $parent = Split-Path -Parent $Path
+  New-Item -ItemType Directory -Force $parent | Out-Null
+  [System.IO.File]::WriteAllText($Path, $Content, [System.Text.UTF8Encoding]::new($false))
+}
+
+Require-Tool ailang
+Require-Tool git
+
+Remove-Item -Recurse -Force $appDir, $templateDir -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force (Join-Path $appDir 'src'), (Join-Path $templateDir 'src') | Out-Null
+
+Write-Utf8File (Join-Path $appDir 'project.aiproj') @'
+Program#p1 {
+  Project#proj1(name="package-smoke" entryFile="src/app.aos" entryExport="start" version="0.0.1-beta.1") {
+    Include#dep_ailang(name="ailang")
+    Include#dep_json(name="std-json")
+  }
+}
+'@
+
+Write-Utf8File (Join-Path $appDir 'src/app.aos') @'
+Program#p1 {
+  Import#i1(package="ailang" path="src/std/core.aos")
+  Import#i2(package="std-json" path="src/json.aos")
+  Export#e1(name=start)
+
+  Let#l1(name=start) {
+    Fn#f1(params=args) {
+      Block#b1 {
+        Let#l2(name=value) {
+          Call#c1(target=resultValueOr) {
+            Call#c2(target=parse) { Lit#s1(value="\"package-smoke\"") }
+            Lit#s2(value="fallback")
+          }
+        }
+        Call#c3(target=sys.stdout.writeLine) { StrConcat#sc1 { Lit#s3(value="Package smoke: ") Var#v1(name=value) } }
+        Return#r1 { Lit#i1(value=0) }
+      }
+    }
+  }
+}
+'@
+
+ailang package restore $appDir
+$packageList = (ailang package list $appDir) -join "`n"
+if ($packageList -notmatch 'std-json') { throw 'std-json missing from package list' }
+ailang build $appDir
+$packageRun = (ailang run $appDir) -join "`n"
+if ($packageRun -notmatch 'Package smoke: "package-smoke"') { throw 'package app output mismatch' }
+
+Write-Utf8File (Join-Path $templateDir 'project.aiproj') @'
+Program#p1 {
+  Project#proj1(name="template-smoke" entryFile="src/app.aos" entryExport="start" version="0.0.1-beta.1") {
+    Include#dep_aivectra(name="aivectra")
+  }
+}
+'@
+
+Write-Utf8File (Join-Path $templateDir 'src/app.aos') @'
+Program#p1 {
+  Export#e1(name=start)
+  Let#l1(name=start) { Fn#f1(params=args) { Block#b1 { Return#r1 { Lit#i1(value=0) } } } }
+}
+'@
+
+ailang package restore $templateDir
+$templatePackageList = (ailang package list $templateDir) -join "`n"
+if ($templatePackageList -notmatch 'aivectra') { throw 'aivectra missing from package list' }
+$projectTemplates = (ailang template list projects $templateDir) -join "`n"
+if ($projectTemplates -notmatch 'aivectra/hello-name') { throw 'aivectra project template missing' }
+$fileTemplates = (ailang template list files $templateDir) -join "`n"
+if ($fileTemplates -notmatch 'aivectra/view-basic') { throw 'aivectra file template missing' }
+
+if (-not $env:AILANG_PACKAGE_SMOKE_KEEP) {
+  Remove-Item -Recurse -Force $tmpRoot -ErrorAction SilentlyContinue
+}
+
+Write-Output 'package workflow smoke passed'

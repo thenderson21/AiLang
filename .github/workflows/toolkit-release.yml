@@ -644,6 +644,9 @@ jobs:
           - macos-14
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - name: Exact version install smoke
         shell: bash
         run: |
@@ -662,6 +665,7 @@ jobs:
           ailang init "${APP_DIR}" --agent codex
           ailang build "${APP_DIR}"
           ailang run "${APP_DIR}"
+          ./scripts/test-installed-package-workflow.sh
 
       - name: Beta channel install smoke
         shell: bash
@@ -679,6 +683,7 @@ jobs:
           ailang init "${APP_DIR}" --agent codex
           ailang build "${APP_DIR}"
           ailang run "${APP_DIR}"
+          ./scripts/test-installed-package-workflow.sh
 
   install-smoke-windows:
     name: install-smoke-windows
@@ -688,6 +693,9 @@ jobs:
       - release
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - name: Exact version install smoke
         shell: pwsh
         run: |
@@ -709,6 +717,7 @@ jobs:
           ailang init $appDir --agent codex
           ailang build $appDir
           ailang run $appDir
+          .\scripts\test-installed-package-workflow.ps1
 
       - name: Beta channel install smoke
         shell: pwsh
@@ -729,3 +738,4 @@ jobs:
           ailang init $appDir --agent codex
           ailang build $appDir
           ailang run $appDir
+          .\scripts\test-installed-package-workflow.ps1
