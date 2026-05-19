@@ -71,12 +71,16 @@ ailang package restore $appDir
 $packageList = (ailang package list $appDir) -join "`n"
 if ($packageList -notmatch 'std-json') { throw 'std-json missing from package list' }
 ailang build $appDir
-$packageRun = (ailang run $appDir) -join "`n"
+$packageRunOut = Join-Path $tmpRoot 'package-run.stdout.txt'
+$packageRunErr = Join-Path $tmpRoot 'package-run.stderr.txt'
+ailang run $appDir 1>$packageRunOut 2>$packageRunErr
+$packageRun = Get-Content -Raw -ErrorAction SilentlyContinue $packageRunOut
+$packageRunErrText = Get-Content -Raw -ErrorAction SilentlyContinue $packageRunErr
 if ($packageRun -notmatch 'Package smoke:') {
   if ($IsWindows) {
-    Write-Warning 'Windows package run completed but did not surface sys.stdout output; tracked in AiLangCore/AiLang#186.'
+    Write-Warning "Windows package run completed but did not surface sys.stdout output; tracked in AiLangCore/AiLang#186. stderr: $packageRunErrText"
   } else {
-    throw "package app output mismatch: $packageRun"
+    throw "package app output mismatch: stdout=$packageRun stderr=$packageRunErrText"
   }
 }
 
