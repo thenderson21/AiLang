@@ -14,8 +14,8 @@ CURRENT_TSV="${TMP_DIR}/bench-current.tsv"
 mkdir -p "${TMP_DIR}"
 cd "${ROOT_DIR}"
 
-if [[ ! -x "${ROOT_DIR}/tools/airun" ]]; then
-  echo "missing runtime: ./tools/airun (run ./build.sh first)" >&2
+if [[ ! -x "${ROOT_DIR}/tools/ailang" ]]; then
+  echo "missing runtime: ./tools/ailang (run ./build.sh first)" >&2
   exit 2
 fi
 
@@ -34,7 +34,7 @@ if ! [[ "${MAX_REGRESSION_PCT}" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
   exit 2
 fi
 
-./tools/airun bench --iterations "${ITERATIONS}" --human > "${BENCH_OUT}" 2>&1
+./tools/ailang bench --iterations "${ITERATIONS}" --human > "${BENCH_OUT}" 2>&1
 awk 'NR>1 && $2 == "ok" {print $1 "\t" $4}' "${BENCH_OUT}" > "${CURRENT_TSV}"
 
 MISSING_COUNT="$(

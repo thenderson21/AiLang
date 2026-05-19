@@ -24,7 +24,7 @@
 - `dotnet build src/AiCLI/AiCLI.csproj -v minimal -m:1 /nr:false`
 - `dotnet test tests/AiLang.Tests/AiLang.Tests.csproj -v minimal -m:1 /nr:false --filter "Name~CliInvocationParsing_|Name~Cli_HelpText_ContainsCommandSectionsAndExamples"`
 - `./scripts/bootstrap-debug-fixtures.sh` (internal fixture bootstrap; not a day-to-day entrypoint)
-- `dotnet src/AiCLI/bin/Debug/net10.0/airun.dll debug scenario examples/debug/scenarios/minimal.scenario.toml --name minimal`
+- `dotnet src/AiCLI/bin/Debug/net10.0/ailang.dll debug scenario examples/debug/scenarios/minimal.scenario.toml --name minimal`
 - `./test.sh` (full golden gate)
 - GitHub Actions `Main Release Gate` workflow green on target commit
 

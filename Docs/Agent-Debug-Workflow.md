@@ -22,25 +22,25 @@ This workflow is tooling-only. Do not modify app source to debug runtime behavio
 2. Run app with artifact capture:
 
 ```bash
-./tools/airun debug capture run /absolute/or/relative/path/to/app.aos --out .artifacts/debug/my-run
+./tools/ailang debug capture run /absolute/or/relative/path/to/app.aos --out .artifacts/debug/my-run
 ```
 
 3. Run app with trace output:
 
 ```bash
-./tools/airun debug trace run /absolute/or/relative/path/to/app.aos --out .artifacts/debug/trace-run
+./tools/ailang debug trace run /absolute/or/relative/path/to/app.aos --out .artifacts/debug/trace-run
 ```
 
 4. Use runtime-owned synthetic input when UI automation is required:
 
 ```bash
-./tools/airun debug capture run /absolute/or/relative/path/to/app.aos --inject-click 124,138 --inject-text 76103 --inject-key enter --out .artifacts/debug/scripted-run
+./tools/ailang debug capture run /absolute/or/relative/path/to/app.aos --inject-click 124,138 --inject-text 76103 --inject-key enter --out .artifacts/debug/scripted-run
 ```
 
 4a. Use built-in deterministic waits and close/finalization for live UI flows against an existing sample project:
 
 ```bash
-./tools/airun debug capture run ./samples/weather-site/project.aiproj --inject-wait 10 --inject-close --out .artifacts/debug/weather-site-run
+./tools/ailang debug capture run ./samples/weather-site/project.aiproj --inject-wait 10 --inject-close --out .artifacts/debug/weather-site-run
 ```
 
 4b. For multi-step live scenarios, prefer a script file over long flag chains:
@@ -53,13 +53,13 @@ close
 ```
 
 ```bash
-./tools/airun debug capture run ./samples/weather-site/project.aiproj --inject-script /absolute/path/to/weather.script --out .artifacts/debug/weather-site-run
+./tools/ailang debug capture run ./samples/weather-site/project.aiproj --inject-script /absolute/path/to/weather.script --out .artifacts/debug/weather-site-run
 ```
 
 5. When a debug command needs both tool flags and compiled-app argv, put app argv after `--`:
 
 ```bash
-./tools/airun debug capture run ./samples/cli-fetch/project.aiproj --out .artifacts/debug/cli-fetch -- Fort\ Worth
+./tools/ailang debug capture run ./samples/cli-fetch/project.aiproj --out .artifacts/debug/cli-fetch -- Fort\ Worth
 ```
 
 5. CI-parity local path:

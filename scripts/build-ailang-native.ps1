@@ -10,21 +10,19 @@ $nativeSrc = if ($env:AIVM_C_SOURCE_DIR) {
   throw 'AiVM native source not found. Set AIVM_C_SOURCE_DIR or place AiVM next to AiLang.'
 }
 
-$sourcePath = Join-Path $nativeSrc 'ailang_cli\airun.c'
+$sourcePath = Join-Path $nativeSrc 'ailang_cli\ailang.c'
 $uiHostWindowsPath = Join-Path $nativeSrc 'ailang_cli\airun_ui_host_windows.c'
 $nativeInclude = Join-Path $nativeSrc 'include'
 $hostWrapperPath = Join-Path $root 'tools\ailang.exe'
-$hostCompatWrapperPath = Join-Path $root 'tools\airun.exe'
 $hostRuntimePath = Join-Path $root 'tools\aivm-runtime.exe'
 
-$targetArch = if ($env:AIVM_AIRUN_ARCH) { $env:AIVM_AIRUN_ARCH } else { 'x64' }
+$targetArch = if ($env:AILANG_NATIVE_ARCH) { $env:AILANG_NATIVE_ARCH } else { 'x64' }
 if ($targetArch -ne 'x64' -and $targetArch -ne 'arm64') {
-  throw "unsupported AIVM_AIRUN_ARCH: $targetArch"
+  throw "unsupported AILANG_NATIVE_ARCH: $targetArch"
 }
 
 $outDir = Join-Path $root ".artifacts\ailang-windows-$targetArch"
 $wrapperPath = Join-Path $outDir 'ailang.exe'
-$compatWrapperPath = Join-Path $outDir 'airun.exe'
 $runtimePath = Join-Path $outDir 'aivm-runtime.exe'
 
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
@@ -67,7 +65,6 @@ $linkLibs = @('Ws2_32.lib', 'psapi.lib', 'user32.lib', 'gdi32.lib', 'Shell32.lib
 $clArgs = $commonArgs + @("/Fe:$wrapperPath") + $sources + $linkLibs
 & cl @clArgs
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-Copy-Item $wrapperPath $compatWrapperPath -Force
 
 $runtimeArgs = $commonArgs + @('/DAIRUN_MINIMAL_RUNTIME=1', "/Fe:$runtimePath") + $sources + $linkLibs
 & cl @runtimeArgs
@@ -78,6 +75,6 @@ Get-ChildItem -Path $root -Filter '*.obj' -ErrorAction SilentlyContinue | Remove
 if ($targetArch -eq 'x64') {
   New-Item -ItemType Directory -Force -Path (Join-Path $root 'tools') | Out-Null
   Copy-Item $wrapperPath $hostWrapperPath -Force
-  Copy-Item $compatWrapperPath $hostCompatWrapperPath -Force
   Copy-Item $runtimePath $hostRuntimePath -Force
+  Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $root 'tools\ailang.exe'), (Join-Path $root 'tools\ailang')
 }

@@ -6,4 +6,4 @@ cd "${ROOT_DIR}"
 
 ./scripts/bootstrap-golden-publish-fixtures.sh
 ./test.sh
-./tools/airun debug scenario examples/debug/scenarios/minimal.scenario.toml --name minimal
+./tools/ailang debug scenario examples/debug/scenarios/minimal.scenario.toml --name minimal

@@ -15,7 +15,7 @@
 
 ## Primary Entry Points
 
-- Native launcher entry: `../AiVM/native/ailang_cli/airun.c`
+- Native launcher entry: `../AiVM/native/ailang_cli/ailang.c`
 - VM execution core: `../AiVM/native/aivm_vm.c`
 - Program load/serialization: `../AiVM/native/aivm_program.c`
 - Runtime host bridge: `../AiVM/native/aivm_runtime.c`
@@ -32,7 +32,7 @@
 
 ## Debug And Diagnostics
 
-- Debug/bundle CLI flow: `../AiVM/native/ailang_cli/airun.c`
+- Debug/bundle CLI flow: `../AiVM/native/ailang_cli/ailang.c`
 - Debug host/bundle emission: `../AiVM/native/ailang_cli/airun_debug_host.inc`
 - Native parity/debug/memory tests: `../AiVM/native/tests/`
 - Golden fixtures and publish fixtures: `examples/golden/`

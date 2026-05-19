@@ -73,7 +73,7 @@ cat examples/golden/run_var.in.aos | ./tools/ailang run --vm=ast src/compiler/ai
 
 ## Debugging Notes
 
-- For golden verification, prefer native `ailang` execution over `dotnet .../airun.dll` because the golden harness spawns subprocesses using the current process path.
+- For golden verification, prefer native `ailang` execution over `dotnet .../ailang.dll` because the golden harness spawns subprocesses using the current process path.
 - Native toolchain is C-only in active workflows; no C#/DLL fallback is required for command execution.
 - If `./tools/ailang` is not usable in your environment, use the published native artifact:
 ```bash

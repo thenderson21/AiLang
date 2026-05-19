@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
-TMP_DIR="${ROOT_DIR}/.tmp/test-airun-debug-bundle-network"
+TMP_DIR="${ROOT_DIR}/.tmp/test-ailang-debug-bundle-network"
 rm -rf "${TMP_DIR}"
 mkdir -p "${TMP_DIR}"
 
@@ -30,7 +30,7 @@ Program#p1 {
 EOF
 
 OUT_DIR="${TMP_DIR}/bundle"
-"${ROOT_DIR}/tools/airun" debug capture run "${TMP_DIR}/app.aos" --out "${OUT_DIR}" >/dev/null 2>&1 || true
+"${ROOT_DIR}/tools/ailang" debug capture run "${TMP_DIR}/app.aos" --out "${OUT_DIR}" >/dev/null 2>&1 || true
 
 if ! grep -q '^network = { ' "${OUT_DIR}/diagnostics.toml"; then
   echo "debug bundle regression: missing network summary in diagnostics.toml" >&2
@@ -79,7 +79,7 @@ Program#p1 {
 EOF
 
 OUT_DIR_LOCAL="${TMP_DIR}/bundle_localhost"
-"${ROOT_DIR}/tools/airun" debug capture run "${TMP_DIR}/app_localhost.aos" --out "${OUT_DIR_LOCAL}" >/dev/null 2>&1 || true
+"${ROOT_DIR}/tools/ailang" debug capture run "${TMP_DIR}/app_localhost.aos" --out "${OUT_DIR_LOCAL}" >/dev/null 2>&1 || true
 
 if ! grep -Eq 'resolved_ip = "(127\.0\.0\.1|::1)"' "${OUT_DIR_LOCAL}/diagnostics.toml"; then
   echo "debug bundle regression: network summary missing resolved localhost ip" >&2

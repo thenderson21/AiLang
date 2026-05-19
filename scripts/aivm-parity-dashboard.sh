@@ -29,12 +29,12 @@ mkdir -p "$(dirname "${REPORT_PATH}")"
 cd "${ROOT_DIR}"
 
 ensure_runtime() {
-  if [[ -x "${ROOT_DIR}/tools/airun" ]]; then
+  if [[ -x "${ROOT_DIR}/tools/ailang" ]]; then
     return 0
   fi
   ./build.sh >/dev/null
-  if [[ ! -x "${ROOT_DIR}/tools/airun" ]]; then
-    echo "missing runtime: ${ROOT_DIR}/tools/airun" >&2
+  if [[ ! -x "${ROOT_DIR}/tools/ailang" ]]; then
+    echo "missing runtime: ${ROOT_DIR}/tools/ailang" >&2
     exit 2
   fi
 }
@@ -42,7 +42,7 @@ ensure_runtime() {
 run_c_mode() {
   local input="$1"
   local output="$2"
-  ./tools/airun run "${input}" --vm=c >"${output}" 2>&1
+  ./tools/ailang run "${input}" --vm=c >"${output}" 2>&1
 }
 
 status_word() {
@@ -83,7 +83,7 @@ for input in "${GOLDEN_INPUTS[@]}"; do
   right_out="${TMP_DIR}/${name}.cvm.out"
 
   set +e
-  ./tools/airun run "${input}" >"${left_out}" 2>&1
+  ./tools/ailang run "${input}" >"${left_out}" 2>&1
   left_status=$?
   run_c_mode "${input}" "${right_out}"
   right_status=$?
@@ -116,9 +116,9 @@ ENTRY_SERVE_STATUS="PASS"
 ENTRY_SERVE_DETAILS="serve is intentionally out-of-scope for native runtime surface"
 
 set +e
-./tools/airun run "${AIVM_C_TESTS_DIR}/parity_cases/vm_c_execute_src_main_params.aos" --vm=c > "${TMP_DIR}/entry-bytecode.out" 2>&1
+./tools/ailang run "${AIVM_C_TESTS_DIR}/parity_cases/vm_c_execute_src_main_params.aos" --vm=c > "${TMP_DIR}/entry-bytecode.out" 2>&1
 entry_bytecode_rc=$?
-./tools/airun run examples/golden/publishcases/include_success/app_include_ok.aibundle --vm=c > "${TMP_DIR}/entry-bundle.out" 2>&1
+./tools/ailang run examples/golden/publishcases/include_success/app_include_ok.aibundle --vm=c > "${TMP_DIR}/entry-bundle.out" 2>&1
 entry_bundle_rc=$?
 set -e
 
@@ -229,7 +229,7 @@ BENCH_BASELINE_MISSING_COUNT=0
 BENCH_ALLOWED_REGRESSION_PCT="${AIVM_BENCH_MAX_REGRESSION_PCT:-5}"
 if [[ "${RUN_BENCH}" == "1" ]]; then
   set +e
-  ./tools/airun bench --iterations 10 --human > "${TMP_DIR}/bench.out" 2>&1
+  ./tools/ailang bench --iterations 10 --human > "${TMP_DIR}/bench.out" 2>&1
   bench_rc=$?
   set -e
   if [[ ${bench_rc} -eq 0 ]]; then

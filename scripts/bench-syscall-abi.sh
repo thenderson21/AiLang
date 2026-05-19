@@ -55,7 +55,7 @@ bench_ref() {
   local ref_name="$1"
   local worktree="$2"
   local report_file="$3"
-  local binary_path="${worktree}/tools/airun"
+  local binary_path="${worktree}/tools/ailang"
   local build_log
   build_log="$(mktemp -t abi-build-${ref_name//\//_}-XXXXXX.log)"
 

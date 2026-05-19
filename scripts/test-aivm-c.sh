@@ -31,21 +31,21 @@ else
   ctest --test-dir "${BUILD_DIR}" --output-on-failure -LE wasm
 fi
 
-if [[ -x "${ROOT_DIR}/tools/airun" ]]; then
-  AIRUN_HELP_TEXT="$("${ROOT_DIR}/tools/airun" 2>&1 || true)"
-  AIRUN_HAS_BUILD=0
-  AIRUN_HAS_CLEAN=0
-  if printf "%s\n" "${AIRUN_HELP_TEXT}" | rg -q '^\s+build(\s|$)'; then
-    AIRUN_HAS_BUILD=1
+if [[ -x "${ROOT_DIR}/tools/ailang" ]]; then
+  AILANG_HELP_TEXT="$("${ROOT_DIR}/tools/ailang" 2>&1 || true)"
+  AILANG_HAS_BUILD=0
+  AILANG_HAS_CLEAN=0
+  if printf "%s\n" "${AILANG_HELP_TEXT}" | rg -q '^\s+build(\s|$)'; then
+    AILANG_HAS_BUILD=1
   fi
-  if printf "%s\n" "${AIRUN_HELP_TEXT}" | rg -q '^\s+clean(\s|$)'; then
-    AIRUN_HAS_CLEAN=1
+  if printf "%s\n" "${AILANG_HELP_TEXT}" | rg -q '^\s+clean(\s|$)'; then
+    AILANG_HAS_CLEAN=1
   fi
 
-  "${ROOT_DIR}/tools/airun" run "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_main_params.aos" --vm=c >/dev/null
+  "${ROOT_DIR}/tools/ailang" run "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_main_params.aos" --vm=c >/dev/null
   TMP_NATIVE_PUBLISH_DIR="${ROOT_DIR}/.tmp/aivm-c-native-publish-smoke"
   rm -rf "${TMP_NATIVE_PUBLISH_DIR}"
-  "${ROOT_DIR}/tools/airun" publish "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_main_params.aos" --out "${TMP_NATIVE_PUBLISH_DIR}" >/dev/null
+  "${ROOT_DIR}/tools/ailang" publish "${AIVM_C_SOURCE_DIR}/tests/parity_cases/vm_c_execute_src_main_params.aos" --out "${TMP_NATIVE_PUBLISH_DIR}" >/dev/null
   if [[ ! -f "${TMP_NATIVE_PUBLISH_DIR}/app.aibc1" ]]; then
     echo "native publish smoke failed: app.aibc1 was not produced" >&2
     exit 1
@@ -92,7 +92,7 @@ Bytecode#bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {
   }
 }
 EOF
-    "${ROOT_DIR}/tools/airun" publish "${TMP_NATIVE_PROJECT_DIR}" --out "${TMP_NATIVE_PROJECT_OUT}" >/dev/null
+    "${ROOT_DIR}/tools/ailang" publish "${TMP_NATIVE_PROJECT_DIR}" --out "${TMP_NATIVE_PROJECT_OUT}" >/dev/null
     if [[ ! -x "${TMP_NATIVE_PROJECT_OUT}/projtarget" ]]; then
       echo "native publish target-from-manifest failed: projtarget executable missing" >&2
       exit 1
@@ -121,25 +121,25 @@ Program#p1 {
   }
 }
 EOF
-  if [[ "${AIRUN_HAS_BUILD}" == "1" && "${AIRUN_HAS_CLEAN}" == "1" ]]; then
-    "${ROOT_DIR}/tools/airun" clean "${TMP_NATIVE_CACHE_PROJECT}" >/dev/null
-    "${ROOT_DIR}/tools/airun" build --no-cache "${TMP_NATIVE_CACHE_PROJECT}" --out "${TMP_NATIVE_CACHE_OUT_NO}" >/dev/null
-    if find "${TMP_NATIVE_CACHE_PROJECT}/.toolchain/cache/airun" -type f -name app.aibc1 2>/dev/null | grep -q .; then
+  if [[ "${AILANG_HAS_BUILD}" == "1" && "${AILANG_HAS_CLEAN}" == "1" ]]; then
+    "${ROOT_DIR}/tools/ailang" clean "${TMP_NATIVE_CACHE_PROJECT}" >/dev/null
+    "${ROOT_DIR}/tools/ailang" build --no-cache "${TMP_NATIVE_CACHE_PROJECT}" --out "${TMP_NATIVE_CACHE_OUT_NO}" >/dev/null
+    if find "${TMP_NATIVE_CACHE_PROJECT}/.toolchain/cache/ailang" -type f -name app.aibc1 2>/dev/null | grep -q .; then
       echo "native cache smoke failed: --no-cache build populated cache unexpectedly" >&2
       exit 1
     fi
-    "${ROOT_DIR}/tools/airun" build "${TMP_NATIVE_CACHE_PROJECT}" --out "${TMP_NATIVE_CACHE_OUT_YES}" >/dev/null
-    if ! find "${TMP_NATIVE_CACHE_PROJECT}/.toolchain/cache/airun" -type f -name app.aibc1 2>/dev/null | grep -q .; then
+    "${ROOT_DIR}/tools/ailang" build "${TMP_NATIVE_CACHE_PROJECT}" --out "${TMP_NATIVE_CACHE_OUT_YES}" >/dev/null
+    if ! find "${TMP_NATIVE_CACHE_PROJECT}/.toolchain/cache/ailang" -type f -name app.aibc1 2>/dev/null | grep -q .; then
       echo "native cache smoke failed: cached build did not write cache artifact" >&2
       exit 1
     fi
-    "${ROOT_DIR}/tools/airun" clean "${TMP_NATIVE_CACHE_PROJECT}" >/dev/null
-    if find "${TMP_NATIVE_CACHE_PROJECT}/.toolchain/cache/airun" -type f -name app.aibc1 2>/dev/null | grep -q .; then
+    "${ROOT_DIR}/tools/ailang" clean "${TMP_NATIVE_CACHE_PROJECT}" >/dev/null
+    if find "${TMP_NATIVE_CACHE_PROJECT}/.toolchain/cache/ailang" -type f -name app.aibc1 2>/dev/null | grep -q .; then
       echo "native cache smoke failed: clean did not remove cache artifacts" >&2
       exit 1
     fi
   else
-    echo "Skipping native cache smoke: tools/airun build/clean commands unavailable." >&2
+    echo "Skipping native cache smoke: tools/ailang build/clean commands unavailable." >&2
   fi
 
   TMP_NATIVE_CALL_FIXUP_REPRO="${ROOT_DIR}/.tmp/aivm-c-native-call-fixup-repro.aos"
@@ -165,7 +165,7 @@ Program#p1 {
   }
 }
 EOF
-  TMP_NATIVE_CALL_FIXUP_OUT="$("${ROOT_DIR}/tools/airun" run "${TMP_NATIVE_CALL_FIXUP_REPRO}" 2>&1 || true)"
+  TMP_NATIVE_CALL_FIXUP_OUT="$("${ROOT_DIR}/tools/ailang" run "${TMP_NATIVE_CALL_FIXUP_REPRO}" 2>&1 || true)"
   if [[ "${TMP_NATIVE_CALL_FIXUP_OUT}" != *"Ok#ok1(type=int value=2)"* ]]; then
     echo "native call fixup smoke failed: expected value=2 from helper call" >&2
     printf '%s\n' "${TMP_NATIVE_CALL_FIXUP_OUT}" >&2
@@ -203,7 +203,7 @@ Program#p1 {
   }
 }
 EOF
-  TMP_NATIVE_TAILCALL_OUT="$("${ROOT_DIR}/tools/airun" run "${TMP_NATIVE_TAILCALL_REPRO}" 2>&1 || true)"
+  TMP_NATIVE_TAILCALL_OUT="$("${ROOT_DIR}/tools/ailang" run "${TMP_NATIVE_TAILCALL_REPRO}" 2>&1 || true)"
   if [[ "${TMP_NATIVE_TAILCALL_OUT}" != *"Ok#ok1(type=int value=6)"* ]]; then
     echo "native tail-call smoke failed: expected value=6 from recursive loop" >&2
     printf '%s\n' "${TMP_NATIVE_TAILCALL_OUT}" >&2
@@ -254,7 +254,7 @@ EOF
     echo '  }'
     echo '}'
   } > "${TMP_NATIVE_DEBUG_MEM_APP}"
-  if "${ROOT_DIR}/tools/airun" debug run "${TMP_NATIVE_DEBUG_MEM_APP}" --out "${TMP_NATIVE_DEBUG_MEM_OUT}" >/dev/null 2>&1; then
+  if "${ROOT_DIR}/tools/ailang" debug run "${TMP_NATIVE_DEBUG_MEM_APP}" --out "${TMP_NATIVE_DEBUG_MEM_OUT}" >/dev/null 2>&1; then
     echo "native debug memory smoke failed: expected memory-pressure failure" >&2
     exit 1
   fi
@@ -443,7 +443,7 @@ Bytecode#bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {
   }
 }
 EOF
-  if ! "${ROOT_DIR}/tools/airun" debug run "${TMP_NATIVE_DEBUG_OK_APP}" --out "${TMP_NATIVE_DEBUG_OK_OUT}" >/dev/null 2>&1; then
+  if ! "${ROOT_DIR}/tools/ailang" debug run "${TMP_NATIVE_DEBUG_OK_APP}" --out "${TMP_NATIVE_DEBUG_OK_OUT}" >/dev/null 2>&1; then
     echo "native debug success smoke failed: expected successful debug run" >&2
     exit 1
   fi
@@ -498,7 +498,7 @@ EOF
 fi
 
 mkdir -p "$(dirname "${PARITY_REPORT}")"
-if [[ -x "${ROOT_DIR}/tools/airun" ]]; then
+if [[ -x "${ROOT_DIR}/tools/ailang" ]]; then
   TASK_EDGE_TMP_DIR="${ROOT_DIR}/.tmp/aivm-task-edge-parity"
   mkdir -p "${TASK_EDGE_TMP_DIR}"
   TASK_EDGE_TOTAL=0
@@ -519,7 +519,7 @@ if [[ -x "${ROOT_DIR}/tools/airun" ]]; then
     local status="PASS"
 
     set +e
-    "${ROOT_DIR}/tools/airun" run "${input}" --vm=c > "${actual_output}" 2>&1
+    "${ROOT_DIR}/tools/ailang" run "${input}" --vm=c > "${actual_output}" 2>&1
     actual_exit=$?
     set -e
 
@@ -573,7 +573,7 @@ if [[ -x "${ROOT_DIR}/tools/airun" ]]; then
 else
   {
     echo "task edge parity checks"
-    echo "summary|passed=0|total=0|failed=0|skipped=tools/airun-missing"
+    echo "summary|passed=0|total=0|failed=0|skipped=tools/ailang-missing"
   } > "${PARITY_REPORT}"
 fi
 

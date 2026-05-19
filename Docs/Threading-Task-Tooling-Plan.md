@@ -128,7 +128,7 @@ Validation commands:
 ## Backlog (Post-M4)
 
 1. Optional CLI diagnostics for task table snapshots in debug mode only.
-   - Targets: `../AiVM/native/ailang_cli/airun.c`, `../AiVM/native/aivm_runtime.c`
+   - Targets: `../AiVM/native/ailang_cli/ailang.c`, `../AiVM/native/aivm_runtime.c`
 2. Optional expanded deterministic telemetry for event queue depth over time.
    - Targets: `../AiVM/native/aivm_runtime.c`, `Docs/AiVM-C-Conformance-Matrix.md`
 

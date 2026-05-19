@@ -55,7 +55,7 @@ Defined `sys.*` targets (dispatcher + contracts):
 | `sys.platform` | `()` | `string` | Host OS family (`macos`, `windows`, `linux`, `unknown`). |
 | `sys.arch` | `()` | `string` | Host OS architecture. |
 | `sys.os.version` | `()` | `string` | Host OS version string. |
-| `sys.runtime` | `()` | `string` | Host runtime id (`airun-dotnet`). |
+| `sys.runtime` | `()` | `string` | Host runtime id (`ailang-dotnet`). |
 
 Related non-`sys` native calls exposed through VM capability dispatcher:
 

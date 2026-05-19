@@ -13,9 +13,9 @@ if ($Iterations -le 0) {
 }
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$airun = Join-Path $root 'tools/airun.exe'
-if (-not (Test-Path $airun)) {
-  throw "missing runtime: $airun"
+$ailang = Join-Path $root 'tools/ailang.exe'
+if (-not (Test-Path $ailang)) {
+  throw "missing runtime: $ailang"
 }
 
 $vmMode = if ($env:AIVM_MEM_AUDIT_VM_MODE) { $env:AIVM_MEM_AUDIT_VM_MODE } else { '--vm=c' }
@@ -28,5 +28,5 @@ if (-not [string]::IsNullOrWhiteSpace($reportDir)) {
 }
 
 Set-Location $root
-& $airun debug profile $Target --iterations $Iterations --max-growth-kb $maxGrowthKb --out $report $vmMode
+& $ailang debug profile $Target --iterations $Iterations --max-growth-kb $maxGrowthKb --out $report $vmMode
 exit $LASTEXITCODE

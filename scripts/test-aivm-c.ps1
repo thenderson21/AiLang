@@ -60,11 +60,11 @@ if ((Test-Path $presetFile) -and -not $env:AIVM_BUILD_SHARED) {
 
 if ($IsWindows) {
   if (Get-Command cl -ErrorAction SilentlyContinue) {
-    & (Join-Path $root 'scripts/build-airun.ps1')
+    & (Join-Path $root 'scripts/build-ailang-native.ps1')
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    if (!(Test-Path .\tools\airun.exe)) { throw 'failed to compile tools/airun.exe' }
+    if (!(Test-Path .\tools\ailang.exe)) { throw 'failed to compile tools/ailang.exe' }
   } else {
-    Write-Host 'Skipping tools/airun.exe build in test-aivm-c.ps1: cl.exe is not on PATH.'
+    Write-Host 'Skipping tools/ailang.exe build in test-aivm-c.ps1: cl.exe is not on PATH.'
   }
 }
 
@@ -74,12 +74,12 @@ if (-not (Test-Path $parityDir)) {
 }
 
 if ($IsWindows) {
-  if (Test-Path (Join-Path $root 'tools/airun.exe')) {
-    & (Join-Path $root 'tools/airun.exe') run (Join-Path $aivmTests 'parity_cases/vm_c_execute_src_main_params.aos') --vm=c | Out-Null
+  if (Test-Path (Join-Path $root 'tools/ailang.exe')) {
+    & (Join-Path $root 'tools/ailang.exe') run (Join-Path $aivmTests 'parity_cases/vm_c_execute_src_main_params.aos') --vm=c | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'native bytecode .aos run smoke failed' }
     $nativePublishDir = Join-Path $root '.tmp/aivm-c-native-publish-smoke'
     if (Test-Path $nativePublishDir) { Remove-Item -Recurse -Force $nativePublishDir }
-    & (Join-Path $root 'tools/airun.exe') publish (Join-Path $aivmTests 'parity_cases/vm_c_execute_src_main_params.aos') --out $nativePublishDir | Out-Null
+    & (Join-Path $root 'tools/ailang.exe') publish (Join-Path $aivmTests 'parity_cases/vm_c_execute_src_main_params.aos') --out $nativePublishDir | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'native bytecode .aos publish smoke failed' }
     if (-not (Test-Path (Join-Path $nativePublishDir 'app.aibc1'))) { throw 'native publish smoke failed: app.aibc1 missing' }
     if (-not (Test-Path (Join-Path $nativePublishDir 'vm_c_execute_src_main_params.exe'))) { throw 'native publish smoke failed: app executable missing' }
@@ -102,20 +102,20 @@ Bytecode#bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {
   }
 }
 "@ | Set-Content -Path (Join-Path $projectDir 'main.aos') -NoNewline
-    & (Join-Path $root 'tools/airun.exe') publish $projectDir --out $projectOut | Out-Null
+    & (Join-Path $root 'tools/ailang.exe') publish $projectDir --out $projectOut | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'native publish target-from-manifest failed' }
     if (-not (Test-Path (Join-Path $projectOut 'projtarget.exe'))) { throw 'native publish target-from-manifest failed: projtarget.exe missing' }
     Set-Content -Path $parityReport -Value 'parity manifest skipped: source-mode dualrun removed in C-only runtime cutover'
   } else {
-    Set-Content -Path $parityReport -Value 'parity manifest skipped: missing ./tools/airun.exe'
+    Set-Content -Path $parityReport -Value 'parity manifest skipped: missing ./tools/ailang.exe'
   }
 } else {
-  if (Test-Path (Join-Path $root 'tools/airun')) {
-    & (Join-Path $root 'tools/airun') run (Join-Path $aivmTests 'parity_cases/vm_c_execute_src_main_params.aos') --vm=c | Out-Null
+  if (Test-Path (Join-Path $root 'tools/ailang')) {
+    & (Join-Path $root 'tools/ailang') run (Join-Path $aivmTests 'parity_cases/vm_c_execute_src_main_params.aos') --vm=c | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'native bytecode .aos run smoke failed' }
     $nativePublishDir = Join-Path $root '.tmp/aivm-c-native-publish-smoke'
     if (Test-Path $nativePublishDir) { Remove-Item -Recurse -Force $nativePublishDir }
-    & (Join-Path $root 'tools/airun') publish (Join-Path $aivmTests 'parity_cases/vm_c_execute_src_main_params.aos') --out $nativePublishDir | Out-Null
+    & (Join-Path $root 'tools/ailang') publish (Join-Path $aivmTests 'parity_cases/vm_c_execute_src_main_params.aos') --out $nativePublishDir | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'native bytecode .aos publish smoke failed' }
     if (-not (Test-Path (Join-Path $nativePublishDir 'app.aibc1'))) { throw 'native publish smoke failed: app.aibc1 missing' }
     if (-not (Test-Path (Join-Path $nativePublishDir 'vm_c_execute_src_main_params'))) { throw 'native publish smoke failed: app executable missing' }
@@ -147,13 +147,13 @@ Bytecode#bc1(magic="AIBC" format="AiBC1" version=2 flags=0) {
   }
 }
 "@ | Set-Content -Path (Join-Path $projectDir 'main.aos') -NoNewline
-      & (Join-Path $root 'tools/airun') publish $projectDir --out $projectOut | Out-Null
+      & (Join-Path $root 'tools/ailang') publish $projectDir --out $projectOut | Out-Null
       if ($LASTEXITCODE -ne 0) { throw 'native publish target-from-manifest failed' }
       if (-not (Test-Path (Join-Path $projectOut 'projtarget'))) { throw 'native publish target-from-manifest failed: projtarget missing' }
     }
     Set-Content -Path $parityReport -Value 'parity manifest skipped: source-mode dualrun removed in C-only runtime cutover'
   } else {
-    Set-Content -Path $parityReport -Value 'parity manifest skipped: missing ./tools/airun'
+    Set-Content -Path $parityReport -Value 'parity manifest skipped: missing ./tools/ailang'
   }
 }
 

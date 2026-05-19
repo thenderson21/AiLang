@@ -51,7 +51,7 @@ This document is an execution checklist, not a roadmap narrative.
 - String/bytes/node lifetime semantics are documented and test-backed.
 
 2. Leak Detection Is CI-Enforced
-- `airun debug profile` emits deterministic TOML (`aivm_debug_mem_v1`) and is exercised through `scripts/aivm-mem-audit.sh`.
+- `ailang debug profile` emits deterministic TOML (`aivm_debug_mem_v1`) and is exercised through `scripts/aivm-mem-audit.sh`.
 - Leak check runs on Linux and macOS in CI.
 - Growth threshold is enforced by gate (fail on regression).
 - Report artifacts are retained for failed runs.

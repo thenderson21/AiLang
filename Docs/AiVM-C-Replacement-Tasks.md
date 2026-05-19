@@ -34,9 +34,9 @@ Exit: parity dashboard fully green, no known semantic drift.
 2. `EPIC-ZC2` C Runtime As Sole Engine
 Status: `completed`
 Goal: remove remaining bridge-gated transitional runtime behavior and C# runtime fallback semantics.
-Current: native launcher code has moved to AiVM (`../AiVM/native/ailang_cli/airun.c`), and canonical run/build/publish/debug flows are exercised through the native path.
+Current: native launcher code has moved to AiVM (`../AiVM/native/ailang_cli/ailang.c`), and canonical run/build/publish/debug flows are exercised through the native path.
 Exit: runtime-only C path for the supported native CLI surfaces.
-Note: `serve` is not part of the current `airun` command surface and is no longer tracked as a blocker.
+Note: `serve` is not part of the current `ailang` command surface and is no longer tracked as a blocker.
 
 3. `EPIC-ZC3` Repo-wide C# Deletion
 Status: `completed`
@@ -111,7 +111,7 @@ Use this sequence to reproduce threading/task readiness checks locally with dete
 ### Preconditions
 
 - Run from repository root.
-- `tools/airun` exists and is executable.
+- `tools/ailang` exists and is executable.
 - No network dependency is required.
 
 ### Command Sequence
@@ -164,4 +164,4 @@ Expected:
 
 1. If determinism gate fails, fix `aivm_test_vm_determinism` before parity manifest updates.
 2. If task-tooling gate fails with missing edge cases, restore entries in parity command manifests first.
-3. If full test gate fails after parity edits, run changed parity cases directly with `./tools/airun run <case>.aos --vm=c` and reconcile `.out` snapshots.
+3. If full test gate fails after parity edits, run changed parity cases directly with `./tools/ailang run <case>.aos --vm=c` and reconcile `.out` snapshots.

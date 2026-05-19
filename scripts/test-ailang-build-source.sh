@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
-TMP_DIR="${ROOT_DIR}/.tmp/airun-build-source-smoke"
+TMP_DIR="${ROOT_DIR}/.tmp/ailang-build-source-smoke"
 APP_DIR="${TMP_DIR}/app"
 FILE_BUILD_DIR="${TMP_DIR}/file-build"
 
@@ -28,8 +28,8 @@ to_base36() {
 rm -rf "${TMP_DIR}"
 mkdir -p "${TMP_DIR}"
 
-./tools/airun init "${APP_DIR}"
-./tools/airun build "${APP_DIR}/" --out "${APP_DIR}" --no-cache >/dev/null
+./tools/ailang init "${APP_DIR}"
+./tools/ailang build "${APP_DIR}/" --out "${APP_DIR}" --no-cache >/dev/null
 
 cat > "${APP_DIR}/src/app.aos" <<'EOF'
 Program#p1 {
@@ -46,9 +46,9 @@ Program#p1 {
 }
 EOF
 
-./tools/airun build "${APP_DIR}/src/app.aos" --out "${FILE_BUILD_DIR}" --no-cache >/dev/null
+./tools/ailang build "${APP_DIR}/src/app.aos" --out "${FILE_BUILD_DIR}" --no-cache >/dev/null
 
-FILE_OUT="$(./tools/airun run "${FILE_BUILD_DIR}/app.aibc1" 2>&1)"
+FILE_OUT="$(./tools/ailang run "${FILE_BUILD_DIR}/app.aibc1" 2>&1)"
 printf '%s\n' "${FILE_OUT}" | rg -q '^fresh-source-build$'
 
 SCOPE_DIR="${TMP_DIR}/scope-reuse"
@@ -88,8 +88,8 @@ mkdir -p "${SCOPE_DIR}"
   echo '}'
 } > "${SCOPE_DIR}/app.aos"
 
-./tools/airun build "${SCOPE_DIR}/app.aos" --out "${SCOPE_OUT_DIR}" --no-cache >/dev/null
-SCOPE_RUN_OUT="$(./tools/airun run "${SCOPE_OUT_DIR}/app.aibc1" 2>&1 || true)"
+./tools/ailang build "${SCOPE_DIR}/app.aos" --out "${SCOPE_OUT_DIR}" --no-cache >/dev/null
+SCOPE_RUN_OUT="$(./tools/ailang run "${SCOPE_OUT_DIR}/app.aibc1" 2>&1 || true)"
 printf '%s\n' "${SCOPE_RUN_OUT}" | rg -q '^Ok#ok1\(type=int value=2\)$'
 
 RECURSE_DIR="${TMP_DIR}/recursive-locals"
@@ -136,8 +136,8 @@ Program#rp1 {
 }
 EOF
 
-./tools/airun build "${RECURSE_DIR}/app.aos" --out "${RECURSE_OUT_DIR}" --no-cache >/dev/null
-RECURSE_RUN_OUT="$(./tools/airun run "${RECURSE_OUT_DIR}/app.aibc1" 2>&1 || true)"
+./tools/ailang build "${RECURSE_DIR}/app.aos" --out "${RECURSE_OUT_DIR}" --no-cache >/dev/null
+RECURSE_RUN_OUT="$(./tools/ailang run "${RECURSE_OUT_DIR}/app.aibc1" 2>&1 || true)"
 printf '%s\n' "${RECURSE_RUN_OUT}" | rg -q '^Ok#ok1\(type=int value=3608\)$'
 
 UI_TEXT_DIR="${TMP_DIR}/ui-text-events"
@@ -167,6 +167,6 @@ Program#p1 {
 EOF
 
 UI_TEXT_CAPTURE_DIR="${TMP_DIR}/ui-text-capture"
-./tools/airun debug capture run "${UI_TEXT_DIR}/app.aos" --out "${UI_TEXT_CAPTURE_DIR}" --inject-text "X" --inject-close --no-cache >/dev/null
+./tools/ailang debug capture run "${UI_TEXT_DIR}/app.aos" --out "${UI_TEXT_CAPTURE_DIR}" --inject-text "X" --inject-close --no-cache >/dev/null
 grep -q 'type = "text"' "${UI_TEXT_CAPTURE_DIR}/events.toml"
 grep -q 'text = "X"' "${UI_TEXT_CAPTURE_DIR}/events.toml"

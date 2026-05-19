@@ -52,7 +52,7 @@ Updated: 2026-02-20
 - Replay harness from fixture file.
 - Scenario runner and compare support.
 - Current: `Green`
-- Notes: `airun debug scenario ...` works with TOML fixtures; artifact bundle writes deterministic TOML outputs.
+- Notes: `ailang debug scenario ...` works with TOML fixtures; artifact bundle writes deterministic TOML outputs.
 
 7. Samples and coverage
 - Criteria:
@@ -79,14 +79,14 @@ Updated: 2026-02-20
 - `dotnet build src/AiCLI/AiCLI.csproj -v minimal -m:1 /nr:false` passed.
 - `dotnet test tests/AiLang.Tests/AiLang.Tests.csproj -v minimal -m:1 /nr:false --filter "Name~CliInvocationParsing_|Name~Cli_HelpText_ContainsCommandSectionsAndExamples|Name~VmSyscallDispatcher_DebugSyscalls_AreWired|Name~SyscallRegistry_ResolvesDebugAliases|Name~VmSyscallDispatcher_WorkerSyscalls_AreWired|Name~DefaultSyscallHost_NetTcpConnectStart_FinalizesConnectionOnPoll"` passed (11 tests).
 - `./test.sh` passed (full golden gate).
-- `airun --version` reports `version=0.0.1`.
+- `ailang --version` reports `version=0.0.1`.
 - Targeted tests passed:
 - `VmSyscallDispatcher_DebugSyscalls_AreWired`
 - `SyscallRegistry_ResolvesDebugAliases`
 - `VmSyscallDispatcher_WorkerSyscalls_AreWired`
 - `DefaultSyscallHost_NetTcpConnectStart_FinalizesConnectionOnPoll`
 - Debug scenario run passed:
-- `airun debug scenario examples/debug/scenarios/minimal.scenario.toml --name minimal`
+- `ailang debug scenario examples/debug/scenarios/minimal.scenario.toml --name minimal`
 - TOML artifacts produced:
 - `config.toml`
 - `vm_trace.toml`

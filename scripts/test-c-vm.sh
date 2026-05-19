@@ -4,9 +4,9 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
-C_VM_BIN="${C_VM_BIN:-./tools/airun}"
+C_VM_BIN="${C_VM_BIN:-./tools/ailang}"
 C_VM_RUN_ARGS="${C_VM_RUN_ARGS:-run}"
-REF_BIN="${REF_BIN:-./tools/airun}"
+REF_BIN="${REF_BIN:-./tools/ailang}"
 REF_RUN_ARGS="${REF_RUN_ARGS:-run}"
 CASE_FILE="${CASE_FILE:-}"
 

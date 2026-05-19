@@ -42,7 +42,7 @@ Acceptance:
 # 2️⃣ HTTPS Support
 create_issue "HTTP: Add HTTPS / TLS Support to serve" \
 "Goal:
-Support HTTPS in airun serve.
+Support HTTPS in ailang serve.
 
 Scope:
 - Add TLS syscalls

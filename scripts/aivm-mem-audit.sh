@@ -23,11 +23,11 @@ if ! [[ "${MAX_GROWTH_KB}" =~ ^-?[0-9]+$ ]]; then
   exit 2
 fi
 
-if [[ ! -x "${ROOT_DIR}/tools/airun" ]]; then
-  echo "missing runtime: ${ROOT_DIR}/tools/airun" >&2
+if [[ ! -x "${ROOT_DIR}/tools/ailang" ]]; then
+  echo "missing runtime: ${ROOT_DIR}/tools/ailang" >&2
   exit 2
 fi
 
 mkdir -p "$(dirname "${REPORT}")"
 cd "${ROOT_DIR}"
-./tools/airun debug profile "${TARGET}" --iterations "${ITERATIONS}" --max-growth-kb "${MAX_GROWTH_KB}" --out "${REPORT}" "${VM_MODE}"
+./tools/ailang debug profile "${TARGET}" --iterations "${ITERATIONS}" --max-growth-kb "${MAX_GROWTH_KB}" --out "${REPORT}" "${VM_MODE}"

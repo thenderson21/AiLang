@@ -184,7 +184,7 @@ jobs:
             archive: tar.gz
             artifact_dir: .artifacts/ailang-linux-x64
             frontend: aos_frontend
-            airun: ailang
+            tool: ailang
             runtime: aivm-runtime
           - os: ubuntu-latest
             rid: linux-arm64
@@ -193,7 +193,7 @@ jobs:
             archive: tar.gz
             artifact_dir: .artifacts/ailang-linux-arm64
             frontend: aos_frontend
-            airun: ailang
+            tool: ailang
             runtime: aivm-runtime
           - os: macos-14
             rid: osx-x64
@@ -202,7 +202,7 @@ jobs:
             archive: tar.gz
             artifact_dir: .artifacts/ailang-osx-x64
             frontend: aos_frontend
-            airun: ailang
+            tool: ailang
             runtime: aivm-runtime
           - os: macos-14
             rid: osx-arm64
@@ -211,7 +211,7 @@ jobs:
             archive: tar.gz
             artifact_dir: .artifacts/ailang-osx-arm64
             frontend: aos_frontend
-            airun: ailang
+            tool: ailang
             runtime: aivm-runtime
           - os: windows-latest
             rid: windows-x64
@@ -220,7 +220,7 @@ jobs:
             archive: zip
             artifact_dir: .artifacts/ailang-windows-x64
             frontend: aos_frontend.exe
-            airun: ailang.exe
+            tool: ailang.exe
             runtime: aivm-runtime.exe
             msvc_arch: amd64
           - os: windows-latest
@@ -230,7 +230,7 @@ jobs:
             archive: zip
             artifact_dir: .artifacts/ailang-windows-arm64
             frontend: aos_frontend.exe
-            airun: ailang.exe
+            tool: ailang.exe
             runtime: aivm-runtime.exe
             msvc_arch: amd64_arm64
 
@@ -271,8 +271,8 @@ jobs:
           AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/native
         run: |
           set -euo pipefail
-          AIVM_AIRUN_PLATFORM="${{ matrix.platform }}" \
-          AIVM_AIRUN_ARCH="${{ matrix.arch }}" \
+          AILANG_NATIVE_PLATFORM="${{ matrix.platform }}" \
+          AILANG_NATIVE_ARCH="${{ matrix.arch }}" \
           AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh
 
       - name: Stage AiLang tools (Windows)
@@ -281,7 +281,7 @@ jobs:
         env:
           AIVM_C_SOURCE_DIR: ${{ github.workspace }}\AiVM\native
         run: |
-          $env:AIVM_AIRUN_ARCH = '${{ matrix.arch }}'
+          $env:AILANG_NATIVE_ARCH = '${{ matrix.arch }}'
           $env:AILANG_IGNORE_PROJECT_TOOLCHAIN = '1'
           ./build.ps1
 
@@ -326,12 +326,12 @@ jobs:
           PACKAGE_DIR="ailang-${VERSION}-${{ matrix.rid }}"
           mkdir -p "${PACKAGE_DIR}"
           cp "./dist/${{ matrix.frontend }}" "${PACKAGE_DIR}/"
-          test -x "./${{ matrix.artifact_dir }}/${{ matrix.airun }}"
-          cp "./${{ matrix.artifact_dir }}/${{ matrix.airun }}" "${PACKAGE_DIR}/"
+          test -x "./${{ matrix.artifact_dir }}/${{ matrix.tool }}"
+          cp "./${{ matrix.artifact_dir }}/${{ matrix.tool }}" "${PACKAGE_DIR}/"
           test -x "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}"
           cp "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}" "${PACKAGE_DIR}/"
           mkdir -p "${PACKAGE_DIR}/bin"
-          cp "./${{ matrix.artifact_dir }}/${{ matrix.airun }}" "${PACKAGE_DIR}/bin/ailang"
+          cp "./${{ matrix.artifact_dir }}/${{ matrix.tool }}" "${PACKAGE_DIR}/bin/ailang"
           cp "./${{ matrix.artifact_dir }}/${{ matrix.runtime }}" "${PACKAGE_DIR}/bin/aivm-runtime"
           chmod +x "${PACKAGE_DIR}/bin/ailang" "${PACKAGE_DIR}/bin/aivm-runtime"
           cp "./dist/${{ matrix.frontend }}" "${PACKAGE_DIR}/bin/aos_frontend"
@@ -357,12 +357,12 @@ jobs:
           $packageDir = "ailang-$version-${{ matrix.rid }}"
           New-Item -ItemType Directory -Force $packageDir | Out-Null
           Copy-Item ".\\dist\\${{ matrix.frontend }}" $packageDir
-          if (-not (Test-Path ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}")) { throw 'missing airun runtime' }
-          Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}" $packageDir
+          if (-not (Test-Path ".\\${{ matrix.artifact_dir }}\\${{ matrix.tool }}")) { throw 'missing ailang tool' }
+          Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.tool }}" $packageDir
           if (-not (Test-Path ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}")) { throw 'missing minimal runtime' }
           Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}" $packageDir
           New-Item -ItemType Directory -Force "$packageDir\bin" | Out-Null
-          Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.airun }}" "$packageDir\bin\ailang.exe"
+          Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.tool }}" "$packageDir\bin\ailang.exe"
           Copy-Item ".\\${{ matrix.artifact_dir }}\\${{ matrix.runtime }}" "$packageDir\bin\aivm-runtime.exe"
           Copy-Item ".\\dist\\${{ matrix.frontend }}" "$packageDir\bin\aos_frontend.exe"
           $targetRid = '${{ matrix.rid }}' -replace '^windows-', 'win-'
@@ -421,8 +421,8 @@ jobs:
           AIVM_C_SOURCE_DIR: ${{ github.workspace }}/AiVM/native
         run: |
           set -euo pipefail
-          AIVM_AIRUN_PLATFORM=linux \
-          AIVM_AIRUN_ARCH=x64 \
+          AILANG_NATIVE_PLATFORM=linux \
+          AILANG_NATIVE_ARCH=x64 \
           AILANG_IGNORE_PROJECT_TOOLCHAIN=1 ./build.sh host
 
       - name: Setup wasmtime

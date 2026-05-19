@@ -65,17 +65,7 @@ function Invoke-StageInstalledToolchain {
   }
   New-Item -ItemType Directory -Force -Path $toolsDir | Out-Null
   Copy-Item $ailang (Join-Path $toolsDir 'ailang.exe') -Force
-  $airun = Join-Path $sdkBin 'airun.exe'
-  if (-not (Test-Path $airun)) { $airun = Join-Path $sdkBin 'airun' }
-  if ((-not (Test-Path $airun)) -and $allowLegacyBootstrap) {
-    $airun = Join-Path $sdkRoot 'airun.exe'
-    if (-not (Test-Path $airun)) { $airun = Join-Path $sdkRoot 'airun' }
-  }
-  if (Test-Path $airun) {
-    Copy-Item $airun (Join-Path $toolsDir 'airun.exe') -Force
-  } else {
-    Copy-Item $ailang (Join-Path $toolsDir 'airun.exe') -Force
-  }
+  Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $toolsDir 'airun.exe'), (Join-Path $toolsDir 'airun')
   $runtime = Join-Path $sdkBin 'aivm-runtime.exe'
   if (-not (Test-Path $runtime)) { $runtime = Join-Path $sdkBin 'aivm-runtime' }
   if ((-not (Test-Path $runtime)) -and $allowLegacyBootstrap) {
@@ -106,7 +96,7 @@ function Invoke-StageInstalledToolchain {
 function Invoke-BuildTarget([string]$Target) {
   switch ($Target) {
     'host' {
-      & "$PSScriptRoot/scripts/build-airun.ps1"
+      & "$PSScriptRoot/scripts/build-ailang-native.ps1"
       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     }
     'shared' {

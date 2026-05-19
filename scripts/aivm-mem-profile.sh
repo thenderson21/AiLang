@@ -12,7 +12,7 @@ VM_MODE="${1:---vm=c}"
 REPORT="${AIVM_MEM_REPORT:-/tmp/aivm-mem-profile.txt}"
 
 if command -v /usr/bin/time >/dev/null 2>&1; then
-  /usr/bin/time -l ./tools/airun run "${TARGET}" "${VM_MODE}" >"${REPORT}.stdout" 2>"${REPORT}.metrics" || true
+  /usr/bin/time -l ./tools/ailang run "${TARGET}" "${VM_MODE}" >"${REPORT}.stdout" 2>"${REPORT}.metrics" || true
   {
     echo "AIVM_MEM_PROFILE"
     echo "target=${TARGET}"

@@ -7,7 +7,7 @@ cd "${ROOT_DIR}"
 PROGRAM="${1:-examples/bench/loop_compute.aos}"
 shift || true
 
-C_VM_BIN="${C_VM_BIN:-./tools/airun}"
+C_VM_BIN="${C_VM_BIN:-./tools/ailang}"
 C_VM_RUN_ARGS="${C_VM_RUN_ARGS:-run}"
 PROGRAM_ARGS="${PROGRAM_ARGS:-}"
 PROFILE_MODE="${PROFILE_MODE:-auto}"

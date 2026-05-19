@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
-TMP_DIR="${ROOT_DIR}/.tmp/test-airun-traced-syscalls"
+TMP_DIR="${ROOT_DIR}/.tmp/test-ailang-traced-syscalls"
 rm -rf "${TMP_DIR}"
 mkdir -p "${TMP_DIR}"
 
@@ -32,10 +32,10 @@ Program#p1 {
 }
 EOF
 
-OUTPUT="$("${ROOT_DIR}/tools/airun" debug trace run "${TMP_DIR}/app.aos" --no-cache 2>&1)"
+OUTPUT="$("${ROOT_DIR}/tools/ailang" debug trace run "${TMP_DIR}/app.aos" --no-cache 2>&1)"
 printf '%s\n' "${OUTPUT}"
 
 if ! printf '%s\n' "${OUTPUT}" | grep -q '^aGVsbG8=$'; then
-  echo "traced airun regression: sys.bytes.fromUtf8String did not round-trip under debug trace" >&2
+  echo "traced ailang regression: sys.bytes.fromUtf8String did not round-trip under debug trace" >&2
   exit 1
 fi

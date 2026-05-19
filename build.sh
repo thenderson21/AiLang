@@ -21,7 +21,7 @@ run_target() {
   local target="$1"
   case "${target}" in
     host)
-      "${ROOT_DIR}/scripts/build-airun.sh"
+      "${ROOT_DIR}/scripts/build-ailang-native.sh"
       ;;
     shared)
       "${ROOT_DIR}/scripts/build-aivm-c-shared.sh"

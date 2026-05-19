@@ -47,7 +47,7 @@ esac
 rss_values=()
 for ((i=1; i<=ITERATIONS; i++)); do
   METRICS="/tmp/aivm-leak-metrics-$$-${i}.txt"
-  /usr/bin/time ${time_mode} ./tools/airun run "${TARGET}" --vm=c >/dev/null 2>"${METRICS}" || true
+  /usr/bin/time ${time_mode} ./tools/ailang run "${TARGET}" --vm=c >/dev/null 2>"${METRICS}" || true
   if [[ "${platform}" == "Darwin" ]]; then
     rss="$(grep -F "${rss_pattern}" "${METRICS}" | awk '{print $1}' | head -n1 || true)"
   else

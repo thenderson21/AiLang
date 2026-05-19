@@ -32,7 +32,7 @@ This PR hardens deterministic memory behavior for AiVM C runtime and increases m
 
 - `../AiVM/native/aivm_vm.c`
 - `../AiVM/native/include/aivm_vm.h`
-- `../AiVM/native/ailang_cli/airun.c`
+- `../AiVM/native/ailang_cli/ailang.c`
 - `../AiVM/native/tests/test_vm_core.c`
 - `../AiVM/native/tests/test_vm_ops.c`
 - `../AiVM/native/tests/test_process_lifecycle_stress.c`

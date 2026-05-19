@@ -5,8 +5,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/scripts/aivm-native-paths.sh"
 AIVM_C_SOURCE_DIR="$(require_aivm_native_dir "${ROOT_DIR}")"
 AILANG_CLI="${ROOT_DIR}/tools/ailang"
-if [[ ! -x "${AILANG_CLI}" && -x "${ROOT_DIR}/tools/airun" ]]; then
-  AILANG_CLI="${ROOT_DIR}/tools/airun"
+if [[ ! -x "${AILANG_CLI}" && -x "${ROOT_DIR}/tools/ailang" ]]; then
+  AILANG_CLI="${ROOT_DIR}/tools/ailang"
 fi
 TMP_ROOT="${ROOT_DIR}/.tmp/aivm-wasm-golden"
 TMP_DIR="${TMP_ROOT}/run-$$"

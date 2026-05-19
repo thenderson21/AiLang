@@ -10,13 +10,13 @@ cd "${ROOT_DIR}"
 ./scripts/test-stdlib-behavior.sh
 ./scripts/test-parser-selfhost.sh
 ./scripts/test-parser-selfhost-compiler-files.sh
-./scripts/test-airun-init.sh
-./scripts/test-airun-build-source.sh
+./scripts/test-ailang-init.sh
+./scripts/test-ailang-build-source.sh
 ./scripts/test-ailang-cli-spec.sh
-./scripts/test-airun-traced-syscalls.sh
-bash ./scripts/test-airun-debug-dns.sh
-bash ./scripts/test-airun-debug-disasm.sh
-bash ./scripts/test-airun-debug-bundle-network.sh
+./scripts/test-ailang-traced-syscalls.sh
+bash ./scripts/test-ailang-debug-dns.sh
+bash ./scripts/test-ailang-debug-disasm.sh
+bash ./scripts/test-ailang-debug-bundle-network.sh
 AIVM_BIN="$(require_aivm_bin)"
 "${AIVM_BIN}" --help >/dev/null || "${AIVM_BIN}" --version >/dev/null
 

@@ -153,7 +153,7 @@ AiVM/
 
 ### Phase 4: Clean AiLang public surface
 
-- Rename public launcher/tooling from legacy `airun` to the intended AiLang-facing
+- Rename public launcher/tooling from legacy `ailang` to the intended AiLang-facing
   `ailang`; pre-1.0 migration replaces old contracts instead of keeping compatibility shims.
 - Keep only compiler/toolset, stdlib, specs, SDK docs, and examples in AiLang.
 - Remove obsolete VM ownership language from AiLang docs.

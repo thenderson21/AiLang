@@ -7,11 +7,11 @@ Define repository components and stable operating assumptions for agents.
 ## Preconditions
 
 - Working directory is repo root.
-- `tools/airun` exists (or run `./build.sh`).
+- `tools/ailang` exists (or run `./build.sh`).
 
 ## Components
 
-- `tools/airun`: native runtime entrypoint.
+- `tools/ailang`: native runtime entrypoint.
   - Command surface: `build`, `run`, `publish`, `repl`, `bench`, `debug run`.
 - `src/compiler/aic.aos`: compiler driver (`fmt`, `fmt --ids`, `check`, `run`, `test`).
 - `src/compiler/format.aos`: canonical formatter.

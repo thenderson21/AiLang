@@ -79,13 +79,7 @@ fi
 
 mkdir -p "${TOOLS_DIR}"
 copy_executable "${AILANG_BIN}" "${TOOLS_DIR}/ailang"
-
-AIRUN_BIN="$(resolve_sdk_executable airun || true)"
-if [[ -n "${AIRUN_BIN}" ]]; then
-  copy_executable "${AIRUN_BIN}" "${TOOLS_DIR}/airun"
-else
-  copy_executable "${AILANG_BIN}" "${TOOLS_DIR}/airun"
-fi
+rm -f "${TOOLS_DIR}/ailang" "${TOOLS_DIR}/ailang.exe"
 
 RUNTIME_BIN="$(resolve_sdk_executable aivm-runtime || true)"
 if [[ -n "${RUNTIME_BIN}" ]]; then

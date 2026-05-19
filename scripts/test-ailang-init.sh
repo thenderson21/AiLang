@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
-TMP_DIR="${ROOT_DIR}/.tmp/airun-init-smoke"
+TMP_DIR="${ROOT_DIR}/.tmp/ailang-init-smoke"
 CLI_DIR="${TMP_DIR}/cli"
 CLI_ARGS_DIR="${TMP_DIR}/cli-args"
 MULTI_AGENT_DIR="${TMP_DIR}/multi-agent"
@@ -13,10 +13,10 @@ CLAUDE_DIR="${TMP_DIR}/claude"
 rm -rf "${TMP_DIR}"
 mkdir -p "${TMP_DIR}"
 
-./tools/airun init "${CLI_DIR}"
-./tools/airun init "${CLI_ARGS_DIR}" --template cli-args
-./tools/airun init "${MULTI_AGENT_DIR}" --agents claude,cursor,gemini,copilot,windsurf
-./tools/airun init "${CLAUDE_DIR}" --agent claude
+./tools/ailang init "${CLI_DIR}"
+./tools/ailang init "${CLI_ARGS_DIR}" --template cli-args
+./tools/ailang init "${MULTI_AGENT_DIR}" --agents claude,cursor,gemini,copilot,windsurf
+./tools/ailang init "${CLAUDE_DIR}" --agent claude
 
 test -f "${CLI_DIR}/project.aiproj"
 test -f "${CLI_DIR}/AGENTS.md"
@@ -33,8 +33,8 @@ test -f "${MULTI_AGENT_DIR}/.windsurfrules"
 test -f "${CLAUDE_DIR}/AGENTS.md"
 test -f "${CLAUDE_DIR}/CLAUDE.md"
 
-CLI_OUT="$(./tools/airun run "${CLI_DIR}/" 2>&1)"
-CLI_ARGS_OUT="$(./tools/airun run "${CLI_ARGS_DIR}/" -- hello 2>&1)"
+CLI_OUT="$(./tools/ailang run "${CLI_DIR}/" 2>&1)"
+CLI_ARGS_OUT="$(./tools/ailang run "${CLI_ARGS_DIR}/" -- hello 2>&1)"
 
 printf '%s\n' "${CLI_OUT}" | rg -q 'Hello from cli'
 printf '%s\n' "${CLI_ARGS_OUT}" | rg -q '^hello$'

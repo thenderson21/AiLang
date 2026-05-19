@@ -4,7 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
-C_VM_BIN="${C_VM_BIN:-./tools/airun}"
+C_VM_BIN="${C_VM_BIN:-./tools/ailang}"
 C_VM_RUN_ARGS="${C_VM_RUN_ARGS:-run}"
 ITERATIONS="${ITERATIONS:-30}"
 WARMUP="${WARMUP:-5}"
