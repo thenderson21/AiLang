@@ -10,29 +10,31 @@ layers.
 
 ## Current Beta Release
 
-- AiLang: `v0.0.1-beta.2`
+- AiLang: `v0.0.1-beta.6`
 - AiVM: `v0.0.1-beta.1`
 - AiVectra: `v0.0.1-beta.1`
 
 Verified on 2026-05-19:
 
 - GitHub release metadata marks all three releases as prereleases.
-- AiLang release workflow passed Linux, macOS, Windows, WASM, package, and
+- AiLang `v0.0.1-beta.6` release workflow passed Linux, macOS, Windows, WASM, package, and
   release-publish jobs.
 - AiVM release workflow passed Linux, macOS, Windows, package, and
   release-publish jobs.
 - AiVectra release workflow passed SDK package and release-publish jobs.
 - Live website install script defaults to the `beta` channel.
-- Local macOS install smoke succeeded from `https://ailang.codes/install.sh`.
+- Public install smoke succeeded on Linux, macOS, and Windows for exact
+  version and beta-channel installs.
 - Installed SDK smoke succeeded for `ailang init --agent codex`, `ailang build`,
-  and `ailang run`.
+  `ailang run`, `aivm --version`, `aivectra help`, package restore/build/run,
+  and template package listing.
 
 ## Required Gates
 
 - [ ] Deterministic golden tests are stable across macOS, Linux, and Windows.
-- [ ] Install flow works from a clean machine on macOS.
-- [ ] Install flow works from a clean machine on Linux.
-- [ ] Install flow works from a clean machine on Windows.
+- [x] Install flow works from a clean machine on macOS.
+- [x] Install flow works from a clean machine on Linux.
+- [x] Install flow works from a clean machine on Windows.
 - [x] `ailang init` works with project templates and `--agent` options.
 - [x] `ailang build` works from an installed SDK.
 - [x] `ailang run` works from an installed SDK.
@@ -89,15 +91,11 @@ Verified on 2026-05-19:
 
 ## Next Beta Hardening Tasks
 
-1. Run fresh Linux and Windows installer smoke tests against the published beta
-   artifacts.
-2. Audit package restore from an installed SDK using the public curated
-   registry.
-3. Tighten repo metadata and README status across the public repositories.
-4. Finish resource-limit and error-code documentation for beta users.
-5. Harden restored package tool dispatch. Tracking: `AiLangCore/AiLang#185`.
-6. Implement project-level `ailang test`.
-7. Decide whether failed AiLang `v0.0.1-beta.1` should remain visible as a
+1. Tighten repo metadata and README status across the public repositories.
+2. Finish resource-limit and error-code documentation for beta users.
+3. Harden restored package tool dispatch. Tracking: `AiLangCore/AiLang#185`.
+4. Implement project-level `ailang test`.
+5. Decide whether failed AiLang `v0.0.1-beta.1` should remain visible as a
    historical failed tag or be removed manually.
 
 ## Beta Exit Rule
