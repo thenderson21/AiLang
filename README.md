@@ -11,6 +11,21 @@ For contributor setup and verification, use [CONTRIBUTING.md](CONTRIBUTING.md).
 For curated public examples, use
 [AiLangCore/ailang-examples](https://github.com/AiLangCore/ailang-examples).
 
+## Current Status
+
+Current public SDK beta: `v0.0.1-beta.6`.
+
+Install the latest public beta SDK:
+
+```bash
+curl -fsSL https://ailang.codes/install.sh | sh
+export PATH="$HOME/.ailang/bin:$PATH"
+```
+
+This repository tracks the language/tooling work toward beta readiness. See
+[`BETA_READINESS.md`](BETA_READINESS.md) for current gates and
+[`ROADMAP.md`](ROADMAP.md) for the Alpha -> Beta -> RC -> 1.0 direction.
+
 ## Architecture
 
 AiLang owns the language, compiler/toolset, core libraries, SDK contracts, and
@@ -20,7 +35,8 @@ development gates.
 
 - `src/compiler` — AiLang-authored compiler/runtime scripts.
 - `src/std` — AiLang standard library modules.
-- `src/compiler` and `src/std` — AiLang-authored compiler/toolset and core libraries.
+- `templates` — built-in project and file templates.
+- `scripts` — repository-local bootstrap, validation, and release helpers.
 
 Layer rule:
 
@@ -65,7 +81,7 @@ Notes:
 - `Assets/` subfolders are optional and can be removed if unused.
 - Extension boundary: `.aos` is executable code, `.toml` is project data.
 
-## Quick Start
+## Repository Quick Start
 
 Use the repo-local launcher:
 
