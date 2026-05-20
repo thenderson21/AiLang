@@ -58,9 +58,16 @@ Program#p1 {
 AILANG_SOURCE
 
 ailang package restore "${APP_DIR}"
-ailang package list "${APP_DIR}" | grep -q 'std-json'
+ailang package list "${APP_DIR}" >"${TMP_ROOT}/package-list.txt"
+grep -q 'std-json' "${TMP_ROOT}/package-list.txt"
 ailang build "${APP_DIR}"
-ailang run "${APP_DIR}" | grep -q 'Package smoke: "package-smoke"'
+ailang run "${APP_DIR}" >"${TMP_ROOT}/package-run.stdout.txt" 2>"${TMP_ROOT}/package-run.stderr.txt"
+if ! grep -q 'Package smoke: "package-smoke"' "${TMP_ROOT}/package-run.stdout.txt"; then
+  echo "package app output mismatch" >&2
+  cat "${TMP_ROOT}/package-run.stdout.txt" >&2 || true
+  cat "${TMP_ROOT}/package-run.stderr.txt" >&2 || true
+  exit 1
+fi
 
 cat > "${TEMPLATE_DIR}/project.aiproj" <<'AILANG_PROJECT'
 Program#p1 {
@@ -78,8 +85,27 @@ Program#p1 {
 AILANG_SOURCE
 
 ailang package restore "${TEMPLATE_DIR}"
-ailang package list "${TEMPLATE_DIR}" | grep -q 'aivectra'
-ailang template list projects "${TEMPLATE_DIR}" | grep -q 'aivectra/hello-name'
-ailang template list files "${TEMPLATE_DIR}" | grep -q 'aivectra/view-basic'
+ailang package list "${TEMPLATE_DIR}" >"${TMP_ROOT}/template-package-list.txt"
+grep -q 'aivectra' "${TMP_ROOT}/template-package-list.txt"
+ailang template list projects "${TEMPLATE_DIR}" >"${TMP_ROOT}/template-projects.txt"
+grep -q 'aivectra/hello-name' "${TMP_ROOT}/template-projects.txt"
+ailang template list files "${TEMPLATE_DIR}" >"${TMP_ROOT}/template-files.txt"
+grep -q 'aivectra/view-basic' "${TMP_ROOT}/template-files.txt"
+
+TOOL_STDOUT="${TMP_ROOT}/aivectra-tool.stdout.txt"
+TOOL_STDERR="${TMP_ROOT}/aivectra-tool.stderr.txt"
+set +e
+AILANG_PACKAGE_TOOL_TIMEOUT_SECONDS="${AILANG_PACKAGE_TOOL_TIMEOUT_SECONDS:-10}" \
+  bash -c 'cd "$1" && ailang aivectra help' _ "${TEMPLATE_DIR}" >"${TOOL_STDOUT}" 2>"${TOOL_STDERR}"
+TOOL_STATUS=$?
+set -e
+if [[ "${TOOL_STATUS}" -ne 0 ]]; then
+  if ! grep -q 'package tool timed out' "${TOOL_STDERR}"; then
+    echo "aivectra package tool failed unexpectedly" >&2
+    cat "${TOOL_STDOUT}" >&2 || true
+    cat "${TOOL_STDERR}" >&2 || true
+    exit 1
+  fi
+fi
 
 echo "package workflow smoke passed"

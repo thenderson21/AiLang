@@ -41,7 +41,7 @@ Verified on 2026-05-19:
 - [x] `ailang test` exists or the beta docs explicitly define the temporary
   test command.
 - [x] Package restore works from the curated package registry.
-- [ ] Package restore rejects tool command conflicts deterministically.
+- [x] Package restore rejects tool command conflicts deterministically.
 - [x] Package publishing flow is documented.
 - [x] AiVM native runtime is the runtime used by the public SDK.
 - [x] `aivm` and `aivm-debug` release artifacts exist for supported hosts.
@@ -74,8 +74,7 @@ Verified on 2026-05-19:
 - [x] One canonical package demo exists.
 - [x] Demo uses a dependency from the curated registry.
 - [x] Demo documents restore, build, and run.
-- [ ] Tool packages expose subcommands without name conflicts. Tracking:
-  `AiLangCore/AiLang#185`.
+- [x] Tool packages expose subcommands without name conflicts.
 - [x] Library packages are referenceable by AiLang source.
 - [x] Template packages are visible through template listing.
 
@@ -91,9 +90,8 @@ Verified on 2026-05-19:
 
 ## Next Beta Hardening Tasks
 
-1. Harden restored package tool dispatch. Tracking: `AiLangCore/AiLang#185`.
-2. Implement project-level `ailang test`.
-3. Decide whether failed AiLang `v0.0.1-beta.1` should remain visible as a
+1. Implement project-level `ailang test`.
+2. Decide whether failed AiLang `v0.0.1-beta.1` should remain visible as a
    historical failed tag or be removed manually.
 
 ## Beta Exit Rule

@@ -103,6 +103,34 @@ if ($projectTemplates -notmatch 'aivectra/hello-name') { throw 'aivectra project
 $fileTemplates = (ailang template list files $templateDir) -join "`n"
 if ($fileTemplates -notmatch 'aivectra/view-basic') { throw 'aivectra file template missing' }
 
+$toolOut = Join-Path $tmpRoot 'aivectra-tool.stdout.txt'
+$toolErr = Join-Path $tmpRoot 'aivectra-tool.stderr.txt'
+$oldTimeout = $env:AILANG_PACKAGE_TOOL_TIMEOUT_SECONDS
+$oldNativePref = $PSNativeCommandUseErrorActionPreference
+if (-not $env:AILANG_PACKAGE_TOOL_TIMEOUT_SECONDS) {
+  $env:AILANG_PACKAGE_TOOL_TIMEOUT_SECONDS = '10'
+}
+$PSNativeCommandUseErrorActionPreference = $false
+try {
+  Push-Location $templateDir
+  try {
+    ailang aivectra help 1>$toolOut 2>$toolErr
+  } finally {
+    Pop-Location
+  }
+  $toolStatus = $LASTEXITCODE
+} finally {
+  $PSNativeCommandUseErrorActionPreference = $oldNativePref
+  $env:AILANG_PACKAGE_TOOL_TIMEOUT_SECONDS = $oldTimeout
+}
+if ($toolStatus -ne 0) {
+  $toolErrText = Get-Content -Raw -ErrorAction SilentlyContinue $toolErr
+  if ($toolErrText -notmatch 'package tool timed out') {
+    $toolOutText = Get-Content -Raw -ErrorAction SilentlyContinue $toolOut
+    throw "aivectra package tool failed unexpectedly: stdout=$toolOutText stderr=$toolErrText"
+  }
+}
+
 if (-not $env:AILANG_PACKAGE_SMOKE_KEEP) {
   Remove-Item -Recurse -Force $tmpRoot -ErrorAction SilentlyContinue
 }

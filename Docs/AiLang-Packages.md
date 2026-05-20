@@ -237,8 +237,10 @@ If a package declares `tool` and its tool name conflicts with a compiled,
 global, or already-local tool, restore fails instead of silently shadowing a
 command.
 
-Known beta issue: restored package tool execution still needs hardening before
-it is release-gated. See `AiLangCore/AiLang#185`.
+Restored package tools run with a bounded timeout. The default timeout is 30
+seconds and can be overridden with `AILANG_PACKAGE_TOOL_TIMEOUT_SECONDS`. A
+timeout fails deterministically with a `PKG001` error instead of hanging the
+caller or release smoke.
 
 Alpha implementation note: `restore` is currently backed by an AiVM C native
 bridge helper. This is an intermediary boundary for self-hosting and native
