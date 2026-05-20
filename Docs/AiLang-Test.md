@@ -1,10 +1,11 @@
 # AiLang Test Workflow
 
-Status: beta temporary contract.
+Status: beta contract.
 
-AiLang does not currently expose a project-level `ailang test` command. For the
-beta line, testing is defined by repository and example validation entrypoints.
-Do not document or depend on `ailang test` until the command is implemented.
+AiLang exposes a project-level `ailang test` command for app projects. The
+command is intentionally small for beta: it discovers project-local tests,
+runs them through the normal build/run path, and returns deterministic process
+status.
 
 ## AiLang Repository
 
@@ -62,17 +63,31 @@ ailang build .
 ailang run .
 ```
 
-If a project has its own test script, that script owns project-specific test
-policy. The SDK only guarantees restore/build/run until `ailang test` is
-implemented.
+Run project-local tests:
 
-## Future `ailang test`
+```bash
+ailang test .
+```
 
-The eventual `ailang test` command should:
+`ailang test [project-dir] [--no-cache]` discovers tests in deterministic
+order:
 
-- run project-local tests without requiring repository scripts
-- consume restored packages from `ailang.lock.toml`
+- `tests/project.aiproj`, if present
+- direct `tests/*.aos` files, sorted lexically, if no nested project exists
+- `Tests/project.aiproj`, if present and distinct from `tests/`
+- direct `Tests/*.aos` files, sorted lexically, if no nested project exists
+
+Each discovered test is built and run through the same native AiBC1 path used
+by `ailang run`. Test stdout/stderr is preserved. If no tests exist, the
+command succeeds with `Ok#ok1(type=int value=0)`.
+
+## Future Hardening
+
+Future `ailang test` hardening should:
+
+- support test filters
+- add machine-readable test result output
+- add package test conventions
 - avoid implicit network fetches
-- return deterministic exit codes and diagnostics
-- support CI-friendly output
+- keep deterministic exit codes and diagnostics
 - stay separate from VM/runtime conformance tests owned by AiVM

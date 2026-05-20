@@ -38,8 +38,7 @@ Verified on 2026-05-19:
 - [x] `ailang init` works with project templates and `--agent` options.
 - [x] `ailang build` works from an installed SDK.
 - [x] `ailang run` works from an installed SDK.
-- [x] `ailang test` exists or the beta docs explicitly define the temporary
-  test command.
+- [x] `ailang test` exists for project-local beta tests.
 - [x] Package restore works from the curated package registry.
 - [x] Package restore rejects tool command conflicts deterministically.
 - [x] Package publishing flow is documented.
@@ -90,8 +89,7 @@ Verified on 2026-05-19:
 
 ## Next Beta Hardening Tasks
 
-1. Implement project-level `ailang test`.
-2. Decide whether failed AiLang `v0.0.1-beta.1` should remain visible as a
+1. Decide whether failed AiLang `v0.0.1-beta.1` should remain visible as a
    historical failed tag or be removed manually.
 
 ## Beta Exit Rule

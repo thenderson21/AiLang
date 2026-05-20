@@ -13,6 +13,7 @@ cd "${ROOT_DIR}"
 ./scripts/test-ailang-init.sh
 ./scripts/test-ailang-build-source.sh
 ./scripts/test-ailang-cli-spec.sh
+./scripts/test-ailang-test-command.sh
 ./scripts/test-ailang-traced-syscalls.sh
 bash ./scripts/test-ailang-debug-dns.sh
 bash ./scripts/test-ailang-debug-disasm.sh
