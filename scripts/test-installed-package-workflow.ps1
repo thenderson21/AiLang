@@ -77,11 +77,7 @@ ailang run $appDir 1>$packageRunOut 2>$packageRunErr
 $packageRun = Get-Content -Raw -ErrorAction SilentlyContinue $packageRunOut
 $packageRunErrText = Get-Content -Raw -ErrorAction SilentlyContinue $packageRunErr
 if ($packageRun -notmatch 'Package smoke:') {
-  if ($IsWindows) {
-    Write-Warning "Windows package run completed but did not surface sys.stdout output; tracked in AiLangCore/AiLang#186. stderr: $packageRunErrText"
-  } else {
-    throw "package app output mismatch: stdout=$packageRun stderr=$packageRunErrText"
-  }
+  throw "package app output mismatch: stdout=$packageRun stderr=$packageRunErrText"
 }
 
 Write-Utf8File (Join-Path $templateDir 'project.aiproj') @'
