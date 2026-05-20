@@ -47,8 +47,8 @@ Verified on 2026-05-19:
 - [x] `aivm` and `aivm-debug` release artifacts exist for supported hosts.
 - [x] At least one AiVectra sample app is functional and documented.
 - [ ] Canonical formatting is stable enough for docs and samples.
-- [ ] Resource limits are documented and visible in diagnostics.
-- [ ] Error code families are documented and stable for beta.
+- [x] Resource limits are documented and visible in diagnostics.
+- [x] Error code families are documented and stable for beta.
 
 ## Public Coherence Gates
 
@@ -91,11 +91,9 @@ Verified on 2026-05-19:
 
 ## Next Beta Hardening Tasks
 
-1. Tighten repo metadata and README status across the public repositories.
-2. Finish resource-limit and error-code documentation for beta users.
-3. Harden restored package tool dispatch. Tracking: `AiLangCore/AiLang#185`.
-4. Implement project-level `ailang test`.
-5. Decide whether failed AiLang `v0.0.1-beta.1` should remain visible as a
+1. Harden restored package tool dispatch. Tracking: `AiLangCore/AiLang#185`.
+2. Implement project-level `ailang test`.
+3. Decide whether failed AiLang `v0.0.1-beta.1` should remain visible as a
    historical failed tag or be removed manually.
 
 ## Beta Exit Rule
